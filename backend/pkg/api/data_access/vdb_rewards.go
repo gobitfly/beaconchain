@@ -88,7 +88,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			goqu.L("e.epoch"),
 			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_rewards, 0)) AS cl_rewards`),
 			goqu.L("SUM(COALESCE(e.attestations_scheduled, 0)) AS attestations_scheduled"),
-			goqu.L("SUM(COALESCE(e.attestations_executed, 0)) AS attestations_executed"),
+			goqu.L("SUM(COALESCE(e.attestations_observed, 0)) AS attestations_observed"),
 			goqu.L("SUM(COALESCE(e.blocks_scheduled, 0)) AS blocks_scheduled"),
 			goqu.L("SUM(COALESCE(e.blocks_proposed, 0)) AS blocks_proposed"),
 			goqu.L("SUM(COALESCE(e.sync_scheduled, 0)) AS sync_scheduled"),
@@ -300,7 +300,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		GroupId               int64  `db:"result_group_id"`
 		ClRewards             int64  `db:"cl_rewards"`
 		AttestationsScheduled uint64 `db:"attestations_scheduled"`
-		AttestationsExecuted  uint64 `db:"attestations_executed"`
+		AttestationsExecuted  uint64 `db:"attestations_observed"`
 		BlocksScheduled       uint64 `db:"blocks_scheduled"`
 		BlocksProposed        uint64 `db:"blocks_proposed"`
 		SyncScheduled         uint64 `db:"sync_scheduled"`
@@ -539,9 +539,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			goqu.L("COALESCE(e.attestations_inactivity_reward, 0) AS attestations_inactivity_reward"),
 			goqu.L("COALESCE(e.attestations_inclusion_reward, 0) AS attestations_inclusion_reward"),
 			goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
-			goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
-			goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
-			goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+			goqu.L("COALESCE(e.attestations_head_executed, 0) AS attestations_head_executed"),
+			goqu.L("COALESCE(e.attestations_source_executed, 0) AS attestations_source_executed"),
+			goqu.L("COALESCE(e.attestations_target_executed, 0) AS attestations_target_executed"),
 			goqu.L("COALESCE(e.blocks_scheduled, 0) AS blocks_scheduled"),
 			goqu.L("COALESCE(e.blocks_proposed, 0) AS blocks_proposed"),
 			goqu.L("COALESCE(e.blocks_cl_reward, 0) AS blocks_cl_reward"),
@@ -601,10 +601,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		AttestationInactivitytReward decimal.Decimal `db:"attestations_inactivity_reward"`
 		AttestationInclusionReward   decimal.Decimal `db:"attestations_inclusion_reward"`
 
-		AttestationsScheduled     int64 `db:"attestations_scheduled"`
-		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
-		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
-		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
+		AttestationsScheduled      int64 `db:"attestations_scheduled"`
+		AttestationsHeadExecuted   int64 `db:"attestations_head_executed"`
+		AttestationsSourceExecuted int64 `db:"attestations_source_executed"`
+		AttestationsTargetExecuted int64 `db:"attestations_target_executed"`
 
 		BlocksScheduled uint32          `db:"blocks_scheduled"`
 		BlocksProposed  uint32          `db:"blocks_proposed"`
@@ -662,16 +662,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	for _, entry := range queryResult {
 		ret.AttestationsHead.Income = ret.AttestationsHead.Income.Add(entry.AttestationHeadReward.Mul(gWei))
-		ret.AttestationsHead.StatusCount.Success += uint64(entry.AttestationHeadExecuted)
-		ret.AttestationsHead.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationHeadExecuted)
+		ret.AttestationsHead.StatusCount.Success += uint64(entry.AttestationsHeadExecuted)
+		ret.AttestationsHead.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationsHeadExecuted)
 
 		ret.AttestationsSource.Income = ret.AttestationsSource.Income.Add(entry.AttestationSourceReward.Mul(gWei))
-		ret.AttestationsSource.StatusCount.Success += uint64(entry.AttestationSourceExecuted)
-		ret.AttestationsSource.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationSourceExecuted)
+		ret.AttestationsSource.StatusCount.Success += uint64(entry.AttestationsSourceExecuted)
+		ret.AttestationsSource.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationsSourceExecuted)
 
 		ret.AttestationsTarget.Income = ret.AttestationsTarget.Income.Add(entry.AttestationTargetReward.Mul(gWei))
-		ret.AttestationsTarget.StatusCount.Success += uint64(entry.AttestationTargetExecuted)
-		ret.AttestationsTarget.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationTargetExecuted)
+		ret.AttestationsTarget.StatusCount.Success += uint64(entry.AttestationsTargetExecuted)
+		ret.AttestationsTarget.StatusCount.Failed += uint64(entry.AttestationsScheduled) - uint64(entry.AttestationsTargetExecuted)
 
 		ret.Inactivity.Income = ret.Inactivity.Income.Add(entry.AttestationInactivitytReward.Mul(gWei))
 		if entry.AttestationInactivitytReward.LessThan(decimal.Zero) {
@@ -960,9 +960,9 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 			goqu.L("COALESCE(e.attestations_scheduled, 0) AS attestations_scheduled"),
 			goqu.L("COALESCE(e.attestation_source_executed, 0) AS attestation_source_executed"),
 			goqu.L("COALESCE(e.attestations_source_reward, 0) AS attestations_source_reward"),
-			goqu.L("COALESCE(e.attestation_target_executed, 0) AS attestation_target_executed"),
+			goqu.L("COALESCE(e.attestations_target_executed, 0) AS attestations_target_executed"),
 			goqu.L("COALESCE(e.attestations_target_reward, 0) AS attestations_target_reward"),
-			goqu.L("COALESCE(e.attestation_head_executed, 0) AS attestation_head_executed"),
+			goqu.L("COALESCE(e.attestations_head_executed, 0) AS attestations_head_executed"),
 			goqu.L("COALESCE(e.attestations_head_reward, 0) AS attestations_head_reward"),
 			goqu.L("COALESCE(e.sync_scheduled, 0) AS sync_scheduled"),
 			goqu.L("COALESCE(e.sync_executed, 0) AS sync_executed"),
@@ -1044,11 +1044,11 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	queryResult := []struct {
 		ValidatorIndex              uint64 `db:"validator_index"`
 		AttestationsScheduled       uint64 `db:"attestations_scheduled"`
-		AttestationsSourceExecuted  uint64 `db:"attestation_source_executed"`
+		AttestationsSourceExecuted  uint64 `db:"attestations_source_executed"`
 		AttestationsSourceReward    int64  `db:"attestations_source_reward"`
-		AttestationsTargetExecuted  uint64 `db:"attestation_target_executed"`
+		AttestationsTargetExecuted  uint64 `db:"attestations_target_executed"`
 		AttestationsTargetReward    int64  `db:"attestations_target_reward"`
-		AttestationsHeadExecuted    uint64 `db:"attestation_head_executed"`
+		AttestationsHeadExecuted    uint64 `db:"attestations_head_executed"`
 		AttestationsHeadReward      int64  `db:"attestations_head_reward"`
 		SyncScheduled               uint64 `db:"sync_scheduled"`
 		SyncExecuted                uint64 `db:"sync_executed"`
