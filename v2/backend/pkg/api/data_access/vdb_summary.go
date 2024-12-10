@@ -1374,6 +1374,7 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 			Select(
 				goqu.L("epoch_start")).
 			From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
+			Order(goqu.L("epoch_start").Asc()).
 			Limit(1)
 
 		query, args, err := ds.Prepared(true).ToSQL()
@@ -1687,6 +1688,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			goqu.L("epoch_start"),
 			goqu.L("epoch_end")).
 		From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
+		Order(goqu.L("epoch_start").Asc()).
 		Limit(1)
 
 	query, args, err := ds.Prepared(true).ToSQL()
