@@ -4,17 +4,17 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
+import type { Paging } from '~/types/api/common'
 
 type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
   identifier: string,
 }
-
-const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -23,19 +23,21 @@ const { t: $t } = useTranslation()
 const { latestState } = useLatestStateStore()
 const { getEpochFromSlot } = useNetworkStore()
 const {
-  getTotalAmount,
-  getWithdrawals,
+  data,
+  isLoading,
   isLoadingTotal,
-  isLoadingWithdrawals,
-  query: lastQuery,
+  paging,
   totalAmount,
-  withdrawals,
-} = useValidatorDashboardWithdrawalsStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+} = defineProps<{
+  data?: VDBWithdrawalsTableRow[],
+  isLoading: boolean,
+  isLoadingTotal: boolean,
+  paging?: Paging,
+  totalAmount?: string,
+}>()
+const query = defineModel<TableQueryParams>('query', {
+  required: true,
+})
 const totalIdentifier = 'total'
 
 const validatorDashboardStore = useValidatorDashboardStore()
@@ -53,74 +55,26 @@ const colsVisible = computed(() => {
     slot: width.value > 875,
   }
 })
-
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'slot:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(dashboardKey, () => {
-  loadData()
-  getTotalAmount(dashboardKey.value)
-},
-{ immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getWithdrawals(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
-const tableData = computed(() => {
-  if (!withdrawals.value?.data?.length) {
-    return
-  }
-
-  return {
-    data: [
-      {
-        amount: totalAmount.value,
-        identifier: totalIdentifier,
-      },
-      ...withdrawals.value.data.map(w => ({
-        ...w,
-        identifier: `${w.slot}-${w.index}`,
-      })),
-    ],
-    paging: withdrawals.value.paging,
-  }
-})
-
 const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value, '')
+  return getGroupLabel($t, groupId, groups.value)
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  query.value = setQuerySort(sort, query.value)
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  query.value = setQueryCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  query.value = setQueryPageSize(value, query.value)
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
+  query.value = setQuerySearch(value, query.value)
 }
 
 const getRowClass = (row: ExtendedVDBWithdrawalsTableRow) => {
@@ -150,6 +104,27 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 
   return false
 }
+
+// data with total row at the top
+const tableData = computed(() => {
+  if (!data || data.length === 0) {
+    return
+  }
+
+  return {
+    data: [
+      {
+        amount: totalAmount,
+        identifier: totalIdentifier,
+      },
+      ...data.map(w => ({
+        ...w,
+        identifier: `${w.slot}-${w.index}`,
+      })),
+    ],
+    paging: paging,
+  }
+})
 </script>
 
 <template>
@@ -173,8 +148,8 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable
-            :loading="isLoadingWithdrawals"
-            :selected-sort="tempQuery?.sort"
+            :loading="isLoading"
+            :selected-sort="query.sort"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

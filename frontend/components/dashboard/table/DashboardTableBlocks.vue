@@ -2,13 +2,14 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import type { Paging } from '~/types/api/common'
 
 const {
-  dashboardKey,
   isGuestDashboard,
 } = useDashboardKey()
 
@@ -16,17 +17,14 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const {
-  blocks,
-  getBlocks,
-  isLoading,
-  query: lastQuery,
-} = useValidatorDashboardBlocksStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+defineProps<{
+  data?: VDBBlocksTableRow[],
+  isLoading: boolean,
+  paging?: Paging,
+}>()
+const query = defineModel<TableQueryParams>('query', {
+  required: true,
+})
 
 const validatorDashboardStore = useValidatorDashboardStore()
 const {
@@ -48,54 +46,26 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'slot:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [ dashboardKey ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getBlocks(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  query.value = setQuerySort(sort, query.value)
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  query.value = setQueryCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  query.value = setQueryPageSize(value, query.value)
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
+  query.value = setQuerySearch(value, query.value)
 }
 
 const getRowClass = (row: VDBBlocksTableRow) => {
@@ -125,7 +95,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="blocks"
+            :data="{ data, paging }"
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"
@@ -134,7 +104,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable
-            :selected-sort="tempQuery?.sort"
+            :selected-sort="query.sort"
             :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"

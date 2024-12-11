@@ -40,7 +40,7 @@ export const useValidatorDashboardStore = defineStore(
       groups.value.filter(group => !!group.count),
     )
 
-    const setByOverviewData = (data: VDBOverviewData) => {
+    const initializeOverviewData = (data: VDBOverviewData) => {
       const v = data.validators
       validatorCount.value = v.exited + v.offline + v.online + v.pending + v.slashed
       chainId.value = data.network
@@ -57,7 +57,7 @@ export const useValidatorDashboardStore = defineStore(
       return validatorCount.value > VALIDATOR_DASHBOARD_SIZE_THRESHOLD
     })
 
-    const reset = () => {
+    const resetOverviewData = () => {
       validatorCount.value = null
       chainId.value = null
       rawGroups.value = null
@@ -70,10 +70,10 @@ export const useValidatorDashboardStore = defineStore(
       groups,
       hasAbilityChartHistory,
       hasValidators,
+      initializeOverviewData,
       isLargeDashboard,
       populatedGroups,
-      reset,
-      setByOverviewData,
+      resetOverviewData,
       validatorCount,
     }
   },

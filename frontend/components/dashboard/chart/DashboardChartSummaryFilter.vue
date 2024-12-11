@@ -13,11 +13,10 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 
-const validatorDashboardStore = useValidatorDashboardStore()
 const {
   groups: dashboardGroups,
   hasAbilityChartHistory,
-} = storeToRefs(validatorDashboardStore)
+} = storeToRefs(useValidatorDashboardStore())
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
