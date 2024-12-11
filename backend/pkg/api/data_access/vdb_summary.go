@@ -118,7 +118,14 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS cl_rewards"),
+			goqu.L(`
+				(
+					SUM(COALESCE(finalizeAggregation(r.balance_end), 0)) +
+					SUM(COALESCE(r.withdrawals_amount, 0)) -
+					SUM(COALESCE(r.deposits_amount, 0)) -
+					SUM(COALESCE(finalizeAggregation(r.balance_start), 0))
+				) AS cl_rewards
+			`),
 			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
 			goqu.L("COALESCE(SUM(r.attestations_observed), 0) AS attestations_observed"),
@@ -857,8 +864,14 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
 			goqu.L("COUNT(*) AS validator_count"),
-			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward"))
-
+			goqu.L(`
+				(
+					SUM(COALESCE(finalizeAggregation(r.balance_end), 0)) +
+					SUM(COALESCE(r.withdrawals_amount, 0)) -
+					SUM(COALESCE(r.deposits_amount, 0)) -
+					SUM(COALESCE(finalizeAggregation(r.balance_start), 0))
+				) AS reward
+			`))
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
@@ -1030,7 +1043,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			SELECT
 				%[2]s as ts,
 				0 AS group_id, 
-				COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
+				COALESCE(SUM(d.attestations_reward), 0) AS attestations_reward,
 				COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
 				COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
 				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
@@ -1052,7 +1065,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		SELECT
 			%[2]s as ts,
 			v.group_id,
-			COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
+			COALESCE(SUM(d.attestations_reward), 0) AS attestations_reward,
 			COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
 			COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
 			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
@@ -1183,16 +1196,16 @@ func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggreg
 	var dateColumn string
 	switch aggregation {
 	case enums.IntervalEpoch:
-		table = "view_validator_dashboard_data_epoch_max_ts"
+		table = "validator_dashboard_data_epoch_max_ts"
 		dateColumn = "t"
 	case enums.IntervalHourly:
-		table = "view_validator_dashboard_data_hourly_max_ts"
+		table = "validator_dashboard_data_hourly_max_ts"
 		dateColumn = "t"
 	case enums.IntervalDaily:
-		table = "view_validator_dashboard_data_daily_max_ts"
+		table = "validator_dashboard_data_daily_max_ts"
 		dateColumn = "t"
 	case enums.IntervalWeekly:
-		table = "view_validator_dashboard_data_weekly_max_ts"
+		table = "validator_dashboard_data_weekly_max_ts"
 		dateColumn = "t"
 	default:
 		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
