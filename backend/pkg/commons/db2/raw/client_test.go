@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
 )
 
 const (
@@ -43,12 +43,12 @@ func TestBigTableClientRealCondition(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			bg, err := database.NewBigTable(project, instance, nil)
+			bt, err := database.NewBigTable(project, instance, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			rawStore := NewStore(database.Wrap(bg, BlocksRawTable, ""))
+			rawStore := NewStore(database.Wrap(bt, Table))
 			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
 				Transport: NewBigTableEthRaw(rawStore, chainID),
 			}))
@@ -130,7 +130,7 @@ func BenchmarkRawBigTable(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	rawStore := WithCache(NewStore(database.Wrap(bt, BlocksRawTable, "")))
+	rawStore := WithCache(NewStore(database.Wrap(bt, Table)))
 	rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
 		Transport: NewBigTableEthRaw(rawStore, chainID),
 	}))
@@ -166,14 +166,14 @@ func TestBigTableClient(t *testing.T) {
 	}
 
 	client, admin := databasetest.NewBigTable(t)
-	bg, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
+	bt, err := database.NewBigTableWithClient(context.Background(), client, admin, Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rawStore := NewStore(database.Wrap(bg, BlocksRawTable, ""))
+			rawStore := NewStore(database.Wrap(bt, Table))
 			if err := rawStore.AddBlocks([]FullBlockData{tt.block}); err != nil {
 				t.Fatal(err)
 			}
@@ -237,7 +237,7 @@ func TestBigTableClientWithFallback(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rawStore := NewStore(database.Wrap(bt, BlocksRawTable, ""))
+			rawStore := NewStore(database.Wrap(bt, Table))
 
 			rpcClient, err := rpc.DialOptions(context.Background(), node, rpc.WithHTTPClient(&http.Client{
 				Transport: NewWithFallback(NewBigTableEthRaw(rawStore, tt.block.ChainID), http.DefaultTransport),

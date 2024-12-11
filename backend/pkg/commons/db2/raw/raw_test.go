@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
 )
 
 func TestRaw(t *testing.T) {
@@ -19,7 +19,7 @@ func TestRaw(t *testing.T) {
 	}
 
 	store := Store{
-		db:         database.Wrap(s, BlocksRawTable, ""),
+		db:         database.Wrap(s, Table),
 		compressor: noOpCompressor{},
 	}
 

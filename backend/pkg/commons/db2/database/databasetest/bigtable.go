@@ -12,11 +12,13 @@ import (
 )
 
 func NewBigTable(t testing.TB) (*bigtable.Client, *bigtable.AdminClient) {
+	t.Helper()
 	srv, err := bttest.NewServer("localhost:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
+	t.Cleanup(func() { srv.Close() })
 
 	conn, err := grpc.NewClient(srv.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {

@@ -94,11 +94,11 @@ func (store Store) ReadBlockByHash(chainID uint64, hash string) (*FullBlockData,
 
 func (store Store) readBlock(chainID uint64, number int64) (*FullBlockData, error) {
 	key := blockKey(chainID, number)
-	data, err := store.db.GetRow(key)
+	row, err := store.db.GetRow(key)
 	if err != nil {
 		return nil, err
 	}
-	return store.parseRow(chainID, number, data)
+	return store.parseRow(chainID, number, row.Values)
 }
 
 func (store Store) parseRow(chainID uint64, number int64, data map[string][]byte) (*FullBlockData, error) {
