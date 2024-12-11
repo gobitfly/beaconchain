@@ -42,7 +42,10 @@ func SendHTMLMail(to, subject string, msg types.Email, attachment []types.EmailA
 		log.Infof("Email Attachments will not work with SMTP server")
 		err = SendMailSMTP(to, body.Bytes())
 	} else if utils.Config.Frontend.Mail.Mailgun.PrivateKey != "" {
-		_ = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		err = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		if err != nil {
+			log.Error(err, "error rendering mail template", 0)
+		}
 		content := body.String()
 		err = SendMailMailgun(to, subject, content, createTextMessage(msg), attachment)
 	} else {
