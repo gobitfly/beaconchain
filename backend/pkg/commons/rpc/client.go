@@ -280,7 +280,7 @@ func (client *RawStoreClient) GetBlocks(start, end int64, traceMode string) ([]*
 		}
 		parsedBlock := parseBlock(block, receipts, parseTraceGeth(traces), func(_ context.Context, tx *geth_types.Transaction, block common.Hash, _ uint) (common.Address, error) {
 			// Try to load the address from the cache.
-			return geth_types.Sender(&raw.SenderFromDBSigner{Blockhash: block}, tx)
+			return geth_types.Sender(raw.SignerForChainID(tx.ChainId(), block), tx)
 		})
 		blocks = append(blocks, parsedBlock)
 	}
@@ -298,7 +298,7 @@ func (client *RawStoreClient) GetBlock(number int64, traceMode string) (*types.E
 	}
 	return parseBlock(block, receipts, parseTraceGeth(traces), func(_ context.Context, tx *geth_types.Transaction, block common.Hash, _ uint) (common.Address, error) {
 		// Try to load the address from the cache.
-		return geth_types.Sender(&raw.SenderFromDBSigner{Blockhash: block}, tx)
+		return geth_types.Sender(raw.SignerForChainID(tx.ChainId(), block), tx)
 	}), nil
 }
 
