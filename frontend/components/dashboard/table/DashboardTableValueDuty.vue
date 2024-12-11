@@ -3,8 +3,14 @@ import type { VDBRewardsTableDuty } from '~/types/api/validator_dashboard'
 
 interface Props {
   duty: VDBRewardsTableDuty,
+  isNumberVisible?: boolean,
 }
-defineProps<Props>()
+withDefaults(
+  defineProps<Props>(),
+  {
+    isNumberVisible: true,
+  },
+)
 </script>
 
 <template>
@@ -18,6 +24,7 @@ defineProps<Props>()
     >
       {{ $t("dashboard.validator.rewards.attestation") }}
       <BcFormatPercent
+        v-if="isNumberVisible"
         class="round-brackets"
         :percent="duty.attestation"
         :maximum-fraction-digits="0"
@@ -29,6 +36,7 @@ defineProps<Props>()
     >
       {{ $t("dashboard.validator.rewards.proposal") }}
       <BcFormatPercent
+        v-if="isNumberVisible"
         class="round-brackets"
         :percent="duty.proposal"
         :maximum-fraction-digits="0"
@@ -40,6 +48,7 @@ defineProps<Props>()
     >
       {{ $t("dashboard.validator.rewards.sync_committee") }}
       <BcFormatPercent
+        v-if="isNumberVisible"
         class="round-brackets"
         :percent="duty.sync"
         :maximum-fraction-digits="0"
@@ -51,6 +60,7 @@ defineProps<Props>()
     >
       {{ $t("dashboard.validator.rewards.slashing") }}
       <BcFormatNumber
+        v-if="isNumberVisible"
         class="round-brackets"
         :value="duty.slashing"
       />
