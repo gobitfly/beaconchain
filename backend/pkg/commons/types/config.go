@@ -321,6 +321,7 @@ type Chain struct {
 	ElConfigPath               string `yaml:"elConfigPath" envconfig:"CHAIN_EL_CONFIG_PATH"`
 	ClConfig                   ClChainConfig
 	ElConfig                   *params.ChainConfig
+	ElOnly                     bool `yaml:"elOnly" envconfig:"EL_ONLY"`
 }
 
 type InternalAlertDiscord struct {

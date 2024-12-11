@@ -93,9 +93,11 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Frontend.SiteBrand = "beaconcha.in"
 	}
 
-	err = setCLConfig(cfg)
-	if err != nil {
-		return err
+	if !cfg.Chain.ElOnly {
+		err = setCLConfig(cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = setELConfig(cfg)
@@ -115,41 +117,45 @@ func ReadConfig(cfg *types.Config, path string) error {
 		log.Fatal(fmt.Errorf("invalid DeploymentType: %v (valid types: %v)", cfg.DeploymentType, validTypes), "", 0)
 	}
 
-	if cfg.Chain.GenesisTimestamp == 0 {
-		switch cfg.Chain.Name {
-		case "mainnet":
-			cfg.Chain.GenesisTimestamp = 1606824023
-		case "prater":
-			cfg.Chain.GenesisTimestamp = 1616508000
-		case "sepolia":
-			cfg.Chain.GenesisTimestamp = 1655733600
-		case "zhejiang":
-			cfg.Chain.GenesisTimestamp = 1675263600
-		case "gnosis":
-			cfg.Chain.GenesisTimestamp = 1638993340
-		case "holesky":
-			cfg.Chain.GenesisTimestamp = 1695902400
-		default:
-			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
+	if !cfg.Chain.ElOnly {
+		if cfg.Chain.GenesisTimestamp == 0 {
+			switch cfg.Chain.Name {
+			case "mainnet":
+				cfg.Chain.GenesisTimestamp = 1606824023
+			case "prater":
+				cfg.Chain.GenesisTimestamp = 1616508000
+			case "sepolia":
+				cfg.Chain.GenesisTimestamp = 1655733600
+			case "zhejiang":
+				cfg.Chain.GenesisTimestamp = 1675263600
+			case "gnosis":
+				cfg.Chain.GenesisTimestamp = 1638993340
+			case "holesky":
+				cfg.Chain.GenesisTimestamp = 1695902400
+			default:
+				return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
+			}
 		}
 	}
 
-	if cfg.Chain.GenesisValidatorsRoot == "" {
-		switch cfg.Chain.Name {
-		case "mainnet":
-			cfg.Chain.GenesisValidatorsRoot = "0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95"
-		case "prater":
-			cfg.Chain.GenesisValidatorsRoot = "0x043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb"
-		case "sepolia":
-			cfg.Chain.GenesisValidatorsRoot = "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078"
-		case "zhejiang":
-			cfg.Chain.GenesisValidatorsRoot = "0x53a92d8f2bb1d85f62d16a156e6ebcd1bcaba652d0900b2c2f387826f3481f6f"
-		case "gnosis":
-			cfg.Chain.GenesisValidatorsRoot = "0xf5dcb5564e829aab27264b9becd5dfaa017085611224cb3036f573368dbb9d47"
-		case "holesky":
-			cfg.Chain.GenesisValidatorsRoot = "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1"
-		default:
-			return fmt.Errorf("tried to set known genesis-validators-root, but unknown chain-name")
+	if !cfg.Chain.ElOnly {
+		if cfg.Chain.GenesisValidatorsRoot == "" {
+			switch cfg.Chain.Name {
+			case "mainnet":
+				cfg.Chain.GenesisValidatorsRoot = "0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95"
+			case "prater":
+				cfg.Chain.GenesisValidatorsRoot = "0x043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb"
+			case "sepolia":
+				cfg.Chain.GenesisValidatorsRoot = "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078"
+			case "zhejiang":
+				cfg.Chain.GenesisValidatorsRoot = "0x53a92d8f2bb1d85f62d16a156e6ebcd1bcaba652d0900b2c2f387826f3481f6f"
+			case "gnosis":
+				cfg.Chain.GenesisValidatorsRoot = "0xf5dcb5564e829aab27264b9becd5dfaa017085611224cb3036f573368dbb9d47"
+			case "holesky":
+				cfg.Chain.GenesisValidatorsRoot = "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1"
+			default:
+				return fmt.Errorf("tried to set known genesis-validators-root, but unknown chain-name")
+			}
 		}
 	}
 
@@ -233,22 +239,34 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.Id = 11155111
 		case "gnosis":
 			cfg.Chain.Id = 100
+		case "optimism":
+			cfg.Chain.Id = 10
+		case "arbitrum":
+			cfg.Chain.Id = 42161
+		case "base":
+			cfg.Chain.Id = 8453
 		}
 	}
 
 	// we check for machine chain id just for safety
-	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
-		log.Fatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
+	if !cfg.Chain.ElOnly {
+		if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
+			log.Fatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
+		}
 	}
 
-	cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
+	if !cfg.Chain.ElOnly {
+		cfg.Chain.Id = cfg.Chain.ClConfig.DepositChainID
+	}
 
 	if cfg.RedisSessionStoreEndpoint == "" && cfg.RedisCacheEndpoint != "" {
 		log.Warnf("using RedisCacheEndpoint %s as RedisSessionStoreEndpoint as no dedicated RedisSessionStoreEndpoint was provided", cfg.RedisCacheEndpoint)
 		cfg.RedisSessionStoreEndpoint = cfg.RedisCacheEndpoint
 	}
 
-	confSanityCheck(cfg)
+	if !cfg.Chain.ElOnly {
+		confSanityCheck(cfg)
+	}
 
 	log.InfoWithFields(log.Fields{
 		"genesisTimestamp":       cfg.Chain.GenesisTimestamp,
