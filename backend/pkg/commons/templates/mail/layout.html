@@ -57,19 +57,10 @@
               <span style="font-family: Barlow; color: white;">
                 <span style="color: white;">bitfly explorer GmbH, FN 623067 w, CR-Court: Commercial Court Vienna</span>
                 <br />
-                {{ if .Mail.UnSubURL }}
-                  <span>
-                    {{ .Mail.UnSubURL }}
-                    <span>to stop receiving notifications of this kind.</span>
-                  </span>
-                {{ end }}
-                {{ if .Mail.SubscriptionManageURL }}
-                  <br />
-                  <span>
-                    {{ .Mail.SubscriptionManageURL }}
-                    <span>your subscriptions.</span>
-                  </span>
-                {{ end }}
+                <span>
+                  {{ .Mail.SubscriptionManageURL }}
+                  <span>your subscriptions.</span>
+                </span>
               </span>
             </td>
           </tr>
