@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import type { ApiPagingResponse } from '~/types/api/common'
+import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
   addSpacer?: boolean,
   cursor?: Cursor,
-  data?: ApiPagingResponse<any>,
+  data?: {
+    data?: any[],
+    paging?: Paging,
+  },
   dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
   hidePager?: boolean,

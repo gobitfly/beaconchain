@@ -6,7 +6,10 @@ import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
+import {
+  DAHSHBOARDS_ALL_GROUPS_ID,
+  type TableProps,
+} from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import {
   type SummaryChartFilter,
@@ -29,18 +32,13 @@ const chartFilter = ref<SummaryChartFilter>({
   groupIds: [],
 })
 
-const {
-  getSummary,
-  isLoading,
-  query: lastQuery,
-  summary,
-} = useValidatorDashboardSummaryStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-
+const props = defineProps<TableProps<VDBSummaryTableRow> & { timeFrame: SummaryTimeFrame }>()
+const emit = defineEmits<{
+  (e: 'update', timeframe: SummaryTimeFrame, query: TableQueryParams): void,
+}>()
+const emitUpdate = (query: TableQueryParams) => {
+  emit('update', props.timeFrame, query)
+}
 const showAbsoluteValues = ref<boolean | null>(null)
 
 const {
@@ -53,7 +51,6 @@ const timeFrames = computed(() =>
     name: $t(`time_frames.${t}`),
   })),
 )
-const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
 const { width } = useWindowSize()
 const colsVisible = computed<SummaryTableVisibility>(() => {
@@ -65,17 +62,6 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
     validatorsSortable: width.value >= 571,
   }
 })
-const loadData = (q?: TableQueryParams) => {
-  if (!q) {
-    q = query.value
-      ? { ...query.value }
-      : {
-          limit: pageSize.value,
-          sort: 'efficiency:desc',
-        }
-  }
-  setQuery(q, true, true)
-}
 
 watch(
   validatorCount,
@@ -87,50 +73,26 @@ watch(
   { immediate: true },
 )
 
-watch(
-  [ dashboardKey ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  [
-    query,
-    selectedTimeFrame,
-  ],
-  ([
-    q,
-    timeFrame,
-  ]) => {
-    if (q) {
-      getSummary(dashboardKey.value, timeFrame, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery?.value))
+  emitUpdate(setQuerySort(sort, props.query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery?.value))
+  emitUpdate(setQueryCursor(value, props.query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery?.value))
+  emitUpdate(setQueryPageSize(value, props.query))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery?.value))
+  emitUpdate(setQuerySearch(value, props.query))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
@@ -161,12 +123,13 @@ const searchPlaceholder = computed(() =>
         </h1>
         <BcDropdown
           v-if="tableIsShown"
-          v-model="selectedTimeFrame"
+          :model-value="timeFrame"
           :options="timeFrames"
           option-value="id"
           option-label="name"
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
+          @select="($event) => { emit('update', $event, props.query) }"
         />
         <DashboardChartSummaryFilter
           v-else
@@ -176,14 +139,14 @@ const searchPlaceholder = computed(() =>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="summary"
+            :data="{ data, paging }"
             data-key="group_id"
             :expandable="true"
             class="summary_table"
             :cursor
             :page-size
             :row-class="getRowClass"
-            :selected-sort="tempQuery?.sort"
+            :selected-sort="query.sort"
             :loading="isLoading"
             :hide-pager="true"
             @set-cursor="setCursor"
@@ -242,7 +205,7 @@ const searchPlaceholder = computed(() =>
                   :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   context="group"
                 />
               </template>
@@ -258,7 +221,7 @@ const searchPlaceholder = computed(() =>
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="efficiency"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -274,7 +237,7 @@ const searchPlaceholder = computed(() =>
                   :class="slotProps.data.className"
                   property="attestations"
                   :absolute="showAbsoluteValues ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -291,7 +254,7 @@ const searchPlaceholder = computed(() =>
                   property="proposals"
                   class="no-space-between-value"
                   :absolute="showAbsoluteValues ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -308,7 +271,7 @@ const searchPlaceholder = computed(() =>
                   property="reward"
                   class="no-space-between-value"
                   :absolute="showAbsoluteValues ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -317,7 +280,7 @@ const searchPlaceholder = computed(() =>
               <DashboardTableSummaryDetails
                 :table-visibility="colsVisible"
                 :row="slotProps.data"
-                :time-frame="selectedTimeFrame"
+                :time-frame
                 :absolute="showAbsoluteValues ?? true"
               />
             </template>

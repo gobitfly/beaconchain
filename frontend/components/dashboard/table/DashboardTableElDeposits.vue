@@ -1,31 +1,43 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  VDBExecutionDepositsTableRow,
+  VDBTotalExecutionDepositsData,
+} from '~/types/api/validator_dashboard'
+import type {
+  DataProps,
+  TableProps,
+} from '~/types/dashboard'
+import type {
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
 import { getGroupLabel } from '~/utils/dashboard/group'
-
-const { dashboardKey } = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
+const props = defineProps<{
+  tableProps: TableProps<VDBExecutionDepositsTableRow>,
+  totalProps: DataProps<VDBTotalExecutionDepositsData>,
+}>()
 const {
-  deposits,
-  getDeposits,
-  getTotalAmount,
-  isLoadingDeposits,
-  isLoadingTotal,
-  query: lastQuery,
-  totalAmount,
-} = useValidatorDashboardElDepositsStore()
+  data,
+  isLoading,
+  paging,
+  query,
+} = toRefs(props.tableProps)
 const {
-  bounce: setQuery, value: query,
-} = useDebounceValue<
-  TableQueryParams | undefined
->(undefined, 500)
+  data: totalData,
+  isLoading: isLoadingTotal,
+} = toRefs(props.totalProps)
+const emit = defineEmits<{
+  (e: 'update', query: TableQueryParams): void,
+}>()
+
+const emitUpdate = (query: TableQueryParams) => {
+  emit('update', query)
+}
 
 const {
   groups, hasValidators,
@@ -44,62 +56,18 @@ const colsVisible = computed(() => {
     withdrawalCredentials: width.value >= 1060,
   }
 })
-
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [ dashboardKey ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  async (q) => {
-    if (q) {
-      await getDeposits(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
-const tableData = computed(() => {
-  if (!deposits.value?.data?.length) {
-    return
-  }
-  return {
-    data: [
-      { amount: totalAmount.value },
-      ...deposits.value.data,
-    ],
-    paging: deposits.value.paging,
-  }
-})
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value)
 }
 
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
-}
-
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  emitUpdate(setQueryCursor(value, query.value))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  emitUpdate(setQueryPageSize(value, query.value))
 }
 
 const getRowClass = (row: VDBExecutionDepositsTableRow) => {
@@ -111,6 +79,21 @@ const getRowClass = (row: VDBExecutionDepositsTableRow) => {
 const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
   return row.index !== undefined
 }
+
+// data with total row at the top
+const tableData = computed(() => {
+  const rows = data.value
+  if (!rows || rows.length === 0) {
+    return
+  }
+  return {
+    data: [
+      { amount: totalData.value?.total_amount },
+      ...rows,
+    ],
+    paging: paging.value,
+  }
+})
 </script>
 
 <template>
@@ -127,9 +110,8 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
             :page-size
             :row-class="getRowClass"
             :is-row-expandable
-            :loading="isLoadingDeposits"
+            :loading="isLoading"
             @set-cursor="setCursor"
-            @sort="onSort"
             @set-page-size="setPageSize"
           >
             <Column

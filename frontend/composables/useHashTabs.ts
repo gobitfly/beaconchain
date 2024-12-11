@@ -1,7 +1,7 @@
 import type { HashTabs } from '~/types/hashTabs'
 
 export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = false) {
-  const activeTab = ref<string>('-1')
+  const activeTab = ref<string>(defaultTab)
   const { hash: initialHash } = useRoute()
 
   const findFirstValidIndex = () => {
