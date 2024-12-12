@@ -269,6 +269,10 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, respo
 	}
 }
 
+func emptyPagingResponse() interface{} {
+	return types.ApiPagingResponse[any]{Paging: types.Paging{}, Data: []any{}}
+}
+
 func returnError(w http.ResponseWriter, r *http.Request, code int, err error) {
 	response := types.ApiErrorResponse{
 		Error: err.Error(),

@@ -37,14 +37,14 @@ import (
 type NotificationsRepository interface {
 	GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error)
 
-	GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error)
+	GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor t.NotificationsDashboardsCursor, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error)
 	// depending on how notifications are implemented, we may need to use something other than `notificationId` for identifying the notification
 	GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error)
 	GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error)
 
-	GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
-	GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
-	GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
+	GetMachineNotifications(ctx context.Context, userId uint64, cursor t.NotificationMachinesCursor, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error)
+	GetClientNotifications(ctx context.Context, userId uint64, cursor t.NotificationClientsCursor, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error)
+	GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error)
 
 	GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error)
 	GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error)
@@ -54,7 +54,7 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
 	DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
-	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
+	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor t.NotificationSettingsCursor, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
 	UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error
 	UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error
 
@@ -260,16 +260,8 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 	return &response, err
 }
 
-func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor t.NotificationsDashboardsCursor, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	response := []t.NotificationDashboardsTableRow{}
-	var err error
-
-	var currentCursor t.NotificationsDashboardsCursor
-	if cursor != "" {
-		if currentCursor, err = utils.StringToCursor[t.NotificationsDashboardsCursor](cursor); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationsDashboardsCursor: %w", err)
-		}
-	}
 
 	// validator query
 	vdbQuery := goqu.Dialect("postgres").
@@ -346,14 +338,14 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 
 	// sorting
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Epoch},
-		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToExpr(), Desc: false, Offset: currentCursor.DashboardName},
-		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToExpr(), Desc: false, Offset: currentCursor.DashboardId},
-		{Column: enums.NotificationsDashboardsColumns.GroupName.ToExpr(), Desc: false, Offset: currentCursor.GroupName},
-		{Column: enums.NotificationsDashboardsColumns.GroupId.ToExpr(), Desc: false, Offset: currentCursor.GroupId},
-		{Column: enums.NotificationsDashboardsColumns.ChainId.ToExpr(), Desc: true, Offset: currentCursor.ChainId},
+		{Column: enums.NotificationsDashboardsColumns.Timestamp.ToExpr(), Desc: true, Offset: cursor.Epoch},
+		{Column: enums.NotificationsDashboardsColumns.DashboardName.ToExpr(), Desc: false, Offset: cursor.DashboardName},
+		{Column: enums.NotificationsDashboardsColumns.DashboardId.ToExpr(), Desc: false, Offset: cursor.DashboardId},
+		{Column: enums.NotificationsDashboardsColumns.GroupName.ToExpr(), Desc: false, Offset: cursor.GroupName},
+		{Column: enums.NotificationsDashboardsColumns.GroupId.ToExpr(), Desc: false, Offset: cursor.GroupId},
+		{Column: enums.NotificationsDashboardsColumns.ChainId.ToExpr(), Desc: true, Offset: cursor.ChainId},
 	}
-	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, cursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -387,14 +379,14 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	if moreDataFlag {
 		response = response[:len(response)-1]
 	}
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(response)
 	}
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return response, &t.Paging{}, nil
 	}
-	paging, err := utils.GetPagingFromData(response, currentCursor, moreDataFlag)
+	paging, err := utils.GetPagingFromData(response, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -699,19 +691,9 @@ func (d *DataAccessService) GetAccountDashboardNotificationDetails(ctx context.C
 	return d.dummy.GetAccountDashboardNotificationDetails(ctx, dashboardId, groupId, epoch, search)
 }
 
-func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId uint64, cursor t.NotificationMachinesCursor, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
 	result := make([]t.NotificationMachinesTableRow, 0)
 	var paging t.Paging
-
-	// Initialize the cursor
-	var currentCursor t.NotificationMachinesCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.NotificationMachinesCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationMachinesCursor: %w", err)
-		}
-	}
 
 	// -------------------------------------
 	// Get the machine notification history
@@ -742,19 +724,19 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (ts, machine_id, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
-		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: currentCursor.MachineId},
-		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationsMachinesColumns.Timestamp.ToExpr(), Desc: true, Offset: cursor.Ts},
+		{Column: enums.NotificationsMachinesColumns.MachineId.ToExpr(), Desc: false, Offset: cursor.MachineId},
+		{Column: enums.NotificationsMachinesColumns.EventType.ToExpr(), Desc: false, Offset: cursor.EventType},
 	}
 	var offset interface{}
 	switch colSort.Column {
 	case enums.NotificationsMachinesColumns.MachineName:
-		offset = currentCursor.MachineName
+		offset = cursor.MachineName
 	case enums.NotificationsMachinesColumns.Threshold:
-		offset = currentCursor.EventThreshold
+		offset = cursor.EventThreshold
 	}
 
-	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, cursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -790,7 +772,7 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
@@ -801,31 +783,21 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		cursorData = cursorData[:limit]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
 	}
 
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(cursorData, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
 
 	return result, p, nil
 }
-func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId uint64, cursor t.NotificationClientsCursor, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	result := make([]t.NotificationClientsTableRow, 0)
 	var paging t.Paging
-
-	// Initialize the cursor
-	var currentCursor t.NotificationClientsCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.NotificationClientsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationClientsCursor: %w", err)
-		}
-	}
 
 	// -------------------------------------
 	// Get the client notification history
@@ -854,10 +826,10 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (ts, client)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
-		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: currentCursor.Client},
+		{Column: enums.NotificationsClientsColumns.Timestamp.ToExpr(), Desc: true, Offset: cursor.Ts},
+		{Column: enums.NotificationsClientsColumns.ClientName.ToExpr(), Desc: false, Offset: cursor.Client},
 	}
-	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, cursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -894,7 +866,7 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
@@ -905,12 +877,12 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 		cursorData = cursorData[:limit]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
 	}
 
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(cursorData, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
@@ -918,19 +890,9 @@ func (d *DataAccessService) GetClientNotifications(ctx context.Context, userId u
 	return result, p, nil
 }
 
-func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	result := make([]t.NotificationNetworksTableRow, 0)
 	var paging t.Paging
-
-	// Initialize the cursor
-	var currentCursor t.NotificationNetworksCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.NotificationNetworksCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationNetworksCursor: %w", err)
-		}
-	}
 
 	// -------------------------------------
 	// Get the network notification history
@@ -954,11 +916,11 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 	// Sorting and limiting if cursor is present
 	// Rows can be uniquely identified by (ts, network, event_type)
 	defaultColumns := []t.SortColumn{
-		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: currentCursor.Ts},
-		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: currentCursor.Network},
-		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: currentCursor.EventType},
+		{Column: enums.NotificationNetworksColumns.Timestamp.ToExpr(), Desc: true, Offset: cursor.Ts},
+		{Column: enums.NotificationNetworksColumns.Network.ToExpr(), Desc: false, Offset: cursor.Network},
+		{Column: enums.NotificationNetworksColumns.EventType.ToExpr(), Desc: false, Offset: cursor.EventType},
 	}
-	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, cursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1005,7 +967,7 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
@@ -1016,12 +978,12 @@ func (d *DataAccessService) GetNetworkNotifications(ctx context.Context, userId 
 		cursorData = cursorData[:limit]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 		slices.Reverse(cursorData)
 	}
 
-	p, err := utils.GetPagingFromData(cursorData, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(cursorData, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
@@ -1515,23 +1477,13 @@ func (d *DataAccessService) UpdateNotificationSettingsClients(ctx context.Contex
 
 	return result, nil
 }
-func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor t.NotificationSettingsCursor, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	result := make([]t.NotificationSettingsDashboardsTableRow, 0)
 	var paging t.Paging
 
 	wg := errgroup.Group{}
 
-	// Initialize the cursor
-	var currentCursor t.NotificationSettingsCursor
-	var err error
-	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.NotificationSettingsCursor](cursor)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as NotificationSettingsCursor: %w", err)
-		}
-	}
-
-	isReverseDirection := (colSort.Desc && !currentCursor.IsReverse()) || (!colSort.Desc && currentCursor.IsReverse())
+	isReverseDirection := (colSort.Desc && !cursor.IsReverse()) || (!colSort.Desc && cursor.IsReverse())
 
 	// -------------------------------------
 	// Get the events
@@ -1625,7 +1577,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// 	return nil
 	// })
 
-	err = wg.Wait()
+	err := wg.Wait()
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving dashboard notification data: %w", err)
 	}
@@ -1837,11 +1789,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// Paging
 
 	// Find the index for the cursor and limit the data
-	if currentCursor.IsValid() {
+	if cursor.IsValid() {
 		for idx, row := range result {
-			if row.DashboardId == currentCursor.DashboardId &&
-				row.GroupId == currentCursor.GroupId &&
-				row.IsAccountDashboard == currentCursor.IsAccountDashboard {
+			if row.DashboardId == cursor.DashboardId &&
+				row.GroupId == cursor.GroupId &&
+				row.IsAccountDashboard == cursor.IsAccountDashboard {
 				result = result[idx+1:]
 				break
 			}
@@ -1850,7 +1802,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 	// Flag if above limit
 	moreDataFlag := len(result) > int(limit)
-	if !moreDataFlag && !currentCursor.IsValid() {
+	if !moreDataFlag && !cursor.IsValid() {
 		// No paging required
 		return result, &paging, nil
 	}
@@ -1860,11 +1812,11 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		result = result[:limit]
 	}
 
-	if currentCursor.IsReverse() {
+	if cursor.IsReverse() {
 		slices.Reverse(result)
 	}
 
-	p, err := utils.GetPagingFromData(result, currentCursor, moreDataFlag)
+	p, err := utils.GetPagingFromData(result, cursor, moreDataFlag)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}

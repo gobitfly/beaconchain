@@ -282,7 +282,7 @@ func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Con
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor t.ValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search t.VDBManageValidatorsSearch, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBManageValidatorsTableRow](ctx)
 }
 
@@ -314,7 +314,7 @@ func (d *DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboa
 	return r.Epochs, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search t.VDBSummarySearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBSummaryTableRow](ctx)
 }
 func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
@@ -338,7 +338,7 @@ func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(ctx contex
 	return getDummyStruct[t.VDBProposalSummaryValidators](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor t.RewardsCursor, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRewardsTableRow](ctx)
 }
 
@@ -350,11 +350,11 @@ func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, da
 	return getDummyStruct[t.ChartData[int, decimal.Decimal]](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor t.ValidatorDutiesCursor, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBEpochDutiesTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor t.BlocksCursor, colSort t.Sort[enums.VDBBlocksColumn], search t.VDBBlocksSearch, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBBlocksTableRow](ctx)
 }
 
@@ -366,11 +366,11 @@ func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, da
 	return getDummyStruct[t.VDBHeatmapTooltipData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor t.ELDepositsCursor, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBExecutionDepositsTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor t.CLDepositsCursor, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBConsensusDepositsTableRow](ctx)
 }
 
@@ -382,7 +382,7 @@ func (d *DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context,
 	return getDummyStruct[t.VDBTotalConsensusDepositsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor t.WithdrawalsCursor, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	return []t.VDBWithdrawalsTableRow{}, &t.Paging{}, nil
 }
 
@@ -390,7 +390,7 @@ func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context
 	return getDummyStruct[t.VDBTotalWithdrawalsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor t.VDBRocketPoolCursor, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolTableRow](ctx)
 }
 
@@ -398,7 +398,7 @@ func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context,
 	return getDummyStruct[t.VDBRocketPoolTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor t.VDBRocketPoolMinipoolsCursor, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow](ctx)
 }
 
@@ -549,7 +549,7 @@ func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, d
 func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return getDummyStruct[t.NotificationOverviewData](ctx)
 }
-func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor t.NotificationsDashboardsCursor, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationDashboardsTableRow](ctx)
 }
 
@@ -561,13 +561,14 @@ func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Contex
 	return getDummyStruct[t.NotificationAccountDashboardDetail](ctx)
 }
 
-func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
+func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor t.NotificationMachinesCursor, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationMachinesTableRow](ctx)
 }
-func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
+func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor t.NotificationClientsCursor, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationClientsTableRow](ctx)
 }
-func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+
+func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor t.NotificationNetworksCursor, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow](ctx)
 }
 
@@ -594,7 +595,7 @@ func (d *DummyService) UpdateNotificationSettingsClients(ctx context.Context, us
 	return getDummyStruct[t.NotificationSettingsClient](ctx)
 }
 
-func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
+func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor t.NotificationSettingsCursor, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	r, p, err := getDummyWithPaging[t.NotificationSettingsDashboardsTableRow](ctx)
 	for i, n := range r {
 		var settings interface{}
@@ -784,7 +785,7 @@ func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor t.VDBMobileValidatorsCursor, colSort t.Sort[enums.VDBManageValidatorsColumn], search t.VDBManageValidatorsSearch, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow](ctx)
 }
 

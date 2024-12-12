@@ -1,6 +1,8 @@
 package enums
 
-import "time"
+import (
+	"time"
+)
 
 type Enum interface {
 	Int() int
