@@ -316,6 +316,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 				if trace.Type == "CREATE" {
 				} else if trace.Type == "SELFDESTRUCT" {
 				} else if trace.Type == "SUICIDE" {
+				} else if trace.Type == "INVALID" {
 				} else if trace.Type == "CALL" || trace.Type == "DELEGATECALL" || trace.Type == "STATICCALL" || trace.Type == "CALLCODE" {
 				} else if trace.Type == "" {
 					log.Error(fmt.Errorf("geth style trace without type"), "", 0, map[string]interface{}{"type": trace.Type, "block.Number": block.Number(), "block.Hash": block.Hash()})
