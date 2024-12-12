@@ -30,7 +30,7 @@ jobs:
         CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
         CONFIG_PATH: ${{ secrets.CI_CONFIG_PATH }}
       run: |
-        nohup go run cmd/main.go -config "${CONFIG_PATH}" > backend.log 2>&1 &
+        nohup go run cmd/main.go api -config="${CONFIG_PATH}" > backend.log 2>&1 &
         sleep 60 # Wait for the backend to initialize
     - name: Run Postman Collection
       run: |
