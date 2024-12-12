@@ -1,0 +1,52 @@
+          CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
+name: Backend and Postman Tests
+
+on: [push, pull_request]
+
+jobs:
+  backend-and-postman-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.20'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install Newman
+      run: npm install -g newman
+
+    - name: Start Backend in Background
+      working-directory: backend
+      env:
+        CLICKHOUSE_WRITER_DB_NAME: holesky_re_export_2024_11_09
+        CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
+        CONFIG_PATH: ${{ secrets.CI_CONFIG_PATH }}
+      run: |
+        nohup go run cmd/main.go -config "${CONFIG_PATH}" > backend.log 2>&1 &
+        sleep 60 # Wait for the backend to initialize
+    - name: Run Postman Collection
+      run: |
+        newman run postman/api.json \
+          --reporters cli,junit \
+          --reporter-junit-export results.xml
+
+    - name: Stop Backend
+      if: always()
+      run: |
+        pkill -f "go run cmd/main.go"
+
+    - name: Upload Newman JUnit Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: newman-junit-report
+        path: results.xml
