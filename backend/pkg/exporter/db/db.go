@@ -949,7 +949,10 @@ func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because 
 			SELECT *
 			FROM %s
 			FINAL
-			WHERE (successful_insert IS NULL) AND (insert_batch_id IS NOT NULL)
+			WHERE 
+				(successful_insert IS NULL OR successful_insert < now() - interval 5 day) AND
+				(insert_batch_id IS NOT NULL) AND
+				(successful_transfer IS NULL)
 			ORDER BY epoch ASC
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
@@ -1291,7 +1294,7 @@ func SwapRollingTables(rolling Rollings) error {
 	// swaps _unsafe_rolling with _final_rolling
 	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
 		EXCHANGE TABLES _unsafe_%[1]s AND _final_%[1]s
-	`, rolling))	
+	`, rolling))
 	if err != nil {
 		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
 	}
@@ -1330,9 +1333,17 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 	err := db.ClickHouseReader.Select(&epochs,
 		fmt.Sprintf(`
 			SELECT *
-			FROM %s
+			FROM %[1]s
 			FINAL
-			WHERE (successful_transfer IS NULL) AND (transfer_batch_id IS NOT NULL) AND (successful_insert IS NOT NULL) 
+			WHERE 
+				-- data has been inserted to the unsafe table
+			    (successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days within any transfer batch
+				(transfer_batch_id NOT IN (select transfer_batch_id from %[1]s WHERE successful_insert < now() - interval 5 day)) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL) AND
+				-- data has been assigned a transfer batch id
+				(transfer_batch_id IS NOT NULL)
 			ORDER BY epoch ASC
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
@@ -1347,9 +1358,17 @@ func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	err := db.ClickHouseReader.Select(&epochs,
 		fmt.Sprintf(`
 			SELECT *
-			FROM %s
+			FROM %[1]s
 			FINAL
-			WHERE (successful_transfer IS NULL) AND (successful_insert IS NOT NULL)
+			WHERE
+				-- data has been inserted to the unsafe table
+				(successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days
+				(successful_insert >= now() - interval 5 day) AND
+				-- data has not been assigned a transfer batch id
+				(transfer_batch_id IS NULL) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL)
 			ORDER BY epoch ASC
 			SETTINGS select_sequential_consistency = 1
 		`, ExporterMetadataTableName))
