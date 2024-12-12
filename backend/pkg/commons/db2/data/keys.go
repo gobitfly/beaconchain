@@ -43,6 +43,75 @@ func reversePaddedTimestamp(timestamp *timestamppb.Timestamp) string {
 //	return fmt.Sprintf("%09d", maxExecutionLayerBlockNumber-blockNumber)
 //}
 
+const base = "<address>:<time>:<id>:<side>:<with>:<chainID>:<type>:<extra_type>"
+
+func transactionKeysV3(chainID string, transaction *types.Eth1TransactionIndexed, index int) (string, []string) {
+	main := "TX:<chainID>:<hash>"
+	txBase := strings.NewReplacer(
+		"<id>", "<index>",
+		"<type>", "TX",
+		"<extra_type>", "<method>",
+	).Replace(base)
+	senderBase := strings.NewReplacer(
+		"<address>", "<from>",
+		"<side>", "out",
+		"<with>", "<to>",
+	).Replace(txBase)
+	receiverBase := strings.NewReplacer(
+		"<address>", "<to>",
+		"<side>", "in",
+		"<with>", "<from>",
+	).Replace(txBase)
+	replacer := strings.NewReplacer(
+		"<hash>", toHex(transaction.Hash),
+		"<from>", toHex(transaction.From),
+		"<to>", toHex(transaction.To),
+		"<chainID>", chainID,
+		"<time>", reversePaddedTimestamp(transaction.Time),
+		"<index>", reversePaddedIndex(index, txPerBlockLimit),
+		"<method>", fmt.Sprintf("%x", transaction.MethodId),
+	)
+	keys := []string{
+		replacer.Replace(senderBase),
+		replacer.Replace(receiverBase),
+	}
+	return replacer.Replace(main), keys
+}
+
+func transferKeysV3(chainID string, transaction *types.Eth1ERC20Indexed, index int, logIndex int) (string, []string) {
+	main := "ERC20:<chainID>:<hash>:<logIndex>"
+	transferBase := strings.NewReplacer(
+		"<id>", "<index>.<logIndex>",
+		"<type>", "ERC20",
+		"<extra_type>", "<asset>",
+	).Replace(base)
+	senderBase := strings.NewReplacer(
+		"<address>", "<from>",
+		"<side>", "out",
+		"<with>", "<to>",
+	).Replace(transferBase)
+	receiverBase := strings.NewReplacer(
+		"<address>", "<to>",
+		"<side>", "in",
+		"<with>", "<from>",
+	).Replace(transferBase)
+	replacer := strings.NewReplacer(
+		"<hash>", toHex(transaction.ParentHash),
+		"<from>", toHex(transaction.From),
+		"<to>", toHex(transaction.To),
+		"<chainID>", chainID,
+		"<time>", reversePaddedTimestamp(transaction.Time),
+		"<index>", reversePaddedIndex(index, txPerBlockLimit),
+		"<logIndex>", reversePaddedIndex(logIndex, logPerTxLimit),
+		"<asset>", toHex(transaction.TokenAddress),
+	)
+	keys := []string{
+		replacer.Replace(senderBase),
+		replacer.Replace(receiverBase),
+	}
+	return replacer.Replace(main), keys
+}
+
 // lost keyTxBlock, keyTxError, keyTxContractCreation
 // key are sorted side, with, chainID, type, method
 func transactionKeys(chainID string, transaction *types.Eth1TransactionIndexed, index int) (string, []string) {

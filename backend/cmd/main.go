@@ -40,6 +40,8 @@ func main() {
 		blobindexer.Run()
 	case "eth1indexer":
 		eth1indexer.Run()
+	case "eth1indexer2":
+		eth1indexer.Run2()
 	case "ethstore-exporter":
 		ethstore_exporter.Run()
 	case "exporter":

@@ -287,7 +287,7 @@ func TestStore(t *testing.T) {
 				t.Fatalf("no transactions found")
 			}
 			if got, want := len(txs), len(tt.expectedHashes); got != want {
-				t.Errorf("got %v, want %v", got, want)
+				t.Fatalf("got %v, want %v", got, want)
 			}
 			for i := int64(0); i < int64(len(tt.expectedHashes)); i++ {
 				if got, want := string(txs[i].Hash), tt.expectedHashes[i]; got != want {
