@@ -3,10 +3,6 @@ package modules
 import (
 	"fmt"
 	"math/big"
-	"os"
-	"os/signal"
-	"runtime/pprof"
-	"syscall"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
@@ -87,23 +83,6 @@ func StartAll(context ModuleContext) {
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		log.Info("received SIGTERM, writing heap profile")
-		f, err := os.Create("heap.prof")
-		if err != nil {
-			log.Error(err, "failed to create heap profile", 0)
-			return
-		}
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			log.Error(err, "failed to write heap profile", 0)
-		}
-		f.Close()
-		os.Exit(0)
-	}()
-
 	log.Infof("initialising exporter modules")
 
 	// Initialize modules
