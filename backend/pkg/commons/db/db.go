@@ -99,28 +99,29 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	var sslParam string
+	var extraParams string
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// ensure binds work
 		if sqlx.BindType("clickhouse") != sqlx.DOLLAR {
 			log.Infof("changing bind type from %v to %v", sqlx.BindType("clickhouse"), sqlx.DOLLAR)
 			sqlx.BindDriver("clickhouse", sqlx.DOLLAR)
 		}
+		extraParams += "&client_info_product=beaconchain-explorer/" + version.Version
 		// debug
 		//sslParam += "&debug=true"
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
 
 	log.Infof("connecting to %s database %s:%s/%s as writer with %d/%d max open/idle connections", databaseBrand, writer.Host, writer.Port, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
-	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslParam))
+	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
@@ -135,21 +136,22 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	}
 
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// debug
 		//sslParam += "&debug=true"
+		extraParams += "&client_info_product=beaconchain-explorer/" + version.Version
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
 
 	log.Infof("connecting to %s database %s:%s/%s as reader with %d/%d max open/idle connections", databaseBrand, reader.Host, reader.Port, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
-	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslParam))
+	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}

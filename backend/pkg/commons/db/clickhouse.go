@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -49,6 +50,14 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		Settings: ch.Settings{
 			"deduplicate_blocks_in_dependent_materialized_views":                "1",
 			"update_insert_deduplication_token_in_dependent_materialized_views": "1",
+		},
+		ClientInfo: ch.ClientInfo{
+			Products: []struct {
+				Name    string
+				Version string
+			}{
+				{Name: "beaconchain-explorer", Version: version.Version},
+			},
 		},
 	})
 	if err != nil {
