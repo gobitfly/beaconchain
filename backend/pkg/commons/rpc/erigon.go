@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"encoding/hex"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -98,7 +97,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 
 	block, err := client.ethClient.BlockByNumber(ctx, big.NewInt(number))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("error while getting block by number, error: %v", err)
 	}
 
 	timings.Headers = time.Since(start)
@@ -177,14 +176,11 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	txs := block.Transactions()
 
 	for _, tx := range txs {
-		var from []byte
-		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
+		sender, err := client.ethClient.TransactionSender(ctx, tx, block.Hash(), 0)
 		if err != nil {
-			from, _ = hex.DecodeString("abababababababababababababababababababab")
 			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
-		} else {
-			from = sender.Bytes()
 		}
+		from := sender.Bytes()
 
 		pbTx := &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
