@@ -1,4 +1,3 @@
-          CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
 name: Backend and Postman Tests
 
 on: [push, pull_request]
