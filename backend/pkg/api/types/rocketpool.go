@@ -13,3 +13,15 @@ type RPNetworkStats struct {
 	RPLPrice            decimal.Decimal `db:"rpl_price"`
 	Ts                  time.Time       `db:"ts"`
 }
+
+type RPInfo struct {
+	Minipool             map[uint64]RPMinipoolInfo
+	SmoothingPoolAddress []byte
+}
+
+type RPMinipoolInfo struct {
+	NodeFee              float64
+	NodeDepositBalance   decimal.Decimal
+	UserDepositBalance   decimal.Decimal
+	SmoothingPoolRewards map[uint64]decimal.Decimal
+}

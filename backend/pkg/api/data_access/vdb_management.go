@@ -330,6 +330,11 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
+	rpInfos, err := d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving rocketpool validators: %w", err)
+	}
+
 	// Validator status and balance
 	eg.Go(func() error {
 		validatorMapping, err := d.services.GetCurrentValidatorMapping()
@@ -346,10 +351,13 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			data.Groups = append(data.Groups, t.VDBOverviewGroup{Id: t.DefaultGroupId, Name: t.DefaultGroupName, Count: uint64(len(validators))})
 		}
 
-		// Status
+		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
+		var nonRpDashboardId t.VDBId
+
 		for _, validator := range validators {
 			metadata := validatorMapping.ValidatorMetadata[validator]
 
+			// Status
 			switch constypes.ValidatorDbStatus(metadata.Status) {
 			case constypes.DbExitingOnline, constypes.DbSlashingOnline, constypes.DbActiveOnline:
 				data.Validators.Online++
@@ -362,61 +370,22 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			case constypes.DbExited:
 				data.Validators.Exited++
 			}
-		}
 
-		// Find rocketpool validators
-		type RpOperatorInfo struct {
-			ValidatorIndex     uint64          `db:"validatorindex"`
-			NodeFee            float64         `db:"node_fee"`
-			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
-			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
-		}
-		var queryResult []RpOperatorInfo
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("v.validatorindex"),
-				goqu.L("rplm.node_fee"),
-				goqu.L("rplm.node_deposit_balance"),
-				goqu.L("rplm.user_deposit_balance")).
-			From(goqu.L("rocketpool_minipools AS rplm")).
-			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
-			Where(goqu.L("node_deposit_balance IS NOT NULL")).
-			Where(goqu.L("user_deposit_balance IS NOT NULL"))
-
-		if len(dashboardId.Validators) == 0 {
-			ds = ds.
-				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
-				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
-		} else {
-			ds = ds.
-				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
-		}
-
-		rpValidators := make(map[uint64]RpOperatorInfo)
-		for _, res := range queryResult {
-			rpValidators[res.ValidatorIndex] = res
-		}
-
-		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
-		var nonRpDashboardId t.VDBId
-
-		for _, validator := range validators {
-			metadata := validatorMapping.ValidatorMetadata[validator]
+			// Balance
 			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
 			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
+			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
 
-			if rpValidator, ok := rpValidators[validator]; ok {
+			handleNonRpDashboard := func() {
+				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
+				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
+			}
+
+			if rpInfos == nil {
+				handleNonRpDashboard()
+			} else if rpValidator, ok := rpInfos.Minipool[validator]; !ok {
+				handleNonRpDashboard()
+			} else {
 				if protocolModes.RocketPool {
 					// Calculate the balance of the operator
 					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
@@ -434,12 +403,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
 				}
 				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
-			} else {
-				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-
-				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
 			}
-			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
 		}
 
 		// Get the total cl deposits for non-rocketpool validators
@@ -457,7 +421,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
+			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, t.AllGroups, protocolModes, rpInfos, hours)
 			if err != nil {
 				return err
 			}

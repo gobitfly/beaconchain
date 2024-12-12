@@ -24,8 +24,6 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate protocolModes
-
 	// -------------------------------------
 	// Setup
 	var err error
@@ -39,6 +37,15 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	if cursor != "" {
 		if currentCursor, err = utils.StringToCursor[t.BlocksCursor](cursor); err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
+		}
+	}
+
+	// Get the rocketpool minipool infos
+	var rpInfos *t.RPInfo
+	if protocolModes.RocketPool {
+		rpInfos, err = d.getRocketPoolInfos(ctx, dashboardId, t.AllGroups)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
@@ -127,7 +134,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	// -------------------------------------
-	// Constuct final query
+	// Construct final query
 	var blocksDs *goqu.SelectDataset
 
 	// 1. Tables
@@ -178,6 +185,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			goqu.COALESCE(goqu.I("rb.proposer_fee_recipient"), blocks.Col("exec_fee_recipient")).As("fee_recipient"),
 			goqu.COALESCE(goqu.L("rb.value / 1e18"), goqu.I("ep.fee_recipient_reward")).As("el_reward"),
 		)
+
+	if rpInfos != nil && protocolModes.RocketPool {
+		blocksDs = blocksDs.
+			SelectAppend(goqu.L("(blocks.exec_fee_recipient = ? AND (rb.proposer_fee_recipient IS NULL OR rb.proposer_fee_recipient = ?)) AS is_smoothing_pool", rpInfos.SmoothingPoolAddress, rpInfos.SmoothingPoolAddress))
+	}
 
 	// 3. Sorting and pagination
 	defaultColumns := []t.SortColumn{
@@ -276,6 +288,11 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 					goqu.L("NULL::NUMERIC").As("el_reward"),
 				)
 
+			if rpInfos != nil && protocolModes.RocketPool {
+				scheduledDs = scheduledDs.
+					SelectAppend(goqu.L("NULL::BOOL").As("is_smoothing_pool"))
+			}
+
 			// We don't have access to exec_block_number and status for a WHERE without wrapping the query so if we sort by those get all the data
 			if colSort.Column == enums.VDBBlocksColumns.Proposer || colSort.Column == enums.VDBBlocksColumns.Slot {
 				scheduledDs = scheduledDs.
@@ -311,16 +328,17 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	// -------------------------------------
 	// Execute query
 	var proposals []struct {
-		Proposer     t.VDBValidator      `db:"validator_index"`
-		Group        uint64              `db:"group_id"`
-		Epoch        uint64              `db:"epoch"`
-		Slot         uint64              `db:"slot"`
-		Status       uint64              `db:"status"`
-		Block        sql.NullInt64       `db:"exec_block_number"`
-		FeeRecipient []byte              `db:"fee_recipient"`
-		ElReward     decimal.NullDecimal `db:"el_reward"`
-		ClReward     decimal.NullDecimal `db:"cl_reward"`
-		GraffitiText sql.NullString      `db:"graffiti_text"`
+		Proposer        t.VDBValidator      `db:"validator_index"`
+		Group           uint64              `db:"group_id"`
+		Epoch           uint64              `db:"epoch"`
+		Slot            uint64              `db:"slot"`
+		Status          uint64              `db:"status"`
+		Block           sql.NullInt64       `db:"exec_block_number"`
+		FeeRecipient    []byte              `db:"fee_recipient"`
+		ElReward        decimal.NullDecimal `db:"el_reward"`
+		ClReward        decimal.NullDecimal `db:"cl_reward"`
+		GraffitiText    sql.NullString      `db:"graffiti_text"`
+		IsSmoothingPool sql.NullBool        `db:"is_smoothing_pool"`
 
 		// for cursor only
 		Reward decimal.Decimal
@@ -355,7 +373,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		slots[i] = proposal.Slot
 	}
 
-	// retrieve the cl rewards, source it from clickhouse for mainnet and from postgres for holsky
+	// retrieve the cl rewards, source it from clickhouse for mainnet and from postgres for holesky
 	// TODO: harmonize this @invis
 	clRewardsData := []struct {
 		Slot     uint64              `db:"slot"`
@@ -448,9 +466,19 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				TraceIdx: -1,
 			})
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			if rpInfos != nil && protocolModes.RocketPool && !(proposal.IsSmoothingPool.Valid && proposal.IsSmoothingPool.Bool) {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok {
+					reward.El = reward.El.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
+			}
 		}
 		if clReward, ok := clRewards[proposal.Slot]; ok && clReward.Valid {
 			reward.Cl = clReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			if rpInfos != nil && protocolModes.RocketPool {
+				if rpValidator, ok := rpInfos.Minipool[proposal.Proposer]; ok {
+					reward.Cl = reward.Cl.Mul(d.getRocketPoolOperatorFactor(rpValidator))
+				}
+			}
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward
