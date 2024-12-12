@@ -25,6 +25,10 @@ var (
 		Name: "version",
 		Help: "Gauge with version-string in label",
 	}, []string{"version"})
+	DatabaseVersion = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "db_version",
+		Help: "Gauge with database and version in labels",
+	}, []string{"brand", "name", "version"})
 	HttpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Total number of requests by path, method and status_code.",
