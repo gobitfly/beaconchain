@@ -17,8 +17,9 @@ const {
   fullOnEmptyBase,
   hideEmptyValue,
   maximumFractionDigits = 2,
-  minimumFractionDigits = 0,
+  minimumFractionDigits = 2,
   percent,
+  trailingZeroDisplay = 'stripIfInteger',
   value,
 }
  = defineProps<{
@@ -29,9 +30,10 @@ const {
    comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
    fullOnEmptyBase?: boolean,
    hideEmptyValue?: boolean,
-   maximumFractionDigits?: number,
-   minimumFractionDigits?: number,
+   maximumFractionDigits?: Intl.NumberFormatOptions['maximumFractionDigits'],
+   minimumFractionDigits?: Intl.NumberFormatOptions['minimumFractionDigits'],
    percent?: number,
+   trailingZeroDisplay?: Intl.NumberFormatOptions['trailingZeroDisplay'],
    value?: number,
  }>()
 
@@ -60,6 +62,7 @@ const data = computed(() => {
     maximumFractionDigits,
     minimumFractionDigits,
     style: 'unit',
+    trailingZeroDisplay,
     unit: 'percent',
   }).format(localPercent)
   label = addPositiveSign ? `+${label}` : label
