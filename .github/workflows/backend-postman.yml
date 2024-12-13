@@ -32,15 +32,9 @@ jobs:
       run: |
         nohup go run cmd/main.go api -config="${CONFIG_PATH}" > backend.log 2>&1 &
         sleep 60 # Wait for the backend to initialize
-    - name: Run Postman Collection
-      run: |
         newman run postman/api.json \
           --reporters cli,junit \
           --reporter-junit-export results.xml
-
-    - name: Stop Backend
-      if: always()
-      run: |
         pkill -f "go run cmd/main.go"
 
     - name: Upload Newman JUnit Report
