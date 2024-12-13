@@ -48,12 +48,12 @@ const data = computed(() => {
         :value="props.failed"
       />
     </span>
+
     <BcFormatPercent
       v-else
       class="percent"
       :base="data.sum"
       :value="props.success"
-      :fixed="undefined"
       :color-break-point="80"
       :full-on-empty-base="true"
     />
