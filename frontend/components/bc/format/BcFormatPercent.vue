@@ -8,35 +8,46 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { CompareResult } from '~/types/value'
 
-interface Props {
-  addPositiveSign?: boolean,
-  base?: number,
+const {
+  addPositiveSign,
+  base,
   // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
-  colorBreakPoint?: number,
-  comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
-  fixed?: number,
-  fullOnEmptyBase?: boolean,
-  hideEmptyValue?: boolean,
-  percent?: number,
-  precision?: number,
-  value?: number,
+  colorBreakPoint,
+  comparePercent,
+  fullOnEmptyBase,
+  hideEmptyValue,
+  maximumFractionDigits = 2,
+  minimumFractionDigits = 0,
+  percent,
+  value,
 }
-
-const props = defineProps<Props>()
+ = defineProps<{
+   addPositiveSign?: boolean,
+   base?: number,
+   // if set then the percentage will be colored accordingly. Do not use it in combination with comparePercent
+   colorBreakPoint?: number,
+   comparePercent?: number, // if set it adds the compare sign in front and colors the values accordingly
+   fullOnEmptyBase?: boolean,
+   hideEmptyValue?: boolean,
+   maximumFractionDigits?: number,
+   minimumFractionDigits?: number,
+   percent?: number,
+   value?: number,
+ }>()
 
 const data = computed(() => {
   let label: null | string = null
   let compareResult: CompareResult | null = null
   let className = ''
-  if (props.base === 0 && props.fullOnEmptyBase) {
+  if (base === 0 && fullOnEmptyBase) {
     return {
       className: 'text-positive',
       label: '100%',
     }
   }
   let leadingIcon: IconDefinition | undefined
-  if (props.percent === undefined && !props.base) {
-    if (!props.hideEmptyValue) {
+  if (percent === undefined && !base) {
+    if (!hideEmptyValue) {
       label = '0%'
     }
     return {
@@ -44,21 +55,23 @@ const data = computed(() => {
       label,
     }
   }
-  const percent = props.percent ?? calculatePercent(props.value, props.base)
-  const config = {
-    addPositiveSign: props.addPositiveSign,
-    fixed: props.fixed ?? 2,
-    precision: props.precision ?? 2,
-  }
-  label = formatPercent(percent, config)
-  if (props.comparePercent !== undefined) {
+  const localPercent = percent ?? calculatePercent(value, base)
+  label = new Intl.NumberFormat('en', {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'unit',
+    unit: 'percent',
+  }).format(localPercent)
+  label = addPositiveSign ? `+${label}` : label
+
+  if (comparePercent !== undefined) {
     const thresholdToDifferenciateUnderperformerAndOverperformer = 0.25
-    if (Math.abs(props.comparePercent - percent) <= thresholdToDifferenciateUnderperformerAndOverperformer) {
+    if (Math.abs(comparePercent - localPercent) <= thresholdToDifferenciateUnderperformerAndOverperformer) {
       className = 'text-equal'
       leadingIcon = faArrowsLeftRight
       compareResult = 'equal'
     }
-    else if (percent > props.comparePercent) {
+    else if (localPercent > comparePercent) {
       className = 'text-positive'
       leadingIcon = faArrowUp
       compareResult = 'higher'
@@ -69,10 +82,10 @@ const data = computed(() => {
       compareResult = 'lower'
     }
   }
-  else if (props.colorBreakPoint) {
+  else if (colorBreakPoint) {
     if (
-      (props.base === 0 && percent === 0)
-      || percent >= props.colorBreakPoint
+      (base === 0 && localPercent === 0)
+      || localPercent >= colorBreakPoint
     ) {
       className = 'text-positive'
     }

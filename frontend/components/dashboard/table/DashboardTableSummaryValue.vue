@@ -322,7 +322,7 @@ const openValidatorModal = () => {
         <BcFormatPercent
           class="space_before"
           :percent="data.luck.proposal.percent"
-          :precision="0"
+          :maximum-fraction-digits="0"
         />
       </span>
       <span> | </span>
@@ -331,7 +331,7 @@ const openValidatorModal = () => {
         <BcFormatPercent
           class="space_before"
           :percent="data.luck.sync.percent"
-          :precision="0"
+          :maximum-fraction-digits="0"
         />
       </span>
     </span>
