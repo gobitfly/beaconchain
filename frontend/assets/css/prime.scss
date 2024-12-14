@@ -42,7 +42,7 @@ button.p-button,
     border-color: var(--button-color-disabled);
   }
 
-  &:not(:disabled):not([data-data-p-severity="secondary"]):hover {
+  &:not(:disabled):not([data-p-severity="secondary"]):hover {
     border: 1px solid var(--button-color-hover);
     background: var(--button-color-hover);
   }
