@@ -493,7 +493,7 @@ func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webho
 	if err != nil {
 		return err
 	}
-	if count > 10 {
+	if count > 100 {
 		return fmt.Errorf("rate limit has been exceeded")
 	}
 
