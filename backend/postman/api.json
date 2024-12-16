@@ -1,0 +1,1746 @@
+{
+	"info": {
+		"_postman_id": "6bc43f99-e529-4c03-b65d-0822bdc7ea46",
+		"name": "Dashboard APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "36926997"
+	},
+	"item": [
+		{
+			"name": "Rewards",
+			"item": [
+				{
+					"name": "GetValidatorDashboardRewards",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"/*",
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"data\": [",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 11,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 50",
+									"            },",
+									"            \"group_id\": 13,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"1001000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 14,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 0",
+									"            },",
+									"            \"group_id\": 16,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"-10422000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 17,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 18,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 19,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"11024000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 20,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99221,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 21,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12424000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 88.88888888888889",
+									"            },",
+									"            \"group_id\": -1,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"183474000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 50",
+									"            },",
+									"            \"group_id\": 1,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"1223000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 2,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 3,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"6434000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 5,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 6,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 7,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 8,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 9,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 10,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"19302000000000\"",
+									"            }",
+									"        },",
+									"        {",
+									"            \"epoch\": 99222,",
+									"            \"duty\": {",
+									"                \"attestation\": 100",
+									"            },",
+									"            \"group_id\": 11,",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"12868000000000\"",
+									"            }",
+									"        }",
+									"    ]",
+									"}",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Track mismatched fields",
+									"let mismatches = [];",
+									"",
+									"// Helper function to compare objects recursively",
+									"function compareObjects(expected, actual, path) {",
+									"    Object.keys(expected).forEach(key => {",
+									"        const currentPath = path ? `${path}.${key}` : key;",
+									"",
+									"        if (typeof expected[key] === 'object' && !Array.isArray(expected[key])) {",
+									"            compareObjects(expected[key], actual[key], currentPath); // Recursive check for nested objects",
+									"        } else if (expected[key] !== actual[key]) {",
+									"            mismatches.push(`Mismatch at ${currentPath}: expected ${expected[key]}, got ${actual[key]}`);",
+									"        }",
+									"    });",
+									"}",
+									"",
+									"// Validate `data` array length",
+									"if (expectedOutput.data.length !== actualResponse.data.length) {",
+									"    mismatches.push(`Data array length mismatch: expected ${expectedOutput.data.length}, got ${actualResponse.data.length}`);",
+									"} else {",
+									"    // Validate each object in the `data` array",
+									"    actualResponse.data.forEach((item, index) => {",
+									"        compareObjects(expectedOutput.data[index], item, `data[${index}]`);",
+									"    });",
+									"}",
+									"",
+									"// Assert the final test result",
+									"pm.test(\"Response matches the expected output\", function () {",
+									"    pm.expect(mismatches.length).to.eql(0, mismatches.join(\"\\n\"));",
+									"});",
+									"*/"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/rewards",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"rewards"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardGroupRewards epoch 51290",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"data\": {",
+									"        \"attestations_source\": {",
+									"            \"status_count\": {",
+									"                \"success\": 226233,",
+									"                \"failed\": 18102",
+									"            },",
+									"            \"income\": \"365913975000000000\"",
+									"        },",
+									"        \"attestations_target\": {",
+									"            \"status_count\": {",
+									"                \"success\": 229507,",
+									"                \"failed\": 14828",
+									"            },",
+									"            \"income\": \"712369485000000000\"",
+									"        },",
+									"        \"attestations_head\": {",
+									"            \"status_count\": {",
+									"                \"success\": 203895,",
+									"                \"failed\": 40440",
+									"            },",
+									"            \"income\": \"326229850000000000\"",
+									"        },",
+									"        \"sync\": {",
+									"            \"status_count\": {",
+									"                \"success\": 2207,",
+									"                \"failed\": 253",
+									"            },",
+									"            \"income\": \"54524416000000000\"",
+									"        },",
+									"        \"slashing\": {",
+									"            \"status_count\": {",
+									"                \"success\": 0,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"inactivity\": {",
+									"            \"status_count\": {",
+									"                \"success\": 250000,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"proposal\": {",
+									"            \"status_count\": {",
+									"                \"success\": 5,",
+									"                \"failed\": 1",
+									"            },",
+									"            \"income\": \"329456744151689806\"",
+									"        },",
+									"        \"proposal_el_reward\": \"63242713151689806\",",
+									"        \"proposal_cl_att_inc_reward\": \"256591827000000000\",",
+									"        \"proposal_cl_sync_inc_reward\": \"9622204000000000\",",
+									"        \"proposal_cl_slashing_inc_reward\": \"0\"",
+									"    }",
+									"};",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Consolidated test for full validation",
+									"pm.test(\"Validate response matches the expected output in detail\", function () {",
+									"    let mismatches = [];",
+									"",
+									"    // Helper function to compare objects recursively",
+									"    function compareObjects(expected, actual, path = \"\") {",
+									"        for (const key in expected) {",
+									"            const currentPath = path ? `${path}.${key}` : key;",
+									"",
+									"            if (expected[key] && typeof expected[key] === \"object\" && !Array.isArray(expected[key])) {",
+									"                compareObjects(expected[key], actual[key], currentPath); // Recursive check for nested objects",
+									"            } else if (expected[key] !== actual[key]) {",
+									"                mismatches.push(`Mismatch at ${currentPath}: expected ${expected[key]}, got ${actual[key]}`);",
+									"            }",
+									"        }",
+									"    }",
+									"",
+									"    // Compare `data` section",
+									"    compareObjects(expectedOutput.data, actualResponse.data);",
+									"",
+									"    // Assert the results",
+									"    pm.expect(mismatches.length).to.eql(0, mismatches.join(\"\\n\"));",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/groups/-1/rewards/51290",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"groups",
+								"-1",
+								"rewards",
+								"51290"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardGroupRewards epoch 98759",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"data\": {",
+									"        \"attestations_source\": {",
+									"            \"status_count\": {",
+									"                \"success\": 224754,",
+									"                \"failed\": 15793",
+									"            },",
+									"            \"income\": \"351223146000000000\"",
+									"        },",
+									"        \"attestations_target\": {",
+									"            \"status_count\": {",
+									"                \"success\": 227229,",
+									"                \"failed\": 13318",
+									"            },",
+									"            \"income\": \"678293597000000000\"",
+									"        },",
+									"        \"attestations_head\": {",
+									"            \"status_count\": {",
+									"                \"success\": 204006,",
+									"                \"failed\": 36541",
+									"            },",
+									"            \"income\": \"313145658000000000\"",
+									"        },",
+									"        \"sync\": {",
+									"            \"status_count\": {",
+									"                \"success\": 1486,",
+									"                \"failed\": 194",
+									"            },",
+									"            \"income\": \"37287120000000000\"",
+									"        },",
+									"        \"slashing\": {",
+									"            \"status_count\": {",
+									"                \"success\": 0,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"inactivity\": {",
+									"            \"status_count\": {",
+									"                \"success\": 250000,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"proposal\": {",
+									"            \"status_count\": {",
+									"                \"success\": 3,",
+									"                \"failed\": 1",
+									"            },",
+									"            \"income\": \"146124291052498242\"",
+									"        },",
+									"        \"proposal_el_reward\": \"6400698052498242\",",
+									"        \"proposal_cl_att_inc_reward\": \"135622203000000000\",",
+									"        \"proposal_cl_sync_inc_reward\": \"4101390000000000\",",
+									"        \"proposal_cl_slashing_inc_reward\": \"0\"",
+									"    }",
+									"};",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Consolidated test for full validation",
+									"pm.test(\"Validate response matches the expected output in detail\", function () {",
+									"    let mismatches = [];",
+									"",
+									"    // Helper function to compare objects recursively",
+									"    function compareObjects(expected, actual, path = \"\") {",
+									"        for (const key in expected) {",
+									"            const currentPath = path ? `${path}.${key}` : key;",
+									"",
+									"            if (expected[key] && typeof expected[key] === \"object\" && !Array.isArray(expected[key])) {",
+									"                compareObjects(expected[key], actual[key], currentPath); // Recursive check for nested objects",
+									"            } else if (expected[key] !== actual[key]) {",
+									"                mismatches.push(`Mismatch at ${currentPath}: expected ${expected[key]}, got ${actual[key]}`);",
+									"            }",
+									"        }",
+									"    }",
+									"",
+									"    // Compare `data` section",
+									"    compareObjects(expectedOutput.data, actualResponse.data);",
+									"",
+									"    // Assert the results",
+									"    pm.expect(mismatches.length).to.eql(0, mismatches.join(\"\\n\"));",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/groups/-1/rewards/98759",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"groups",
+								"-1",
+								"rewards",
+								"98759"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardGroupRewards epoch 90992",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"data\": {",
+									"        \"attestations_source\": {",
+									"            \"status_count\": {",
+									"                \"success\": 224754,",
+									"                \"failed\": 15793",
+									"            },",
+									"            \"income\": \"351223146000000000\"",
+									"        },",
+									"        \"attestations_target\": {",
+									"            \"status_count\": {",
+									"                \"success\": 227229,",
+									"                \"failed\": 13318",
+									"            },",
+									"            \"income\": \"678293597000000000\"",
+									"        },",
+									"        \"attestations_head\": {",
+									"            \"status_count\": {",
+									"                \"success\": 204006,",
+									"                \"failed\": 36541",
+									"            },",
+									"            \"income\": \"313145658000000000\"",
+									"        },",
+									"        \"sync\": {",
+									"            \"status_count\": {",
+									"                \"success\": 1486,",
+									"                \"failed\": 194",
+									"            },",
+									"            \"income\": \"37287120000000000\"",
+									"        },",
+									"        \"slashing\": {",
+									"            \"status_count\": {",
+									"                \"success\": 0,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"inactivity\": {",
+									"            \"status_count\": {",
+									"                \"success\": 250000,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"proposal\": {",
+									"            \"status_count\": {",
+									"                \"success\": 3,",
+									"                \"failed\": 1",
+									"            },",
+									"            \"income\": \"146124291052498242\"",
+									"        },",
+									"        \"proposal_el_reward\": \"6400698052498242\",",
+									"        \"proposal_cl_att_inc_reward\": \"135622203000000000\",",
+									"        \"proposal_cl_sync_inc_reward\": \"4101390000000000\",",
+									"        \"proposal_cl_slashing_inc_reward\": \"0\"",
+									"    }",
+									"};",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Consolidated test for full validation",
+									"pm.test(\"Validate response matches the expected output in detail\", function () {",
+									"    let mismatches = [];",
+									"",
+									"    // Helper function to compare objects recursively",
+									"    function compareObjects(expected, actual, path = \"\") {",
+									"        for (const key in expected) {",
+									"            const currentPath = path ? `${path}.${key}` : key;",
+									"",
+									"            if (expected[key] && typeof expected[key] === \"object\" && !Array.isArray(expected[key])) {",
+									"                compareObjects(expected[key], actual[key], currentPath); // Recursive check for nested objects",
+									"            } else if (expected[key] !== actual[key]) {",
+									"                mismatches.push(`Mismatch at ${currentPath}: expected ${expected[key]}, got ${actual[key]}`);",
+									"            }",
+									"        }",
+									"    }",
+									"",
+									"    // Compare `data` section",
+									"    compareObjects(expectedOutput.data, actualResponse.data);",
+									"",
+									"    // Assert the results",
+									"    pm.expect(mismatches.length).to.eql(0, mismatches.join(\"\\n\"));",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/groups/-1/rewards/98759",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"groups",
+								"-1",
+								"rewards",
+								"98759"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardGroupRewards slashing",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"data\": {",
+									"        \"attestations_source\": {",
+									"            \"status_count\": {",
+									"                \"success\": 228710,",
+									"                \"failed\": 12347",
+									"            },",
+									"            \"income\": \"385855548000000000\"",
+									"        },",
+									"        \"attestations_target\": {",
+									"            \"status_count\": {",
+									"                \"success\": 229493,",
+									"                \"failed\": 11564",
+									"            },",
+									"            \"income\": \"724483862000000000\"",
+									"        },",
+									"        \"attestations_head\": {",
+									"            \"status_count\": {",
+									"                \"success\": 220468,",
+									"                \"failed\": 20589",
+									"            },",
+									"            \"income\": \"380964816000000000\"",
+									"        },",
+									"        \"sync\": {",
+									"            \"status_count\": {",
+									"                \"success\": 1893,",
+									"                \"failed\": 251",
+									"            },",
+									"            \"income\": \"46432476000000000\"",
+									"        },",
+									"        \"slashing\": {",
+									"            \"status_count\": {",
+									"                \"success\": 8,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"500000000000000000\"",
+									"        },",
+									"        \"inactivity\": {",
+									"            \"status_count\": {",
+									"                \"success\": 250000,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"0\"",
+									"        },",
+									"        \"proposal\": {",
+									"            \"status_count\": {",
+									"                \"success\": 4,",
+									"                \"failed\": 0",
+									"            },",
+									"            \"income\": \"729546193345713392\"",
+									"        },",
+									"        \"proposal_el_reward\": \"10241546345713392\",",
+									"        \"proposal_cl_att_inc_reward\": \"211509377000000000\",",
+									"        \"proposal_cl_sync_inc_reward\": \"7795270000000000\",",
+									"        \"proposal_cl_slashing_inc_reward\": \"500000000000000000\"",
+									"    }",
+									"};",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Consolidated test for full validation",
+									"pm.test(\"Validate response matches the expected output in detail\", function () {",
+									"    let mismatches = [];",
+									"",
+									"    // Helper function to compare objects recursively",
+									"    function compareObjects(expected, actual, path = \"\") {",
+									"        for (const key in expected) {",
+									"            const currentPath = path ? `${path}.${key}` : key;",
+									"",
+									"            if (expected[key] && typeof expected[key] === \"object\" && !Array.isArray(expected[key])) {",
+									"                compareObjects(expected[key], actual[key], currentPath); // Recursive check for nested objects",
+									"            } else if (expected[key] !== actual[key]) {",
+									"                mismatches.push(`Mismatch at ${currentPath}: expected ${expected[key]}, got ${actual[key]}`);",
+									"            }",
+									"        }",
+									"    }",
+									"",
+									"    // Compare `data` section",
+									"    compareObjects(expectedOutput.data, actualResponse.data);",
+									"",
+									"    // Assert the results",
+									"    pm.expect(mismatches.length).to.eql(0, mismatches.join(\"\\n\"));",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/groups/-1/rewards/71815",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"groups",
+								"-1",
+								"rewards",
+								"71815"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardRewardsChart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/rewards-chart",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"rewards-chart"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardDuties",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected output",
+									"const expectedOutput = {",
+									"    \"paging\": {",
+									"        \"next_cursor\": \"eyJyIjpmYWxzZSwiSW5kZXgiOjU1LCJSZXdhcmQiOiI1MDk3MDAwMDAwMDAwIn0\"",
+									"    },",
+									"    \"data\": [",
+									"        {",
+									"            \"validator\": 1,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"failed\",",
+									"                    \"income\": \"0\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 7,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 13,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 19,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 25,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 31,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 37,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"failed\",",
+									"                    \"income\": \"0\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 43,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"failed\",",
+									"                    \"income\": \"0\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 49,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1561000000000\"",
+									"                }",
+									"            }",
+									"        },",
+									"        {",
+									"            \"validator\": 55,",
+									"            \"duties\": {",
+									"                \"attestation_source\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"1776000000000\"",
+									"                },",
+									"                \"attestation_target\": {",
+									"                    \"status\": \"success\",",
+									"                    \"income\": \"3321000000000\"",
+									"                },",
+									"                \"attestation_head\": {",
+									"                    \"status\": \"failed\",",
+									"                    \"income\": \"0\"",
+									"                }",
+									"            }",
+									"        }",
+									"    ]",
+									"};",
+									"",
+									"// Parse the actual response",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Compare the actual response with the expected output",
+									"pm.test(\"Response matches the expected output\", function () {",
+									"    pm.expect(actualResponse).to.eql(expectedOutput);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/duties/50150",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"duties",
+								"50150"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Summary",
+			"item": [
+				{
+					"name": "GetValidatorDashboardSummary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/summary?period=all_time",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"summary"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "all_time"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardGroupSummary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/groups/-1/summary?period=all_time",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"groups",
+								"-1",
+								"summary"
+							],
+							"query": [
+								{
+									"key": "period",
+									"value": "all_time"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardSummaryChart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/summary-chart",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"summary-chart"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardSummary",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Expected response object",
+									"const expectedResponse = {",
+									"    \"data\": [",
+									"        {",
+									"            \"category\": \"deposited\",",
+									"            \"validators\": []",
+									"        },",
+									"        {",
+									"            \"category\": \"online\",",
+									"            \"validators\": [",
+									"                { \"index\": 125001 },",
+									"                { \"index\": 125050 },",
+									"                { \"index\": 125100 },",
+									"                { \"index\": 125101 },",
+									"                { \"index\": 125111 },",
+									"                { \"index\": 125133 },",
+									"                { \"index\": 125390 },",
+									"                { \"index\": 125391 },",
+									"                { \"index\": 125479 },",
+									"                { \"index\": 125498 },",
+									"                { \"index\": 155200 },",
+									"                { \"index\": 155205 },",
+									"                { \"index\": 155282 },",
+									"                { \"index\": 155292 },",
+									"                { \"index\": 155390 },",
+									"                { \"index\": 845424 },",
+									"                { \"index\": 845429 },",
+									"                { \"index\": 845433 },",
+									"                { \"index\": 846345 },",
+									"                { \"index\": 846554 },",
+									"                { \"index\": 846555 },",
+									"                { \"index\": 846575 },",
+									"                { \"index\": 846578 },",
+									"                { \"index\": 846579 },",
+									"                { \"index\": 846600 },",
+									"                { \"index\": 846601 },",
+									"                { \"index\": 855275 },",
+									"                { \"index\": 855280 },",
+									"                { \"index\": 855284 },",
+									"                { \"index\": 1552820 },",
+									"                { \"index\": 1552821 },",
+									"                { \"index\": 1628499 }",
+									"            ]",
+									"        },",
+									"        {",
+									"            \"category\": \"offline\",",
+									"            \"validators\": [",
+									"                { \"index\": 1553821 },",
+									"                { \"index\": 1553900 },",
+									"                { \"index\": 1553921 },",
+									"                { \"index\": 1609411 }",
+									"            ]",
+									"        },",
+									"        {",
+									"            \"category\": \"slashing\",",
+									"            \"validators\": []",
+									"        },",
+									"        {",
+									"            \"category\": \"slashed\",",
+									"            \"validators\": []",
+									"        },",
+									"        {",
+									"            \"category\": \"exited\",",
+									"            \"validators\": [",
+									"                { \"index\": 1461049 },",
+									"                { \"index\": 1461050 },",
+									"                { \"index\": 1461080 },",
+									"                { \"index\": 1461121 },",
+									"                { \"index\": 1461187 },",
+									"                { \"index\": 1461204 },",
+									"                { \"index\": 1461210 },",
+									"                { \"index\": 1463261 },",
+									"                { \"index\": 1558208 }",
+									"            ]",
+									"        },",
+									"        {",
+									"            \"category\": \"withdrawn\",",
+									"            \"validators\": [",
+									"                { \"index\": 1461049 },",
+									"                { \"index\": 1461050 },",
+									"                { \"index\": 1461080 },",
+									"                { \"index\": 1461121 },",
+									"                { \"index\": 1461187 },",
+									"                { \"index\": 1461204 },",
+									"                { \"index\": 1461210 },",
+									"                { \"index\": 1463261 },",
+									"                { \"index\": 1558208 }",
+									"            ]",
+									"        },",
+									"        {",
+									"            \"category\": \"pending\",",
+									"            \"validators\": []",
+									"        },",
+									"        {",
+									"            \"category\": \"exiting\",",
+									"            \"validators\": []",
+									"        },",
+									"        {",
+									"            \"category\": \"withdrawing\",",
+									"            \"validators\": []",
+									"        }",
+									"    ]",
+									"};",
+									"",
+									"// Parse the actual response body",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Test if the actual response matches the expected response",
+									"pm.test(\"Response matches expected JSON\", function () {",
+									"    pm.expect(actualResponse).to.eql(expectedResponse);",
+									"});"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/summary/validators?group_id=-1&duty=&period=all_time",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"summary",
+								"validators"
+							],
+							"query": [
+								{
+									"key": "group_id",
+									"value": "-1"
+								},
+								{
+									"key": "duty",
+									"value": ""
+								},
+								{
+									"key": "period",
+									"value": "all_time"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Validator",
+			"item": [
+				{
+					"name": "GetValidatorDashboardValidators",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/validators",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"validators"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Blocks",
+			"item": [
+				{
+					"name": "GetValidatorDashboardBlocks",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Define the expected response structure",
+									"const expectedResponse = {",
+									"    \"paging\": {",
+									"        \"next_cursor\": \"eyJyIjpmYWxzZSwiUHJvcG9zZXIiOjE0MzY3MjUsIlNsb3QiOjYwLCJCbG9jayI6eyJJbnQ2NCI6NDEsIlZhbGlkIjp0cnVlfSwiU3RhdHVzIjoxLCJSZXdhcmQiOiIwLjA4OTIwMjQzIn0\"",
+									"    },",
+									"    \"data\": [",
+									"        {",
+									"            \"proposer\": 921241,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 1,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 228247,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 6,",
+									"            \"block\": 3,",
+									"            \"status\": \"success\",",
+									"            \"reward_recipient\": {",
+									"                \"hash\": \"0xf97e180c050e5ab072211ad2c213eb5aee4df134\",",
+									"                \"is_contract\": false",
+									"            },",
+									"            \"reward\": {",
+									"                \"el\": \"2352467078125000\",",
+									"                \"cl\": \"43019951000000000\"",
+									"            },",
+									"            \"graffiti\": \"EF-lighthouse-geth\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1048297,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 7,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1222963,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 10,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 424627,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 12,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1208071,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 0,",
+									"            \"slot\": 29,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 659107,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 1,",
+									"            \"slot\": 43,",
+									"            \"block\": 29,",
+									"            \"status\": \"success\",",
+									"            \"reward_recipient\": {",
+									"                \"hash\": \"0xc6e2459991bfe27cca6d86722f35da23a1e4cb97\",",
+									"                \"is_contract\": false",
+									"            },",
+									"            \"reward\": {",
+									"                \"el\": \"0\",",
+									"                \"cl\": \"37287852000000000\"",
+									"            },",
+									"            \"graffiti\": \"Lighthouse/v4.5.0-441fc16\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1011571,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 1,",
+									"            \"slot\": 45,",
+									"            \"status\": \"missed\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1200037,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 1,",
+									"            \"slot\": 48,",
+									"            \"block\": 33,",
+									"            \"status\": \"success\",",
+									"            \"reward_recipient\": {",
+									"                \"hash\": \"0x0c10000000756bd1d14f9c837f022929a97bda45\",",
+									"                \"is_contract\": false",
+									"            },",
+									"            \"reward\": {",
+									"                \"el\": \"89097310000000000\",",
+									"                \"cl\": \"31876150000000000\"",
+									"            },",
+									"            \"graffiti\": \"\\\"prysm-k8s-holesky\\\"\"",
+									"        },",
+									"        {",
+									"            \"proposer\": 1436725,",
+									"            \"group_id\": 0,",
+									"            \"epoch\": 1,",
+									"            \"slot\": 60,",
+									"            \"block\": 41,",
+									"            \"status\": \"success\",",
+									"            \"reward_recipient\": {",
+									"                \"hash\": \"0x2b1d879b5e102e60166202de79537b48e2f18a42\",",
+									"                \"is_contract\": false",
+									"            },",
+									"            \"reward\": {",
+									"                \"el\": \"89202430000000000\",",
+									"                \"cl\": \"61095954000000000\"",
+									"            },",
+									"            \"graffiti\": \"Block by Stakely-114\"",
+									"        }",
+									"    ]",
+									"};",
+									"",
+									"// Parse the actual response body",
+									"const actualResponse = pm.response.json();",
+									"",
+									"// Compare the actual response to the expected structure",
+									"pm.test(\"Response matches expected JSON\", function () {",
+									"    pm.expect(actualResponse).to.eql(expectedResponse);",
+									"});",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/blocks",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"blocks"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SlotVitz",
+			"item": [
+				{
+					"name": "GetValidatorDashboardSlotViz",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/slot-viz",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"slot-viz"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "LatestState",
+			"item": [
+				{
+					"name": "LatestState",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/latest-state",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"latest-state"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Deposits",
+			"item": [
+				{
+					"name": "GetValidatorDashboardElDeposits",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/execution-layer-deposits",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"execution-layer-deposits"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardTotalElDeposits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/total-execution-layer-deposits",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"total-execution-layer-deposits"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardClDeposits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/consensus-layer-deposits",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"consensus-layer-deposits"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardTotalClDeposits",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5001/total-consensus-layer-deposits",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5001",
+								"total-consensus-layer-deposits"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Withdrawls",
+			"item": [
+				{
+					"name": "GetValidatorDashboardWithdrawals",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/withdrawals?sort=slot:asc&limit=10",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"withdrawals"
+							],
+							"query": [
+								{
+									"key": "sort",
+									"value": "slot:asc"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetValidatorDashboardTotalWithdrawals",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/i/validator-dashboards/5014/total-withdrawals",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8080",
+							"path": [
+								"api",
+								"i",
+								"validator-dashboards",
+								"5014",
+								"total-withdrawals"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
