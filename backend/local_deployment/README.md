@@ -33,8 +33,8 @@ sudo apt install kurtosis-cli
 You will find the last version of Go [on this page](https://go.dev/doc/install). The commands that you will type to install it will look like this:
 
 ```
-wget https://go.dev/dl/go1.21.4.linux-amd64.tar.gz
-sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.21.4.linux-amd64.tar.gz
+wget https://go.dev/dl/go1.23.0.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.23.0.linux-amd64.tar.gz
 ```
 Add the golang binaries to the path by adding the following lines to your _~/.profile_ file and then logout & login again.
 ```
@@ -60,7 +60,7 @@ make all
 # Start postgres, redis, little_bigtable & the eth test network
 ```
 cd ~/eth2-beaconchain-explorer/backend/local_deployment/
-kurtosis clean -a && kurtosis run --enclave my-testnet . "$(cat network-params.json)"
+kurtosis clean -a && kurtosis run --image-download always --enclave my-testnet . "$(cat network-params.json)"
 ```
 Later in your developer life (after having started Kurtosis and stopped it a few times), if you encounter an error at this step, you might need to clean up bugged cache files from previous runs that Kurtosis or Docker left behind.
 The `./stop` script [in this repository](https://github.com/thib-wien/scripts-localnetworkandexplorer) gathers cleaning commands which worked for their author (it might save you hours of browsing Stack Overflow and GitHub's issues).
@@ -75,7 +75,7 @@ This will generate a _config.yml_ to be used by the explorer and then create the
 # Start the explorer modules
 ```
 cd ~/eth2-beaconchain-explorer/local_deployment/
-docker compose up -d
+docker compose up -d --pull always
 ```
 You can start / stop the exporter submodules using `docker compose`
 
@@ -88,11 +88,16 @@ Exiting individual validators can be done using the provided `exit_validator.sh`
 bash exit_validators.sh -i validator_index -m "memonic" -b "http://bn_api_host:bn_api_port"
 ```
 
+# Deposits
+Install _ethereal_:
+```
+go install github.com/wealdtech/ethereal/v2@latest
+```
+
 # Enabling withdrawals
 First, install _JQ_ and _eth2-val-tools_:
 ```
 sudo apt install jq
-go get github.com/protolambda/eth2-val-tools@master
 go install github.com/protolambda/eth2-val-tools@master
 ```
 To enable withdrawals for specific validators in your local network, we provide the script `add_withdrawal_address.sh`. It creates and submits a BLS-to-execution-layer-address-change message.

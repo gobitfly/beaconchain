@@ -21,5 +21,5 @@ TTL toDateTime(expires_at + toIntervalMonth(1))
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE status_reports IF EXISTS
+DROP TABLE IF EXISTS status_reports;
 -- +goose StatementEnd

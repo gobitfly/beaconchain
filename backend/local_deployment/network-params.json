@@ -20,12 +20,14 @@
       "network_id": "3151908",
       "deposit_contract_address": "0x4242424242424242424242424242424242424242",
       "seconds_per_slot": 12,
+      "eth1_follow_distance": 16,
       "genesis_delay": 10,
-      "capella_fork_epoch": 0,
       "deneb_fork_epoch": 0,
-      "electra_fork_epoch": 999999999
+      "electra_fork_epoch": 999999999,
+      "prefunded_accounts": '{
+        "0x8943545177806ED17B9F23F0a21ee5948eCaa776": {"balance": "10000ETH"},
+        "0xE25583099BA105D9ec0A67f5Ae86D90e50036425": {"balance": "10000ETH"}
+      }'
     },
-    "global_log_level": "info",
-    "start_tx_spammer": true,
-    "start_blob_spammer": false
+    "global_log_level": "info"
   }
