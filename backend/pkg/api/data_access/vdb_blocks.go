@@ -381,7 +381,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			From(goqu.L("mainnet.validator_proposal_rewards_slot")).
 			Select(
 				goqu.C("slot"),
-				goqu.L("attestations_reward / 1e9 + sync_aggregate_reward / 1e9 + slasher_reward / 1e9 AS cl_reward"),
+				goqu.L("attestations_reward + sync_aggregate_reward + slasher_reward AS cl_reward"),
 			).Where(goqu.C("slot").In(slots))
 		clRewardsQuerySql, args, err := clRewardsQuery.Prepared(true).ToSQL()
 		if err != nil {
