@@ -366,7 +366,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			From(goqu.T("consensus_payloads")).
 			Select(
 				goqu.C("slot"),
-				goqu.L("cl_attestations_reward / 1e9 + cl_sync_aggregate_reward / 1e9 + cl_slashing_inclusion_reward / 1e9 AS cl_reward"),
+				goqu.L("cl_attestations_reward + cl_sync_aggregate_reward + cl_slashing_inclusion_reward AS cl_reward"),
 			).Where(goqu.C("slot").In(slots))
 		clRewardsQuerySql, args, err := clRewardsQuery.Prepared(true).ToSQL()
 		if err != nil {
@@ -450,7 +450,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		if clReward, ok := clRewards[proposal.Slot]; ok && clReward.Valid {
-			reward.Cl = clReward.Decimal.Mul(decimal.NewFromInt(1e18))
+			reward.Cl = clReward.Decimal.Mul(decimal.NewFromInt(1e9))
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward
