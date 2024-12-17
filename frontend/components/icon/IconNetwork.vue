@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
-  ChainFamily, type ChainIDs, ChainInfo,
+  type ChainId,
+  ChainInfo,
 } from '~/types/network'
 
 const colorMode = useColorMode()
@@ -9,34 +10,23 @@ const colorMode = useColorMode()
 // Both properties width and height must be set by the parent component.
 // The icon will fill this frame as much as possible without deformation.
 // Additional properties are the following:
-const props = defineProps({
-  chainId: {
-    required: true,
-    type: Number,
-  }, // network whose icon must be displayed (L2s and tesnets can be given)
+const props = defineProps<{
+  chainId: ChainId,
+  // network whose icon must be displayed (L2s and tesnets can be given)
   // tells whether the icon must be in its official color or in the color of the font
-  colored: {
-    default: false,
-    type: Boolean,
-  },
+  colored?: boolean,
   // some icons in their original colors are hard to see on a dark background,
   //  so they are adapted automatically, but you can deactivate this behavior
   // if your background is always light
-  doNotAdaptToColorTheme: {
-    default: false,
-    type: Boolean,
-  },
+  doNotAdaptToColorTheme?: boolean,
   // makes some icons slightly smaller/bigger, to appear with a size "similar" to the others
-  harmonizePerceivedSize: {
-    default: false,
-    type: Boolean,
-  },
-})
+  harmonizePerceivedSize?: boolean,
+}>()
 
 const family = computed(() =>
   props.chainId in ChainInfo
-    ? ChainInfo[props.chainId as ChainIDs].family
-    : ChainFamily.Ethereum,
+    ? ChainInfo[props.chainId].family
+    : 'Ethereum',
 )
 const coloring = computed(() =>
   !props.colored
@@ -53,27 +43,27 @@ const sizing = computed(() =>
 <template>
   <div class="frame">
     <IconNetworkEthereum
-      v-if="family === ChainFamily.Ethereum"
+      v-if="family === 'Ethereum'"
       class="icon"
       :class="[sizing, coloring]"
     />
     <IconNetworkArbitrum
-      v-else-if="family === ChainFamily.Arbitrum"
+      v-else-if="family === 'Arbitrum'"
       class="icon"
       :class="[sizing, coloring]"
     />
     <IconNetworkOptimism
-      v-else-if="family === ChainFamily.Optimism"
+      v-else-if="family === 'Optimism'"
       class="icon"
       :class="[sizing, coloring]"
     />
     <IconNetworkBase
-      v-else-if="family === ChainFamily.Base"
+      v-else-if="family === 'Base'"
       class="icon"
       :class="[sizing, coloring]"
     />
     <IconNetworkGnosis
-      v-else-if="family === ChainFamily.Gnosis"
+      v-else-if="family === 'Gnosis'"
       class="icon"
       :class="[sizing, coloring]"
     />

@@ -5,11 +5,9 @@ import {
 import {
   DateTime, type StringUnitLength,
 } from 'luxon'
+
 import type { ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import {
-  type ChainIDs, epochToTs, slotToTs,
-} from '~/types/network'
 import type { NumberOrString } from '~/types/value'
 
 export const ONE_MINUTE = 60
@@ -58,51 +56,6 @@ export function formatAndCalculatePercent(
   return formatPercent(calculatePercent(value, base), config)
 }
 
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDate(currentNetwork.value, ...)` you
- * should rather use `formatEpochToDate(...)` from `useFormat.ts`.
- */
-export function formatEpochToDate(
-  chainId: ChainIDs,
-  epoch: number,
-  locales: string,
-): null | string | undefined {
-  return formatEpochToDateTime(
-    chainId,
-    epoch,
-    undefined,
-    'absolute',
-    undefined,
-    locales,
-    false,
-  )
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDateTime(currentNetwork.value, ...)`
- * you should rather use `formatEpochToDateTime(...)` from `useFormat.ts`.
- */
-export function formatEpochToDateTime(
-  chainId: ChainIDs,
-  epoch: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    epochToTs(chainId, epoch),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
-}
-
 export function formatFiat(
   value: number,
   currency: string,
@@ -131,15 +84,11 @@ export function formatGoTimestamp(
   if (typeof timestamp === 'number') {
     timestamp *= 1000
   }
-  const dateTime = new Date(timestamp).getTime()
-  return formatTs(
-    dateTime / 1000,
-    compareTimestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
+  const dateTime = new Date(timestamp).getTime() / 1000
+  if (format === 'relative') {
+    return formatTsToRelative(dateTime, timestamp, style, locales)
+  }
+  return formatTsToAbsolute(dateTime, locales, withTime)
 }
 
 export function formatNumber(value?: number): string {
@@ -175,24 +124,6 @@ export function formatPercent(
  * Wherever you would write `formatSlotToDateTime(currentNetwork.value, ...)`
  * you should rather use `formatSlotToDateTime(...)` from `useFormat.ts`.
  */
-export function formatSlotToDateTime(
-  chainId: ChainIDs,
-  slot: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    slotToTs(chainId, slot),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
-}
 
 export function formattedNumberToHtml(value?: string): string | undefined {
   return value?.split(',').join('<span class=\'comma\' />')
@@ -233,7 +164,7 @@ export function formatTimeDuration(
 
 export function formatTsToAbsolute(
   ts: number,
-  locales: string,
+  locales: string = 'en',
   includeTime?: boolean,
 ): string {
   const timeOptions: Intl.DateTimeFormatOptions = includeTime
@@ -252,6 +183,27 @@ export function formatTsToAbsolute(
   return includeTime
     ? date.toLocaleString(locales, options)
     : date.toLocaleDateString(locales, options)
+}
+
+export function formatTsToRelative(
+  targetTimestamp?: number,
+  baseTimestamp?: number,
+  style: StringUnitLength = 'narrow',
+  locales: string = 'en-US',
+): null | string | undefined {
+  if (!targetTimestamp) {
+    return undefined
+  }
+
+  const date = baseTimestamp
+    ? DateTime.fromMillis(baseTimestamp)
+    : DateTime.now()
+  return DateTime.fromMillis(targetTimestamp)
+    .setLocale(locales)
+    .toRelative({
+      base: date,
+      style,
+    })
 }
 
 export function formatTsToTime(ts: number, locales: string): string {
@@ -305,47 +257,6 @@ export function trim(
 
 export function withCurrency(value: string, currency: string): string {
   return `${value} ${currency}`
-}
-
-function formatTs(
-  ts?: number,
-  timestamp?: number,
-  format: AgeFormat = 'relative',
-  style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
-  withTime = true,
-) {
-  if (ts === undefined) {
-    return undefined
-  }
-
-  if (format === 'relative') {
-    return formatTsToRelative(ts * 1000, timestamp, style, locales)
-  }
-  else {
-    return formatTsToAbsolute(ts, locales, withTime)
-  }
-}
-
-function formatTsToRelative(
-  targetTimestamp?: number,
-  baseTimestamp?: number,
-  style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
-): null | string | undefined {
-  if (!targetTimestamp) {
-    return undefined
-  }
-
-  const date = baseTimestamp
-    ? DateTime.fromMillis(baseTimestamp)
-    : DateTime.now()
-  return DateTime.fromMillis(targetTimestamp)
-    .setLocale(locales)
-    .toRelative({
-      base: date,
-      style,
-    })
 }
 
 export const formatPremiumProductPrice = (

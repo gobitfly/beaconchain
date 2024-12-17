@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
-import { useFormat } from '~/composables/useFormat'
 import type { AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
-
-const {
-  formatEpochToDateTime, formatSlotToDateTime,
-} = useFormat()
 
 interface Props {
   format?: 'global-setting' | AgeFormat,
@@ -19,6 +14,11 @@ const props = defineProps<Props>()
 const { t: $t } = useTranslation()
 const { timestamp } = useDate()
 const { setting } = useGlobalSetting<AgeFormat>('age-format')
+
+const {
+  epochToTs,
+  slotToTs,
+} = useNetworkStore()
 
 const initTs = ref(timestamp.value) // store the initial timestamp, in case we don't want to auto update
 
@@ -78,6 +78,34 @@ const label = computed(() => {
 
   return { text }
 })
+
+function formatEpochToDateTime(
+  epoch: number,
+  timestamp?: number,
+  format?: AgeFormat,
+  style?: StringUnitLength,
+  locales: string = 'en',
+  withTime?: boolean,
+) {
+  if (format === 'relative') {
+    return formatTsToRelative(epochToTs(epoch) ?? 0 * 1000, timestamp, style, locales)
+  }
+  return formatTsToAbsolute(epochToTs(epoch) ?? 0 * 1000, locales, withTime)
+}
+
+function formatSlotToDateTime(
+  slot: number,
+  timestamp?: number,
+  format?: AgeFormat,
+  style?: StringUnitLength,
+  locales: string = 'en',
+  withTime?: boolean,
+) {
+  if (format === 'relative') {
+    return formatTsToRelative(slotToTs(slot) ?? 0 * 1000, timestamp, style, locales)
+  }
+  return formatTsToAbsolute(slotToTs(slot) ?? 0 * 1000, locales, withTime)
+}
 </script>
 
 <template>

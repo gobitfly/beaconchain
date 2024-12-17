@@ -7,9 +7,6 @@ import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 import {
-  SearchbarColors, SearchbarShape,
-} from '~/types/searchbar'
-import {
   mobileHeaderThreshold, smallHeaderThreshold,
 } from '~/types/header'
 
@@ -31,7 +28,6 @@ const { width } = useWindowSize()
 const { t: $t } = useTranslation()
 const { promoCode } = usePromoCode()
 
-const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
 
@@ -143,21 +139,6 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
           </span>
         </span>
       </div>
-
-      <div class="grid-cell search-bar">
-        <BcSearchbarGeneral
-          v-if="showInDevelopment && !isHomePage"
-          class="bar"
-          :bar-shape="SearchbarShape.Medium"
-          :color-theme="
-            isSmallScreen && colorMode.value != 'dark'
-              ? SearchbarColors.LightBlue
-              : SearchbarColors.DarkBlue
-          "
-          :screen-width-causing-sudden-change="smallHeaderThreshold"
-        />
-      </div>
-
       <div class="grid-cell controls">
         <BcCurrencySelection
           class="currency"

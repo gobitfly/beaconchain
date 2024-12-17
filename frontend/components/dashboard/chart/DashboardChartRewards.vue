@@ -31,10 +31,8 @@ import type {
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { DashboardChartRewardsTooltip } from '#components'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import { useFormat } from '~/composables/useFormat'
 import type { CryptoUnits } from '~/types/currencies'
 
-const { formatEpochToDate } = useFormat()
 const { networkInfo } = useNetworkStore()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
@@ -246,7 +244,7 @@ const option = computed<ECBasicOption | undefined>(() => {
   if (series.value === undefined) {
     return undefined
   }
-
+  const { epochToTs } = useNetworkStore()
   return {
     dataZoom: {
       borderColor: colors.value.label,
@@ -256,7 +254,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       },
       end: 100,
       labelFormatter: (_value: number, valueStr: string) => {
-        return formatEpochToDate(parseInt(valueStr), $t('locales.date'))
+        return formatTsToAbsolute(epochToTs(parseInt(valueStr)) ?? 0, $t('locales.date'))
       },
       start: 60,
       type: 'slider',
@@ -314,7 +312,7 @@ const option = computed<ECBasicOption | undefined>(() => {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
         formatter: (value: number) => {
-          const date = formatEpochToDate(value, $t('locales.date'))
+          const date = formatTsToAbsolute(epochToTs(value) ?? 0, $t('locales.date'))
           if (date === undefined) {
             return ''
           }

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import {
-  type ChainIDs, getAllExistingChainIDs,
-} from '~/types/network'
 </script>
 
 <template>
@@ -87,40 +84,6 @@ import {
       </BcTooltip>
       Slot Sync
     </div>
-  </div>
-
-  <div>
-    <h2>Network icons</h2>
-    <div>Monochromous:</div>
-    <IconNetwork
-      v-for="id of getAllExistingChainIDs(false)"
-      :key="id"
-      :chain-id="id as ChainIDs"
-      :colored="false"
-      :harmonize-perceived-size="false"
-      class="icon-size"
-    />
-    <div>Colored:</div>
-    <IconNetwork
-      v-for="id of getAllExistingChainIDs(false)"
-      :key="id"
-      :chain-id="id as ChainIDs"
-      :colored="true"
-      :harmonize-perceived-size="false"
-      class="icon-size"
-    />
-    <div>
-      Harmonized sizes (for example Ethereum looks less skinny compared to the
-      others):
-    </div>
-    <IconNetwork
-      v-for="id of getAllExistingChainIDs(false)"
-      :key="id"
-      :chain-id="id as ChainIDs"
-      :colored="true"
-      :harmonize-perceived-size="true"
-      class="icon-size"
-    />
   </div>
   <div>
     <h2>Loading issues:</h2>
