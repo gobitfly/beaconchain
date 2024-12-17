@@ -203,6 +203,20 @@ var ValidatorDuties = struct {
 }
 
 // ----------------
+// Chart Types
+
+type ChartType int
+
+const (
+	ChartDefault ChartType = iota
+	ChartRewards
+)
+
+func (d ChartType) Int() int {
+	return int(d)
+}
+
+// ----------------
 // Chart Aggregation Interval
 
 type ChartAggregation int

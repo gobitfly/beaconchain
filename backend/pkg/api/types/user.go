@@ -125,6 +125,7 @@ type PremiumPerks struct {
 	ManageDashboardViaApi                          bool                `json:"manage_dashboard_via_api"`
 	BulkAdding                                     bool                `json:"bulk_adding"`
 	ChartHistorySeconds                            ChartHistorySeconds `json:"chart_history_seconds"`
+	RewardsChartHistorySeconds                     ChartHistorySeconds `json:"rewards_chart_history_seconds"`
 	EmailNotificationsPerDay                       uint64              `json:"email_notifications_per_day"`
 	ConfigureNotificationsViaApi                   bool                `json:"configure_notifications_via_api"`
 	ValidatorGroupNotifications                    uint64              `json:"validator_group_notifications"`

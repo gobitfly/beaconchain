@@ -610,12 +610,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	var limit uint64
-	if isUserAdmin(userInfo) {
-		limit = math.MaxUint32 // no limit for admins
-	} else if dashboardLimit >= existingValidatorCount {
-		limit = dashboardLimit - existingValidatorCount
-	}
+	limit := dashboardLimit - existingValidatorCount
 
 	var data []types.VDBPostValidatorsData
 	var dataErr error
@@ -1150,7 +1145,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
 
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation, enums.ChartDefault)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1323,12 +1318,17 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
 //	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
 //	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
 func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	ctx := r.Context()
 	vars := mux.Vars(r)
 	q := r.URL.Query()
 	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
@@ -1336,13 +1336,22 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 		handleErr(w, r, err)
 		return
 	}
+	groupIds := v.checkGroupIdList(q.Get("group_ids"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
+
+	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation, enums.ChartRewards)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
 
-	data, err := h.getDataAccessor(r).GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, protocolModes)
+	data, err := h.getDataAccessor(r).GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, groupIds, protocolModes, aggregation, afterTs, beforeTs)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1465,7 +1474,7 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation, enums.ChartDefault)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1520,7 +1529,7 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 		handleErr(w, r, v)
 		return
 	}
-	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
+	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation, enums.ChartDefault)
 	if err != nil {
 		handleErr(w, r, err)
 		return
