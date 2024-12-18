@@ -18,6 +18,10 @@ clean:
 test:
 	go test ./...
 
+lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.1
+	golangci-lint run --timeout 5m
+
 frontend-types:
 	go run cmd/main.go typescript-converter --out ../frontend/types/api
 
