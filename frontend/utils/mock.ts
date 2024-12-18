@@ -87,5 +87,11 @@ export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<
       )
     }
   }
+  result.data.push(
+    {
+      chain_id: 11155111,
+      name: 'sepolia',
+    },
+  )
   return result
 }
