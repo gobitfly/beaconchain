@@ -26,5 +26,10 @@ func (d *DataAccessService) GetAllNetworks() ([]types.NetworkInfo, error) {
 			Name:              "holesky",
 			NotificationsName: "holesky",
 		},
+		{
+			ChainId:           11155111,
+			Name:              "sepolia",
+			NotificationsName: "sepolia",
+		},
 	}, nil
 }
