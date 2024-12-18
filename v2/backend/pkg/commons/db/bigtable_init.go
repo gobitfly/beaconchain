@@ -3,8 +3,10 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
@@ -20,7 +22,6 @@ func InitBigtableSchema() error {
 		VALIDATOR_BALANCES_FAMILY:             nil,
 		VALIDATOR_HIGHEST_ACTIVE_INDEX_FAMILY: nil,
 		ATTESTATIONS_FAMILY:                   nil,
-		PROPOSALS_FAMILY:                      nil,
 		SYNC_COMMITTEES_FAMILY:                nil,
 		INCOME_DETAILS_COLUMN_FAMILY:          nil,
 		STATS_COLUMN_FAMILY:                   nil,
@@ -49,6 +50,18 @@ func InitBigtableSchema() error {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
+
+	if utils.Config.Bigtable.Emulator {
+		if utils.Config.Bigtable.EmulatorHost == "" {
+			utils.Config.Bigtable.EmulatorHost = "127.0.0.1"
+		}
+		log.Infof("using emulated local bigtable environment, setting BIGTABLE_EMULATOR_HOST env variable to %s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort)
+		err := os.Setenv("BIGTABLE_EMULATOR_HOST", fmt.Sprintf("%s:%d", utils.Config.Bigtable.EmulatorHost, utils.Config.Bigtable.EmulatorPort))
+
+		if err != nil {
+			log.Fatal(err, "unable to set bigtable emulator environment variable", 0)
+		}
+	}
 
 	admin, err := gcp_bigtable.NewAdminClient(ctx, utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
 	if err != nil {
