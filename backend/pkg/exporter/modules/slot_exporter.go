@@ -335,12 +335,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
 	}
 
-	// save the proposal to bigtable
-	err = db.BigtableClient.SaveProposal(block)
-	if err != nil {
-		return fmt.Errorf("error exporting proposal to bigtable for slot %v: %w", block.Slot, err)
-	}
-
 	// save the block data to the db
 	err = edb.SaveBlock(block, false, tx)
 	if err != nil {
@@ -468,13 +462,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			err := db.BigtableClient.SaveSyncComitteeDuties(syncDutiesEpoch)
 			if err != nil {
 				return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
-			}
-			return nil
-		})
-		g.Go(func() error {
-			err := db.BigtableClient.SaveProposalAssignments(epoch, block.EpochAssignments.ProposerAssignments)
-			if err != nil {
-				return fmt.Errorf("error exporting proposal assignments to bigtable: %w", err)
 			}
 			return nil
 		})
