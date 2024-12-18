@@ -1,3 +1,6 @@
+import type { Paging } from '../api/common'
+import type { TableQueryParams } from '../datatable'
+
 export enum GUEST_DASHBOARD_ID {
   ACCOUNT = -3,
   VALIDATOR = -2,
@@ -28,7 +31,19 @@ export type DashboardKeyData = {
   setDashboardKey: (key: string) => void,
 }
 
+export type DataProps<T> = {
+  data: T | undefined,
+  isLoading: boolean,
+}
+
 // For not logged in Users we store the Dashboard in Cookies
 export interface GuestDashboard extends Dashboard {
   key?: string,
+}
+
+export type TableProps<T> = {
+  data: T[] | undefined,
+  isLoading: boolean,
+  paging: Paging | undefined,
+  query: TableQueryParams,
 }

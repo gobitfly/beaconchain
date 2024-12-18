@@ -2,14 +2,14 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import type { TableProps } from '~/types/dashboard'
 
 const {
-  dashboardKey,
   isGuestDashboard,
 } = useDashboardKey()
 
@@ -17,22 +17,17 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const {
-  blocks,
-  getBlocks,
-  isLoading,
-  query: lastQuery,
-} = useValidatorDashboardBlocksStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+const props = defineProps<TableProps<VDBBlocksTableRow>>()
+const emit = defineEmits<{
+  (e: 'update', query: TableQueryParams): void,
+}>()
+const emitUpdate = (query: TableQueryParams) => {
+  emit('update', query)
+}
 
-const { groups } = useValidatorDashboardGroups()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  groups, hasValidators,
+} = storeToRefs(useValidatorDashboardStore())
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -49,57 +44,26 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'slot:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getBlocks(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  emitUpdate(setQuerySort(sort, props.query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  emitUpdate(setQueryCursor(value, props.query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  emitUpdate(setQueryPageSize(value, props.query))
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
+  emitUpdate(setQuerySearch(value, props.query))
 }
 
 const getRowClass = (row: VDBBlocksTableRow) => {
@@ -129,7 +93,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="blocks"
+            :data="{ data, paging }"
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"
@@ -138,7 +102,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable
-            :selected-sort="tempQuery?.sort"
+            :selected-sort="query.sort"
             :loading="isLoading"
             @set-cursor="setCursor"
             @sort="onSort"
