@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"math/big"
 	"slices"
 	"sort"
@@ -909,6 +910,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// Create a map structure to store the data
 	epochStartData := make(map[uint64]map[int]t.ClElValue[decimal.Decimal])
 	epochStartList := make([]uint64, 0)
+	groupMap := make(map[int]bool)
 
 	for _, res := range queryResult {
 		if _, ok := epochStartData[res.EpochStart]; !ok {
@@ -920,17 +922,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			El: elRewards[res.EpochStart][res.GroupId],
 			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 		}
+		groupMap[int(res.GroupId)] = true
 	}
 
 	// Get the list of groups
-	// It should be identical for all epochs (in most cases)
-	var groupList []int
-	for _, groupData := range epochStartData {
-		for groupId := range groupData {
-			groupList = append(groupList, groupId)
-		}
-		break
-	}
+	groupList := slices.Collect(maps.Keys(groupMap))
 	slices.Sort(groupList)
 
 	// Create the series structure
