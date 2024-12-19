@@ -1350,6 +1350,10 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 		handleErr(w, r, v)
 		return
 	}
+	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
+		returnConflict(w, r, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
+		return
+	}
 
 	data, err := h.getDataAccessor(r).GetValidatorDashboardRewardsChart(r.Context(), *dashboardId, groupIds, protocolModes, aggregation, afterTs, beforeTs)
 	if err != nil {

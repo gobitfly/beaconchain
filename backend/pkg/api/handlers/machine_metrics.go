@@ -72,7 +72,7 @@ func (h *HandlerService) LegacyPostUserMachineMetrics(w http.ResponseWriter, r *
 		apiKey = r.Header.Get("apikey")
 	}
 
-	if !h.isPostMachineMetricsEnabled {
+	if h.cfg.Frontend.DisableStatsInserts {
 		returnError(w, r, http.StatusServiceUnavailable, fmt.Errorf("machine metrics pushing is temporarily disabled"))
 		return
 	}

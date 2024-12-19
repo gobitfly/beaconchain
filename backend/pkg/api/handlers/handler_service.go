@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/invopop/jsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -24,13 +23,14 @@ import (
 )
 
 type HandlerService struct {
-	daService                   dataaccess.DataAccessor
-	daDummy                     dataaccess.DataAccessor
-	scs                         *scs.SessionManager
-	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
+	daService dataaccess.DataAccessor
+	daDummy   dataaccess.DataAccessor
+	scs       *scs.SessionManager
+
+	cfg *commontypes.Config
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, cfg *commontypes.Config) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -40,10 +40,10 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 
 	return &HandlerService{
-		daService:                   dataAccessor,
-		daDummy:                     dummy,
-		scs:                         sessionManager,
-		isPostMachineMetricsEnabled: enablePostMachineMetrics,
+		daService: dataAccessor,
+		daDummy:   dummy,
+		scs:       sessionManager,
+		cfg:       cfg,
 	}
 }
 
@@ -193,7 +193,7 @@ func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Conte
 		return limits, err
 	}
 	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
-	secondsPerEpoch := utils.Config.Chain.ClConfig.SlotsPerEpoch * utils.Config.Chain.ClConfig.SecondsPerSlot   // TODO: fetch dashboards chain id and use correct value for network once available
+	secondsPerEpoch := h.cfg.Chain.ClConfig.SlotsPerEpoch * h.cfg.Chain.ClConfig.SecondsPerSlot                 // TODO: fetch dashboards chain id and use correct value for network once available
 	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
 
 	return limits, nil
