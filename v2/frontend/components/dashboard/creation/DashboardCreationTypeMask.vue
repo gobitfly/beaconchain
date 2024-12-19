@@ -8,7 +8,6 @@ const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
 
 interface Props {
-  accountsDisabled: boolean,
   validatorsDisabled: boolean,
 }
 const props = defineProps<Props>()
@@ -24,7 +23,7 @@ const typeButtons = [
   },
   {
     component: IconAccount,
-    disabled: props.accountsDisabled,
+    disabled: true,
     subText: $t('common.coming_soon'),
     text: $t('dashboard.creation.type.accounts'),
     value: 'account',
