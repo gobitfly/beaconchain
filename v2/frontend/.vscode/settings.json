@@ -33,6 +33,7 @@
     "NotificationsNetworkTable",
     "NotificationsOverview",
     "NotificationsTableEmpty",
+    "SlotVizViewer",
     "a11y",
     "checkout",
     "ci",

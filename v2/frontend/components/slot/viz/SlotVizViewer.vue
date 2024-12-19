@@ -153,9 +153,12 @@ watch(
           :buttons="icons"
         />
       </div>
-      <h1 class="network">
+      <BcText
+        variant="lg"
+        class="network"
+      >
         {{ networkInfo?.name }}
-      </h1>
+      </BcText>
       <div class="header-right">
         <slot name="header-right" />
       </div>
@@ -199,6 +202,8 @@ watch(
   .header-row {
     display: grid;
     justify-content: center;
+    justify-items: center;
+    align-items: center;
     padding: var(--padding-large) var(--padding-large) var(--padding) 9px;
     gap: var(--padding);
     grid-template: [row1-start] "info filter-row network header-right" [row1-end] / max-content max-content 1fr max-content;
