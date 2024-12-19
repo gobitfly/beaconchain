@@ -78,7 +78,9 @@ var opts = struct {
  * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
-	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"app-bundle":         (&commands.AppBundleCommand{}).Requires(),
+	"initBigtableSchema": {},
+	"applyDbSchema":      {NetworkDBs: true},
 }
 
 func Run() {
@@ -144,6 +146,7 @@ func Run() {
 			ElNode:     true,
 			UserDBs:    true,
 			NetworkDBs: true,
+			Clickhouse: true,
 		}
 	}
 
@@ -246,28 +249,30 @@ func Run() {
 		defer db.FrontendWriterDB.Close()
 	}
 
-	// clickhouse
-	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.ClickHouse.WriterDatabase.Username,
-		Password:     cfg.ClickHouse.WriterDatabase.Password,
-		Name:         cfg.ClickHouse.WriterDatabase.Name,
-		Host:         cfg.ClickHouse.WriterDatabase.Host,
-		Port:         cfg.ClickHouse.WriterDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	}, &types.DatabaseConfig{
-		Username:     cfg.ClickHouse.ReaderDatabase.Username,
-		Password:     cfg.ClickHouse.ReaderDatabase.Password,
-		Name:         cfg.ClickHouse.ReaderDatabase.Name,
-		Host:         cfg.ClickHouse.ReaderDatabase.Host,
-		Port:         cfg.ClickHouse.ReaderDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	}, "clickhouse", "clickhouse")
-	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	if requires.Clickhouse {
+		// clickhouse
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.ClickHouse.WriterDatabase.Username,
+			Password:     cfg.ClickHouse.WriterDatabase.Password,
+			Name:         cfg.ClickHouse.WriterDatabase.Name,
+			Host:         cfg.ClickHouse.WriterDatabase.Host,
+			Port:         cfg.ClickHouse.WriterDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.ClickHouse.ReaderDatabase.Username,
+			Password:     cfg.ClickHouse.ReaderDatabase.Password,
+			Name:         cfg.ClickHouse.ReaderDatabase.Name,
+			Host:         cfg.ClickHouse.ReaderDatabase.Host,
+			Port:         cfg.ClickHouse.ReaderDatabase.Port,
+			MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
+			SSL:          true,
+			MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
+		}, "clickhouse", "clickhouse")
+		defer db.ClickHouseReader.Close()
+		defer db.ClickHouseWriter.Close()
+	}
 
 	// Initialize the persistent redis client
 	if requires.Redis {
@@ -318,7 +323,7 @@ func Run() {
 		}
 		log.Infof("db schema applied successfully")
 	case "initBigtableSchema":
-		log.Infof("initializing bigtable schema")
+		log.Infof("initializing bigtable schema for project: %v, instance: %v", utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
 		err := db.InitBigtableSchema()
 		if err != nil {
 			log.Fatal(err, "error initializing bigtable schema", 0)

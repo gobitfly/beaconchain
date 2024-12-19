@@ -129,6 +129,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "mekong":
+			cfg.Chain.GenesisTimestamp = 1730822400
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
@@ -148,6 +150,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisValidatorsRoot = "0xf5dcb5564e829aab27264b9becd5dfaa017085611224cb3036f573368dbb9d47"
 		case "holesky":
 			cfg.Chain.GenesisValidatorsRoot = "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1"
+		case "mekong":
+			cfg.Chain.GenesisValidatorsRoot = "0x9838240bca889c52818d7502179b393a828f61f15119d9027827c36caeb67db7" // TODO: mekong check if this is still correct https://github.com/ethpandaops/mekong-devnets/blob/master/network-configs/devnet-0/metadata/genesis_validators_root.txt
 		default:
 			return fmt.Errorf("tried to set known genesis-validators-root, but unknown chain-name")
 		}
@@ -287,6 +291,8 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &minimalCfg)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg)
+		case "mekong":
+			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg) // TODO: mekong update
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ElConfigPath)
 		}
