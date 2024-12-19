@@ -111,6 +111,7 @@ export interface PremiumPerks {
   manage_dashboard_via_api: boolean;
   bulk_adding: boolean;
   chart_history_seconds: ChartHistorySeconds;
+  rewards_chart_history_seconds: ChartHistorySeconds;
   email_notifications_per_day: number /* uint64 */;
   configure_notifications_via_api: boolean;
   validator_group_notifications: number /* uint64 */;

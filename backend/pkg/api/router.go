@@ -33,7 +33,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
-	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, !cfg.Frontend.DisableStatsInserts)
+	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, cfg)
 
 	// store user id in context, if available
 	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)

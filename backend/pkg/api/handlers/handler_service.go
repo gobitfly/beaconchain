@@ -23,13 +23,14 @@ import (
 )
 
 type HandlerService struct {
-	daService                   dataaccess.DataAccessor
-	daDummy                     dataaccess.DataAccessor
-	scs                         *scs.SessionManager
-	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
+	daService dataaccess.DataAccessor
+	daDummy   dataaccess.DataAccessor
+	scs       *scs.SessionManager
+
+	cfg *commontypes.Config
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, cfg *commontypes.Config) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -39,10 +40,10 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 
 	return &HandlerService{
-		daService:                   dataAccessor,
-		daDummy:                     dummy,
-		scs:                         sessionManager,
-		isPostMachineMetricsEnabled: enablePostMachineMetrics,
+		daService: dataAccessor,
+		daDummy:   dummy,
+		scs:       sessionManager,
+		cfg:       cfg,
 	}
 }
 
@@ -167,7 +168,7 @@ type ChartTimeDashboardLimits struct {
 }
 
 // helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
-func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
+func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation, chart enums.ChartType) (ChartTimeDashboardLimits, error) {
 	limits := ChartTimeDashboardLimits{}
 	var err error
 	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
@@ -175,7 +176,15 @@ func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Conte
 		return limits, err
 	}
 
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
+	var historySeconds types.ChartHistorySeconds
+	switch chart {
+	case enums.ChartRewards:
+		historySeconds = premiumPerks.RewardsChartHistorySeconds
+	case enums.ChartDefault:
+		historySeconds = premiumPerks.ChartHistorySeconds
+	}
+
+	maxAge := getMaxChartAge(aggregation, historySeconds) // can be max int for unlimited, always check for underflows
 	if maxAge == 0 {
 		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
 	}
@@ -184,7 +193,7 @@ func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Conte
 		return limits, err
 	}
 	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
-	secondsPerEpoch := uint64(12 * 32)                                                                          // TODO: fetch dashboards chain id and use correct value for network once available
+	secondsPerEpoch := h.cfg.Chain.ClConfig.SlotsPerEpoch * h.cfg.Chain.ClConfig.SecondsPerSlot                 // TODO: fetch dashboards chain id and use correct value for network once available
 	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
 
 	return limits, nil

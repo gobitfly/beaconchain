@@ -346,7 +346,7 @@ func (d *DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, da
 	return getDummyStruct[t.VDBGroupRewardsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
+func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, decimal.Decimal], error) {
 	return getDummyStruct[t.ChartData[int, decimal.Decimal]](ctx)
 }
 
