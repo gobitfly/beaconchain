@@ -3,11 +3,11 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor,
+  TableProps,
   TableQueryParams,
 } from '~/types/datatable'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import type { TableProps } from '~/types/dashboard'
 
 const {
   isGuestDashboard,
@@ -21,9 +21,6 @@ const props = defineProps<TableProps<VDBBlocksTableRow>>()
 const emit = defineEmits<{
   (e: 'update', query: TableQueryParams): void,
 }>()
-const emitUpdate = (query: TableQueryParams) => {
-  emit('update', query)
-}
 
 const {
   groups, hasValidators,
@@ -49,21 +46,21 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  emitUpdate(setQuerySort(sort, props.query))
+  emit('update', setQuerySort(sort, props.query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  emitUpdate(setQueryCursor(value, props.query))
+  emit('update', setQueryCursor(value, props.query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  emitUpdate(setQueryPageSize(value, props.query))
+  emit('update', setQueryPageSize(value, props.query))
 }
 
 const setSearch = (value?: string) => {
-  emitUpdate(setQuerySearch(value, props.query))
+  emit('update', setQuerySearch(value, props.query))
 }
 
 const getRowClass = (row: VDBBlocksTableRow) => {

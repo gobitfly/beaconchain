@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import type { VDBRewardsTableDuty } from '~/types/api/validator_dashboard'
 
-interface Props {
+const { t: $t } = useTranslation()
+
+const { hasNumber = true } = defineProps<{
   duty: VDBRewardsTableDuty,
-  isNumberVisible?: boolean,
-}
-withDefaults(
-  defineProps<Props>(),
-  {
-    isNumberVisible: true,
-  },
-)
+  hasNumber?: boolean,
+}>()
 </script>
 
 <template>
@@ -24,7 +20,7 @@ withDefaults(
     >
       {{ $t("dashboard.validator.rewards.attestation") }}
       <BcFormatPercent
-        v-if="isNumberVisible"
+        v-if="hasNumber"
         class="round-brackets"
         :percent="duty.attestation"
         :maximum-fraction-digits="0"
@@ -36,7 +32,7 @@ withDefaults(
     >
       {{ $t("dashboard.validator.rewards.proposal") }}
       <BcFormatPercent
-        v-if="isNumberVisible"
+        v-if="hasNumber"
         class="round-brackets"
         :percent="duty.proposal"
         :maximum-fraction-digits="0"
@@ -48,7 +44,7 @@ withDefaults(
     >
       {{ $t("dashboard.validator.rewards.sync_committee") }}
       <BcFormatPercent
-        v-if="isNumberVisible"
+        v-if="hasNumber"
         class="round-brackets"
         :percent="duty.sync"
         :maximum-fraction-digits="0"
@@ -60,7 +56,7 @@ withDefaults(
     >
       {{ $t("dashboard.validator.rewards.slashing") }}
       <BcFormatNumber
-        v-if="isNumberVisible"
+        v-if="hasNumber"
         class="round-brackets"
         :value="duty.slashing"
       />

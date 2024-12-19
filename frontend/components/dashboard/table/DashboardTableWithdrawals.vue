@@ -9,14 +9,11 @@ import type {
 import type {
   Cursor,
   TableQueryParams,
+  TotalTableProps,
 } from '~/types/datatable'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import type {
-  DataProps,
-  TableProps,
-} from '~/types/dashboard'
 
 type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
   identifier: string,
@@ -28,20 +25,14 @@ const { t: $t } = useTranslation()
 
 const { latestState } = useLatestStateStore()
 const { slotToEpoch } = useNetworkStore()
-const props = defineProps<{
-  tableProps: TableProps<VDBWithdrawalsTableRow>,
-  totalProps: DataProps<VDBTotalWithdrawalsData>,
-}>()
 const {
   data,
+  dataTotal,
   isLoading,
+  isLoadingTotal,
   paging,
   query,
-} = toRefs(props.tableProps)
-const {
-  data: totalData,
-  isLoading: isLoadingTotal,
-} = toRefs(props.totalProps)
+} = defineProps<TotalTableProps<VDBWithdrawalsTableRow, VDBTotalWithdrawalsData>>()
 const emit = defineEmits<{
   (e: 'update', query: TableQueryParams): void,
 }>()
@@ -64,26 +55,23 @@ const colsVisible = computed(() => {
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value)
 }
-const emitUpdate = (query: TableQueryParams) => {
-  emit('update', query)
-}
 
 const onSort = (sort: DataTableSortEvent) => {
-  emitUpdate(setQuerySort(sort, query.value))
+  emit('update', setQuerySort(sort, query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  emitUpdate(setQueryCursor(value, query.value))
+  emit('update', setQueryCursor(value, query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  emitUpdate(setQueryPageSize(value, query.value))
+  emit('update', setQueryPageSize(value, query))
 }
 
 const setSearch = (value?: string) => {
-  emitUpdate(setQuerySearch(value, query.value))
+  emit('update', setQuerySearch(value, query))
 }
 
 const getRowClass = (row: ExtendedVDBWithdrawalsTableRow) => {
@@ -116,23 +104,22 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
 
 // data with total row at the top
 const tableData = computed(() => {
-  const rows = data.value
-  if (!rows || rows.length === 0) {
+  if (!data || data.length === 0) {
     return
   }
 
   return {
     data: [
       {
-        amount: totalData.value?.total_amount,
+        amount: dataTotal?.total_amount,
         identifier: totalIdentifier,
       },
-      ...rows.map(w => ({
+      ...data.map(w => ({
         ...w,
         identifier: `${w.slot}-${w.index}`,
       })),
     ],
-    paging: paging.value,
+    paging: paging,
   }
 })
 </script>

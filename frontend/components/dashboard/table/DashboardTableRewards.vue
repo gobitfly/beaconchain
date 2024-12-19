@@ -3,12 +3,12 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor,
+  TableProps,
   TableQueryParams,
 } from '~/types/datatable'
 import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
-  type TableProps,
 } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -26,9 +26,6 @@ const props = defineProps<TableProps<VDBRewardsTableRow>>()
 const emit = defineEmits<{
   (e: 'update', query: TableQueryParams): void,
 }>()
-const emitUpdate = (query: TableQueryParams) => {
-  emit('update', query)
-}
 
 const {
   groups, hasValidators,
@@ -49,21 +46,21 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  emitUpdate(setQuerySort(sort, props.query))
+  emit('update', setQuerySort(sort, props.query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  emitUpdate(setQueryCursor(value, props.query))
+  emit('update', setQueryCursor(value, props.query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  emitUpdate(setQueryPageSize(value, props.query))
+  emit('update', setQueryPageSize(value, props.query))
 }
 
 const setSearch = (value?: string) => {
-  emitUpdate(setQuerySearch(value, props.query))
+  emit('update', setQuerySearch(value, props.query))
 }
 
 const getRowClass = (row: VDBRewardsTableRow) => {
@@ -149,7 +146,7 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
             >
               <template #body="slotProps">
                 <DashboardTableValueDuty
-                  :is-number-visible="slotProps.data.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID"
+                  :has-number="slotProps.data.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID"
                   :duty="slotProps.data.duty"
                 />
               </template>

@@ -8,38 +8,38 @@ const {
   groups: dashboardGroups, validatorCount,
 } = storeToRefs(useValidatorDashboardStore())
 const { networkInfo } = useNetworkStore()
-const selectedGroups = ref<number[]>([])
 
-const {
-  tick,
-} = useInterval(12)
-
-const props = defineProps<{
-  data?: SlotVizEpoch[],
+const { data } = defineProps<{
+  data: SlotVizEpoch[],
 }>()
-const { data } = toRefs(props)
 
 const emit = defineEmits<{
   (e: 'update', groupIds: number[]): void,
 }>()
 
+const {
+  resetTick, tick,
+} = useInterval(12)
 watch(
-  [
-    selectedGroups,
-    tick,
-  ],
-  ([
-    newSelectedGroups,
-    newTick,
-  ], [
-    oldSelectedGroups,
-    oldTick,
-  ]) => {
-    if (oldTick === newTick && isAllSelected(newSelectedGroups) && isAllSelected(oldSelectedGroups)) {
-      // when toggleAll is called or dashboard groups are updated, don't emit redundantly
+  tick,
+  () => {
+    emit('update', selectedGroups.value)
+  },
+)
+
+const isAllSelected = (groupList: number[]) => {
+  return groupList.length === groups.value.length || groupList.length === 0
+}
+const selectedGroups = ref<number[]>([])
+watch (
+  selectedGroups,
+  (newSelectedGroups, oldSelectedGroups) => {
+    if (isAllSelected(newSelectedGroups) && isAllSelected(oldSelectedGroups)) {
+      // avoids redundant emit on toggleAll or dashboard switch
       return
     }
-    emit('update', selectedGroups.value)
+    emit('update', newSelectedGroups)
+    resetTick()
   },
 )
 
@@ -60,10 +60,6 @@ const groups = computed(() => {
     'asc',
   )
 })
-
-const isAllSelected = (groupList: number[]) => {
-  return groupList.length === groups.value.length || groupList.length === 0
-}
 
 const selectAll = () => {
   selectedGroups.value = groups.value.map(g => g.id)
@@ -107,7 +103,6 @@ const selectedLabel = computed(() => {
 
 <template>
   <SlotVizViewer
-    v-if="data"
     :data
     :network-info
     :timestamp="tick"

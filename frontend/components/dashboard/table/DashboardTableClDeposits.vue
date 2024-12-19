@@ -6,39 +6,28 @@ import type {
 import type {
   Cursor,
   TableQueryParams,
+  TotalTableProps,
 } from '~/types/datatable'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import type {
-  DataProps, TableProps,
-} from '~/types/dashboard'
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
 const { slotToEpoch } = useNetworkStore()
-const props = defineProps<{
-  tableProps: TableProps<VDBConsensusDepositsTableRow>,
-  totalProps: DataProps<VDBTotalConsensusDepositsData>,
-}>()
 const {
   data,
+  dataTotal,
   isLoading,
+  isLoadingTotal,
   paging,
   query,
-} = toRefs(props.tableProps)
-const {
-  data: totalData,
-  isLoading: isLoadingTotal,
-} = toRefs(props.totalProps)
+} = defineProps<TotalTableProps<VDBConsensusDepositsTableRow, VDBTotalConsensusDepositsData>>()
 const emit = defineEmits<{
   (e: 'update', query: TableQueryParams): void,
 }>()
 
-const emitUpdate = (query: TableQueryParams) => {
-  emit('update', query)
-}
 const {
   groups, hasValidators,
 } = storeToRefs(useValidatorDashboardStore())
@@ -59,12 +48,12 @@ const groupNameLabel = (groupId?: number) => {
 }
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  emitUpdate(setQueryCursor(value, query.value))
+  emit('update', setQueryCursor(value, query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  emitUpdate(setQueryPageSize(value, query.value))
+  emit('update', setQueryPageSize(value, query))
 }
 
 const getRowClass = (row: VDBConsensusDepositsTableRow) => {
@@ -79,16 +68,15 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
 
 // data with total row at the top
 const tableData = computed(() => {
-  const rows = data.value
-  if (!rows || rows.length === 0) {
+  if (!data || data.length === 0) {
     return
   }
   return {
     data: [
-      { amount: totalData.value?.total_amount },
-      ...rows,
+      { amount: dataTotal?.total_amount },
+      ...data,
     ],
-    paging: paging.value,
+    paging: paging,
   }
 })
 </script>

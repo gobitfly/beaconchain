@@ -20,7 +20,6 @@ import {
   DAHSHBOARDS_NEXT_EPOCH_ID,
   type DashboardKey,
   type GuestDashboard,
-  type TableProps,
 } from '~/types/dashboard'
 import {
   isGuestDashboardKey, isSharedDashboardKey,
@@ -33,10 +32,10 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import type { TableQueryParams } from '~/types/datatable'
-import type {
-  ApiPagingResponse, Paging,
-} from '~/types/api/common'
+import type { Paging } from '~/types/api/common'
 import type { SummaryTimeFrame } from '~/types/dashboard/summary'
+import { useTableFetcher } from '~/composables/useTableFetcher'
+import { useDataFetcher } from '~/composables/useDataFetcher'
 
 const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
@@ -171,6 +170,17 @@ watch(
   },
 )
 
+const handleError = (e: any) => {
+  if (!e) {
+    return
+  }
+  if (e.statusCode === 404) {
+    // TODO: show that the dashboard does not exist
+    return
+  }
+  throw e
+}
+
 const validatorDashboardStore = useValidatorDashboardStore()
 const service = useValidatorDashboard()
 
@@ -193,13 +203,13 @@ const refreshSlotViz = (groupIds: number[]) => {
 
 const defaultPageSize = 10
 
-const dataSummary = ref<VDBSummaryTableRow[]>()
-const pagingSummary = ref<Paging>()
-const isLoadingSummary = ref(false)
 const defaultQuerySummary: TableQueryParams = {
   limit: defaultPageSize,
   sort: 'efficiency:desc',
 }
+const dataSummary = ref<VDBSummaryTableRow[]>()
+const pagingSummary = ref<Paging>()
+const isLoadingSummary = ref(false)
 const querySummary = ref<TableQueryParams>(defaultQuerySummary)
 const timeframeSummary = ref<SummaryTimeFrame>('last_24h')
 const refreshSummary = (timeframe: SummaryTimeFrame, query: TableQueryParams) => {
@@ -219,63 +229,11 @@ const refreshSummary = (timeframe: SummaryTimeFrame, query: TableQueryParams) =>
     })
 }
 
-const propsSummary = computed(() => ({
-  data: dataSummary.value,
-  isLoading: isLoadingSummary.value,
-  paging: pagingSummary.value,
-  query: querySummary.value,
-  timeFrame: timeframeSummary.value,
-}))
-
-// function that creates appropriate table refs and refresh functions
-const createTableHandler = <T extends object>(
-  fetchFunc: (
-    dashboardKey: DashboardKey,
-    query?: TableQueryParams,
-  ) => Promise<ApiPagingResponse<T> | undefined>,
-  defaultQuery: TableQueryParams,
-) => {
-  const data = ref<T[]>()
-  const paging = ref<Paging>()
-  const isLoading = ref(false)
-  const query = ref<TableQueryParams>(defaultQuery)
-
-  const refresh = (inputQuery: TableQueryParams) => {
-    isLoading.value = true
-    query.value = inputQuery
-    fetchFunc(dashboardKey.value, inputQuery)
-      .then((fetchedResult) => {
-        data.value = fetchedResult?.data
-        paging.value = fetchedResult?.paging
-      })
-      .catch((e) => {
-        handleError(e)
-      })
-      .finally(() => {
-        isLoading.value = false
-      })
-  }
-  const props = computed<TableProps<T>>(() => ({
-    data: data.value,
-    isLoading: isLoading.value,
-    paging: paging.value,
-    query: query.value,
-  }))
-
-  return {
-    props,
-    refresh,
-  }
-}
-
 const defaultQueryRewards: TableQueryParams = {
   limit: defaultPageSize,
   sort: 'epoch:desc',
 }
-const {
-  props: rawPropsRewards,
-  refresh: refreshRewards,
-} = createTableHandler(service.fetchRewards, defaultQueryRewards)
+const rewards = useTableFetcher(service.fetchRewards, defaultQueryRewards, handleError)
 
 // Helper function to create a "future row" for rewards data
 function createNextRewardRow(latestEpoch: SlotVizEpoch): VDBRewardsTableRow {
@@ -294,14 +252,14 @@ function createNextRewardRow(latestEpoch: SlotVizEpoch): VDBRewardsTableRow {
   }
 }
 
-// Computed property for rewards data with a potential "future row"
-const rewardsData = computed(() => {
-  const data = rawPropsRewards.value.data
+// rewards data with a potential "future row"
+const dataRewards = computed(() => {
+  const data = rewards.data.value
   if (!data || data.length === 0) {
     return undefined
   }
 
-  const isFirstPage = !rawPropsRewards.value.paging?.prev_cursor
+  const isFirstPage = !rewards.paging.value?.prev_cursor
   const slotVizData = dataSlotViz.value
   const dataEpoch = data[0].epoch
   const latestEpoch = slotVizData?.[0].epoch ?? 0
@@ -320,86 +278,28 @@ const rewardsData = computed(() => {
   ]
 })
 
-const propsRewards = computed(() => ({
-  data: rewardsData.value,
-  isLoading: rawPropsRewards.value.isLoading,
-  paging: rawPropsRewards.value.paging,
-  query: rawPropsRewards.value.query,
-}))
-
 const defaultQueryBlocks: TableQueryParams = {
   limit: defaultPageSize,
   sort: 'slot:desc',
 }
-const {
-  props: propsBlocks,
-  refresh: refreshBlocks,
-} = createTableHandler(service.fetchBlocks, defaultQueryBlocks)
-
-const createDataHandlers = <T extends object>(
-  fetchFunc: (
-    dashboardKey: DashboardKey
-  ) => Promise<T | undefined>,
-) => {
-  const data = ref<T>()
-  const isLoading = ref(false)
-  const refresh = async () => {
-    isLoading.value = true
-    fetchFunc(dashboardKey.value)
-      .then((fetchedData) => {
-        data.value = fetchedData
-      })
-      .catch((e) => {
-        handleError(e)
-      })
-      .finally(() => {
-        isLoading.value = false
-      })
-  }
-  const props = computed(() => ({
-    data: data.value,
-    isLoading: isLoading.value,
-  }))
-  return {
-    props,
-    refresh,
-  }
-}
+const blocks = useTableFetcher(service.fetchBlocks, defaultQueryBlocks, handleError)
 
 const defaultQueryClDeposits: TableQueryParams = {
   limit: 5,
 }
-const {
-  props: propsClDeposits,
-  refresh: refreshClDeposits,
-} = createTableHandler(service.fetchClDeposits, defaultQueryClDeposits)
-const {
-  props: propsTotalClDeposits,
-  refresh: refreshTotalClDeposits,
-} = createDataHandlers(service.fetchTotalClDeposits)
+const clDeposits = useTableFetcher(service.fetchClDeposits, defaultQueryClDeposits, handleError)
+const totalClDeposits = useDataFetcher(service.fetchTotalClDeposits, handleError)
 const defaultQueryElDeposits: TableQueryParams = {
   limit: 5,
 }
-const {
-  props: propsElDeposits,
-  refresh: refreshElDeposits,
-} = createTableHandler(service.fetchElDeposits, defaultQueryElDeposits)
-const {
-  props: propsTotalElDeposits,
-  refresh: refreshTotalElDeposits,
-} = createDataHandlers(service.fetchTotalElDeposits)
+const elDeposits = useTableFetcher(service.fetchElDeposits, defaultQueryElDeposits, handleError)
+const totalElDeposits = useDataFetcher(service.fetchTotalElDeposits, handleError)
 const defaultQueryWithdrawals: TableQueryParams = {
   limit: defaultPageSize,
   sort: 'slot:desc',
 }
-const {
-  props: propsWithdrawals,
-  refresh: refreshWithdrawals,
-} = createTableHandler(service.fetchWithdrawals, defaultQueryWithdrawals)
-const {
-  props: propsTotalWithdrawals,
-  refresh: refreshTotalWithdrawals,
-} = createDataHandlers(service.fetchTotalWithdrawals)
+const withdrawals = useTableFetcher(service.fetchWithdrawals, defaultQueryWithdrawals, handleError)
+const totalWithdrawals = useDataFetcher(service.fetchTotalWithdrawals, handleError)
 
 // fetches all data for the dashboard (overview, slot viz)
 const fetchOverviewAndSlotViz = () => {
@@ -419,16 +319,6 @@ const fetchOverviewAndSlotViz = () => {
     undefined,
     undefined,
   ])
-}
-const handleError = (e: any) => {
-  if (!e) {
-    return
-  }
-  if (e.statusCode === 404) {
-    // TODO: show that the dashboard does not exist
-    return
-  }
-  throw e
 }
 const handleAllData = (
   fetchedOverviewData: PromiseFulfilledResult<undefined | VDBOverviewData>
@@ -468,28 +358,28 @@ if (data?.value) {
   handleAllData(fetchedOverviewData, fetchedSlotVizData)
 }
 
+const defaultTab = 'summary'
+const activeTab = ref<string>('')
 const refreshActiveTab = () => {
   switch (activeTab.value) {
     case 'blocks':
-      return refreshBlocks(defaultQueryBlocks)
+      return blocks.refresh(dashboardKey.value, defaultQueryBlocks)
     case 'deposits':
-      refreshTotalClDeposits()
-      refreshTotalElDeposits()
-      refreshClDeposits(defaultQueryClDeposits)
-      refreshElDeposits(defaultQueryElDeposits)
+      totalClDeposits.refresh(dashboardKey.value)
+      totalElDeposits.refresh(dashboardKey.value)
+      clDeposits.refresh(dashboardKey.value, defaultQueryClDeposits)
+      elDeposits.refresh(dashboardKey.value, defaultQueryElDeposits)
       return
     case 'rewards':
-      return refreshRewards(defaultQueryRewards)
+      return rewards.refresh(dashboardKey.value, defaultQueryRewards)
     case 'summary':
       return refreshSummary('last_24h', defaultQuerySummary)
     case 'withdrawals':
-      refreshWithdrawals(defaultQueryWithdrawals)
-      refreshTotalWithdrawals()
+      totalWithdrawals.refresh(dashboardKey.value)
+      withdrawals.refresh(dashboardKey.value, defaultQueryWithdrawals)
       return
   }
 }
-
-const activeTab = ref<string>('summary')
 const updateTab = (tab: string) => {
   if (!isClientSide) {
     return
@@ -541,13 +431,14 @@ const refreshAll = () => {
       <DashboardSharedDashboardModal />
       <div>
         <DashboardValidatorSlotViz
+          v-if="dataSlotViz"
           :data="dataSlotViz"
           @update="refreshSlotViz"
         />
       </div>
       <BcTabList
         :tabs
-        default-tab="summary"
+        :default-tab
         :use-route-hash="true"
         class="dashboard-tab-view"
         panels-class="dashboard-tab-panels"
@@ -555,45 +446,67 @@ const refreshAll = () => {
       >
         <template #tab-panel-summary>
           <DashboardTableSummary
-            v-bind="propsSummary"
+            :data="dataSummary"
+            :paging="pagingSummary"
+            :query="querySummary"
+            :time-frame="timeframeSummary"
+            :is-loading="isLoadingSummary"
             @update="refreshSummary"
           />
         </template>
         <template #tab-panel-rewards>
           <DashboardTableRewards
-            v-bind="propsRewards"
-            @update="refreshRewards"
+            :data="dataRewards"
+            :paging="rewards.paging.value"
+            :query="rewards.query.value"
+            :is-loading="rewards.isLoading.value"
+            @update="(query) => rewards.refresh(dashboardKey, query)"
           />
         </template>
         <template #tab-panel-blocks>
           <DashboardTableBlocks
-            v-bind="propsBlocks"
-            @update="refreshBlocks"
+            :data="blocks.data.value"
+            :paging="blocks.paging.value"
+            :query="blocks.query.value"
+            :is-loading="blocks.isLoading.value"
+            @update="(query) => blocks.refresh(dashboardKey, query)"
           />
         </template>
         <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits
-              :table-props="propsElDeposits"
-              :total-props="propsTotalElDeposits"
-              @update="refreshElDeposits"
+              :data="elDeposits.data.value"
+              :paging="elDeposits.paging.value"
+              :query="elDeposits.query.value"
+              :is-loading="elDeposits.isLoading.value"
+              :data-total="totalElDeposits.data.value"
+              :is-loading-total="totalElDeposits.isLoading.value"
+              @update="(query) => elDeposits.refresh(dashboardKey, query)"
             />
             <FontAwesomeIcon
               :icon="faArrowDown"
               class="down_icon"
             />
             <DashboardTableClDeposits
-              :table-props="propsClDeposits"
-              :total-props="propsTotalClDeposits"
-              @update="refreshClDeposits"
+              :data="clDeposits.data.value"
+              :paging="clDeposits.paging.value"
+              :query="clDeposits.query.value"
+              :is-loading="clDeposits.isLoading.value"
+              :data-total="totalClDeposits.data.value"
+              :is-loading-total="totalClDeposits.isLoading.value"
+              @update="(query) => elDeposits.refresh(dashboardKey, query)"
             />
           </div>
         </template>
         <template #tab-panel-withdrawals>
           <DashboardTableWithdrawals
-            :table-props="propsWithdrawals"
-            :total-props="propsTotalWithdrawals"
-            @update="refreshWithdrawals"
+            :data="withdrawals.data.value"
+            :paging="withdrawals.paging.value"
+            :query="withdrawals.query.value"
+            :is-loading="withdrawals.isLoading.value"
+            :data-total="totalWithdrawals.data.value"
+            :is-loading-total="totalWithdrawals.isLoading.value"
+            @update="(query) => elDeposits.refresh(dashboardKey, query)"
           />
         </template>
       </BcTabList>

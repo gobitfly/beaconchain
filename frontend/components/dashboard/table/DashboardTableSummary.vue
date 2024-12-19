@@ -4,12 +4,11 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableProps,
+  TableQueryParams,
 } from '~/types/datatable'
-import {
-  DAHSHBOARDS_ALL_GROUPS_ID,
-  type TableProps,
-} from '~/types/dashboard'
+import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import {
   type SummaryChartFilter,
@@ -36,9 +35,6 @@ const props = defineProps<TableProps<VDBSummaryTableRow> & { timeFrame: SummaryT
 const emit = defineEmits<{
   (e: 'update', timeframe: SummaryTimeFrame, query: TableQueryParams): void,
 }>()
-const emitUpdate = (query: TableQueryParams) => {
-  emit('update', props.timeFrame, query)
-}
 const showAbsoluteValues = ref<boolean | null>(null)
 
 const {
@@ -78,21 +74,21 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  emitUpdate(setQuerySort(sort, props.query))
+  emit('update', props.timeFrame, setQuerySort(sort, props.query))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  emitUpdate(setQueryCursor(value, props.query))
+  emit('update', props.timeFrame, setQueryCursor(value, props.query))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  emitUpdate(setQueryPageSize(value, props.query))
+  emit('update', props.timeFrame, setQueryPageSize(value, props.query))
 }
 
 const setSearch = (value?: string) => {
-  emitUpdate(setQuerySearch(value, props.query))
+  emit('update', props.timeFrame, setQuerySearch(value, props.query))
 }
 
 const getRowClass = (row: VDBSummaryTableRow) => {
