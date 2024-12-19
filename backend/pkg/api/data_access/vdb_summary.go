@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 	"slices"
@@ -1035,7 +1036,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 	}
 
-	totalLineRequested := requestedGroupsMap[t.AllGroups]
+	totalLineRequested := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
 	averageNetworkLineRequested := requestedGroupsMap[t.NetworkAverage]
 
 	if dashboardId.Validators != nil {
@@ -1085,6 +1086,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	// convert the returned data to the expected return type (not pretty)
 	tsMap := make(map[time.Time]bool)
 	data := make(map[time.Time]map[int64]float64)
+	groupMap := make(map[int64]bool)
 
 	totalEfficiencyMap := make(map[time.Time]*t.VDBValidatorSummaryChartRow)
 	for _, row := range queryResults {
@@ -1094,13 +1096,14 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			data[row.Timestamp] = make(map[int64]float64)
 		}
 
-		if requestedGroupsMap[row.GroupId] {
+		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
 			groupEfficiency, err := d.calculateChartEfficiency(efficiency, row)
 			if err != nil {
 				return nil, err
 			}
 
 			data[row.Timestamp][row.GroupId] = groupEfficiency
+			groupMap[row.GroupId] = true
 		}
 
 		if totalLineRequested {
@@ -1130,17 +1133,23 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		for ts := range tsMap {
 			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
 		}
+		groupMap[t.NetworkAverage] = true
 	}
 
 	if totalLineRequested {
+		totalLineGroupId := int64(t.AllGroups)
+		if dashboardId.AggregateGroups {
+			totalLineGroupId = t.DefaultGroupId
+		}
 		for _, row := range totalEfficiencyMap {
 			totalEfficiency, err := d.calculateChartEfficiency(efficiency, row)
 			if err != nil {
 				return nil, err
 			}
 
-			data[row.Timestamp][t.AllGroups] = totalEfficiency
+			data[row.Timestamp][totalLineGroupId] = totalEfficiency
 		}
+		groupMap[totalLineGroupId] = true
 	}
 
 	tsArray := make([]time.Time, 0, len(tsMap))
@@ -1151,13 +1160,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return tsArray[i].Before(tsArray[j])
 	})
 
-	groupsArray := make([]int64, 0, len(requestedGroupsMap))
-	for group := range requestedGroupsMap {
-		groupsArray = append(groupsArray, group)
-	}
-	sort.Slice(groupsArray, func(i, j int) bool {
-		return groupsArray[i] < groupsArray[j]
-	})
+	groupsArray := slices.Collect(maps.Keys(groupMap))
+	slices.Sort(groupsArray)
 
 	ret.Categories = make([]uint64, 0, len(tsArray))
 	for _, ts := range tsArray {
@@ -1166,7 +1170,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
 	seriesMap := make(map[int64]*t.ChartSeries[int, float64])
-	for group := range requestedGroupsMap {
+	for _, group := range groupsArray {
 		series := t.ChartSeries[int, float64]{
 			Id:   int(group),
 			Data: make([]float64, 0, len(tsMap)),
