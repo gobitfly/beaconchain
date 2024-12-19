@@ -164,7 +164,6 @@ func Run() {
 
 	// check config
 	{
-		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 		cfg := &types.Config{}
 		err := utils.ReadConfig(cfg, *configPath)
 		if err != nil {
@@ -179,6 +178,8 @@ func Run() {
 		} else {
 			eth1RpcEndpoint = utils.Config.Eth1GethEndpoint
 		}
+
+		log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName, "eth1RpcEndpoint": eth1RpcEndpoint}, "starting")
 
 		if utils.Config.Metrics.Enabled {
 			go func() {
