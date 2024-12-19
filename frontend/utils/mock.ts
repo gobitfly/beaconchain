@@ -38,18 +38,22 @@ export function simulateAPIresponseAboutNetworkList(): ApiDataResponse<
   ApiChainInfo[]
 > {
   const result = { data: [] } as ApiDataResponse<ApiChainInfo[]>
-  result.data.push(
-    {
-      chain_id: Number(useRuntimeConfig().public.chainIdByDefault),
-      name: 'ehtereum',
-    },
-  )
+  const currentChainId = Number(useRuntimeConfig().public.chainIdByDefault)
+  const isGnosis = currentChainId === 100
+  // hotfix: make gnosis work -> we have to get rid of the `loadAvailableNetworks()` and this mock
+  if (!isGnosis) {
+    result.data.push(
+      {
+        chain_id: currentChainId,
+        name: 'ethereum',
+      },
+    )
+  }
   result.data.push(
     {
       chain_id: 100,
       name: 'gnosis',
     },
   )
-
   return result
 }

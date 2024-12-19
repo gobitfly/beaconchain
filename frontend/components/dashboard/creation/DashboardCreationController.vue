@@ -8,7 +8,6 @@ import type { ChainIDs } from '~/types/network'
 
 const userDashboardStore = useUserDashboardStore()
 const {
-  createAccountDashboard,
   createValidatorDashboard,
 } = userDashboardStore
 
@@ -27,36 +26,23 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-
 const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
 const network = ref<ChainIDs>(0)
 const forcedDashboardType = ref<'' | DashboardType>('')
-let forcedNetworkIfValidatorDashboard = 0
 const {
   dashboardKey, publicEntities,
 } = useDashboardKey()
 const { fetch } = useCustomFetch()
-const route = useRoute()
 
 const maxDashboards = computed(() => {
   // TODO: currently there is no value for "amount of account dashboards", using
   //  "amount of validator dashboards" instead for now
   return user.value?.premium_perks.validator_dashboards ?? 1
 })
-const accountsDisabled = computed(() => {
-  // TODO: Once account dashboards are being tackled, use something like
-  // return !showInDevelopment || (dashboards.value?.account_dashboards?.length ?? 0) >= maxDashboards.value
-  // || (!!forcedDashboardType.value && forcedDashboardType.value !== 'account')
 
-  return (
-    !showInDevelopment
-    || (!!forcedDashboardType.value && forcedDashboardType.value !== 'account')
-  )
-})
 const validatorsDisabled = computed(() => {
   return (
     (dashboards.value?.validator_dashboards?.length ?? 0)
@@ -67,20 +53,15 @@ const validatorsDisabled = computed(() => {
 
 function show(
   forcedType: '' | DashboardType = '',
-  forcedNetwork: ChainIDs = 0,
 ) {
   visible.value = true
-  forcedNetworkIfValidatorDashboard = forcedNetwork
   type.value = forcedDashboardType.value = forcedType
   if (!type.value) {
     if (!validatorsDisabled.value) {
       type.value = 'validator'
     }
-    else if (!accountsDisabled.value) {
-      type.value = 'account'
-    }
   }
-  network.value = forcedNetwork || currentNetwork.value
+  network.value = currentNetwork.value ?? 1
   state.value = 'type'
   name.value = isLoggedIn.value ? '' : 'cookie'
 }
@@ -92,74 +73,37 @@ if (props.initiallyVisible) {
 
 async function createDashboard() {
   visible.value = false
-  const matchingType
-    = route.name === 'dashboard-id' && type.value === 'validator'
 
   const publicKey
-    = matchingType && !isLoggedIn.value ? dashboardKey.value : undefined
-  if (type.value === 'account') {
-    if (!name.value) {
-      return
-    }
-    const response = await createAccountDashboard(name.value, publicKey)
+    = !isLoggedIn.value ? dashboardKey.value : undefined
 
-    await navigateTo(
-      `/account-dashboard/${response?.key ?? response?.id ?? 1}`,
-    )
+  if (!name.value || !network.value) {
+    return
   }
-  else if (type.value === 'validator') {
-    if (!name.value || !network.value) {
-      return
-    }
 
-    const response = await createValidatorDashboard(
-      name.value,
-      network.value,
-      publicKey,
-    )
-    if (
-      matchingType
-      && publicEntities.value?.length
-      && response?.id
-      && response.id > 0
-    ) {
-      await fetch(
-        'DASHBOARD_VALIDATOR_MANAGEMENT',
-        {
-          body: {
-            group_id: '0',
-            validators: publicEntities.value,
-          },
-          method: 'POST',
+  const response = await createValidatorDashboard(
+    name.value,
+    network.value,
+    publicKey,
+  )
+  if (
+    publicEntities.value?.length
+    && response?.id
+    && response.id > 0
+  ) {
+    await fetch(
+      'DASHBOARD_VALIDATOR_MANAGEMENT',
+      {
+        body: {
+          group_id: '0',
+          validators: publicEntities.value,
         },
-        { dashboardKey: response.id },
-      )
-    }
-    await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
+        method: 'POST',
+      },
+      { dashboardKey: response.id },
+    )
   }
-}
-
-function onBack() {
-  if (state.value === 'network') {
-    state.value = 'type'
-  }
-}
-
-function onNext() {
-  if (state.value === 'type') {
-    if (type.value === 'account') {
-      createDashboard()
-    }
-    else if (forcedNetworkIfValidatorDashboard) {
-      createDashboard()
-    }
-    else {
-      state.value = 'network'
-    }
-  }
-  else if (state.value === 'network') {
-    createDashboard()
-  }
+  await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
 }
 </script>
 
@@ -173,16 +117,9 @@ function onNext() {
       v-model:state="state"
       v-model:type="type"
       v-model:name="name"
-      :accounts-disabled
       :validators-disabled
-      @next="onNext()"
-    />
-    <DashboardCreationNetworkMask
-      v-else-if="state === 'network'"
-      v-model:state="state"
-      v-model:network="network"
-      @next="onNext()"
-      @back="onBack()"
+      accounts-disabled
+      @next="createDashboard"
     />
   </BcDialog>
   <div v-else-if="visible && props.displayMode === 'panel'">
@@ -192,16 +129,8 @@ function onNext() {
         v-model:state="state"
         v-model:type="type"
         v-model:name="name"
-        :accounts-disabled
         :validators-disabled
-        @next="onNext()"
-      />
-      <DashboardCreationNetworkMask
-        v-else-if="state === 'network'"
-        v-model:state="state"
-        v-model:network="network"
-        @next="onNext()"
-        @back="onBack()"
+        @next=" createDashboard"
       />
     </div>
   </div>
