@@ -11,9 +11,10 @@ const {
 const { networkInfo } = useNetworkStore()
 const selectedGroups = ref<number[]>([])
 
+const { secondsPerSlot = 12 } = networkInfo.value
 const {
   resetTick, tick,
-} = useInterval(12)
+} = useInterval(secondsPerSlot)
 
 const {
   refreshSlotViz, slotViz,
