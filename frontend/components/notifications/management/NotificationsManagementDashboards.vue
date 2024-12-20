@@ -304,19 +304,6 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           </template>
         </Column>
         <Column
-          v-if="colsVisible.networks"
-          field="networks"
-          body-class="networks-col"
-          header-class="networks-col"
-          :header="$t('notifications.col.networks')"
-        >
-          <template #body="slotProps">
-            <BcNetworkSelector
-              :readonly-networks="slotProps.data.chain_ids"
-            />
-          </template>
-        </Column>
-        <Column
           field="action"
           body-class="action-col"
           header-class="action-col"
@@ -363,25 +350,6 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
                 truncate-text
                 @on-edit="() => onEdit('webhook', slotProps.data)"
               />
-            </div>
-            <div class="info">
-              <div class="label">
-                {{ $t("notifications.col.networks") }}
-              </div>
-
-              <BcTablePopoutEdit
-                class="value"
-                :no-icon="!slotProps.data.is_account_dashboard"
-              >
-                <template #content>
-                  <div class="newtork-row">
-                    <BcNetworkSelector
-                      :readonly-networks="slotProps.data.chain_ids"
-                    />
-                    &nbsp;
-                  </div>
-                </template>
-              </BcTablePopoutEdit>
             </div>
           </div>
         </template>
