@@ -5,7 +5,6 @@ import {
   PlaygroundDutyStatus,
   PlaygroundIcons,
   PlaygroundInput,
-  PlaygroundMiddleEllipsisTests,
   PlaygroundTable,
   PlaygroundTags,
 } from '#components'
@@ -21,11 +20,6 @@ const tabs: HashTabs = [
     component: PlaygroundAccordeon,
     key: 'accordeon',
     title: 'Accordeon',
-  },
-  {
-    component: PlaygroundMiddleEllipsisTests,
-    key: 'middle',
-    title: 'Middle Ellipsis',
   },
   {
     component: PlaygroundTags,

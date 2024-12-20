@@ -3,7 +3,6 @@ import * as networkTs from '~/types/network'
 export function useNetworkStore() {
   const runTimeNetwork = Number(useRuntimeConfig().public.chainIdByDefault) as networkTs.ChainIDs
   const currentNetwork = computed(() => runTimeNetwork)
-  const availableNetworks = computed(() => [ runTimeNetwork ])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function isNetworkDisabled(chainId: networkTs.ChainIDs): boolean {
@@ -49,7 +48,6 @@ export function useNetworkStore() {
   }
 
   return {
-    availableNetworks,
     currentNetwork,
     epochsPerDay,
     epochToTs,
