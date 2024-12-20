@@ -1,8 +1,5 @@
-import { simulateAPIresponseAboutNetworkList } from '~/utils/mock'
-
 export type API_PATH =
   | 'AD_CONFIGURATIONs'
-  | 'AVAILABLE_NETWORKS'
   | 'DASHBOARD_CL_DEPOSITS'
   | 'DASHBOARD_CL_DEPOSITS_TOTAL'
   | 'DASHBOARD_CREATE_ACCOUNT'
@@ -86,12 +83,6 @@ export const mapping: Record<API_PATH, MappingData> = {
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true,
     path: '/ad-configurations?={keys}',
-  },
-  AVAILABLE_NETWORKS: {
-    method: 'GET',
-    mock: true,
-    mockFunction: simulateAPIresponseAboutNetworkList,
-    path: '/available-networks',
   },
   DASHBOARD_CL_DEPOSITS: {
     getPath: values =>

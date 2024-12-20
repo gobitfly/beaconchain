@@ -1,57 +1,9 @@
-import { defineStore } from 'pinia'
-
-import type { ApiDataResponse } from '~/types/api/common'
 import * as networkTs from '~/types/network'
 
-interface ApiChainInfo {
-  chain_id: networkTs.ChainIDs,
-  name: string,
-}
-
-const store = defineStore('network-store', () => {
-  const data = ref<{
-    availableNetworks: networkTs.ChainIDs[],
-    currentNetwork: networkTs.ChainIDs,
-  }>({
-    availableNetworks: [ networkTs.ChainIDs.Ethereum ],
-    // this impossible value by defaut must be kept, it ensures that the `computed`
-    // of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
-    currentNetwork: networkTs.ChainIDs.Any,
-  })
-  return { data }
-})
-
 export function useNetworkStore() {
-  const { data } = storeToRefs(store())
-
-  /**
-   * Needs to be called once, when the front-end is loading. Unnecessary afterwards.
-   */
-  async function loadAvailableNetworks(): Promise<boolean> {
-    try {
-      const { fetch } = useCustomFetch()
-      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(
-        'AVAILABLE_NETWORKS',
-      )
-      if (!response.data || !response.data.length) {
-        return false
-      }
-      data.value.availableNetworks = networkTs.sortChainIDsByPriority(
-        response.data.map(apiInfo => apiInfo.chain_id),
-      )
-      return true
-    }
-    catch {
-      return false
-    }
-  }
-
-  const availableNetworks = computed(() => data.value.availableNetworks)
-  const currentNetwork = computed(() =>
-    availableNetworks.value.includes(data.value.currentNetwork)
-      ? data.value.currentNetwork
-      : availableNetworks.value[0],
-  )
+  const runTimeNetwork = Number(useRuntimeConfig().public.chainIdByDefault) as networkTs.ChainIDs
+  const currentNetwork = computed(() => runTimeNetwork)
+  const availableNetworks = computed(() => [ runTimeNetwork ])
   const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
 
   function isNetworkDisabled(chainId: networkTs.ChainIDs): boolean {
@@ -60,10 +12,6 @@ export function useNetworkStore() {
       !useRuntimeConfig().public.showInDevelopment
       && chainId !== currentNetwork.value
     )
-  }
-
-  function setCurrentNetwork(chainId: networkTs.ChainIDs) {
-    data.value.currentNetwork = chainId
   }
 
   function isMainNet(): boolean {
@@ -108,10 +56,8 @@ export function useNetworkStore() {
     isL1,
     isMainNet,
     isNetworkDisabled,
-    loadAvailableNetworks,
     networkInfo,
     secondsPerEpoch,
-    setCurrentNetwork,
     slotToEpoch,
     slotToTs,
     tsToEpoch,
