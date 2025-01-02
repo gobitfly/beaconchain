@@ -85,7 +85,8 @@ export function useNotificationsManagementDashboards() {
     const accountDashboardSettings = settings as NotificationSettingsValidatorDashboard
     accountDashboardSettings.group_efficiency_below_threshold = 0
     accountDashboardSettings.is_attestations_missed_subscribed = false
-    accountDashboardSettings.is_block_proposal_subscribed = false
+    accountDashboardSettings.is_block_proposal_missed_subscribed = false
+    accountDashboardSettings.is_block_proposal_success_subscribed = false
     accountDashboardSettings.is_group_efficiency_below_subscribed = false
     accountDashboardSettings.is_max_collateral_subscribed = false
     accountDashboardSettings.is_min_collateral_subscribed = false

@@ -418,7 +418,12 @@
                     "text": "Indicates the percentage of rewards in relation to the theoretical maximum value",
                     "title": "Attestation Efficiency: "
                 },
-                "block_proposal": "Block Proposal",
+                "block_proposal_missed": {
+                    "label": "Block proposal missed"
+                },
+                "block_proposal_success": {
+                    "label": "Block proposal success"
+                },
                 "sync": {
                     "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1",
                     "title": "Sync Committee Efficiency: "
