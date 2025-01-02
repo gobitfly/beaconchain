@@ -186,7 +186,8 @@ type NotificationSettingsValidatorDashboard struct {
 	IsGroupEfficiencyBelowSubscribed  bool    `json:"is_group_efficiency_below_subscribed"`
 	GroupEfficiencyBelowThreshold     float64 `json:"group_efficiency_below_threshold" faker:"boundary_start=0, boundary_end=1"`
 	IsAttestationsMissedSubscribed    bool    `json:"is_attestations_missed_subscribed"`
-	IsBlockProposalSubscribed         bool    `json:"is_block_proposal_subscribed"`
+	IsBlockProposalSuccessSubscribed  bool    `json:"is_block_proposal_success_subscribed"`
+	IsBlockProposalMissedSubscribed   bool    `json:"is_block_proposal_missed_subscribed"`
 	IsUpcomingBlockProposalSubscribed bool    `json:"is_upcoming_block_proposal_subscribed"`
 	IsSyncSubscribed                  bool    `json:"is_sync_subscribed"`
 	IsWithdrawalProcessedSubscribed   bool    `json:"is_withdrawal_processed_subscribed"`
