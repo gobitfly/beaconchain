@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -14,7 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/sethvargo/go-envconfig"
 
 	//nolint:depguard
 	"github.com/sirupsen/logrus"
@@ -43,7 +44,7 @@ func readConfigFile(cfg *types.Config, path string) error {
 }
 
 func readConfigEnv(cfg *types.Config) error {
-	return envconfig.Process("", cfg)
+	return envconfig.Process(context.Background(), cfg)
 }
 
 func readConfigSecrets(cfg *types.Config) error {
