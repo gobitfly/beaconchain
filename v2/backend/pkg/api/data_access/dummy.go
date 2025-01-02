@@ -518,15 +518,19 @@ func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, 
 	return getDummyStruct[t.SearchValidatorsByDepositAddress](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	return getDummyStruct[t.SearchValidatorsByWithdrwalCredential](ctx)
+func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrawalCredential, error) {
+	return getDummyStruct[t.SearchValidatorsByWithdrawalCredential](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	return getDummyStruct[t.SearchValidatorsByWithdrwalCredential](ctx)
+func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrawalCredential, error) {
+	return getDummyStruct[t.SearchValidatorsByWithdrawalCredential](ctx)
 }
 
 func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
+	return getDummyStruct[t.SearchValidatorsByGraffiti](ctx)
+}
+
+func (d *DummyService) GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error) {
 	return getDummyStruct[t.SearchValidatorsByGraffiti](ctx)
 }
 

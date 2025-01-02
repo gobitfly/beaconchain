@@ -293,7 +293,8 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
@@ -320,7 +321,8 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
@@ -346,12 +348,13 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorsByWithdrawalAddress, ok := resp.Data[0].Value.(api_types.SearchValidatorsByWithdrwalCredential)
+	validatorsByWithdrawalAddress, ok := resp.Data[0].Value.(api_types.SearchValidatorsByWithdrawalCredential)
 	assert.True(t, ok, "response data should be of type SearchValidator")
 	assert.Greater(t, validatorsByWithdrawalAddress.Count, uint64(0), "returned number of validators should be greater than 0")
 }
