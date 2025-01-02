@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -13,9 +14,10 @@ type SearchRepository interface {
 	GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error)
 	GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error)
 	GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositAddress, error)
-	GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error)
-	GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error)
+	GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrawalCredential, error)
+	GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrawalCredential, error)
 	GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error)
+	GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error)
 }
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
@@ -75,9 +77,9 @@ func (d *DataAccessService) GetSearchValidatorsByDepositEnsName(ctx context.Cont
 	return nil, ErrNotFound
 }
 
-func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
+func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrawalCredential, error) {
 	// TODO: implement handling of chainid
-	ret := &t.SearchValidatorsByWithdrwalCredential{
+	ret := &t.SearchValidatorsByWithdrawalCredential{
 		WithdrawalCredential: hexutil.Encode(credential),
 	}
 	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(validatorindex) from validators where withdrawalcredentials = $1;", credential)
@@ -90,7 +92,7 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalCredential(ctx contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error) {
+func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrawalCredential, error) {
 	// TODO: implement handling of chainid
 	// TODO: finalize ens implementation first
 	return nil, ErrNotFound
@@ -100,8 +102,25 @@ func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, c
 	// TODO: implement handling of chainid
 	ret := &t.SearchValidatorsByGraffiti{
 		Graffiti: graffiti,
+		Hex:      hexutil.Encode([]byte(graffiti)),
 	}
 	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
+	if err != nil {
+		return nil, err
+	}
+	if ret.Count == 0 {
+		return nil, ErrNotFound
+	}
+	return ret, nil
+}
+
+func (d *DataAccessService) GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error) {
+	// TODO: implement handling of chainid
+	ret := &t.SearchValidatorsByGraffiti{
+		Graffiti: strings.TrimRight(string(graffiti), "\u0000"),
+		Hex:      hexutil.Encode(graffiti),
+	}
+	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(distinct proposer) from blocks where graffiti = $1;", graffiti)
 	if err != nil {
 		return nil, err
 	}

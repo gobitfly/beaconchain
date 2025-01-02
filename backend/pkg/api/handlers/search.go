@@ -30,6 +30,7 @@ const (
 	validatorsByWithdrawalAddress    searchTypeKey = "validators_by_withdrawal_address"
 	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens_name"
 	validatorsByGraffiti             searchTypeKey = "validators_by_graffiti"
+	validatorsByGraffitiHex          searchTypeKey = "validators_by_graffiti_hex"
 )
 
 // source of truth for all possible search types and their regex
@@ -68,6 +69,10 @@ var searchTypeMap = map[searchTypeKey]searchType{
 	},
 	validatorsByGraffiti: {
 		regex:        reGraffiti,
+		responseType: string(validatorsByGraffiti),
+	},
+	validatorsByGraffitiHex: {
+		regex:        reGraffitiHex,
 		responseType: string(validatorsByGraffiti),
 	},
 }
@@ -173,6 +178,8 @@ func (h *HandlerService) handleSearchType(ctx context.Context, input string, sea
 		return h.handleSearchValidatorsByWithdrawalEnsName(ctx, input, chainId)
 	case validatorsByGraffiti:
 		return h.handleSearchValidatorsByGraffiti(ctx, input, chainId)
+	case validatorsByGraffitiHex:
+		return h.handleSearchValidatorsByGraffitiHex(ctx, input, chainId)
 	default:
 		return nil, errors.New("invalid search type")
 	}
@@ -269,6 +276,15 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
 	result, err := h.daService.GetSearchValidatorsByGraffiti(ctx, chainId, input)
 	return asSearchResult(validatorsByGraffiti, chainId, result, err)
+}
+
+func (h *HandlerService) handleSearchValidatorsByGraffitiHex(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	graffitiHex, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchValidatorsByGraffitiHex(ctx, chainId, graffitiHex)
+	return asSearchResult(validatorsByGraffitiHex, chainId, result, err)
 }
 
 // --------------------------------------

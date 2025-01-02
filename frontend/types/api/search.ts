@@ -16,13 +16,14 @@ export interface SearchValidatorsByDepositAddress {
   deposit_address: string;
   count: number /* uint64 */;
 }
-export interface SearchValidatorsByWithdrwalCredential {
+export interface SearchValidatorsByWithdrawalCredential {
   ens_name?: string;
   withdrawal_credential: string;
   count: number /* uint64 */;
 }
 export interface SearchValidatorsByGraffiti {
   graffiti: string;
+  hex: string;
   count: number /* uint64 */;
 }
 export interface SearchResult {
@@ -31,5 +32,5 @@ export interface SearchResult {
   value: any;
 }
 export interface InternalPostSearchResponse {
-  data: ({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrwalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[];
+  data: ({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[];
 }
