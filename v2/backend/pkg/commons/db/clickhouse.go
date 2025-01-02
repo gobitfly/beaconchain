@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"reflect"
 	"sync"
 	"time"
@@ -25,7 +26,15 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 	if writer.MaxOpenConns < writer.MaxIdleConns {
 		writer.MaxIdleConns = writer.MaxOpenConns
 	}
-	log.Infof("initializing clickhouse native writer db connection to %v:%v/%v with %v/%v conn limit", writer.Host, writer.Port, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
+	var hosts []string
+	hosts = append(hosts, net.JoinHostPort(writer.Host, writer.Port))
+	if len(writer.Failovers) > 0 {
+		for _, f := range writer.Failovers {
+			hosts = append(hosts, net.JoinHostPort(f.Host, f.Port))
+		}
+	}
+
+	log.Infof("initializing clickhouse native writer db connection to %v/%v with %v/%v conn limit", hosts, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbWriter, err := ch.Open(&ch.Options{
 		MaxOpenConns: writer.MaxOpenConns,
 		MaxIdleConns: writer.MaxIdleConns,
@@ -34,7 +43,8 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		Compression: &ch.Compression{
 			Method: ch.CompressionLZ4,
 		},
-		Addr: []string{fmt.Sprintf("%s:%s", writer.Host, writer.Port)},
+		Addr:             hosts,
+		ConnOpenStrategy: ch.ConnOpenInOrder,
 		Auth: ch.Auth{
 			Username: writer.Username,
 			Password: writer.Password,

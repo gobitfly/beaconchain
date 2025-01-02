@@ -102,23 +102,31 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	var sslParam string
+	var extraParams string
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
+	var hosts string
+	hosts = net.JoinHostPort(writer.Host, writer.Port)
+	if len(writer.Failovers) > 0 {
+		for _, failover := range writer.Failovers {
+			hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
+		}
+		extraParams += "&connection_open_strategy=in_order"
+	}
 
-	log.Debugf("connecting to %s database %s:%s/%s as writer with %d/%d max open/idle connections", databaseBrand, writer.Host, writer.Port, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
-	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslParam))
+	log.Debugf("connecting to %s database %s/%s as writer with %d/%d max open/idle connections", databaseBrand, hosts, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
+	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, hosts, writer.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
@@ -134,21 +142,29 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	}
 
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
 
-	log.Debugf("connecting to %s database %s:%s/%s as reader with %d/%d max open/idle connections", databaseBrand, reader.Host, reader.Port, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
-	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslParam))
+	hosts = net.JoinHostPort(reader.Host, reader.Port)
+	if len(reader.Failovers) > 0 {
+		for _, failover := range reader.Failovers {
+			hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
+		}
+		extraParams += "&connection_open_strategy=in_order"
+	}
+
+	log.Debugf("connecting to %s database %s/%s as reader with %d/%d max open/idle connections", databaseBrand, hosts, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
+	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, hosts, reader.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
