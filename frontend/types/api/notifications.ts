@@ -182,7 +182,8 @@ export interface NotificationSettingsValidatorDashboard {
   is_group_efficiency_below_subscribed: boolean;
   group_efficiency_below_threshold: number /* float64 */;
   is_attestations_missed_subscribed: boolean;
-  is_block_proposal_subscribed: boolean;
+  is_block_proposal_success_subscribed: boolean;
+  is_block_proposal_missed_subscribed: boolean;
   is_upcoming_block_proposal_subscribed: boolean;
   is_sync_subscribed: boolean;
   is_withdrawal_processed_subscribed: boolean;

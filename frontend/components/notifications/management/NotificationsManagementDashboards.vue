@@ -107,8 +107,11 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_attestations_missed_subscribed) {
       result.push($t('notifications.subscriptions.validators.attestation_missed.label'))
     }
-    if (settingsValidatorDashboard.is_block_proposal_subscribed) {
-      result.push($t('notifications.subscriptions.validators.block_proposal.label'))
+    if (settingsValidatorDashboard.is_block_proposal_missed_subscribed) {
+      result.push($t('notifications.subscriptions.validators.block_proposal_missed.label'))
+    }
+    if (settingsValidatorDashboard.is_block_proposal_success_subscribed) {
+      result.push($t('notifications.subscriptions.validators.block_proposal_success.label'))
     }
     if (settingsValidatorDashboard.is_upcoming_block_proposal_subscribed) {
       result.push($t('notifications.subscriptions.validators.upcoming_block_proposal.label'))
