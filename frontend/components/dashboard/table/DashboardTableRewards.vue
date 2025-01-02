@@ -51,21 +51,21 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
+  query.value = getQueryWithSort(sort, query.value)
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  query.value = setQueryCursor(value, query.value)
+  query.value = getQueryWithCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  query.value = setQueryPageSize(value, query.value)
+  query.value = getQueryWithPageSize(value, query.value)
 }
 
 const setSearch = (value?: string) => {
-  query.value = setQuerySearch(value, query.value)
+  query.value = getQueryWithSearch(value, query.value)
 }
 
 const getRowClass = (row: VDBRewardsTableRow) => {

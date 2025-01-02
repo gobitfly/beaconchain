@@ -48,21 +48,21 @@ const {
 const data = ref<GetValidatorDashboardDutiesResponse | undefined>()
 
 const onSort = (sort: DataTableSortEvent) => {
-  setQuery(setQuerySort(sort, query?.value))
+  setQuery(getQueryWithSort(sort, query?.value))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  setQuery(setQueryCursor(value, query?.value))
+  setQuery(getQueryWithCursor(value, query?.value))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  setQuery(setQueryPageSize(value, query?.value))
+  setQuery(getQueryWithPageSize(value, query?.value))
 }
 
 const setSearch = (value?: string) => {
-  setQuery(setQuerySearch(value, query?.value))
+  setQuery(getQueryWithSearch(value, query?.value))
 }
 
 const loadData = async () => {

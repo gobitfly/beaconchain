@@ -51,12 +51,12 @@ const groupNameLabel = (groupId?: number) => {
 }
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  query.value = setQueryCursor(value, query.value)
+  query.value = getQueryWithCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  query.value = setQueryPageSize(value, query.value)
+  query.value = getQueryWithPageSize(value, query.value)
 }
 
 const getRowClass = (row: VDBConsensusDepositsTableRow) => {
