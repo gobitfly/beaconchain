@@ -105,7 +105,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
             :add-spacer="true"
             :is-row-expandable
             :selected-sort="query.sort"
-            :loading="isLoading"
+            :is-loading
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

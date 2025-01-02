@@ -98,7 +98,7 @@ const tableData = computed(() => {
             :page-size
             :row-class="getRowClass"
             :is-row-expandable
-            :loading="isLoading"
+            :is-loading
             @set-cursor="setCursor"
             @set-page-size="setPageSize"
           >

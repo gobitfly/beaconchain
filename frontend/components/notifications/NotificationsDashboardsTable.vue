@@ -118,7 +118,7 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

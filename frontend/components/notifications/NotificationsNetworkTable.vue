@@ -60,7 +60,7 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             :add-spacer="true"
             @set-cursor="setCursor"
             @sort="onSort"

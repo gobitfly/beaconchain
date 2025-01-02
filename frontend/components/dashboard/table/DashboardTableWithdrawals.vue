@@ -148,7 +148,7 @@ const tableData = computed(() => {
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable
-            :loading="isLoading"
+            :is-loading
             :selected-sort="query.sort"
             @set-cursor="setCursor"
             @sort="onSort"

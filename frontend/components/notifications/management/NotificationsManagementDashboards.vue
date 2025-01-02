@@ -243,7 +243,7 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
         :cursor
         :page-size
         :selected-sort="query?.sort"
-        :loading="isLoading"
+        :is-loading
         @set-cursor="setCursor"
         @sort="onSort"
         @set-page-size="setPageSize"

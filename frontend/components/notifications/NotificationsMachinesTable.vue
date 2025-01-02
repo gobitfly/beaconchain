@@ -49,7 +49,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             :add-spacer="true"
             :expandable="!colsVisible.threshold"
             @set-cursor="setCursor"
