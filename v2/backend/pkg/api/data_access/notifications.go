@@ -1681,8 +1681,10 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.GroupEfficiencyBelowThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
-			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
-				settings.IsBlockProposalSubscribed = true
+			case types.ValidatorExecutedProposalEventName:
+				settings.IsBlockProposalSuccessSubscribed = true
+			case types.ValidatorMissedProposalEventName:
+				settings.IsBlockProposalMissedSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
 			case types.SyncCommitteeSoonEventName:
@@ -1922,9 +1924,8 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, types.RocketpoolCollateralMinReachedEventName, networkName, eventFilter, epoch, settings.MinCollateralThreshold)
-	// Set two events for IsBlockProposalSubscribed
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSuccessSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalMissedSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
