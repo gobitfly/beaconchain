@@ -27,12 +27,12 @@ import (
 
 //	@BasePath	/api/v2
 
-//	@securitydefinitions.apikey	ApiKeyInHeader
+//	@securityDefinitions.apikey	ApiKeyInHeader
 //	@in							header
 //	@name						Authorization
 //	@description				Use your API key as a Bearer token, e.g. `Bearer <your-api-key>`
 
-//	@securitydefinitions.apikey	ApiKeyInQuery
+//	@securityDefinitions.apikey	ApiKeyInQuery
 //	@in							query
 //	@name						api_key
 
@@ -757,7 +757,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.Respons
 
 // PublicPostValidatorDashboardPublicIds godoc
 //
-//	@Description	Create a new public ID for a specified dashboard. This can be used as an ID by other users for non-modyfing (i.e. GET) endpoints only. Currently limited to one per dashboard.
+//	@Description	Create a new public ID for a specified dashboard. This can be used as an ID by other users for non-modifying (i.e. GET) endpoints only. Currently limited to one per dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
@@ -1877,7 +1877,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notifications
 //	@Produce		json
-//	@Success		200	{object}	types.InternalGetUserNotificationsResponse
+//	@Success		200	{object}	types.GetUserNotificationsResponse
 //	@Router			/users/me/notifications [get]
 func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
@@ -1890,7 +1890,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalGetUserNotificationsResponse{
+	response := types.GetUserNotificationsResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -1907,7 +1907,7 @@ func (h *HandlerService) PublicGetUserNotifications(w http.ResponseWriter, r *ht
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	" Enums(chain_id, timestamp, dashboard_id)
 //	@Param			search	query		string	false	"Search for Dashboard, Group"
-//	@Success		200		{object}	types.InternalGetUserNotificationDashboardsResponse
+//	@Success		200		{object}	types.GetUserNotificationDashboardsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/dashboards [get]
 func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWriter, r *http.Request) {
@@ -1932,7 +1932,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		return
 	}
 	mapDashboardNotificationEvents(data)
-	response := types.InternalGetUserNotificationDashboardsResponse{
+	response := types.GetUserNotificationDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -1949,7 +1949,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
 //	@Param			search			query		string	false	"Search for Index"
-//	@Success		200				{object}	types.InternalGetUserNotificationsValidatorDashboardResponse
+//	@Success		200				{object}	types.GetUserNotificationsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
 func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
@@ -1968,7 +1968,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalGetUserNotificationsValidatorDashboardResponse{
+	response := types.GetUserNotificationsValidatorDashboardResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -1984,7 +1984,7 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			epoch			path		integer	true	"The epoch of the notification."
 //	@Param			search			query		string	false	"Search for Address, ENS"
-//	@Success		200				{object}	types.InternalGetUserNotificationsAccountDashboardResponse
+//	@Success		200				{object}	types.GetUserNotificationsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch} [get]
 func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.ResponseWriter, r *http.Request) {
@@ -2003,7 +2003,7 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalGetUserNotificationsAccountDashboardResponse{
+	response := types.GetUserNotificationsAccountDashboardResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -2019,7 +2019,7 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(machine_name, threshold, event_type, timestamp)
 //	@Param			search	query		string	false	"Search for Machine"
-//	@Success		200		{object}	types.InternalGetUserNotificationMachinesResponse
+//	@Success		200		{object}	types.GetUserNotificationMachinesResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/machines [get]
 func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter, r *http.Request) {
@@ -2042,7 +2042,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		return
 	}
 	mapMachineNotificationEventNames(data)
-	response := types.InternalGetUserNotificationMachinesResponse{
+	response := types.GetUserNotificationMachinesResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -2059,7 +2059,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(client_name, timestamp)
 //	@Param			search	query		string	false	"Search for Client"
-//	@Success		200		{object}	types.InternalGetUserNotificationClientsResponse
+//	@Success		200		{object}	types.GetUserNotificationClientsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/clients [get]
 func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter, r *http.Request) {
@@ -2081,7 +2081,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalGetUserNotificationClientsResponse{
+	response := types.GetUserNotificationClientsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -2097,7 +2097,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 //	@Param			cursor	query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(timestamp, event_type)
-//	@Success		200		{object}	types.InternalGetUserNotificationNetworksResponse
+//	@Success		200		{object}	types.GetUserNotificationNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/networks [get]
 func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter, r *http.Request) {
@@ -2120,7 +2120,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		return
 	}
 	mapNetworkNotificationEventNames(data)
-	response := types.InternalGetUserNotificationNetworksResponse{
+	response := types.GetUserNotificationNetworksResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -2135,7 +2135,7 @@ const diffTolerance = 0.0001
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Notification Settings
 //	@Produce		json
-//	@Success		200	{object}	types.InternalGetUserNotificationSettingsResponse
+//	@Success		200	{object}	types.GetUserNotificationSettingsResponse
 //	@Router			/users/me/notifications/settings [get]
 func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter, r *http.Request) {
 	userId, err := GetUserIdByContext(r)
@@ -2180,7 +2180,7 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 		data.GeneralSettings = userGeneralSettings
 	}
 
-	response := types.InternalGetUserNotificationSettingsResponse{
+	response := types.GetUserNotificationSettingsResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -2194,7 +2194,7 @@ func (h *HandlerService) PublicGetUserNotificationSettings(w http.ResponseWriter
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		types.NotificationSettingsGeneral	true	"Description TODO"
-//	@Success		200		{object}	types.InternalPutUserNotificationSettingsGeneralResponse
+//	@Success		200		{object}	types.PutUserNotificationSettingsGeneralResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/general [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.ResponseWriter, r *http.Request) {
@@ -2230,7 +2230,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		return
 	}
 
-	// use tolarance for float comparison
+	// use tolerance for float comparison
 	isCustomThresholdUsed := math.Abs(req.MachineStorageUsageThreshold-defaultSettings.MachineStorageUsageThreshold) > diffTolerance ||
 		math.Abs(req.MachineCpuUsageThreshold-defaultSettings.MachineCpuUsageThreshold) > diffTolerance ||
 		math.Abs(req.MachineMemoryUsageThreshold-defaultSettings.MachineMemoryUsageThreshold) > diffTolerance
@@ -2245,7 +2245,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalPutUserNotificationSettingsGeneralResponse{
+	response := types.PutUserNotificationSettingsGeneralResponse{
 		Data: req,
 	}
 	returnOk(w, r, response)
@@ -2260,7 +2260,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 //	@Produce		json
 //	@Param			network	path		string								true	"The networks name or chain ID."
 //	@Param			request	body		handlers.PublicPutUserNotificationSettingsNetworks.request	true	"Description Todo"
-//	@Success		200		{object}	types.InternalPutUserNotificationSettingsNetworksResponse
+//	@Success		200		{object}	types.PutUserNotificationSettingsNetworksResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/networks/{network} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.ResponseWriter, r *http.Request) {
@@ -2310,7 +2310,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalPutUserNotificationSettingsNetworksResponse{
+	response := types.PutUserNotificationSettingsNetworksResponse{
 		Data: types.NotificationNetwork{
 			ChainId:  chainId,
 			Settings: settings,
@@ -2328,7 +2328,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 //	@Produce		json
 //	@Param			paired_device_id	path		string															true	"The paired device ID."
 //	@Param			request				body		handlers.PublicPutUserNotificationSettingsPairedDevices.request	true	"Description TODO"
-//	@Success		200					{object}	types.InternalPutUserNotificationSettingsPairedDevicesResponse
+//	@Success		200					{object}	types.PutUserNotificationSettingsPairedDevicesResponse
 //	@Failure		400					{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/paired-devices/{paired_device_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.ResponseWriter, r *http.Request) {
@@ -2369,7 +2369,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	// TODO timestamp
-	response := types.InternalPutUserNotificationSettingsPairedDevicesResponse{
+	response := types.PutUserNotificationSettingsPairedDevicesResponse{
 		Data: types.NotificationPairedDevice{
 			Id:                     pairedDeviceId,
 			Name:                   req.Name,
@@ -2428,7 +2428,7 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 //	@Produce		json
 //	@Param			client_id	path		integer														true	"The ID of the client."
 //	@Param			request		body		handlers.PublicPutUserNotificationSettingsClient.request	true	"`is_subscribed`: Set to `true` to subscribe to notifications; set to `false` to unsubscribe."
-//	@Success		200			{object}	types.InternalPutUserNotificationSettingsClientResponse
+//	@Success		200			{object}	types.PutUserNotificationSettingsClientResponse
 //	@Failure		400			{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/clients/{client_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.ResponseWriter, r *http.Request) {
@@ -2456,7 +2456,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.Response
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalPutUserNotificationSettingsClientResponse{
+	response := types.PutUserNotificationSettingsClientResponse{
 		Data: *data,
 	}
 	returnOk(w, r, response)
@@ -2472,7 +2472,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.Response
 //	@Param			limit	query		integer	false	"The maximum number of results that may be returned."
 //	@Param			sort	query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums	(dashboard_id, group_name)
 //	@Param			search	query		string	false	"Search for Dashboard, Group"
-//	@Success		200		{object}	types.InternalGetUserNotificationSettingsDashboardsResponse
+//	@Success		200		{object}	types.GetUserNotificationSettingsDashboardsResponse
 //	@Failure		400		{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/dashboards [get]
 func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.ResponseWriter, r *http.Request) {
@@ -2521,7 +2521,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		}
 		data[i].Settings = settings
 	}
-	response := types.InternalGetUserNotificationSettingsDashboardsResponse{
+	response := types.GetUserNotificationSettingsDashboardsResponse{
 		Data:   data,
 		Paging: *paging,
 	}
@@ -2538,7 +2538,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 //	@Param			dashboard_id	path		string											true	"The ID of the dashboard."
 //	@Param			group_id		path		integer											true	"The ID of the group."
 //	@Param			request			body		types.NotificationSettingsValidatorDashboard	true	"Notification settings"
-//	@Success		200				{object}	types.InternalPutUserNotificationSettingsValidatorDashboardResponse
+//	@Success		200				{object}	types.PutUserNotificationSettingsValidatorDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/validator-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w http.ResponseWriter, r *http.Request) {
@@ -2580,7 +2580,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalPutUserNotificationSettingsValidatorDashboardResponse{
+	response := types.PutUserNotificationSettingsValidatorDashboardResponse{
 		Data: req,
 	}
 	returnOk(w, r, response)
@@ -2596,7 +2596,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 //	@Param			dashboard_id	path		string																true	"The ID of the dashboard."
 //	@Param			group_id		path		integer																true	"The ID of the group."
 //	@Param			request			body		handlers.PublicPutUserNotificationSettingsAccountDashboard.request	true	"Notification settings"
-//	@Success		200				{object}	types.InternalPutUserNotificationSettingsAccountDashboardResponse
+//	@Success		200				{object}	types.PutUserNotificationSettingsAccountDashboardResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/users/me/notifications/settings/account-dashboards/{dashboard_id}/groups/{group_id} [put]
 func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w http.ResponseWriter, r *http.Request) {
@@ -2653,7 +2653,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		handleErr(w, r, err)
 		return
 	}
-	response := types.InternalPutUserNotificationSettingsAccountDashboardResponse{
+	response := types.PutUserNotificationSettingsAccountDashboardResponse{
 		Data: settings,
 	}
 	returnOk(w, r, response)

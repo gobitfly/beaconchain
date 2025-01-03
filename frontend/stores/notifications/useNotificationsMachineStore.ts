@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import type { InternalGetUserNotificationMachinesResponse } from '~/types/api/notifications'
+import type { GetUserNotificationMachinesResponse } from '~/types/api/notifications'
 
 import type { TableQueryParams } from '~/types/datatable'
 
 const notificationsMachineStore = defineStore('notifications-network-store', () => {
-  const data = ref<InternalGetUserNotificationMachinesResponse | undefined>()
+  const data = ref<GetUserNotificationMachinesResponse | undefined>()
   return { data }
 })
 
@@ -24,7 +24,7 @@ export function useNotificationsMachineStore() {
     isLoading.value = true
     setStoredQuery(q)
     try {
-      const result = await fetch<InternalGetUserNotificationMachinesResponse>(
+      const result = await fetch<GetUserNotificationMachinesResponse>(
         'NOTIFICATIONS_MACHINE',
         undefined,
         undefined,
