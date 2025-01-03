@@ -57,25 +57,7 @@ func Run() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
-				Username:     cfg.WriterDatabase.Username,
-				Password:     cfg.WriterDatabase.Password,
-				Name:         cfg.WriterDatabase.Name,
-				Host:         cfg.WriterDatabase.Host,
-				Port:         cfg.WriterDatabase.Port,
-				MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-				SSL:          cfg.WriterDatabase.SSL,
-			}, &types.DatabaseConfig{
-				Username:     cfg.ReaderDatabase.Username,
-				Password:     cfg.ReaderDatabase.Password,
-				Name:         cfg.ReaderDatabase.Name,
-				Host:         cfg.ReaderDatabase.Host,
-				Port:         cfg.ReaderDatabase.Port,
-				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-				SSL:          cfg.ReaderDatabase.SSL,
-			}, "pgx", "postgres")
+			db.WriterDb, db.ReaderDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
 		}()
 	} else {
 		log.Warnf("------- EXPORTER RUNNING IN V2 ONLY MODE ------")
@@ -84,25 +66,7 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.AlloyWriter.Username,
-			Password:     cfg.AlloyWriter.Password,
-			Name:         cfg.AlloyWriter.Name,
-			Host:         cfg.AlloyWriter.Host,
-			Port:         cfg.AlloyWriter.Port,
-			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-			SSL:          cfg.AlloyWriter.SSL,
-		}, &types.DatabaseConfig{
-			Username:     cfg.AlloyReader.Username,
-			Password:     cfg.AlloyReader.Password,
-			Name:         cfg.AlloyReader.Name,
-			Host:         cfg.AlloyReader.Host,
-			Port:         cfg.AlloyReader.Port,
-			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-			SSL:          cfg.AlloyReader.SSL,
-		}, "pgx", "postgres")
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
 	}()
 
 	wg.Add(1)
