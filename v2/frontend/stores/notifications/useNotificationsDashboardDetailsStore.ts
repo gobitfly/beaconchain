@@ -1,5 +1,5 @@
 import type {
-  InternalGetUserNotificationsValidatorDashboardResponse,
+  GetUserNotificationsValidatorDashboardResponse,
   NotificationDashboardsTableRow, NotificationValidatorDashboardDetail,
 } from '~/types/api/notifications'
 
@@ -18,7 +18,7 @@ export const useNotificationsDashboardDetailsStore = defineStore('notifications-
       search?: string,
     },
   ) => {
-    return fetch<InternalGetUserNotificationsValidatorDashboardResponse>(
+    return fetch<GetUserNotificationsValidatorDashboardResponse>(
       'NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR',
       {
         query: {

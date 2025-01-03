@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { InternalGetUserNotificationDashboardsResponse } from '~/types/api/notifications'
+import type { GetUserNotificationDashboardsResponse } from '~/types/api/notifications'
 
 import type { TableQueryParams } from '~/types/datatable'
 import type { ChainIDs } from '~/types/network'
@@ -7,7 +7,7 @@ import type { ChainIDs } from '~/types/network'
 const notificationsDashboardStore = defineStore(
   'notifications-dashboard-store',
   () => {
-    const data = ref<InternalGetUserNotificationDashboardsResponse | undefined>()
+    const data = ref<GetUserNotificationDashboardsResponse | undefined>()
     return { data }
   },
 )
@@ -38,7 +38,7 @@ export function useNotificationsDashboardStore(networkId: globalThis.Ref<ChainID
     isLoading.value = true
     setStoredQuery(q)
     try {
-      const result = await fetch<InternalGetUserNotificationDashboardsResponse>(
+      const result = await fetch<GetUserNotificationDashboardsResponse>(
         'NOTIFICATIONS_DASHBOARDS',
         { query: { networks: networkId.value } },
         undefined,

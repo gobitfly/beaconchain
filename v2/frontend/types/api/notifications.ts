@@ -30,7 +30,7 @@ export interface NotificationOverviewData {
   clients_subscription_count: number /* uint64 */;
   networks_subscription_count: number /* uint64 */;
 }
-export type InternalGetUserNotificationsResponse = ApiDataResponse<NotificationOverviewData>;
+export type GetUserNotificationsResponse = ApiDataResponse<NotificationOverviewData>;
 /**
  * ------------------------------------------------------------
  * Dashboards Table
@@ -46,7 +46,7 @@ export interface NotificationDashboardsTableRow {
   entity_count: number /* uint64 */;
   event_types: ('validator_online' | 'validator_offline' | 'group_efficiency_below' | 'attestation_missed' | 'proposal_success' | 'proposal_missed' | 'proposal_upcoming' | 'max_collateral' | 'min_collateral' | 'sync' | 'withdrawal' | 'validator_got_slashed' | 'validator_has_slashed' | 'incoming_tx' | 'outgoing_tx' | 'transfer_erc20' | 'transfer_erc721' | 'transfer_erc1155')[];
 }
-export type InternalGetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
+export type GetUserNotificationDashboardsResponse = ApiPagingResponse<NotificationDashboardsTableRow>;
 export interface NotificationEventValidatorBackOnline {
   index: number /* uint64 */;
   epoch_count: number /* uint64 */;
@@ -73,7 +73,7 @@ export interface NotificationValidatorDashboardDetail {
   min_collateral: Address[]; // node addresses
   max_collateral: Address[]; // node addresses
 }
-export type InternalGetUserNotificationsValidatorDashboardResponse = ApiDataResponse<NotificationValidatorDashboardDetail>;
+export type GetUserNotificationsValidatorDashboardResponse = ApiDataResponse<NotificationValidatorDashboardDetail>;
 export interface NotificationEventExecution {
   address: Address;
   amount: string /* decimal.Decimal */;
@@ -87,7 +87,7 @@ export interface NotificationAccountDashboardDetail {
   erc721_token_transfers: NotificationEventExecution[];
   erc1155_token_transfers: NotificationEventExecution[];
 }
-export type InternalGetUserNotificationsAccountDashboardResponse = ApiDataResponse<NotificationAccountDashboardDetail>;
+export type GetUserNotificationsAccountDashboardResponse = ApiDataResponse<NotificationAccountDashboardDetail>;
 /**
  * ------------------------------------------------------------
  * Machines Table
@@ -98,7 +98,7 @@ export interface NotificationMachinesTableRow {
   event_type: 'offline' | 'storage' | 'cpu' | 'memory';
   timestamp: number /* int64 */;
 }
-export type InternalGetUserNotificationMachinesResponse = ApiPagingResponse<NotificationMachinesTableRow>;
+export type GetUserNotificationMachinesResponse = ApiPagingResponse<NotificationMachinesTableRow>;
 /**
  * ------------------------------------------------------------
  * Clients Table
@@ -109,7 +109,7 @@ export interface NotificationClientsTableRow {
   url: string;
   timestamp: number /* int64 */;
 }
-export type InternalGetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
+export type GetUserNotificationClientsResponse = ApiPagingResponse<NotificationClientsTableRow>;
 /**
  * ------------------------------------------------------------
  * Networks Table
@@ -120,7 +120,7 @@ export interface NotificationNetworksTableRow {
   event_type: 'new_reward_round' | 'gas_above' | 'gas_below' | 'participation_rate';
   threshold?: string /* decimal.Decimal */; // participation rate threshold should also be passed as decimal string
 }
-export type InternalGetUserNotificationNetworksResponse = ApiPagingResponse<NotificationNetworksTableRow>;
+export type GetUserNotificationNetworksResponse = ApiPagingResponse<NotificationNetworksTableRow>;
 /**
  * ------------------------------------------------------------
  * Notification Settings
@@ -138,21 +138,21 @@ export interface NotificationNetwork {
   chain_id: number /* uint64 */;
   settings: NotificationSettingsNetwork;
 }
-export type InternalPutUserNotificationSettingsNetworksResponse = ApiDataResponse<NotificationNetwork>;
+export type PutUserNotificationSettingsNetworksResponse = ApiDataResponse<NotificationNetwork>;
 export interface NotificationPairedDevice {
   id: number /* uint64 */;
   paired_timestamp: number /* int64 */;
   name?: string;
   is_notifications_enabled: boolean;
 }
-export type InternalPutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;
+export type PutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;
 export interface NotificationSettingsClient {
   id: number /* uint64 */;
   name: string;
   category: 'execution_layer' | 'consensus_layer' | 'other';
   is_subscribed: boolean;
 }
-export type InternalPutUserNotificationSettingsClientResponse = ApiDataResponse<NotificationSettingsClient>;
+export type PutUserNotificationSettingsClientResponse = ApiDataResponse<NotificationSettingsClient>;
 export interface NotificationSettingsGeneral {
   do_not_disturb_timestamp: number /* int64 */; // notifications are disabled until this timestamp
   is_email_notifications_enabled: boolean;
@@ -166,7 +166,7 @@ export interface NotificationSettingsGeneral {
   is_machine_memory_usage_subscribed: boolean;
   machine_memory_usage_threshold: number /* float64 */;
 }
-export type InternalPutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
+export type PutUserNotificationSettingsGeneralResponse = ApiDataResponse<NotificationSettingsGeneral>;
 export interface NotificationSettings {
   general_settings: NotificationSettingsGeneral;
   has_machines: boolean;
@@ -174,7 +174,7 @@ export interface NotificationSettings {
   paired_devices: NotificationPairedDevice[];
   clients: NotificationSettingsClient[];
 }
-export type InternalGetUserNotificationSettingsResponse = ApiDataResponse<NotificationSettings>;
+export type GetUserNotificationSettingsResponse = ApiDataResponse<NotificationSettings>;
 export interface NotificationSettingsValidatorDashboard {
   webhook_url: string;
   is_webhook_discord_enabled: boolean;
@@ -192,7 +192,7 @@ export interface NotificationSettingsValidatorDashboard {
   is_min_collateral_subscribed: boolean;
   min_collateral_threshold: number /* float64 */;
 }
-export type InternalPutUserNotificationSettingsValidatorDashboardResponse = ApiDataResponse<NotificationSettingsValidatorDashboard>;
+export type PutUserNotificationSettingsValidatorDashboardResponse = ApiDataResponse<NotificationSettingsValidatorDashboard>;
 export interface NotificationSettingsAccountDashboard {
   webhook_url: string;
   is_webhook_discord_enabled: boolean;
@@ -205,7 +205,7 @@ export interface NotificationSettingsAccountDashboard {
   is_erc721_token_transfers_subscribed: boolean;
   is_erc1155_token_transfers_subscribed: boolean;
 }
-export type InternalPutUserNotificationSettingsAccountDashboardResponse = ApiDataResponse<NotificationSettingsAccountDashboard>;
+export type PutUserNotificationSettingsAccountDashboardResponse = ApiDataResponse<NotificationSettingsAccountDashboard>;
 export interface NotificationSettingsDashboardsTableRow {
   is_account_dashboard: boolean; // if false it's a validator dashboard
   dashboard_id: number /* uint64 */;
@@ -218,4 +218,4 @@ export interface NotificationSettingsDashboardsTableRow {
   settings: NotificationSettingsAccountDashboard | NotificationSettingsValidatorDashboard;
   chain_ids: number /* uint64 */[];
 }
-export type InternalGetUserNotificationSettingsDashboardsResponse = ApiPagingResponse<NotificationSettingsDashboardsTableRow>;
+export type GetUserNotificationSettingsDashboardsResponse = ApiPagingResponse<NotificationSettingsDashboardsTableRow>;
