@@ -22,7 +22,7 @@ type Config struct {
 		EmulatorPort        int    `yaml:"emulatorPort" env:"EMULATOR_PORT"`
 		EmulatorHost        string `yaml:"emulatorHost" env:"EMULATOR_HOST"`
 		V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" env:"V2_SCHEMA_CUTT_OFF_EPOCH"`
-	} `yaml:"bigtable" env=", prefix=BIGTABLE_"`
+	} `yaml:"bigtable" env:", prefix=BIGTABLE_"`
 	BlobIndexer struct {
 		S3 struct {
 			Endpoint        string `yaml:"endpoint" env:"ENDPOINT"`                 // s3 endpoint

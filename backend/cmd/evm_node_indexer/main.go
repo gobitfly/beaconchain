@@ -214,25 +214,7 @@ func Run() {
 
 	// init postgres
 	{
-		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
-			Username:     utils.Config.WriterDatabase.Username,
-			Password:     utils.Config.WriterDatabase.Password,
-			Name:         utils.Config.WriterDatabase.Name,
-			Host:         utils.Config.WriterDatabase.Host,
-			Port:         utils.Config.WriterDatabase.Port,
-			MaxOpenConns: utils.Config.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: utils.Config.WriterDatabase.MaxIdleConns,
-			SSL:          utils.Config.WriterDatabase.SSL,
-		}, &types.DatabaseConfig{
-			Username:     utils.Config.ReaderDatabase.Username,
-			Password:     utils.Config.ReaderDatabase.Password,
-			Name:         utils.Config.ReaderDatabase.Name,
-			Host:         utils.Config.ReaderDatabase.Host,
-			Port:         utils.Config.ReaderDatabase.Port,
-			MaxOpenConns: utils.Config.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: utils.Config.ReaderDatabase.MaxIdleConns,
-			SSL:          utils.Config.ReaderDatabase.SSL,
-		}, "pgx", "postgres")
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&utils.Config.WriterDatabase, &utils.Config.ReaderDatabase, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
 		log.Info("starting postgres completed")
