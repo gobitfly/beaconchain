@@ -7,6 +7,7 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/lib/pq"
 )
 
 type ArchiverRepository interface {
@@ -99,9 +100,23 @@ func (d *DataAccessService) UpdateValidatorDashboardsArchiving(ctx context.Conte
 }
 
 func (d *DataAccessService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
-	// Delete the dashboard
+	// Delete the dashboards
 	_, err := d.writerDb.ExecContext(ctx, `
 		DELETE FROM users_val_dashboards WHERE id = ANY($1)
 	`, dashboardIds)
+	if err != nil {
+		return err
+	}
+
+	var prefixes []string
+	for _, dashboardId := range dashboardIds {
+		prefixes = append(prefixes, fmt.Sprintf("%s:%d:%%", ValidatorDashboardEventPrefix, dashboardId))
+	}
+
+	// Remove all events related to the dashboards
+	_, err = d.userWriter.ExecContext(ctx, `
+		DELETE FROM users_subscriptions WHERE event_filter LIKE ANY($1)
+	`, pq.Array(prefixes))
+
 	return err
 }
