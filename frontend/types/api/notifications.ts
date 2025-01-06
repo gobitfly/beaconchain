@@ -208,6 +208,7 @@ export interface NotificationSettingsAccountDashboard {
 export type PutUserNotificationSettingsAccountDashboardResponse = ApiDataResponse<NotificationSettingsAccountDashboard>;
 export interface NotificationSettingsDashboardsTableRow {
   is_account_dashboard: boolean; // if false it's a validator dashboard
+  is_archived: boolean;
   dashboard_id: number /* uint64 */;
   dashboard_name: string;
   group_id: number /* uint64 */;

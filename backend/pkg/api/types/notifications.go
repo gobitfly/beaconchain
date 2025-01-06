@@ -216,6 +216,7 @@ type PutUserNotificationSettingsAccountDashboardResponse ApiDataResponse[Notific
 
 type NotificationSettingsDashboardsTableRow struct {
 	IsAccountDashboard bool   `json:"is_account_dashboard"` // if false it's a validator dashboard
+	IsArchived         bool   `json:"is_archived"`
 	DashboardId        uint64 `json:"dashboard_id"`
 	DashboardName      string `json:"dashboard_name"`
 	GroupId            uint64 `json:"group_id"`
