@@ -1564,6 +1564,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// Get the validator dashboards
 	valDashboards := []struct {
 		DashboardId   uint64         `db:"dashboard_id"`
+		IsArchived    bool           `db:"is_archived"`
 		DashboardName string         `db:"dashboard_name"`
 		GroupId       uint64         `db:"group_id"`
 		GroupName     string         `db:"group_name"`
@@ -1575,6 +1576,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
 			SELECT
 				d.id AS dashboard_id,
+				d.is_archived IS NOT NULL AS is_archived,
 				d.name AS dashboard_name,
 				g.id AS group_id,
 				g.name AS group_name,
@@ -1731,6 +1733,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 		// Set general info
 		resultMap[key].IsAccountDashboard = false
+		resultMap[key].IsArchived = valDashboard.IsArchived
 		resultMap[key].DashboardId = valDashboard.DashboardId
 		resultMap[key].DashboardName = valDashboard.DashboardName
 		resultMap[key].GroupId = valDashboard.GroupId
