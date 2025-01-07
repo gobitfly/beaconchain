@@ -274,6 +274,10 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 }
 
 func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	// regex could only verify max character length, validate max byte length here
+	if len(input) > 32 {
+		return nil, nil // return no error as to not disturb the other search types
+	}
 	result, err := h.daService.GetSearchValidatorsByGraffiti(ctx, chainId, input)
 	return asSearchResult(validatorsByGraffiti, chainId, result, err)
 }

@@ -34,9 +34,9 @@ var (
 	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
 	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
 	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
-	reGraffiti                     = regexp.MustCompile(`^.{2,}$`)                     // at least 2 characters, so that queries won't time out
-	reGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){2,}$`) // at least 2 bytes, so that queries won't time out
-	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`)            // has to be base64
+	reGraffiti                     = regexp.MustCompile(`^.{2,32}$`) // at least 2 characters, so that queries won't time out
+	reGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){32}$`)
+	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
 	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
