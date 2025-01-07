@@ -2,7 +2,7 @@ package archiver
 
 import (
 	"context"
-	"slices"
+	"sort"
 	"time"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
@@ -80,20 +80,32 @@ func (a *Archiver) updateArchivedStatus() error {
 		// Check if the user still exceeds the maximum number of active dashboards
 		dashboardLimit := int(userInfo.PremiumPerks.ValidatorDashboards)
 		if len(activeDashboards) > dashboardLimit {
-			slices.Sort(activeDashboards)
-			for id := 0; id < len(activeDashboards)-dashboardLimit; id++ {
-				dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: activeDashboards[id], ArchivedReason: enums.VDBArchivedReasons.Dashboards})
+			for _, id := range activeDashboards[:len(activeDashboards)-dashboardLimit] {
+				dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: id, ArchivedReason: enums.VDBArchivedReasons.Dashboards})
 			}
 		}
 
 		// Check if the user exceeds the maximum number of archived dashboards
 		archivedLimit := handlers.MaxArchivedDashboardsCount
 		if len(archivedDashboards)+len(dashboardsToBeArchived) > archivedLimit {
+			// 1. merge current and about-to-be-archived dashboards
 			dashboardsToBeDeletedForUser := archivedDashboards
 			for _, dashboard := range dashboardsToBeArchived {
 				dashboardsToBeDeletedForUser = append(dashboardsToBeDeletedForUser, dashboard.DashboardId)
 			}
-			slices.Sort(dashboardsToBeDeletedForUser)
+
+			// 2. sort by creation date
+			// messy because collected data containers only contain id
+			// -> HACK: create temp index map to original dashboard list (which was sorted by DB)
+			indices := make(map[uint64]int, len(dashboards)) // dashboard id -> index in sorted "dashboards" list
+			for i, v := range dashboards {
+				indices[v.DashboardId] = i
+			}
+			sort.Slice(dashboardsToBeDeletedForUser, func(i, j int) bool {
+				return indices[dashboardsToBeDeletedForUser[i]] < indices[dashboardsToBeDeletedForUser[j]]
+			})
+
+			// 3. remove oldest dashboards
 			dashboardsToBeDeletedForUser = dashboardsToBeDeletedForUser[:len(dashboardsToBeDeletedForUser)-archivedLimit]
 			dashboardsToBeDeleted = append(dashboardsToBeDeleted, dashboardsToBeDeletedForUser...)
 		}

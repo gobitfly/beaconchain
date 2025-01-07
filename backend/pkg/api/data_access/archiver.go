@@ -50,6 +50,8 @@ func (d *DataAccessService) GetValidatorDashboardsCountInfo(ctx context.Context)
 		FROM users_val_dashboards uvd
 		LEFT JOIN dashboards_groups dg ON uvd.id = dg.dashboard_id
 		LEFT JOIN dashboards_validators dv ON uvd.id = dv.dashboard_id
+		ORDER BY
+			uvd.created_at ASC
 	`)
 	if err != nil {
 		return nil, err
