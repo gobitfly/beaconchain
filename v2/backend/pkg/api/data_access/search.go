@@ -100,9 +100,11 @@ func (d *DataAccessService) GetSearchValidatorsByWithdrawalEnsName(ctx context.C
 
 func (d *DataAccessService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
 	// TODO: implement handling of chainid
+	graffitiHex := [32]byte{}
+	copy(graffitiHex[:], graffiti)
 	ret := &t.SearchValidatorsByGraffiti{
 		Graffiti: graffiti,
-		Hex:      hexutil.Encode([]byte(graffiti)),
+		Hex:      hexutil.Encode(graffitiHex[:]),
 	}
 	err := db.ReaderDb.GetContext(ctx, &ret.Count, "select count(distinct proposer) from blocks where graffiti_text = $1;", graffiti)
 	if err != nil {
