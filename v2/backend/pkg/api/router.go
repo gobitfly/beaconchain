@@ -354,7 +354,7 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 
 	publicDashboardNotificationSettingsRouter := publicNotificationRouter.NewRoute().Subrouter()
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
-	// TODO add adb auth and archivedCheck middleware to account dashboard endpoints once they are implemented
+	// TODO add adb auth middleware to account dashboard endpoints once they are implemented
 	if !debug {
 		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware, hs.VDBArchivedCheckMiddleware)
 		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware, hs.VDBArchivedCheckMiddleware)
@@ -362,10 +362,21 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
 		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
+	}
+	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
+
+	publicActiveDashboardNotificationSettingsRouter := publicDashboardNotificationSettingsRouter.NewRoute().Subrouter()
+	internalActiveDashboardNotificationSettingsRouter := internalDashboardNotificationSettingsRouter.NewRoute().Subrouter()
+	// TODO add archivedCheck middleware to account dashboard endpoints once they are implemented
+	if !debug {
+		publicActiveDashboardNotificationSettingsRouter.Use(hs.VDBArchivedCheckMiddleware)
+		internalActiveDashboardNotificationSettingsRouter.Use(hs.VDBArchivedCheckMiddleware)
+	}
+	activeDashboardSettingsEndpoints := []endpoint{
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsValidatorDashboard, hs.InternalPutUserNotificationSettingsValidatorDashboard},
 		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsAccountDashboard, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
-	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
+	addEndpointsToRouters(activeDashboardSettingsEndpoints, publicActiveDashboardNotificationSettingsRouter, internalActiveDashboardNotificationSettingsRouter)
 }
 
 func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {
