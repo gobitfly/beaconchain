@@ -263,7 +263,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveApr := func(hours int, apr *float64) {
 		eg.Go(func() error {
-			_, elApr, _, clApr, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			_, elApr, _, clApr, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
@@ -274,7 +274,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveRewards := func(hours int, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			elRewards, _, clRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			elRewards, _, clRewards, _, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
