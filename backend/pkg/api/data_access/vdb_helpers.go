@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -13,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 )
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -129,4 +131,158 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	}
 
 	return timeToWithdrawal
+}
+
+func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
+	table := ""
+
+	switch hours {
+	case 1:
+		table = "validator_dashboard_data_rolling_1h"
+	case 24:
+		table = "validator_dashboard_data_rolling_24h"
+	case 7 * 24:
+		table = "validator_dashboard_data_rolling_7d"
+	case 30 * 24:
+		table = "validator_dashboard_data_rolling_30d"
+	case -1:
+		table = "validator_dashboard_data_rolling_90d"
+	default:
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid hours value: %v", hours)
+	}
+
+	type RewardsResult struct {
+		EpochStart     uint64        `db:"epoch_start"`
+		EpochEnd       uint64        `db:"epoch_end"`
+		ValidatorCount uint64        `db:"validator_count"`
+		Reward         sql.NullInt64 `db:"reward"`
+	}
+
+	var rewardsResultTable RewardsResult
+	var rewardsResultTotal RewardsResult
+
+	rewardsDs := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table))).
+		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+		Select(
+			goqu.L("MIN(epoch_start) AS epoch_start"),
+			goqu.L("MAX(epoch_end) AS epoch_end"),
+			goqu.L("COUNT(*) AS validator_count"),
+			goqu.L(`
+				(
+					SUM(COALESCE(finalizeAggregation(r.balance_end), 0)) +
+					SUM(COALESCE(r.withdrawals_amount, 0)) -
+					SUM(COALESCE(r.deposits_amount, 0)) -
+					SUM(COALESCE(finalizeAggregation(r.balance_start), 0))
+				) AS reward
+			`))
+	if len(dashboardId.Validators) > 0 {
+		rewardsDs = rewardsDs.
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
+	} else {
+		rewardsDs = rewardsDs.
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+
+		if groupId != -1 {
+			rewardsDs = rewardsDs.
+				Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	query, args, err := rewardsDs.Prepared(true).ToSQL()
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
+	if err != nil || !rewardsResultTable.Reward.Valid {
+		return decimal.Zero, 0, decimal.Zero, 0, err
+	}
+
+	if rewardsResultTable.ValidatorCount == 0 {
+		return decimal.Zero, 0, decimal.Zero, 0, nil
+	}
+
+	aprDivisor := hours
+	if hours == -1 { // for all time APR
+		aprDivisor = 90 * 24
+	}
+	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	if math.IsNaN(clAPR) {
+		clAPR = 0
+	}
+
+	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+
+	if hours == -1 {
+		rewardsDs = rewardsDs.
+			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
+
+		query, args, err = rewardsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+		}
+
+		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
+		if err != nil || !rewardsResultTotal.Reward.Valid {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+
+		clIncome = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+	}
+
+	elDs := goqu.Dialect("postgres").
+		Select(goqu.COALESCE(goqu.SUM(goqu.L("value / 1e18")), 0)).
+		From(goqu.I("execution_rewards_finalized").As("b"))
+
+	if len(dashboardId.Validators) > 0 {
+		elDs = elDs.
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
+	} else {
+		elDs = elDs.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if groupId != -1 {
+			elDs = elDs.
+				Where(goqu.L("v.group_id = ?", groupId))
+		}
+	}
+
+	elTableDs := elDs.
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTable.EpochStart, rewardsResultTable.EpochEnd))
+
+	query, args, err = elTableDs.Prepared(true).ToSQL()
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, err
+	}
+	elIncomeFloat, _ := elIncome.Float64() // EL income is in ETH
+	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
+	if math.IsNaN(elAPR) {
+		elAPR = 0
+	}
+
+	if hours == -1 {
+		elTotalDs := elDs.
+			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
+
+		query, args, err = elTotalDs.Prepared(true).ToSQL()
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+		}
+
+		err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
+		if err != nil {
+			return decimal.Zero, 0, decimal.Zero, 0, err
+		}
+	}
+	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
+
+	return elIncome, elAPR, clIncome, clAPR, nil
 }
