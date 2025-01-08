@@ -480,6 +480,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 }
 
 func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indices []uint64, table string) (map[uint64]float64, error) {
+	if len(indices) == 0 {
+		return map[uint64]float64{}, nil
+	}
 	ds := goqu.Dialect("postgres").
 		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 		Select(
