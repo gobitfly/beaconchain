@@ -156,7 +156,7 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			return
 		}
 		if dashboard.IsArchived {
-			handleErr(w, r, newForbiddenErr("dashboard with id %v is archived", dashboardId))
+			handleErr(w, r, newForbiddenErr("dashboard with id %s is archived", mux.Vars(r)["dashboard_id"]))
 			return
 		}
 		next.ServeHTTP(w, r)
