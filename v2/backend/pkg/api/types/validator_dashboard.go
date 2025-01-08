@@ -13,7 +13,7 @@ type VDBOverviewGroup struct {
 	Count uint64 `json:"count"`
 }
 
-type VDBOverviewBalances struct {
+type ValidatorBalances struct {
 	Total     decimal.Decimal `json:"total"`
 	Effective decimal.Decimal `json:"effective"`
 	StakedEth decimal.Decimal `json:"staked_eth"`
@@ -28,7 +28,7 @@ type VDBOverviewData struct {
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
-	Balances            VDBOverviewBalances                        `json:"balances"`
+	Balances            ValidatorBalances                          `json:"balances"`
 }
 
 type GetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
@@ -82,6 +82,10 @@ type VDBGroupSummaryMissedRewards struct {
 	Sync            decimal.Decimal            `json:"sync"`
 }
 type VDBGroupSummaryData struct {
+	Efficiency float64                    `json:"efficiency"`
+	Balances   ValidatorBalances          `json:"balances"`
+	Rewards    ClElValue[decimal.Decimal] `json:"rewards"`
+
 	AttestationsHead       StatusCount `json:"attestations_head"`
 	AttestationsSource     StatusCount `json:"attestations_source"`
 	AttestationsTarget     StatusCount `json:"attestations_target"`
