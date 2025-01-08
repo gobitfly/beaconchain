@@ -1,4 +1,4 @@
-# Beaconch.in Good to know
+# Beaconcha.in Good to know
 
 ## Usefull VSC Plugins
 
@@ -37,13 +37,7 @@ cp .env-example .env
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
 The variable evoking the development is used to show/hide features and components that are not ready for production.
 
-Add the following mapping in your `/etc/hosts` file:
-
-```
-127.0.0.1 local.beaconcha.in
-```
-
-Create server certificates for locally running on https, by runing these comands in the console
+Create server certificates for locally running on https, by runing these comands in the console:
 
 ```bash
 openssl genrsa 2048 > server.key
