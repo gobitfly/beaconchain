@@ -44,7 +44,10 @@ func readConfigFile(cfg *types.Config, path string) error {
 }
 
 func readConfigEnv(cfg *types.Config) error {
-	return envconfig.Process(context.Background(), cfg)
+	return envconfig.ProcessWith(context.Background(), &envconfig.Config{
+		Target: cfg,
+		DefaultOverwrite: true,
+	})
 }
 
 func readConfigSecrets(cfg *types.Config) error {
