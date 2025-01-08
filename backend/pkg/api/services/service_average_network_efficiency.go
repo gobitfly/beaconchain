@@ -28,8 +28,8 @@ func (s *Services) startEfficiencyDataService(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		r := services.NewStatusReport("api_service_avg_efficiency", constants.Default, delay)
-		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
 		r(constants.Running, nil)
+		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
 		if err != nil {
 			log.Error(err, "error updating average network efficiency data", 0)
 			r(constants.Failure, map[string]string{"error": err.Error()})
