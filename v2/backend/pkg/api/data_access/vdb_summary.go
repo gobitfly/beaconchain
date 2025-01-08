@@ -581,14 +581,18 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			goqu.L("attestations_head_executed"),
 			goqu.L("attestations_source_executed"),
 			goqu.L("attestations_target_executed"),
+			goqu.L("attestations_reward_rewards_only"),
 			goqu.L("blocks_scheduled"),
 			goqu.L("blocks_proposed"),
+			goqu.L("blocks_cl_missed_median_reward"),
 			goqu.L("sync_scheduled"),
 			goqu.L("sync_executed"),
 			goqu.L("slashed AS slashed_in_period"),
 			goqu.L("blocks_slashing_count AS slashed_amount"),
 			goqu.L("blocks_expected"),
 			goqu.L("inclusion_delay_sum"),
+			goqu.L("sync_localized_max_reward"),
+			goqu.L("sync_reward_rewards_only"),
 			goqu.L("sync_committees_expected")).
 		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
 
@@ -603,16 +607,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	type QueryResult struct {
-		ValidatorIndex         uint32 `db:"validator_index"`
-		EpochStart             uint64 `db:"epoch_start"`
-		AttestationReward      int64  `db:"attestations_reward"`
-		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
+		ValidatorIndex          uint32 `db:"validator_index"`
+		EpochStart              uint64 `db:"epoch_start"`
+		AttestationReward       int64  `db:"attestations_reward"`
+		AttestationsIdealReward int64  `db:"attestations_ideal_reward"`
 
-		AttestationsScheduled      int64 `db:"attestations_scheduled"`
-		AttestationsObserved       int64 `db:"attestations_observed"`
-		AttestationsHeadExecuted   int64 `db:"attestations_head_executed"`
-		AttestationsSourceExecuted int64 `db:"attestations_source_executed"`
-		AttestationsTargetExecuted int64 `db:"attestations_target_executed"`
+		AttestationsScheduled         int64 `db:"attestations_scheduled"`
+		AttestationsObserved          int64 `db:"attestations_observed"`
+		AttestationsHeadExecuted      int64 `db:"attestations_head_executed"`
+		AttestationsSourceExecuted    int64 `db:"attestations_source_executed"`
+		AttestationsTargetExecuted    int64 `db:"attestations_target_executed"`
+		AttestationsRewardRewardsOnly int64 `db:"attestations_reward_rewards_only"`
 
 		BlocksScheduled uint32 `db:"blocks_scheduled"`
 		BlocksProposed  uint32 `db:"blocks_proposed"`
@@ -625,6 +630,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		BlockChance            float64 `db:"blocks_expected"`
 		SyncCommitteesExpected float64 `db:"sync_committees_expected"`
+
+		BlocksCLMissedReward    int64 `db:"blocks_cl_missed_median_reward"`
+		SyncLocalizedMaxRewards int64 `db:"sync_localized_max_reward"`
+		SyncRewardRewardsOnly   int64 `db:"sync_reward_rewards_only"`
 
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
@@ -670,11 +679,15 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	totalSyncExpected := float64(0)
 	totalProposals := uint32(0)
 
+	totalMissedRewardsCl := int64(0)
+	totalMissedRewardsAttestations := int64(0)
+	totalMissedRewardsSync := int64(0)
+
 	validatorArr := make([]t.VDBValidator, 0)
 	for _, row := range rows {
 		validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
 		totalAttestationRewards += row.AttestationReward
-		totalIdealAttestationRewards += row.AttestationIdealReward
+		totalIdealAttestationRewards += row.AttestationsIdealReward
 
 		ret.AttestationsHead.Success += uint64(row.AttestationsHeadExecuted)
 		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsHeadExecuted)
@@ -684,6 +697,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		ret.AttestationsTarget.Success += uint64(row.AttestationsTargetExecuted)
 		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsTargetExecuted)
+
+		totalMissedRewardsCl += row.BlocksCLMissedReward
+		totalMissedRewardsAttestations += row.AttestationsIdealReward - row.AttestationsRewardRewardsOnly
+		totalMissedRewardsSync += row.SyncLocalizedMaxRewards - row.SyncRewardRewardsOnly
 
 		if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
 			row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
@@ -731,6 +748,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			totalInclusionDelayDivisor += row.AttestationsObserved
 		}
 	}
+
+	ret.MissedRewards.Attestations = utils.GWeiToWei(big.NewInt(totalMissedRewardsAttestations))
+	ret.MissedRewards.Sync = utils.GWeiToWei(big.NewInt(totalMissedRewardsSync))
+	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsCl))
 
 	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, hours)
 	if err != nil {

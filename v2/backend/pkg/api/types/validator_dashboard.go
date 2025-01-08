@@ -77,9 +77,9 @@ type VDBGroupSummarySyncCount struct {
 }
 
 type VDBGroupSummaryMissedRewards struct {
-	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards" faker:"cl_el_eth"`
-	Attestations    decimal.Decimal            `json:"attestations" faker:"eth"`
-	Sync            decimal.Decimal            `json:"sync" faker:"eth"`
+	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards"`
+	Attestations    decimal.Decimal            `json:"attestations"`
+	Sync            decimal.Decimal            `json:"sync"`
 }
 type VDBGroupSummaryData struct {
 	AttestationsHead       StatusCount `json:"attestations_head"`
