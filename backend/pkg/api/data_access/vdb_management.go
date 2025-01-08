@@ -1056,7 +1056,6 @@ func (d *DataAccessService) getAddValidatorsQuery(uniqueValidatorIndexesQuery st
 func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
 		// Remove all validators for the dashboard
-		// This is usually forbidden by API validation
 		_, err := d.alloyWriter.ExecContext(ctx, `
 			DELETE FROM users_val_dashboards_validators
 			WHERE dashboard_id = $1

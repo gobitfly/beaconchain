@@ -368,6 +368,10 @@ func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.Respons
 	h.PublicPostValidatorDashboardValidators(w, r)
 }
 
+func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+	h.PublicDeleteValidatorDashboardValidators(w, r)
+}
+
 func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardValidators(w, r)
 }
@@ -400,8 +404,8 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 	returnOk(w, r, response)
 }
 
-func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	h.PublicDeleteValidatorDashboardValidators(w, r)
+func (h *HandlerService) InternalPostValidatorDashboardValidatorBulkDeletions(w http.ResponseWriter, r *http.Request) {
+	h.PublicPostValidatorDashboardValidatorBulkDeletions(w, r)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {

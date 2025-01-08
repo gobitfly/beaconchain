@@ -264,7 +264,7 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 	returnOk(w, r, response)
 }
 
-// PublicPutValidatorDashboard godoc
+// PublicDeleteValidatorDashboard godoc
 //
 //	@Description	Delete a specified validator dashboard.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
@@ -450,7 +450,6 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 //	@Description	Delete a group in a specified validator dashboard.
 //	@Tags			Validator Dashboard Management
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path	integer	true	"The ID of the dashboard."
 //	@Param			group_id		path	integer	true	"The ID of the group."
@@ -714,17 +713,44 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 
 // PublicDeleteValidatorDashboardValidators godoc
 //
-//	@Description	Remove validators from a specified dashboard.
-//	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboard Management
-//	@Accept			json
-//	@Produce		json
-//	@Param			dashboard_id	path	integer														true	"The ID of the dashboard."
-//	@Param			request			body	handlers.PublicDeleteValidatorDashboardValidators.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
-//	@Success		204				"Validators removed successfully."
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
+// @Description	Remove all validators from a specified dashboard.
+// @Security		ApiKeyInHeader || ApiKeyInQuery
+// @Tags			Validator Dashboard Management
+// @Produce		json
+// @Param			dashboard_id	path	integer	true	"The ID of the dashboard."
+// @Success		204				"Validators removed successfully."
+// @Failure		400				{object}	types.ApiErrorResponse
+// @Router			/validator-dashboards/{dashboard_id}/validators [delete]
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
+	if v.hasErrors() {
+		handleErr(w, r, v)
+		return
+	}
+	ctx := r.Context()
+	err := h.getDataAccessor(r).RemoveValidatorDashboardValidators(ctx, dashboardId, []types.VDBValidator{}) // removes all validators
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
+	returnNoContent(w, r)
+}
+
+// PublicPostValidatorDashboardValidatorBulkDeletions godoc
+//
+// @Description	Remove specific validators from a specified dashboard in bulk.
+// @Security		ApiKeyInHeader || ApiKeyInQuery
+// @Tags			Validator Dashboard Management
+// @Accept			json
+// @Produce		json
+// @Param			dashboard_id	path	integer														true	"The ID of the dashboard."
+// @Param			request			body	handlers.PublicPostValidatorDashboardValidatorBulkDeletions.request	true	"`validators`: Provide an array of validator indices or public keys that should get removed from the dashboard."
+// @Success		204				"Validators removed successfully."
+// @Failure		400				{object}	types.ApiErrorResponse
+// @Router			/validator-dashboards/{dashboard_id}/validators/bulk-deletions [post]
+func (h *HandlerService) PublicPostValidatorDashboardValidatorBulkDeletions(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	type request struct {
