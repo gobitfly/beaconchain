@@ -10,7 +10,7 @@ export interface VDBOverviewGroup {
   name: string;
   count: number /* uint64 */;
 }
-export interface VDBOverviewBalances {
+export interface ValidatorBalances {
   total: string /* decimal.Decimal */;
   effective: string /* decimal.Decimal */;
   staked_eth: string /* decimal.Decimal */;
@@ -24,7 +24,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
-  balances: VDBOverviewBalances;
+  balances: ValidatorBalances;
 }
 export type GetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
@@ -68,6 +68,9 @@ export interface VDBGroupSummaryMissedRewards {
   sync: string /* decimal.Decimal */;
 }
 export interface VDBGroupSummaryData {
+  efficiency: number /* float64 */;
+  balances: ValidatorBalances;
+  rewards: ClElValue<string /* decimal.Decimal */>;
   attestations_head: StatusCount;
   attestations_source: StatusCount;
   attestations_target: StatusCount;
