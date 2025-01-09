@@ -16,7 +16,9 @@ defineProps<{
 }>()
 const { latestState } = useLatestStateStore()
 const {
-  currentNetwork, networkInfo, slotToEpoch,
+  currentNetwork,
+  getEpochFromSlot,
+  networkInfo,
 } = useNetworkStore()
 const {
   doLogout, isLoggedIn,
@@ -54,7 +56,7 @@ const rate = computed(() => {
 
 const currentEpoch = computed(() =>
   latestState.value?.current_slot !== undefined
-    ? slotToEpoch(latestState.value.current_slot)
+    ? getEpochFromSlot(latestState.value.current_slot)
     : undefined,
 )
 

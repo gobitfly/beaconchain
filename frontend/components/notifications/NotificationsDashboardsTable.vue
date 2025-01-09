@@ -5,7 +5,7 @@ import IconValidator from '../icon/IconValidator.vue'
 import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
-import type { ChainIDs } from '~/types/network'
+import type { ChainId } from '~/types/network'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 import { NotificationsDashboardDialogEntity } from '#components'
 
@@ -17,7 +17,7 @@ const { t: $t } = useTranslation()
 
 // TODO: replace currentNetwork with selection from NETWORK_SWITCHER_COMPONENT that has yet to be implemented
 const { currentNetwork } = useNetworkStore()
-const networkId = ref<ChainIDs>(currentNetwork.value ?? 1)
+const networkId = ref<ChainId>(currentNetwork.value ?? 1)
 
 const {
   isLoading,

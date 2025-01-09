@@ -35,7 +35,11 @@ import { useFormat } from '~/composables/useFormat'
 import type { CryptoUnits } from '~/types/currencies'
 
 const { formatEpochToDate } = useFormat()
-const { networkInfo } = useNetworkStore()
+const {
+  getEpochFromTimestamp,
+  getTimestampFromEpoch,
+  networkInfo,
+} = useNetworkStore()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
 const { currency } = useCurrency()
 const currencyLabel = computed(() =>
@@ -295,6 +299,8 @@ const option = computed<ECBasicOption | undefined>(() => {
         render(
           h(DashboardChartRewardsTooltip, {
             dataIndex,
+            getEpochFromTimestamp,
+            getTimestampFromEpoch,
             series: series.value.list,
             startEpoch,
             t: $t,

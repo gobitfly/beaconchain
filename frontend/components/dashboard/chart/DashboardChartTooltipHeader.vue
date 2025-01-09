@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { ComposerTranslation } from 'vue-i18n'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 import type {
   AggregationTimeframe,
   EfficiencyType,
@@ -12,6 +11,8 @@ import {
 interface Props {
   aggregation?: AggregationTimeframe,
   efficiencyType?: EfficiencyType,
+  getEpochFromTimestamp: (timestamp: number) => number,
+  getTimestampFromEpoch: (epoch: number) => number,
   startEpoch?: number,
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
   ts?: number,
@@ -19,16 +20,12 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const {
-  epochToTs, tsToEpoch,
-} = useNetworkStore()
-
 const startTs = computed(() => {
   if (props.ts) {
     return props.ts
   }
   if (props.startEpoch) {
-    return epochToTs(props.startEpoch)
+    return props.getTimestampFromEpoch(props.startEpoch)
   }
   return undefined
 })
@@ -81,11 +78,11 @@ const epochText = computed(() => {
   if (!startTs.value) {
     return
   }
-  const startEpoch = tsToEpoch(startTs.value)
+  const startEpoch = props.getEpochFromTimestamp(startTs.value)
   if (!endTs.value) {
     return startEpoch
   }
-  const endEpoch = tsToEpoch(endTs.value)
+  const endEpoch = props.getEpochFromTimestamp(endTs.value)
   return `${startEpoch} - ${endEpoch}`
 })
 

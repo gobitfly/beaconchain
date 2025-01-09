@@ -8,6 +8,8 @@ import type {
 interface Props {
   aggregation: AggregationTimeframe,
   efficiencyType: EfficiencyType,
+  getEpochFromTimestamp: (timestamp: number) => number,
+  getTimestampFromEpoch: (epoch: number) => number,
   groupInfos: {
     color: string,
     efficiency: number,
@@ -26,6 +28,8 @@ defineProps<Props>()
     <DashboardChartTooltipHeader
       :t
       :ts
+      :get-epoch-from-timestamp
+      :get-timestamp-from-epoch
       :aggregation
       :efficiency-type
     />
