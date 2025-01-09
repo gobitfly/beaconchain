@@ -2,21 +2,24 @@ import { LoginPage } from '../../page-object/login.page'
 import {
   expect, goto, test,
 } from '../../utils/helpers'
-import { DashboardPage } from '../../page-object/dashboard.page'
+import { addDashboardFlow } from '../../page-object/dashboard.page'
+import { config } from '../../auth/user-auth'
 
 test.describe('Login', () => {
   test.beforeEach(async ({ page }) => {
     await goto(page, '/login', 'networkidle')
   })
-  // we have to come up with a solution for testing this case without having to input credentials here
-  test.fixme('Successful login with valid credentials', async ({ page }) => {
+
+  test('Successful login with valid credentials', async ({ page }) => {
+    const userEmail = config.userAuth.guppy.email
+    const userPassword = config.userAuth.guppy.password
     await page.waitForLoadState('networkidle')
-    await LoginPage.email(page).fill('')
-    await LoginPage.password(page).fill('')
+    await LoginPage.email(page).fill(userEmail)
+    await LoginPage.password(page).fill(userPassword)
     await page.waitForLoadState('networkidle')
     await LoginPage.loginBtn(page).click()
 
-    await expect(DashboardPage.dashboard(page)).toBeVisible({ timeout: 15000 })
+    await expect(addDashboardFlow.dashboard(page)).toBeVisible({ timeout: 15000 })
   })
   test('The login button is active after filling in all fields', async ({ page }) => {
     await LoginPage.email(page).fill('testDummydata@bitfly.at')
@@ -65,5 +68,18 @@ test.describe('Login', () => {
 
     await expect(LoginPage.errorInvalidPassword(page)).toBeVisible()
     await expect(LoginPage.toastMessageCannotLogin(page)).toBeVisible()
+  })
+
+  test('Login with case-variant email address', async ({ page }) => {
+    await LoginPage.email(page).fill('')
+    await LoginPage.password(page).fill('')
+    await LoginPage.loginBtn(page).click()
+
+    await expect(LoginPage.errorInvalidPassword(page)).toBeVisible()
+    await expect(LoginPage.toastMessageCannotLogin(page)).toBeVisible()
+    await page.waitForLoadState('networkidle')
+    await LoginPage.loginBtn(page).click()
+
+    await expect(addDashboardFlow.dashboard(page)).toBeVisible({ timeout: 15000 })
   })
 })
