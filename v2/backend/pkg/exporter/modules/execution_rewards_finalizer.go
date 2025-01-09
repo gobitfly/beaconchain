@@ -105,7 +105,7 @@ func (d *executionRewardsFinalizer) maintainTable() (err error) {
 				goqu.I("b.epoch").As("epoch"),
 				goqu.I("b.slot").As("slot"),
 				goqu.I("b.proposer").As("proposer"),
-				goqu.Func("sum", goqu.COALESCE(goqu.I("rb.value"), goqu.L("ep.fee_recipient_reward * '1e18'::numeric"), goqu.L("0::numeric"))).As("value"),
+				goqu.Func("max", goqu.COALESCE(goqu.I("rb.value"), goqu.L("ep.fee_recipient_reward * '1e18'::numeric"), goqu.L("0::numeric"))).As("value"),
 			).
 			Where(
 				goqu.I("b.slot").Gt(lastExportedSlot),
