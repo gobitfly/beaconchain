@@ -47,17 +47,6 @@ export function commmifyLeft(value: string): string {
   return formatted
 }
 
-export function formatAndCalculatePercent(
-  value?: number,
-  base?: number,
-  config?: NumberFormatConfig,
-): string {
-  if (!base) {
-    return ''
-  }
-  return formatPercent(calculatePercent(value, base), config)
-}
-
 /**
  * Should be used only when you work with a network different from the current one.
  * Wherever you would write `formatEpochToDate(currentNetwork.value, ...)` you
@@ -144,30 +133,6 @@ export function formatGoTimestamp(
 
 export function formatNumber(value?: number): string {
   return value?.toLocaleString('en-US') ?? ''
-}
-
-export function formatPercent(
-  percent?: number,
-  config?: NumberFormatConfig,
-): string {
-  if (percent === undefined) {
-    return ''
-  }
-  const {
-    addPositiveSign, fixed, precision,
-  } = {
-    ...{
-      addPositiveSign: false,
-      fixed: 2,
-      precision: 2,
-    },
-    ...config,
-  }
-  let result = trim(percent, precision, fixed)
-  if (addPositiveSign) {
-    result = addPlusSign(result)
-  }
-  return `${result}%`
 }
 
 /**
