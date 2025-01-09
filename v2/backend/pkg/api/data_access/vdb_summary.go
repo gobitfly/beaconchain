@@ -755,7 +755,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	ret.MissedRewards.Sync = utils.GWeiToWei(big.NewInt(totalMissedRewardsSync))
 	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsCl))
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.getElClAPR(ctx, dashboardId, groupId, hours)
+	ret.Rewards.El, ret.Apr.El, ret.Rewards.Cl, ret.Apr.Cl, err = d.getElClAPR(ctx, dashboardId, groupId, hours)
 	if err != nil {
 		return nil, err
 	}
