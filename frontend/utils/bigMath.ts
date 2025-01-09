@@ -60,9 +60,6 @@ export const subWei = (total: string, value: string): BigNumber | undefined => {
 
 export const totalElClNumbers = (
   value: ClElValue<number>,
-): number | undefined => {
-  if (!value) {
-    return
-  }
+) => {
   return value.el + value.cl
 }

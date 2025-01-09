@@ -77,27 +77,25 @@ const openValidatorModal = () => {
 }
 
 const efficiencyInfos = computed(() =>
-  TimeFrames.map(k => ({
-    label: $t(`statistics.${k}`),
-    value: formatPercent(overview.value?.efficiency[k] ?? 0),
+  TimeFrames.map(timeFrame => ({
+    label: $t(`statistics.${timeFrame}`),
+    value: formatToPercent(overview.value?.efficiency[timeFrame] ?? 0),
   })),
 )
 
-const rewardsInfos = TimeFrames.map(k =>
-  createInfo(k, overview.value?.rewards[k] ?? {
+const rewardsInfos = TimeFrames.map(timeFrame =>
+  createInfo(timeFrame, overview.value?.rewards[timeFrame] ?? {
     cl: '0',
     el: '0',
   }, formatValueWei),
 )
 
-const apr = computed(() => formatPercent(totalElClNumbers(overview.value?.apr.last_30d ?? {
+const apr = computed(() => formatToPercent(totalElClNumbers(overview.value?.apr.last_30d ?? {
   cl: 0,
   el: 0,
-})),
-)
-
-const aprInfos = TimeFrames.map(k =>
-  createInfo(k, overview.value?.apr[k] ?? {
+})))
+const aprInfos = TimeFrames.map(timeFrame =>
+  createInfo(timeFrame, overview.value?.apr[timeFrame] ?? {
     cl: 0,
     el: 0,
   }, formatToPercent),

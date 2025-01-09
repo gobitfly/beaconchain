@@ -391,7 +391,7 @@ const openValidatorModal = () => {
         {{
           $t(`dashboard.validator.summary.tooltip.${compare}`, {
             name: groupName,
-            average: formatPercent(row.average_network_efficiency),
+            average: formatToPercent(row.average_network_efficiency),
           })
         }}
       </span>
