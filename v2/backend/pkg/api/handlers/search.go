@@ -287,6 +287,12 @@ func (h *HandlerService) handleSearchValidatorsByGraffitiHex(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
+	// exclude the empty hex graffiti
+	var graffitiArray [32]byte
+	copy(graffitiArray[:], graffitiHex)
+	if graffitiArray == [32]byte{} {
+		return nil, nil // return no error as to not disturb the other search types
+	}
 	result, err := h.daService.GetSearchValidatorsByGraffitiHex(ctx, chainId, graffitiHex)
 	return asSearchResult(validatorsByGraffitiHex, chainId, result, err)
 }
