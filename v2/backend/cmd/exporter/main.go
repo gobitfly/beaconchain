@@ -166,6 +166,7 @@ func Run() {
 			modules.NewSlotExporter(context),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
+			modules.NewExecutionRewardFinalizer(context),
 		)
 	}
 
