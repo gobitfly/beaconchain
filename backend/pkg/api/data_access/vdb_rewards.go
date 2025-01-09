@@ -100,7 +100,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	elDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.epoch"),
-			goqu.SUM(goqu.I("value")).As("el_rewards")).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
 		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
@@ -547,7 +547,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 
 	elDs := goqu.Dialect("postgres").
 		Select(
-			goqu.SUM(goqu.I("value")).As("blocks_el_rewards")).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("blocks_el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 		Where(goqu.L("b.epoch = ?", epoch))
@@ -712,7 +712,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	elDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.epoch"),
-			goqu.SUM(goqu.I("value")).As("el_rewards")).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
 		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
@@ -955,7 +955,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 	elDs := goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.proposer"),
-			goqu.SUM(goqu.I("value")).As("el_rewards")).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
 		From(goqu.I("execution_rewards_finalized").As("b")).
 		Where(goqu.L("b.epoch = ?", epoch)).
 		GroupBy(goqu.L("b.proposer"))
