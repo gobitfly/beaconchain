@@ -195,9 +195,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	elRewards := make(map[int64]decimal.Decimal)
 	ds = goqu.Dialect("postgres").
 		Select(
-			goqu.SUM(goqu.I("value")).As("el_rewards")).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
 		From(goqu.I("execution_rewards_finalized").As("b")).
-		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", epochMin, epochMax)).
 		GroupBy(goqu.L("result_group_id"))
 
 	if len(validators) > 0 {
@@ -918,8 +918,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	}
 
 	elDs := goqu.Dialect("postgres").
-		Select(goqu.SUM(goqu.I("value"))).
-		From(goqu.I("execution_rewards_finalized")).As("b")
+		Select(goqu.COALESCE(goqu.SUM(goqu.L("value / 1e18")), 0)).
+		From(goqu.I("execution_rewards_finalized").As("b"))
 
 	if len(dashboardId.Validators) > 0 {
 		elDs = elDs.
