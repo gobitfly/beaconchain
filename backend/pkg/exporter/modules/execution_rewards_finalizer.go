@@ -24,7 +24,6 @@ func NewExecutionRewardFinalizer(moduleContext ModuleContext) ModuleInterface {
 }
 
 func (d *executionRewardsFinalizer) Init() error {
-	log.Infof("hi")
 	return nil
 }
 
@@ -37,7 +36,6 @@ func (d *executionRewardsFinalizer) OnChainReorg(event *constypes.StandardEventC
 }
 
 func (d *executionRewardsFinalizer) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
-
 	return nil // nop
 }
 
