@@ -9,6 +9,8 @@ import type { WeiToValue } from '~/types/value'
 
 interface Props {
   dataIndex: number,
+  getEpochFromTimestamp: (timestamp: number) => number,
+  getTimestampFromEpoch: (epoch: number) => number,
   series: RewardChartSeries[],
   startEpoch: number,
   t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
@@ -95,6 +97,8 @@ const data = computed<Series[]>(() => {
 <template>
   <div class="tooltip-container">
     <DashboardChartTooltipHeader
+      :get-epoch-from-timestamp
+      :get-timestamp-from-epoch
       :t
       :start-epoch
     />

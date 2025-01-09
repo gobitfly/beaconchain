@@ -7,9 +7,6 @@ import {
 } from 'luxon'
 import type { ComposerTranslation } from 'vue-i18n'
 import type { AgeFormat } from '~/types/settings'
-import {
-  type ChainIDs, epochToTs, slotToTs,
-} from '~/types/network'
 import type { NumberOrString } from '~/types/value'
 
 export const ONE_MINUTE = 60
@@ -45,51 +42,6 @@ export function commmifyLeft(value: string): string {
     return formatted.substring(0, formatted.length - 2)
   }
   return formatted
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDate(currentNetwork.value, ...)` you
- * should rather use `formatEpochToDate(...)` from `useFormat.ts`.
- */
-export function formatEpochToDate(
-  chainId: ChainIDs,
-  epoch: number,
-  locales: string,
-): null | string | undefined {
-  return formatEpochToDateTime(
-    chainId,
-    epoch,
-    undefined,
-    'absolute',
-    undefined,
-    locales,
-    false,
-  )
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDateTime(currentNetwork.value, ...)`
- * you should rather use `formatEpochToDateTime(...)` from `useFormat.ts`.
- */
-export function formatEpochToDateTime(
-  chainId: ChainIDs,
-  epoch: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    epochToTs(chainId, epoch),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
 }
 
 export function formatFiat(
@@ -135,30 +87,6 @@ export function formatNumber(value?: number): string {
   return value?.toLocaleString('en-US') ?? ''
 }
 
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatSlotToDateTime(currentNetwork.value, ...)`
- * you should rather use `formatSlotToDateTime(...)` from `useFormat.ts`.
- */
-export function formatSlotToDateTime(
-  chainId: ChainIDs,
-  slot: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    slotToTs(chainId, slot),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
-}
-
 export function formattedNumberToHtml(value?: string): string | undefined {
   return value?.split(',').join('<span class=\'comma\' />')
 }
@@ -194,6 +122,26 @@ export function formatTimeDuration(
   const amount = Math.floor(seconds / divider)
 
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
+}
+
+export function formatTs(
+  ts?: number,
+  timestamp?: number,
+  format: AgeFormat = 'relative',
+  style: StringUnitLength = 'narrow',
+  locales: string = 'en-US',
+  withTime = true,
+) {
+  if (ts === undefined) {
+    return undefined
+  }
+
+  if (format === 'relative') {
+    return formatTsToRelative(ts * 1000, timestamp, style, locales)
+  }
+  else {
+    return formatTsToAbsolute(ts, locales, withTime)
+  }
 }
 
 export function formatTsToAbsolute(
@@ -270,26 +218,6 @@ export function trim(
 
 export function withCurrency(value: string, currency: string): string {
   return `${value} ${currency}`
-}
-
-function formatTs(
-  ts?: number,
-  timestamp?: number,
-  format: AgeFormat = 'relative',
-  style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
-  withTime = true,
-) {
-  if (ts === undefined) {
-    return undefined
-  }
-
-  if (format === 'relative') {
-    return formatTsToRelative(ts * 1000, timestamp, style, locales)
-  }
-  else {
-    return formatTsToAbsolute(ts, locales, withTime)
-  }
 }
 
 function formatTsToRelative(

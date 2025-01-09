@@ -12,7 +12,7 @@ import {
   type GuestDashboard,
 } from '~/types/dashboard'
 import { COOKIE_KEY } from '~/types/cookie'
-import type { ChainIDs } from '~/types/network'
+import type { ChainId } from '~/types/network'
 import {
   isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
@@ -74,7 +74,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
 
   async function createValidatorDashboard(
     name: string,
-    network: ChainIDs,
+    network: ChainId,
     dashboardKey?: string,
   ): Promise<GuestDashboard | undefined> {
     if (!isLoggedIn.value) {

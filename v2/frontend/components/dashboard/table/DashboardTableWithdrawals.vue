@@ -22,7 +22,7 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
 const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetworkStore()
+const { getEpochFromSlot } = useNetworkStore()
 const {
   getTotalAmount,
   getWithdrawals,
@@ -151,7 +151,7 @@ const isRowExpandable = (row: ExtendedVDBWithdrawalsTableRow) => {
 
 const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   if (latestState?.value) {
-    return row.epoch > slotToEpoch(latestState.value.current_slot)
+    return row.epoch > getEpochFromSlot(latestState.value.current_slot)
   }
 
   return false

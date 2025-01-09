@@ -19,7 +19,6 @@ import {
   TooltipComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import SummaryChartTooltip from './DashboardChartSummaryTooltip.vue'
 import {
   getChartTextColor,
   getChartTooltipBackgroundColor,
@@ -35,6 +34,7 @@ import {
   SUMMARY_CHART_GROUP_TOTAL,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
+import { DashboardChartSummaryTooltip } from '#components'
 
 use([
   CanvasRenderer,
@@ -56,7 +56,10 @@ const { t: $t } = useTranslation()
 const colorMode = useColorMode()
 const { fetch } = useCustomFetch()
 const {
-  secondsPerEpoch, slotToTs, tsToEpoch,
+  getEpochFromTimestamp,
+  getTimestampFromEpoch,
+  getTimestampFromSlot,
+  secondsPerEpoch,
 } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
 const { overview } = useValidatorDashboardOverviewStore()
@@ -104,7 +107,7 @@ const categories = computed<number[]>(() => {
     return []
   }
   const list: number[] = []
-  let latestTs = slotToTs(latestSlot.value - 7) || 0
+  let latestTs = getTimestampFromSlot(latestSlot.value - 7) || 0
   let step = 0
   switch (aggregation.value) {
     case 'daily':
@@ -123,7 +126,7 @@ const categories = computed<number[]>(() => {
   if (!step) {
     return []
   }
-  const minTs = Math.max(slotToTs(0) || 0, latestTs - maxSeconds)
+  const minTs = Math.max(getTimestampFromSlot(0) || 0, latestTs - maxSeconds)
   while (latestTs > minTs) {
     list.splice(0, 0, latestTs)
 
@@ -263,7 +266,7 @@ const formatTSToDate = (value: string) => {
   )
 }
 const formatTSToEpoch = (value: string) => {
-  return `${$t('common.epoch')} ${tsToEpoch(Number(value))}`
+  return `${$t('common.epoch')} ${getEpochFromTimestamp(Number(value))}`
 }
 const formatToDateOrEpoch = (value: string) => {
   if (aggregation.value === 'epoch') {
@@ -356,9 +359,11 @@ const option = computed<EChartsOption>(() => {
         })
         const d = document.createElement('div')
         render(
-          h(SummaryChartTooltip, {
+          h(DashboardChartSummaryTooltip, {
             aggregation: aggregation.value,
             efficiencyType: props.filter?.efficiency || 'all',
+            getEpochFromTimestamp,
+            getTimestampFromEpoch,
             groupInfos,
             highlightGroup,
             t: $t,

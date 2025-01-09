@@ -5,7 +5,8 @@ import type { AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
 
 const {
-  formatEpochToDateTime, formatSlotToDateTime,
+  formatEpochToDateTime,
+  formatSlotToDateTime,
 } = useFormat()
 
 interface Props {

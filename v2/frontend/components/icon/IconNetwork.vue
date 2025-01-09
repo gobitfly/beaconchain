@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  ChainFamily, type ChainIDs, ChainInfo,
+  ChainFamily, type ChainId, ChainInfo,
 } from '~/types/network'
 
 const colorMode = useColorMode()
@@ -35,7 +35,7 @@ const props = defineProps({
 
 const family = computed(() =>
   props.chainId in ChainInfo
-    ? ChainInfo[props.chainId as ChainIDs].family
+    ? ChainInfo[props.chainId as ChainId].family
     : ChainFamily.Ethereum,
 )
 const coloring = computed(() =>

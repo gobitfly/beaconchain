@@ -4,7 +4,7 @@ import type {
   DashboardCreationDisplayMode,
   DashboardCreationState,
 } from '~/types/dashboard/creation'
-import type { ChainIDs } from '~/types/network'
+import type { ChainId } from '~/types/network'
 
 const userDashboardStore = useUserDashboardStore()
 const {
@@ -30,7 +30,7 @@ const visible = ref<boolean>(false)
 const state = ref<DashboardCreationState>('')
 const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
-const network = ref<ChainIDs>(0)
+const network = ref<ChainId>(0)
 const forcedDashboardType = ref<'' | DashboardType>('')
 const {
   dashboardKey, publicEntities,

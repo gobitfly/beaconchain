@@ -1,64 +1,46 @@
-import * as networkTs from '~/types/network'
+import {
+  type ChainId,
+  ChainInfo,
+} from '~/types/network'
 
 export function useNetworkStore() {
-  const runTimeNetwork = Number(useRuntimeConfig().public.chainIdByDefault) as networkTs.ChainIDs
-  const currentNetwork = computed(() => runTimeNetwork)
-  const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
+  const { chainIdByDefault } = useRuntimeConfig().public
+  if (!chainIdByDefault) throw createError(
+    {
+      statusMessage: 'NUXT_PUBLIC_CHAIN_ID_BY_DEFAULT has to be set',
+    })
+  const currentNetwork = computed(() => (Number(chainIdByDefault)) as ChainId)
+  const networkInfo = computed(() => ChainInfo[currentNetwork.value])
+  const secondsPerEpoch = computed(() => networkInfo.value.slotsPerEpoch * networkInfo.value.secondsPerSlot)
+  const epochsPerDay = computed(() => (24 * 60 * 60) / secondsPerEpoch.value)
 
-  function isNetworkDisabled(chainId: networkTs.ChainIDs): boolean {
-    // TODO: return `false` for everything once we are ready
-    return (
-      !useRuntimeConfig().public.showInDevelopment
-      && chainId !== currentNetwork.value
-    )
+  const getTimestampFromSlot = (slot: number) =>
+    networkInfo.value.timeStampSlot0 + slot * networkInfo.value.secondsPerSlot
+
+  const getSlotFromTimestamp = (timestamp: number) =>
+    Math.floor((timestamp - networkInfo.value.timeStampSlot0) / networkInfo.value.secondsPerSlot)
+
+  const getEpochFromSlot = (slot: number) => Math.floor(slot / networkInfo.value.slotsPerEpoch)
+
+  const getEpochFromTimestamp = (timestamp: number) => {
+    const slot = getSlotFromTimestamp(timestamp)
+    const epoch = getEpochFromSlot(slot)
+    return epoch
   }
 
-  function isMainNet(): boolean {
-    return networkTs.isMainNet(currentNetwork.value)
-  }
-
-  function isL1(): boolean {
-    return networkTs.isL1(currentNetwork.value)
-  }
-
-  function epochsPerDay(): number {
-    return networkTs.epochsPerDay(currentNetwork.value)
-  }
-
-  function epochToTs(epoch: number): number | undefined {
-    return networkTs.epochToTs(currentNetwork.value, epoch)
-  }
-
-  const secondsPerEpoch = computed(() => networkTs.secondsPerEpoch(currentNetwork.value))
-
-  function slotToTs(slot: number): number | undefined {
-    return networkTs.slotToTs(currentNetwork.value, slot)
-  }
-
-  function tsToSlot(ts: number): number {
-    return networkTs.tsToSlot(currentNetwork.value, ts)
-  }
-
-  function slotToEpoch(slot: number): number {
-    return networkTs.slotToEpoch(currentNetwork.value, slot)
-  }
-
-  function tsToEpoch(ts: number): number {
-    return slotToEpoch(tsToSlot(ts))
+  const getTimestampFromEpoch = (epoch: number) => {
+    return networkInfo.value.timeStampSlot0 + epoch * networkInfo.value.slotsPerEpoch * networkInfo.value.secondsPerSlot
   }
 
   return {
     currentNetwork,
     epochsPerDay,
-    epochToTs,
-    isL1,
-    isMainNet,
-    isNetworkDisabled,
+    getEpochFromSlot,
+    getEpochFromTimestamp,
+    getSlotFromTimestamp,
+    getTimestampFromEpoch,
+    getTimestampFromSlot,
     networkInfo,
     secondsPerEpoch,
-    slotToEpoch,
-    slotToTs,
-    tsToEpoch,
-    tsToSlot,
   }
 }

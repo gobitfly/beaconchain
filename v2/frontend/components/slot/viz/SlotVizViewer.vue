@@ -24,7 +24,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const { tsToSlot } = useNetworkStore()
+const { getSlotFromTimestamp } = useNetworkStore()
 const { t: $t } = useTranslation()
 
 const selectedCategories = useCookie<SlotVizCategories[]>(
@@ -97,8 +97,7 @@ const currentSlotId = computed(() => {
   // in case of some backend issues Inan want's us to tick in the future ... so let's tick
   return Math.max(
     mostRecentScheduledSlotId.value ?? 0,
-    tsToSlot((props.timestamp ?? 0) / 1000) - 1,
-  )
+    getSlotFromTimestamp((props.timestamp ?? 0) / 1000) - 1)
 })
 
 watch(
