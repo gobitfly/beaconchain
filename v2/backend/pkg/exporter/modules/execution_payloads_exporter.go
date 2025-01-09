@@ -18,16 +18,14 @@ import (
 )
 
 type executionPayloadsExporter struct {
-	ModuleContext   ModuleContext
-	ExportMutex     *sync.Mutex
-	CachedViewMutex *sync.Mutex
+	ModuleContext ModuleContext
+	ExportMutex   *sync.Mutex
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionPayloadsExporter{
-		ModuleContext:   moduleContext,
-		ExportMutex:     &sync.Mutex{},
-		CachedViewMutex: &sync.Mutex{},
+		ModuleContext: moduleContext,
+		ExportMutex:   &sync.Mutex{},
 	}
 }
 
@@ -59,49 +57,7 @@ func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventC
 
 // can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
-	// if mutex is locked, return early
-	if !d.CachedViewMutex.TryLock() {
-		log.Infof("execution payloads exporter is already running")
-		return nil
-	}
-	defer d.CachedViewMutex.Unlock()
-
-	start := time.Now()
-	// update cached view
-	err = d.updateCachedView()
-	if err != nil {
-		return err
-	}
-
-	log.Infof("updating execution payloads cached view took %v", time.Since(start))
 	return nil
-}
-
-func (d *executionPayloadsExporter) updateCachedView() (err error) {
-	err = db.CacheQuery(`
-		SELECT DISTINCT ON (uvdv.dashboard_id, uvdv.group_id, b.slot)
-			uvdv.dashboard_id,
-			uvdv.group_id,
-			b.slot,
-			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward) as reward,
-			coalesce(rb.proposer_fee_recipient, b.exec_fee_recipient) as fee_recipient, 
-			rb.value IS NOT NULL AS is_mev
-		FROM
-			blocks b
-			INNER JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			INNER JOIN consensus_payloads cp ON cp.slot = b.slot
-			INNER JOIN users_val_dashboards_validators uvdv ON b.proposer = uvdv.validator_index
-			LEFT JOIN relays_blocks rb ON rb.exec_block_hash = b.exec_block_hash
-		WHERE
-			b.status = '1'
-			AND b.exec_block_hash IS NOT NULL AND ep.fee_recipient_reward IS NOT NULL
-		ORDER BY
-			dashboard_id,
-			group_id,
-			slot DESC,
-			rb.value DESC;
-	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"}, []string{"dashboard_id"})
-	return err
 }
 
 func (d *executionPayloadsExporter) maintainTable() (err error) {
