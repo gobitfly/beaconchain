@@ -356,8 +356,8 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	internalDashboardNotificationSettingsRouter := internalNotificationRouter.NewRoute().Subrouter()
 	// TODO add adb auth middleware to account dashboard endpoints once they are implemented
 	if !debug {
-		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware, hs.VDBArchivedCheckMiddleware)
-		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware, hs.VDBArchivedCheckMiddleware)
+		publicDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
+		internalDashboardNotificationSettingsRouter.Use(hs.VDBAuthMiddleware)
 	}
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
