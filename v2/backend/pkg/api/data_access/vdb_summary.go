@@ -196,7 +196,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	ds = goqu.Dialect("postgres").
 		Select(
 			goqu.SUM(goqu.I("value")).As("el_rewards")).
-		From(goqu.I("execution_rewards_finalized").As('b')).
+		From(goqu.I("execution_rewards_finalized").As("b")).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
 		GroupBy(goqu.L("result_group_id"))
 

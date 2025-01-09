@@ -103,7 +103,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			goqu.SUM(goqu.I("value")).As("el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
-		LeftJoin(goqu.I("execution_rewards_finalized").As('b'), goqu.On(goqu.L("v.validator_index = b.proposer"))).
+		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 		GroupBy(goqu.L("b.epoch"))
 
 	if dashboardId.Validators == nil {
@@ -549,7 +549,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		Select(
 			goqu.SUM(goqu.I("value")).As("blocks_el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
-		LeftJoin(goqu.I("execution_rewards_finalized").As('b'), goqu.On(goqu.L("v.validator_index = b.proposer"))).
+		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 		Where(goqu.L("b.epoch = ?", epoch))
 
 	// handle the case when we have a list of validators
@@ -715,7 +715,7 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			goqu.SUM(goqu.I("value")).As("el_rewards")).
 		From(goqu.L("users_val_dashboards_validators v")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
-		LeftJoin(goqu.I("execution_rewards_finalized").As('b'), goqu.On(goqu.L("v.validator_index = b.proposer"))).
+		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 		GroupBy(goqu.L("b.epoch"))
 
 	if dashboardId.Validators == nil {
@@ -956,7 +956,7 @@ func (d *DataAccessService) GetValidatorDashboardDuties(ctx context.Context, das
 		Select(
 			goqu.L("b.proposer"),
 			goqu.SUM(goqu.I("value")).As("el_rewards")).
-		From(goqu.I("execution_rewards_finalized").As('b')).
+		From(goqu.I("execution_rewards_finalized").As("b")).
 		Where(goqu.L("b.epoch = ?", epoch)).
 		GroupBy(goqu.L("b.proposer"))
 
