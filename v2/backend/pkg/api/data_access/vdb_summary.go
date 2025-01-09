@@ -521,11 +521,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	validators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		validators = dashboardId.Validators
-	}
-
 	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
 		// we need to go to the all time table for last scheduled block/sync committee epoch
 		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
@@ -546,7 +541,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 		} else {
 			ds = ds.
-				Where(goqu.L("validator_index IN ?", validators))
+				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 		}
 
 		query, args, err := ds.Prepared(true).ToSQL()
@@ -603,7 +598,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 	} else {
 		ds = ds.
-			Where(goqu.L("validator_index IN ?", validators))
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
 	type QueryResult struct {
@@ -688,9 +683,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	totalMissedRewardsAttestations := int64(0)
 	totalMissedRewardsSync := int64(0)
 
-	validatorArr := make([]t.VDBValidator, 0)
+	validators := make([]t.VDBValidator, 0)
 	for _, row := range rows {
-		validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
+		validators = append(validators, t.VDBValidator(row.ValidatorIndex))
 		totalAttestationRewards += row.AttestationReward
 		totalIdealAttestationRewards += row.AttestationsIdealReward
 
@@ -765,13 +760,9 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	if len(validators) > 0 {
-		validatorArr = validators
-	}
-
 	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(rows[0].EpochStart)
 	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
+	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validators)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving past sync committee count: %w", err)
 	}
@@ -852,6 +843,20 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		syncEfficiency.Valid = true
 	}
 	ret.Efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+
+	rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, err
+	}
+	balances, err := d.calculateValidatorDashboardBalance(ctx, rpOperatorInfo, validators, validatorMapping, protocolModes)
+	if err != nil {
+		return nil, err
+	}
+	ret.Balances = balances
 
 	return ret, nil
 }

@@ -364,92 +364,16 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			}
 		}
 
-		// Find rocketpool validators
-		type RpOperatorInfo struct {
-			ValidatorIndex     uint64          `db:"validatorindex"`
-			NodeFee            float64         `db:"node_fee"`
-			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
-			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
-		}
-		var queryResult []RpOperatorInfo
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("v.validatorindex"),
-				goqu.L("rplm.node_fee"),
-				goqu.L("rplm.node_deposit_balance"),
-				goqu.L("rplm.user_deposit_balance")).
-			From(goqu.L("rocketpool_minipools AS rplm")).
-			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
-			Where(goqu.L("node_deposit_balance IS NOT NULL")).
-			Where(goqu.L("user_deposit_balance IS NOT NULL"))
-
-		if len(dashboardId.Validators) == 0 {
-			ds = ds.
-				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
-				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
-		} else {
-			ds = ds.
-				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
+		rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
 		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
+			return err
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		balances, err := d.calculateValidatorDashboardBalance(ctx, rpOperatorInfo, validators, validatorMapping, protocolModes)
 		if err != nil {
-			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+			return err
 		}
-
-		rpValidators := make(map[uint64]RpOperatorInfo)
-		for _, res := range queryResult {
-			rpValidators[res.ValidatorIndex] = res
-		}
-
-		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
-		var nonRpDashboardId t.VDBId
-
-		for _, validator := range validators {
-			metadata := validatorMapping.ValidatorMetadata[validator]
-			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
-			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
-
-			if rpValidator, ok := rpValidators[validator]; ok {
-				if protocolModes.RocketPool {
-					// Calculate the balance of the operator
-					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
-					operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
-					invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
-
-					base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(rpValidator.UserDepositBalance)), rpValidator.NodeDepositBalance)
-					commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
-					reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
-
-					operatorBalance := base.Add(reward)
-
-					data.Balances.Total = data.Balances.Total.Add(operatorBalance)
-				} else {
-					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-				}
-				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
-			} else {
-				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-
-				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
-			}
-			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
-		}
-
-		// Get the total cl deposits for non-rocketpool validators
-		if len(nonRpDashboardId.Validators) > 0 {
-			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
-			if err != nil {
-				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
-			}
-			data.Balances.StakedEth = data.Balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
-		}
+		data.Balances = balances
 
 		return nil
 	})
