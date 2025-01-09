@@ -195,19 +195,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	elRewards := make(map[int64]decimal.Decimal)
 	ds = goqu.Dialect("postgres").
 		Select(
-			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-		From(goqu.L("blocks b")).
-		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(
-			goqu.Lateral(goqu.Dialect("postgres").
-				From("relays_blocks").
-				Select(
-					goqu.L("exec_block_hash"),
-					goqu.MAX("value").As("value")).
-				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
-			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
-		).
+			goqu.SUM(goqu.I("value")).As("el_rewards")).
+		From(goqu.I("execution_rewards_finalized").As('b')).
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
 		GroupBy(goqu.L("result_group_id"))
 
@@ -929,20 +918,8 @@ func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId
 	}
 
 	elDs := goqu.Dialect("postgres").
-		Select(goqu.L("COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0) AS el_reward")).
-		From(goqu.L("blocks AS b")).
-		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
-		LeftJoin(
-			goqu.Lateral(goqu.Dialect("postgres").
-				From("relays_blocks").
-				Select(
-					goqu.L("exec_block_hash"),
-					goqu.MAX("value").As("value")).
-				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
-			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
-		).
-		Where(goqu.L("b.status = '1'"))
+		Select(goqu.SUM(goqu.I("value"))).
+		From(goqu.I("execution_rewards_finalized")).As("b")
 
 	if len(dashboardId.Validators) > 0 {
 		elDs = elDs.
