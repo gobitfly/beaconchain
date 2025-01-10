@@ -74,7 +74,7 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   },
   [ChainIDs.Gnosis]: {
     clCurrency: 'GNO',
-    description: 'Mainnet',
+    description: '',
     elCurrency: 'xDAI',
     family: ChainFamily.Gnosis,
     mainNet: ChainIDs.Gnosis,
