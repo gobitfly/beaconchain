@@ -269,7 +269,7 @@ watch(
     overflow-x: auto;
     overflow-y: hidden;
     min-height: 180px;
-    grid-template-columns: 49px max-content;
+    grid-template-columns: max-content auto;
 
     @media (max-width: 490px) {
       padding-right: var(--padding);
@@ -281,6 +281,7 @@ watch(
       justify-content: flex-start;
       height: 30px;
       gap: var(--padding);
+      justify-self: center;
     }
   }
 
