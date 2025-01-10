@@ -15,7 +15,17 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+func rocketPoolDeployed(ctx context.Context, d *DataAccessService) (bool, error) {
+	var rpDeployed bool
+	err := d.alloyReader.GetContext(ctx, &rpDeployed, "select count(*) > 0 from rocketpool_onchain_configs")
+	return rpDeployed, err
+}
+
 func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+	if deployed, err := rocketPoolDeployed(ctx, d); err != nil || !deployed {
+		return []t.VDBRocketPoolTableRow{}, &t.Paging{}, err
+	}
+
 	// Initialize the cursor
 	var currentCursor t.RocketPoolCursor
 	var err error
