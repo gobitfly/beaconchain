@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -42,11 +44,12 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func NewStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
 		flake := utils.GetSnowflake()
+		callerProgramCounter, callerFullFilePath, callerLine, callerOK := runtime.Caller(1)
 		now := time.Now()
 		go func() {
 			if metadata == nil {
@@ -56,6 +59,11 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			metadata["run_id"] = runId
 			metadata["status"] = string(status)
 			metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
+			if callerOK {
+				callerFunction := runtime.FuncForPC(callerProgramCounter).Name()
+				callerFile := filepath.Base(callerFullFilePath)
+				metadata["caller"] = fmt.Sprintf("%s %s:%d", callerFunction, callerFile, callerLine)
+			}
 
 			// report status to monitoring
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"golang.org/x/sync/errgroup"
@@ -990,6 +991,10 @@ func (d *dashboardData) OnFinalizedCheckpoint(_ *constypes.StandardFinalizedChec
 
 func (d *dashboardData) GetName() string {
 	return "Dashboard-Data"
+}
+
+func (d *dashboardData) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleDashboardData
 }
 
 func (d *dashboardData) OnHead(event *constypes.StandardEventHeadResponse) error {

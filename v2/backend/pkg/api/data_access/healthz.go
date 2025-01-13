@@ -111,7 +111,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	response.Reports = make(map[string][]types.HealthzResult)
 	response.ReportingUUID = utils.GetUUID()
 	response.DeploymentType = utils.Config.DeploymentType
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", constants.CleanShutdownEvent))
+	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)))
 	if err != nil {
 		response.Reports["response_error"] = []types.HealthzResult{
 			{
@@ -125,25 +125,16 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 		return response
 	}
 
-	mustExist := []string{
-		"ch_rolling_1h",
-		"ch_rolling_24h",
-		"ch_rolling_7d",
-		"ch_rolling_30d",
-		"ch_rolling_90d",
-		"ch_rolling_total",
-		"ch_dashboard_epoch",
-		"api_service_avg_efficiency",
-		"api_service_validator_mapping",
-		"api_service_slot_viz",
-		"monitoring_timeouts",
-	}
 	for _, result := range results {
 		response.Reports[result.EventId] = append(response.Reports[result.EventId], result)
 	}
-	for _, id := range mustExist {
-		if _, ok := response.Reports[id]; !ok {
-			response.Reports[id] = []types.HealthzResult{
+	requiredEvents := constants.RequiredEvents
+	if utils.Config.DeploymentType == "production" {
+		requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
+	}
+	for _, id := range requiredEvents {
+		if _, ok := response.Reports[string(id)]; !ok {
+			response.Reports[string(id)] = []types.HealthzResult{
 				{
 					Status: constants.Failure,
 					Result: []map[string]string{

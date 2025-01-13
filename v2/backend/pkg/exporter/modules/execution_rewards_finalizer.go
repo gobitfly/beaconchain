@@ -9,6 +9,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
 type executionRewardsFinalizer struct {
@@ -29,6 +30,10 @@ func (d *executionRewardsFinalizer) Init() error {
 
 func (d *executionRewardsFinalizer) GetName() string {
 	return "ExecutionRewards-Finalizer"
+}
+
+func (d *executionRewardsFinalizer) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleELRewardsFinalizer
 }
 
 func (d *executionRewardsFinalizer) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {

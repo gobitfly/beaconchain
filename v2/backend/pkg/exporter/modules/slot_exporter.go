@@ -16,6 +16,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/klauspost/pgzip"
 
 	"fmt"
@@ -673,6 +674,10 @@ func (d *slotExporterData) Init() error {
 
 func (d *slotExporterData) GetName() string {
 	return "Slot-Exporter"
+}
+
+func (d *slotExporterData) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleSlotExporter
 }
 
 func (d *slotExporterData) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {

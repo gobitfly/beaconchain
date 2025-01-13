@@ -36,8 +36,7 @@ func (s *ServiceClickhouseEpoch) internalProcess() {
 }
 
 func (s *ServiceClickhouseEpoch) runChecks() {
-	id := "ch_dashboard_epoch"
-	r := NewStatusReport(id, constants.Default, 30*time.Second)
+	r := NewStatusReport(constants.Event_ClickhouseDashboardEpoch, constants.Default, 30*time.Second)
 	r(constants.Running, nil)
 	if db.ClickHouseReader == nil {
 		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})

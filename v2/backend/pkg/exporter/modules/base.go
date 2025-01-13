@@ -11,6 +11,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
@@ -18,6 +20,7 @@ import (
 type ModuleInterface interface {
 	Init() error
 	GetName() string // Used for logging
+	GetMonitoringEventId() constants.Event
 
 	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 
@@ -63,7 +66,6 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		log.Error(err, "beacon-node seems to be unavailable", 0)
 		time.Sleep(time.Second * 10)
 	}
-
 	// start subscription modules
 	startSubscriptionModules(&context, modules)
 }
@@ -146,15 +148,20 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 	for _, module := range modules {
 		module := module
 		goPool.Go(func() error {
+			start := time.Now()
+			r := services.NewStatusReport(module.GetMonitoringEventId(), constants.Default, constants.Default)
+			r(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
+				r(constants.Failure, map[string]string{"error": err.Error()})
+				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
+			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}
 }
-
 func GetModuleContext() (ModuleContext, error) {
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
