@@ -10,6 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
@@ -212,6 +213,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	eg.Go(func() error {
 		rpNetworkStats, err := d.getInternalRpNetworkStats(ctx)
 		if err != nil {
+			if err == sql.ErrNoRows { // no rocket pool deployment on network
+				return nil
+			}
 			return fmt.Errorf("error retrieving rocketpool network stats: %w", err)
 		}
 		data.RplPrice = rpNetworkStats.RPLPrice
@@ -268,13 +272,16 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		})
 	}
 
-	retrieveRewards := func(hours int, rewards *decimal.Decimal) {
+	retrieveRewards := func(hours int, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			clRewards, _, elRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			elRewards, _, clRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
-			*rewards = clRewards.Add(elRewards)
+			*rewards = t.ClElValue[decimal.Decimal]{
+				El: elRewards,
+				Cl: clRewards,
+			}
 			return nil
 		})
 	}
@@ -339,6 +346,8 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	retrieveEfficiency("validator_dashboard_data_rolling_30d", &data.Last30dEfficiency)
 
 	err = eg.Wait()
+
+	data.ELCLPrice = price.GetPrice(d.config.Frontend.ClCurrency, d.config.Frontend.ElCurrency)
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)

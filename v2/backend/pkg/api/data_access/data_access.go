@@ -60,8 +60,7 @@ type DataAccessService struct {
 	persistentRedisDbClient *redis.Client
 
 	services *services.Services
-
-	skipServiceInitWait bool
+	config   *types.Config
 }
 
 // ensure DataAccessService pointer implements DataAccessor
@@ -89,8 +88,8 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 
 func createDataAccessService(cfg *types.Config) *DataAccessService {
 	dataAccessService := DataAccessService{
-		dummy:               NewDummyService(),
-		skipServiceInitWait: cfg.SkipDataAccessServiceInitWait,
+		dummy:  NewDummyService(),
+		config: cfg,
 	}
 
 	// Initialize the database
@@ -175,7 +174,7 @@ func (d *DataAccessService) StartDataAccessServices() {
 	d.registerNotificationInterfaceTypes()
 	// Initialize the services
 
-	if d.skipServiceInitWait {
+	if d.config.SkipDataAccessServiceInitWait {
 		go d.services.InitServices()
 	} else {
 		d.services.InitServices()
