@@ -53,7 +53,7 @@ func (s *Services) startIndexMappingService(wg *sync.WaitGroup) {
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
+			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
 			lastEpochUpdate = latestEpoch
 			o.Do(func() {
 				wg.Done()
