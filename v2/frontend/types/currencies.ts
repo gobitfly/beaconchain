@@ -14,6 +14,7 @@ const CryptoCurrencies = [
   'GNO',
   'DAI',
   'xDAI',
+  'mGNO',
 ] as const
 type CryptoCurrency = (typeof CryptoCurrencies)[number]
 const Native = 'NAT' as const

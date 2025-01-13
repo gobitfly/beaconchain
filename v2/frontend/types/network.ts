@@ -27,6 +27,7 @@ export interface ChainInfoFields {
   description: string,
   elCurrency: CryptoCurrency,
   family: ChainFamily,
+  mainCurrency: CryptoCurrency,
   mainNet: ChainId,
   name: string,
   nameParts: string[],
@@ -43,6 +44,7 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     description: 'Any network',
     elCurrency: 'ETH',
     family: ChainFamily.Any,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Any,
     name: 'Any network',
     nameParts: [
@@ -60,6 +62,7 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     description: 'Mainnet',
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum',
     nameParts: [
@@ -73,10 +76,11 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     timeStampSlot0: 1606824023,
   },
   [ChainIDs.Gnosis]: {
-    clCurrency: 'GNO',
+    clCurrency: 'mGNO',
     description: '',
     elCurrency: 'xDAI',
     family: ChainFamily.Gnosis,
+    mainCurrency: 'GNO',
     mainNet: ChainIDs.Gnosis,
     name: 'Gnosis',
     nameParts: [
@@ -95,6 +99,7 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     description: 'Testnet',
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Holesky',
     nameParts: [
@@ -112,6 +117,7 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     description: 'Testnet',
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Sepolia',
     nameParts: [
