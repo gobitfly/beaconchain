@@ -59,6 +59,8 @@ type DataAccessService struct {
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
 
+	mainCurrency string // TODO: remove this once we truly go multi-chain
+
 	services *services.Services
 
 	skipServiceInitWait bool
@@ -91,6 +93,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	dataAccessService := DataAccessService{
 		dummy:               NewDummyService(),
 		skipServiceInitWait: cfg.SkipDataAccessServiceInitWait,
+		mainCurrency:        cfg.Frontend.MainCurrency,
 	}
 
 	// Initialize the database
