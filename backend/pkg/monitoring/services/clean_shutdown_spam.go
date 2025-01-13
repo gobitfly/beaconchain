@@ -39,8 +39,7 @@ func (s *CleanShutdownSpamDetector) internalProcess() {
 }
 
 func (s *CleanShutdownSpamDetector) runChecks() {
-	id := "monitoring_clean_shutdown_spam"
-	r := NewStatusReport(id, constants.Default, 30*time.Second)
+	r := NewStatusReport(constants.Event_MonitoringCleanShutdownSpam, constants.Default, 30*time.Second)
 	r(constants.Running, nil)
 	if db.ClickHouseReader == nil {
 		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
@@ -62,7 +61,7 @@ func (s *CleanShutdownSpamDetector) runChecks() {
 	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 	defer cancel()
 	var emitters []string
-	err := db.ClickHouseReader.SelectContext(ctx, &emitters, query, utils.Config.DeploymentType, constants.CleanShutdownEvent)
+	err := db.ClickHouseReader.SelectContext(ctx, &emitters, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
 	if err != nil {
 		r(constants.Failure, map[string]string{"error": err.Error()})
 		return

@@ -41,7 +41,7 @@ func (s *Services) startIndexMappingService(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		err = nil // clear error
-		r := services.NewStatusReport("api_service_validator_mapping", constants.Default, delay)
+		r := services.NewStatusReport(constants.Event_ApiServiceValidatorMapping, constants.Default, delay)
 		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
 		if currentValidatorMapping.Load() == nil || latestEpoch != lastEpochUpdate {

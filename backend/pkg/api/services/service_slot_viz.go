@@ -32,7 +32,7 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.NewStatusReport("api_service_slot_viz", constants.Default, delay)
+		r := services.NewStatusReport(constants.Event_ApiServiceSlotViz, constants.Default, delay)
 		r(constants.Running, nil)
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {

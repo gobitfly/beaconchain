@@ -31,6 +31,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
 // if we ever end up in a situation where we possibly have gaps in the data remember: the merkletree_index is unique.
@@ -153,6 +154,10 @@ func (d *executionDepositsExporter) Init() error {
 
 func (d *executionDepositsExporter) GetName() string {
 	return "ExecutionDeposits-Exporter"
+}
+
+func (d *executionDepositsExporter) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleELDepositsExporter
 }
 
 func (d *executionDepositsExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {

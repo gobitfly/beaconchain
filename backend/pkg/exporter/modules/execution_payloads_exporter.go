@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -48,6 +49,10 @@ func (d *executionPayloadsExporter) Init() error {
 
 func (d *executionPayloadsExporter) GetName() string {
 	return "ExecutionPayloads-Exporter"
+}
+
+func (d *executionPayloadsExporter) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleELPayloadExporter
 }
 
 func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {

@@ -47,11 +47,11 @@ func (s *ServerDbConnections) Start() {
 }
 
 type Entry struct {
-	ID string
+	ID constants.Event
 	DB any
 }
 
-func n[T interface{}](id string, db T) *Entry {
+func n[T interface{}](id constants.Event, db T) *Entry {
 	// use reflect to check if db is nil. use reflect. do not simply compare to nil
 	if v := reflect.ValueOf(db); !v.IsValid() || v.IsNil() {
 		return nil
@@ -62,19 +62,19 @@ func n[T interface{}](id string, db T) *Entry {
 
 func (s *ServerDbConnections) checkDBConnections() {
 	entries := []*Entry{
-		n("db_conn_reader_db", db.ReaderDb),
-		n("db_conn_writer_db", db.WriterDb),
-		n("db_conn_user_reader", db.UserReader),
-		n("db_conn_user_writer", db.UserWriter),
-		n("db_conn_alloy_reader", db.AlloyReader),
-		n("db_conn_alloy_writer", db.AlloyWriter),
-		n("db_conn_frontend_reader_db", db.FrontendReaderDB),
-		n("db_conn_frontend_writer_db", db.FrontendWriterDB),
-		n("db_conn_clickhouse_reader", db.ClickHouseReader),
-		n("db_conn_clickhouse_writer", db.ClickHouseWriter),
-		n("db_conn_clickhouse_native_writer", db.ClickHouseNativeWriter),
-		n("db_conn_persistent_redis_db_client", db.PersistentRedisDbClient),
-		n("db_conn_tiered_cache", cache.TieredCache),
+		n(constants.Event_DBConnReaderDB, db.ReaderDb),
+		n(constants.Event_DBConnWriterDB, db.WriterDb),
+		n(constants.Event_DBConnUserReader, db.UserReader),
+		n(constants.Event_DBConnUserWriter, db.UserWriter),
+		n(constants.Event_DBConnAlloyReader, db.AlloyReader),
+		n(constants.Event_DBConnAlloyWriter, db.AlloyWriter),
+		n(constants.Event_DBConnFrontendReaderDB, db.FrontendReaderDB),
+		n(constants.Event_DBConnFrontendWriterDB, db.FrontendWriterDB),
+		n(constants.Event_DBConnClickhouseReader, db.ClickHouseReader),
+		n(constants.Event_DBConnClickhouseWriter, db.ClickHouseWriter),
+		n(constants.Event_DBConnClickhouseNativeWriter, db.ClickHouseNativeWriter),
+		n(constants.Event_DBConnPersistentRedisDbClient, db.PersistentRedisDbClient),
+		n(constants.Event_DBConnTieredCache, cache.TieredCache),
 	}
 	wg := sync.WaitGroup{}
 	for _, entry := range entries {

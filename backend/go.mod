@@ -52,7 +52,6 @@ require (
 	github.com/juliangruber/go-intersect v1.1.0
 	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/k3a/html2text v1.2.1
-	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.17.6
 	github.com/klauspost/pgzip v1.2.6
 	github.com/lib/pq v1.10.9
@@ -66,6 +65,7 @@ require (
 	github.com/prysmaticlabs/go-ssz v0.0.0-20210121151755-f6208871c388
 	github.com/rocket-pool/rocketpool-go v1.8.4-0.20241009143357-7b6894d57365
 	github.com/rocket-pool/smartnode v1.14.1
+	github.com/sethvargo/go-envconfig v1.1.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
@@ -234,7 +234,6 @@ require (
 	github.com/sanity-io/litter v1.5.5 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/sethvargo/go-envconfig v1.1.0 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
