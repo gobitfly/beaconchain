@@ -229,9 +229,15 @@ func verifyGoogle(client *playstore.Client, receipt *types.PremiumData) (*Verify
 		}
 	}
 
+	expirationDate := resp.ExpiryTimeMillis / 1000
+	if valid && resp.PaymentState != nil && *resp.PaymentState == 0 && resp.AutoRenewing {
+		// user is in grace period, don't update internal subscription end
+		expirationDate = 0
+	}
+
 	return &VerifyResponse{
 		Valid:          valid && !canceled,
-		ExpirationDate: resp.ExpiryTimeMillis / 1000,
+		ExpirationDate: expirationDate,
 		RejectReason:   reason,
 	}, nil
 }
