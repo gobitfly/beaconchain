@@ -70,7 +70,7 @@ type ValidatorUpdateBody = {
   graffiti?: string,
   group_id?: number,
   validators?: number[],
-  withdrawal_address?: string,
+  withdrawal_credential?: string,
 }
 
 const size = computed(() => {
@@ -108,7 +108,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
     !body.validators?.length
     && !body.deposit_address
     && !body.graffiti
-    && !body.withdrawal_address
+    && !body.withdrawal_credential
   ) {
     warn('no validators selected to change group')
     return
