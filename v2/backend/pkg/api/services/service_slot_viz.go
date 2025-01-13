@@ -40,7 +40,7 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
-		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+		r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
 		o.Do(func() {
 			wg.Done()
 		})
