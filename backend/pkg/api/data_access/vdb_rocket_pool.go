@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"slices"
@@ -174,6 +175,9 @@ func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context,
 		var err error
 		rpNetworkStats, err = d.getInternalRpNetworkStats(ctx)
 		if err != nil {
+			if err == sql.ErrNoRows { // no rocket pool deployment on network
+				return fmt.Errorf("rocketpool not deployed on current network")
+			}
 			return fmt.Errorf("error retrieving rocketpool network stats: %w", err)
 		}
 		return nil
