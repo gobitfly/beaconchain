@@ -99,7 +99,7 @@ func Run() {
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 
-	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
+	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.MainCurrency, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
 
 	if utils.Config.TieredCacheProvider != "redis" {
 		log.Fatal(nil, "No cache provider set. Please set TierdCacheProvider (example redis)", 0)
