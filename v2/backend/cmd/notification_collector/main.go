@@ -128,7 +128,7 @@ func Run() {
 	}
 
 	log.Infof("initializing prices...")
-	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
+	price.Init(utils.Config.Chain.ClConfig.DepositChainID, utils.Config.Eth1ErigonEndpoint, utils.Config.Frontend.MainCurrency, utils.Config.Frontend.ClCurrency, utils.Config.Frontend.ElCurrency)
 	log.Infof("...prices initialized")
 
 	wg.Wait()
