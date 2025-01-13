@@ -385,12 +385,12 @@ func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
 	return result
 }
 
-func Deduplicate(slice []uint64) []uint64 {
-	keys := make(map[uint64]bool)
-	list := []uint64{}
+func Deduplicate[T comparable](slice []T) []T {
+	keys := make(map[T]struct{})
+	list := []T{}
 	for _, entry := range slice {
 		if _, value := keys[entry]; !value {
-			keys[entry] = true
+			keys[entry] = struct{}{}
 			list = append(list, entry)
 		}
 	}
