@@ -100,6 +100,7 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	blockChan := make(chan *types.Eth1BlockIndexed, 1000)
 	type Result struct {
 		BlockHash          []byte
+		BlockNumber        uint64
 		FeeRecipientReward decimal.Decimal
 	}
 	resData := make([]Result, 0, maxBlock-minBlock+1)
@@ -138,7 +139,7 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 			if err != nil {
 				return fmt.Errorf("error converting tx reward to decimal for block %v: %w", block.Number, err)
 			}
-			resData = append(resData, Result{BlockHash: hash, FeeRecipientReward: dec})
+			resData = append(resData, Result{BlockHash: hash, FeeRecipientReward: dec, BlockNumber: block.Number})
 		}
 	})
 
@@ -156,22 +157,39 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 		return fmt.Errorf("error processing blocks: %w", err)
 	}
 	// sanity checks: check if any block hashes are 0x0000000000000000000000000000000000000000000000000000000000000000 or duplicate, check if count matches expected
-	if uint64(len(resData)) != maxBlock-minBlock+1 {
-		return fmt.Errorf("error processing blocks: expected %v blocks, got %v", maxBlock-minBlock+1, len(resData))
-	}
 	seen := make(map[string]bool)
 	emptyBlockHash := bytes.Repeat([]byte{0}, 32)
+	err = error(nil)
+	counter := 0
 	for _, r := range resData {
+		if counter > 25 {
+			err = fmt.Errorf("too many errors, aborting")
+			log.Error(err, "error processing blocks", 0)
+			break
+		}
 		if len(r.BlockHash) == 0 {
-			return fmt.Errorf("error processing blocks: block hash is empty")
+			err = fmt.Errorf("error processing blocks: block hash is empty, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
 		}
 		if bytes.Equal(r.BlockHash, emptyBlockHash) {
-			return fmt.Errorf("error processing blocks: block hash is all zeros")
+			err = fmt.Errorf("error processing blocks: block hash is all zeros, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
 		}
 		if _, ok := seen[string(r.BlockHash)]; ok {
-			return fmt.Errorf("error processing blocks: duplicate block hash")
+			err = fmt.Errorf("error processing blocks: duplicate block hash, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
 		}
 		seen[string(r.BlockHash)] = true
+	}
+	if err != nil {
+		return err
+	}
+
+	if uint64(len(resData)) != maxBlock-minBlock+1 {
+		return fmt.Errorf("error processing blocks: expected %v blocks, got %v", maxBlock-minBlock+1, len(resData))
 	}
 
 	// update the execution_payloads table
