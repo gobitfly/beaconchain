@@ -845,14 +845,14 @@
         "all_events": {
           "label": "All events"
         },
-        "attestation_missed": {
+      "attestation_missed": {
           "info": "We will trigger a notification every epoch ({count} minute) during downtime. | We will trigger a notification every epoch ({count} minutes) during downtime.",
           "label": "Attestations missed"
         },
         "block_proposal": {
           "label": "Block proposal (missed & success)"
         },
-        "explanation": "All notifications are sent after network finality (~20min).",
+        "explanation": "All notifications are sent after network finality (~{count} min).",
         "group_efficiency": {
           "info": "Notifies you if your group's efficiency falls below {percentage}% in any given epoch",
           "label": "Group efficiency below"
