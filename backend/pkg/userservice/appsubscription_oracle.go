@@ -339,7 +339,7 @@ func verifyApple(apple *api.StoreClient, receipt *types.PremiumData) (*VerifyRes
 					response.RejectReason = "invalid_expires_date"
 					return response, nil
 				}
-				expiresDateUint64 := int64(math.Round(expiresDateFloat))
+				expiresDateUint64 := int64(math.Round(expiresDateFloat)) / 1000
 
 				response.Valid = true
 				response.ExpirationDate = expiresDateUint64
