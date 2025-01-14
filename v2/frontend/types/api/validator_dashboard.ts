@@ -321,3 +321,13 @@ export interface VDBPostValidatorsData {
   index: number /* uint64 */;
   group_id: number /* uint64 */;
 }
+/**
+ * helper for frontend
+ */
+export interface PostValidatorDashboardValidatorsRequest {
+  group_id?: number /* uint64 */;
+  validators?: (number | string)[];
+  deposit_address?: string;
+  withdrawal_credential?: string;
+  graffiti?: string;
+}
