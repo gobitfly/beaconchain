@@ -7,6 +7,16 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+type Bigtable struct {
+	Project             string `yaml:"project" env:"PROJECT"`
+	Instance            string `yaml:"instance" env:"INSTANCE"`
+	Emulator            bool   `yaml:"emulator" env:"EMULATOR"`
+	EmulatorPort        int    `yaml:"emulatorPort" env:"EMULATOR_PORT"`
+	EmulatorHost        string `yaml:"emulatorHost" env:"EMULATOR_HOST"`
+	V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" env:"V2_SCHEMA_CUTT_OFF_EPOCH"`
+	Remote              string `yaml:"remote"`
+}
+
 // Config is a struct to hold the configuration data
 type Config struct {
 	JustV2         bool           `yaml:"justV2" env:"JUST_V2"` // temp, remove at some point
@@ -15,15 +25,9 @@ type Config struct {
 	WriterDatabase DatabaseConfig `yaml:"writerDatabase" env:", prefix=WRITER_"`
 	AlloyReader    DatabaseConfig `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
 	AlloyWriter    DatabaseConfig `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
-	Bigtable       struct {
-		Project             string `yaml:"project" env:"PROJECT"`
-		Instance            string `yaml:"instance" env:"INSTANCE"`
-		Emulator            bool   `yaml:"emulator" env:"EMULATOR"`
-		EmulatorPort        int    `yaml:"emulatorPort" env:"EMULATOR_PORT"`
-		EmulatorHost        string `yaml:"emulatorHost" env:"EMULATOR_HOST"`
-		V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" env:"V2_SCHEMA_CUTT_OFF_EPOCH"`
-	} `yaml:"bigtable" env:", prefix=BIGTABLE_"`
-	BlobIndexer struct {
+	Bigtable       Bigtable       `yaml:"bigtable" env:", prefix=BIGTABLE_"`
+	RawBigtable    Bigtable       `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`
+	BlobIndexer    struct {
 		S3 struct {
 			Endpoint        string `yaml:"endpoint" env:"ENDPOINT"`                 // s3 endpoint
 			Bucket          string `yaml:"bucket" env:"BUCKET"`                     // s3 bucket
