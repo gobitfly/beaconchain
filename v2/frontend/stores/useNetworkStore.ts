@@ -11,16 +11,21 @@ export function useNetworkStore() {
     })
   const currentNetwork = computed(() => (Number(chainIdByDefault)) as ChainId)
   const networkInfo = computed(() => ChainInfo[currentNetwork.value])
-  const secondsPerEpoch = computed(() => networkInfo.value.slotsPerEpoch * networkInfo.value.secondsPerSlot)
+  const {
+    secondsPerSlot,
+    slotsPerEpoch,
+    timeStampSlot0,
+  } = networkInfo.value
+  const secondsPerEpoch = computed(() => slotsPerEpoch * secondsPerSlot)
   const epochsPerDay = computed(() => (24 * 60 * 60) / secondsPerEpoch.value)
 
   const getTimestampFromSlot = (slot: number) =>
-    networkInfo.value.timeStampSlot0 + slot * networkInfo.value.secondsPerSlot
+    timeStampSlot0 + slot * secondsPerSlot
 
   const getSlotFromTimestamp = (timestamp: number) =>
-    Math.floor((timestamp - networkInfo.value.timeStampSlot0) / networkInfo.value.secondsPerSlot)
+    Math.floor((timestamp - timeStampSlot0) / secondsPerSlot)
 
-  const getEpochFromSlot = (slot: number) => Math.floor(slot / networkInfo.value.slotsPerEpoch)
+  const getEpochFromSlot = (slot: number) => Math.floor(slot / slotsPerEpoch)
 
   const getEpochFromTimestamp = (timestamp: number) => {
     const slot = getSlotFromTimestamp(timestamp)
@@ -29,8 +34,13 @@ export function useNetworkStore() {
   }
 
   const getTimestampFromEpoch = (epoch: number) => {
-    return networkInfo.value.timeStampSlot0 + epoch * networkInfo.value.slotsPerEpoch * networkInfo.value.secondsPerSlot
+    return timeStampSlot0 + epoch * slotsPerEpoch * secondsPerSlot
   }
+
+  const numberOfEpochsTheNetworkIsConsideredToBeFinalized = 3
+  const secondsUntilNetworkFinality = computed(
+    () => secondsPerSlot * slotsPerEpoch * numberOfEpochsTheNetworkIsConsideredToBeFinalized,
+  )
 
   return {
     currentNetwork,
@@ -42,5 +52,6 @@ export function useNetworkStore() {
     getTimestampFromSlot,
     networkInfo,
     secondsPerEpoch,
+    secondsUntilNetworkFinality,
   }
 }

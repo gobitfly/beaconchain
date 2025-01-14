@@ -8,6 +8,7 @@ const {
 const { t: $t } = useTranslation()
 const {
   secondsPerEpoch,
+  secondsUntilNetworkFinality,
 } = useNetworkStore()
 
 const { user } = useUserStore()
@@ -74,6 +75,10 @@ watch(hasAllEvents, () => {
       checkboxes.value[key] = false
     })
 })
+const { minutes: minutesUntilNetworkFinality } = formatSecondsTo(secondsUntilNetworkFinality.value, {
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+})
 </script>
 
 <template>
@@ -85,7 +90,7 @@ watch(hasAllEvents, () => {
     </div>
 
     <div class="explanation">
-      {{ $t('notifications.subscriptions.validators.explanation') }}
+      {{ $t('notifications.subscriptions.validators.explanation', { count: minutesUntilNetworkFinality }) }}
     </div>
     <div
       class="row-container"
