@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math"
 	"math/big"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
@@ -210,10 +210,11 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	if hours == -1 { // for all time APR
 		aprDivisor = 90 * 24
 	}
-	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
-	if math.IsNaN(clAPR) {
-		clAPR = 0
-	}
+
+	// invested amount is not post-pectra safe
+	investedAmount := d.convertClToMain(decimal.NewFromUint64(d.config.ClConfig.MaxEffectiveBalance))
+
+	clAPR = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor, rewardsResultTable.ValidatorCount)
 
 	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 
@@ -235,7 +236,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	}
 
 	elDs := goqu.Dialect("postgres").
-		Select(goqu.COALESCE(goqu.SUM(goqu.L("value / 1e18")), 0)).
+		Select(goqu.COALESCE(goqu.SUM(goqu.L("value")), 0)).
 		From(goqu.I("execution_rewards_finalized").As("b"))
 
 	if len(dashboardId.Validators) > 0 {
@@ -264,11 +265,8 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	if err != nil {
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
-	elIncomeFloat, _ := elIncome.Float64() // EL income is in ETH
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
-	if math.IsNaN(elAPR) {
-		elAPR = 0
-	}
+
+	elAPR = calcAPR(d.convertElToMain(elIncome), investedAmount, aprDivisor, rewardsResultTable.ValidatorCount)
 
 	if hours == -1 {
 		elTotalDs := elDs.
@@ -284,9 +282,28 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 			return decimal.Zero, 0, decimal.Zero, 0, err
 		}
 	}
-	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
 
 	return elIncome, elAPR, clIncome, clAPR, nil
+}
+
+// precondition: invested amount and rewards are in the same currency
+func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor int, validatorCount uint64) float64 {
+	if rewards.IsZero() || investedAmount.IsZero() || validatorCount == 0 {
+		return 0
+	}
+	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount.Mul(decimal.NewFromInt(int64(validatorCount)))).Mul(decimal.NewFromInt(24 * 365 * 100))).InexactFloat64()
+}
+
+// converts a cl amount to the main currency
+func (d *DataAccessService) convertClToMain(amount decimal.Decimal) decimal.Decimal {
+	price := decimal.NewFromFloat(price.GetPrice(d.config.Frontend.MainCurrency, d.config.Frontend.ClCurrency))
+	return amount.Div(decimal.NewFromInt(d.config.Frontend.ClCurrencyDivisor)).Div(price)
+}
+
+// converts a el amount to the main currency
+func (d *DataAccessService) convertElToMain(amount decimal.Decimal) decimal.Decimal {
+	price := decimal.NewFromFloat(price.GetPrice(d.config.Frontend.MainCurrency, d.config.Frontend.ElCurrency))
+	return amount.Div(decimal.NewFromInt(d.config.Frontend.ElCurrencyDivisor)).Div(price)
 }
 
 type RpOperatorInfo struct {
