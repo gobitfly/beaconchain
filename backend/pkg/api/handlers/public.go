@@ -539,7 +539,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.Re
 func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	type request struct {
+	type request struct { // this must align with PostValidatorDashboardValidatorsRequest
 		GroupId              uint64        `json:"group_id,omitempty" x-nullable:"true"`
 		Validators           []intOrString `json:"validators,omitempty"`
 		DepositAddress       string        `json:"deposit_address,omitempty"`
