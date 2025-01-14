@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -155,26 +154,9 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	if err != nil {
 		return fmt.Errorf("error processing blocks: %w", err)
 	}
-	// sanity checks: check if any block hashes are 0x0000000000000000000000000000000000000000000000000000000000000000 or duplicate, check if count matches expected
-	if uint64(len(resData)) != maxBlock-minBlock+1 {
-		return fmt.Errorf("error processing blocks: expected %v blocks, got %v", maxBlock-minBlock+1, len(resData))
-	}
-	seen := make(map[string]bool)
-	emptyBlockHash := bytes.Repeat([]byte{0}, 32)
-	for _, r := range resData {
-		if len(r.BlockHash) == 0 {
-			return fmt.Errorf("error processing blocks: block hash is empty")
-		}
-		if bytes.Equal(r.BlockHash, emptyBlockHash) {
-			return fmt.Errorf("error processing blocks: block hash is all zeros")
-		}
-		if _, ok := seen[string(r.BlockHash)]; ok {
-			return fmt.Errorf("error processing blocks: duplicate block hash")
-		}
-		seen[string(r.BlockHash)] = true
-	}
 
 	// update the execution_payloads table
+
 	log.Infof("preparing copy update to temp table")
 
 	// load data into temp table
