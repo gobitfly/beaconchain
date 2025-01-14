@@ -49,6 +49,7 @@ func (d *executionRewardsFinalizer) OnFinalizedCheckpoint(event *constypes.Stand
 func (d *executionRewardsFinalizer) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
 	if time.Now().Before(d.CooldownTs) {
 		log.Warnf("execution rewards finalizer is on cooldown till %s", d.CooldownTs)
+		return nil
 	}
 	// if mutex is locked, return early
 	if !d.ExportMutex.TryLock() {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -21,6 +22,7 @@ import (
 type executionPayloadsExporter struct {
 	ModuleContext ModuleContext
 	ExportMutex   *sync.Mutex
+	CooldownTs    time.Time
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
@@ -31,6 +33,10 @@ func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 }
 
 func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
+	if time.Now().Before(d.CooldownTs) {
+		log.Warnf("execution rewards finalizer is on cooldown till %s", d.CooldownTs)
+		return nil
+	}
 	// if mutex is locked, return early
 	if !d.ExportMutex.TryLock() {
 		log.Infof("execution payloads exporter is already running")
@@ -39,6 +45,7 @@ func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadRes
 	defer d.ExportMutex.Unlock()
 	err = d.maintainTable()
 	if err != nil {
+		d.CooldownTs = time.Now().Add(1 * time.Minute)
 		return fmt.Errorf("error maintaining table: %w", err)
 	}
 	return nil
