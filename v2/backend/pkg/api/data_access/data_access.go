@@ -14,7 +14,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 type DataAccessor interface {
@@ -202,4 +201,4 @@ func (d *DataAccessService) Close() {
 	}
 }
 
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = db.ErrNotFound
