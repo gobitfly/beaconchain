@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# chore(eslint): add rule to enforce indentation of 4 spaces for json
+5020dfb235f57e3cf91fa65d3b2812dbb969353c
 # chore(eslint): reenabled rule to have only `one attribute` per line in `vue files`
 6a51d528edfc71ffe46653f694a64c563ad70ceb
 # chore(deps): update `eslint rule set` and apply changes
