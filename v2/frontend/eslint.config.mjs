@@ -113,6 +113,10 @@ export default withNuxt({
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
     {
       rules: {
+        'jsonc/indent': [
+          'error',
+          4,
+        ],
         'jsonc/sort-array-values': [
           'warn',
           {
