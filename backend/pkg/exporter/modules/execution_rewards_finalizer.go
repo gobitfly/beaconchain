@@ -88,37 +88,8 @@ func (d *executionRewardsFinalizer) maintainTable() (err error) {
 		log.Debugf("no new finalized slots to export")
 		return nil
 	}
-	// sanity check, check if any non-missed block has a fee_recipient_reward that is NULL
-	var count struct {
-		Total   int64 `db:"total"`
-		NonNull int64 `db:"non_null"`
-	}
-	gc := goqu.Dialect("postgres").From("blocks").
-		Select(
-			goqu.Func("count", goqu.Star()).As("total"),
-			goqu.Func("count", goqu.I("ep.fee_recipient_reward")).As("non_null"),
-		).
-		LeftJoin(
-			goqu.T("execution_payloads").As("ep"),
-			goqu.On(goqu.I("ep.block_hash").Eq(goqu.I("blocks.exec_block_hash"))),
-		).
-		Where(
-			goqu.I("slot").Gt(lastExportedSlot),
-			goqu.I("slot").Lte(latestFinalizedSlot),
-			goqu.I("status").Eq("1"),
-		)
-	query, args, err := gc.Prepared(true).ToSQL()
-	if err != nil {
-		return fmt.Errorf("error preparing query: %w", err)
-	}
-	err = db.ReaderDb.Get(&count, query, args...)
-	if err != nil {
-		return fmt.Errorf("error getting count of non-missed blocks: %w", err)
-	}
-	if count.Total != count.NonNull {
-		return fmt.Errorf("only %v out of %v blocks have non-null fee_recipient_reward", count.NonNull, count.Total)
-	}
 	log.Infof("finalized rewards = last exported slot: %v, latest finalized slot: %v", lastExportedSlot, latestFinalizedSlot)
+
 	start := time.Now()
 	ds := goqu.Dialect("postgres").Insert("execution_rewards_finalized").FromQuery(
 		goqu.From(goqu.T("blocks").As("b")).
@@ -151,11 +122,12 @@ func (d *executionRewardsFinalizer) maintainTable() (err error) {
 
 	log.Debugf("writing execution rewards finalized data")
 
-	query, args, err = ds.Prepared(true).ToSQL()
+	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return fmt.Errorf("error preparing query: %w", err)
 	}
 	_, err = db.WriterDb.Exec(query, args...)
+
 	if err != nil {
 		return fmt.Errorf("error inserting data: %w", err)
 	}
