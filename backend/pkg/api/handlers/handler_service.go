@@ -207,6 +207,14 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	}
 	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
 	if err != nil {
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			log.Warn("user not found for dashboard owner, returning free tier perks", log.Fields{"dashboard_id": id.Id, "user_id_of_dashboard": dashboardUser.UserId})
+			perk, err := h.daService.GetFreeTierPerks(ctx)
+			if err != nil {
+				return nil, err
+			}
+			return perk, nil
+		}
 		return nil, err
 	}
 
