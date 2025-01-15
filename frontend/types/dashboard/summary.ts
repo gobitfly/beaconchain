@@ -58,7 +58,7 @@ export type SummaryDetailsEfficiencySpecialProp =
   (typeof SummaryDetailsEfficiencySpecialProps)[number]
 
 export type SummaryRow = {
-  prop?: SummaryDetailsEfficiencyCombinedProp,
+  property?: SummaryDetailsEfficiencyCombinedProp,
   title: string,
 }
 
