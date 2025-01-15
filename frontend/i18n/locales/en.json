@@ -418,12 +418,7 @@
                     "text": "Indicates the percentage of rewards in relation to the theoretical maximum value",
                     "title": "Attestation Efficiency: "
                 },
-                "block_proposal_missed": {
-                    "label": "Block proposal missed"
-                },
-                "block_proposal_success": {
-                    "label": "Block proposal success"
-                },
+                "block_proposal": "Block Proposal",
                 "sync": {
                     "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1",
                     "title": "Sync Committee Efficiency: "
@@ -854,8 +849,11 @@
                     "info": "We will trigger a notification every epoch ({count} minute) during downtime. | We will trigger a notification every epoch ({count} minutes) during downtime.",
                     "label": "Attestations missed"
                 },
-                "block_proposal": {
-                    "label": "Block proposal (missed & success)"
+                "block_proposal_missed": {
+                    "label": "Block proposal missed"
+                },
+                "block_proposal_success": {
+                    "label": "Block proposal success"
                 },
                 "explanation": "All notifications are sent after network finality (~{count} min).",
                 "group_efficiency": {
