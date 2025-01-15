@@ -739,20 +739,30 @@ func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserBySession(r)
+	userId, err := h.GetUserIdBySession(r)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	// TODO allow if user has any subsciptions etc?
-	err = h.daService.RemoveUser(r.Context(), user.Id)
+	ctx := r.Context()
+	hasUserActiveSubscription, err := h.daService.GetHasUserActiveSubscription(ctx, userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if hasUserActiveSubscription {
+		handleErr(w, r, newConflictErr("user has an active premium subscription or premium API plan, please cancel them first before deleting the account"))
+		return
+	}
+
+	err = h.daService.RemoveUser(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	err = h.purgeAllSessionsForUser(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
