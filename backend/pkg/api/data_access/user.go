@@ -33,6 +33,7 @@ type UserRepository interface {
 	GetUserInfo(ctx context.Context, id uint64) (*t.UserInfo, error)
 	GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error)
 	GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error)
+	GetHasUserActiveSubscription(ctx context.Context, userId uint64) (bool, error)
 }
 
 func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
@@ -397,4 +398,26 @@ func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, 
 	`, userId, active)
 
 	return count, err
+}
+
+func (d *DataAccessService) GetHasUserActiveSubscription(ctx context.Context, userId uint64) (bool, error) {
+	var hasUserActiveSubscription bool
+	err := db.UserReader.GetContext(ctx, &hasUserActiveSubscription, `
+	SELECT EXISTS (
+		SELECT uss.price_id
+		FROM users_stripe_subscriptions uss
+		LEFT JOIN users u ON u.stripe_customer_id = uss.customer_id
+		WHERE uss.active = true AND u.id = $1
+
+		UNION
+
+		SELECT product_id
+		FROM users_app_subscriptions uas
+		LEFT JOIN users u ON u.id = uas.user_id
+		WHERE uas.active = true AND u.id = $1
+	)`, userId)
+	if err != nil {
+		return false, err
+	}
+	return hasUserActiveSubscription, nil
 }

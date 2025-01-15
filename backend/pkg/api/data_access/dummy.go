@@ -805,3 +805,7 @@ func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId 
 func (d *DummyService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
+
+func (d *DummyService) GetHasUserActiveSubscription(ctx context.Context, userId uint64) (bool, error) {
+	return getDummyData[bool](ctx)
+}
