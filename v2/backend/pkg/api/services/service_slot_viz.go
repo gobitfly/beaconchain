@@ -228,6 +228,9 @@ func (s *Services) updateSlotVizData() error {
 				dutiesInfo.SlotSyncParticipated[duty.Slot] = make(map[constypes.ValidatorIndex]bool, 0)
 
 				partValidators := utils.GetParticipatingSyncCommitteeValidators(duty.SyncAggregateBits, dutiesInfo.TotalSyncAssignmentsForEpoch[utils.EpochOfSlot(duty.Slot)])
+				if len(partValidators) == 0 {
+					log.Error(nil, "no participating sync validators found", 0, map[string]interface{}{"slot": duty.Slot})
+				}
 				for _, validator := range partValidators {
 					dutiesInfo.SlotSyncParticipated[duty.Slot][validator] = true
 				}

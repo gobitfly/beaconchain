@@ -221,6 +221,9 @@ func SortedUniqueUint64(arr []uint64) []uint64 {
 }
 
 func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validators []uint64) []uint64 {
+	if len(validators) != len(syncAggregateBits)*8 {
+		return nil
+	}
 	participatingValidators := []uint64{}
 	for i := 0; i < len(syncAggregateBits)*8; i++ {
 		val := validators[i]
