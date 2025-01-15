@@ -99,6 +99,7 @@ const data = computed<SummaryRow[][]>(() => {
   addPropsTolist(2, [
     'apr',
     'luck',
+    'missed_rewards',
     ...addCols,
   ])
 
