@@ -48,14 +48,14 @@ const summarySections = computed<SummaryRow[][]>(() => {
 
   const addToSection = (
     index: number,
-    summaryProperty?: SummaryDetailsEfficiencyCombinedProp,
+    property?: SummaryDetailsEfficiencyCombinedProp,
   ) => {
-    if (!summaryProperty) {
+    if (!property) {
       return
     }
-    const title = $t(`dashboard.validator.summary.row.${summaryProperty}`)
+    const title = $t(`dashboard.validator.summary.row.${property}`)
     const row = {
-      summaryProperty,
+      property,
       title,
     }
     sections[index].push(row)
