@@ -32,7 +32,7 @@ type minimalTraces struct {
 	} `json:"result"`
 }
 
-func validateBlock(fullBlock FullBlockData) error {
+func ValidateBlock(fullBlock FullBlockData) error {
 	if len(fullBlock.Block) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Receipts) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Traces) == 0 {
 		return fmt.Errorf("empty data block=%d receipts=%d traces=%d", len(fullBlock.Block), len(fullBlock.Receipts), len(fullBlock.Traces))
 	}

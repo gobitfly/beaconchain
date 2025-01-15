@@ -29,7 +29,7 @@ func NewStore(store database.Database) Store {
 func (store Store) AddBlocks(blocks []FullBlockData) error {
 	itemsByKey := make(map[string][]database.Item)
 	for _, fullBlock := range blocks {
-		if err := validateBlock(fullBlock); err != nil {
+		if err := ValidateBlock(fullBlock); err != nil {
 			return fmt.Errorf("block %d: %w", fullBlock.BlockNumber, err)
 		}
 		if len(fullBlock.Block) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Traces) == 0 {

@@ -7,6 +7,7 @@ import (
 	"github.com/gobitfly/beaconchain/cmd/api"
 	"github.com/gobitfly/beaconchain/cmd/archiver"
 	"github.com/gobitfly/beaconchain/cmd/blobindexer"
+	"github.com/gobitfly/beaconchain/cmd/dbscan"
 	"github.com/gobitfly/beaconchain/cmd/eth1indexer"
 	"github.com/gobitfly/beaconchain/cmd/ethstore_exporter"
 	"github.com/gobitfly/beaconchain/cmd/evm_node_indexer"
@@ -66,6 +67,8 @@ func main() {
 		monitoring.Run()
 	case "evm_node_indexer":
 		evm_node_indexer.Run()
+	case "dbscan":
+		dbscan.Run()
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown target: %s", target), 0)
 	}
