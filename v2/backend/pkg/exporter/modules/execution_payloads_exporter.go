@@ -5,7 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"math/big"
+	"slices"
 	"sync"
 	"time"
 
@@ -120,7 +122,6 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	ctx, abortProcessing := context.WithCancel(context.Background())
 	defer abortProcessing() // to kill the errgroup if something goes wrong
 	group, _ := errgroup.WithContext(ctx)
-
 	// coroutine to process the blocks
 	group.Go(func() error {
 		var block *types.Eth1BlockIndexed
@@ -171,6 +172,10 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	// sanity checks: check if any block hashes are 0x0000000000000000000000000000000000000000000000000000000000000000 or duplicate, check if count matches expected
 	seen := make(map[string]bool)
 	emptyBlockHash := bytes.Repeat([]byte{0}, 32)
+	unseenBlockNumbers := make(map[uint64]bool)
+	for i := minBlock; i <= maxBlock; i++ {
+		unseenBlockNumbers[i] = true
+	}
 	err = error(nil)
 	counter := 0
 	for _, r := range resData {
@@ -195,13 +200,21 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 			counter++
 		}
 		seen[string(r.BlockHash)] = true
+		if _, ok := unseenBlockNumbers[r.BlockNumber]; !ok {
+			err = fmt.Errorf("error processing blocks: block number %v is not in the unseen map", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
+		}
+		delete(unseenBlockNumbers, r.BlockNumber) // noop in case it doesn't exist
 	}
+
 	if err != nil {
 		return err
 	}
 
-	if uint64(len(resData)) != maxBlock-minBlock+1 {
-		return fmt.Errorf("error processing blocks: expected %v blocks, got %v", maxBlock-minBlock+1, len(resData))
+	u := slices.Collect(maps.Keys(unseenBlockNumbers))
+	if len(u) > 0 && slices.Min(u) < maxBlock-10 { // we are fine with the last 10 blocks being missing, the indexer might not have caught up yet
+		return fmt.Errorf("error processing blocks: expected %v blocks, got %v, unseen map: %v", maxBlock-minBlock+1, len(resData), maps.Keys(unseenBlockNumbers))
 	}
 
 	// update the execution_payloads table
