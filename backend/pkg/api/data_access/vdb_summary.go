@@ -521,17 +521,97 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
+	getMissedELRewards := func(epochStart, epochEnd uint64) (float64, error) {
+		// Initialize the result variable
+		var totalMissedRewardsEl float64
+
+		// Define the `targets` CTE
+		targets := goqu.Dialect("postgres").
+			From("blocks").
+			Select(goqu.I("blocks.slot").As("slot")).
+			Where(
+				goqu.I("blocks.status").Neq("1"),
+				goqu.I("epoch").Gte(epochStart),
+				goqu.I("epoch").Lte(epochEnd),
+			)
+
+		if dashboardId.Validators == nil {
+			targets = targets.
+				Join(
+					goqu.T("users_val_dashboards_validators").As("uvdv"),
+					goqu.On(goqu.I("blocks.proposer").Eq(goqu.I("uvdv.validator_index"))),
+				).
+				Where(
+					goqu.And(
+						goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id),
+						goqu.Or(
+							goqu.I("uvdv.group_id").Eq(groupId),
+							goqu.L("?::smallint = -1", groupId),
+						),
+					),
+				)
+		} else {
+			targets = targets.
+				Where(
+					goqu.I("blocks.proposer").In(dashboardId.Validators),
+				)
+		}
+
+		slots := utils.Config.Chain.ClConfig.SlotsPerEpoch / 2
+
+		// Define the `res` CTE
+		res := goqu.
+			From("targets").
+			LeftJoin(
+				goqu.T("execution_rewards_finalized").As("b"),
+				goqu.On(
+					goqu.L(fmt.Sprintf(
+						`"b"."slot" >= "targets"."slot" - %d AND "b"."slot" < "targets"."slot" + %d`,
+						slots, slots,
+					)),
+				),
+			).
+			Select(
+				goqu.I("targets.slot"),
+				goqu.L("percentile_cont(0.5) WITHIN GROUP (ORDER BY b.value)::numeric(76,0)").As("v"),
+			).
+			GroupBy(goqu.I("targets.slot"))
+
+		// Build the final query
+		query := goqu.From("res").
+			With("targets", targets).
+			With("res", res).
+			Select(goqu.L("COALESCE(SUM(v), 0)"))
+
+		// Generate SQL and arguments
+		sql, args, err := query.Prepared(true).ToSQL()
+		if err != nil {
+			return 0, fmt.Errorf("failed to generate SQL: %w", err)
+		}
+
+		// Execute the query with the generated SQL and arguments
+		err = d.readerDb.GetContext(ctx, &totalMissedRewardsEl, sql, args...)
+		if err != nil {
+			return 0, fmt.Errorf("failed to execute query: %w", err)
+		}
+
+		// Return the computed total median rewards
+		return totalMissedRewardsEl, nil
+	}
+
+	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, uint64, uint64, error) {
 		// we need to go to the all time table for last scheduled block/sync committee epoch
 		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
 		if err != nil {
-			return time.Time{}, time.Time{}, err
+			return time.Time{}, time.Time{}, 0, 0, err
 		}
 
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
-				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
+				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch"),
+				goqu.L("MIN(epoch_start) as min_epoch_start"),
+				goqu.L("MAX(epoch_end) as max_epoch_end")).
 			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
 
 		if dashboardId.Validators == nil {
@@ -546,29 +626,36 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
-			return time.Time{}, time.Time{}, err
+			return time.Time{}, time.Time{}, 0, 0, err
 		}
 
 		var row struct {
-			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
-			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
+			LastScheduledBlockEpoch *int64  `db:"last_scheduled_block_epoch"`
+			LastSyncEpoch           *int64  `db:"last_scheduled_sync_epoch"`
+			MinEpochStart           *uint64 `db:"min_epoch_start"`
+			MaxEpochEnd             *uint64 `db:"max_epoch_end"`
 		}
 		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
 		if err != nil {
-			return time.Time{}, time.Time{}, err
+			return time.Time{}, time.Time{}, 0, 0, err
 		}
 
 		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
-			return time.Time{}, time.Time{}, nil
+			return time.Time{}, time.Time{}, 0, 0, nil
 		}
 
-		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)), utils.EpochToTime(uint64(*row.LastSyncEpoch)), nil
+		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
+			utils.EpochToTime(uint64(*row.LastSyncEpoch)),
+			*row.MinEpochStart,
+			*row.MaxEpochEnd,
+			nil
 	}
 
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
 			goqu.L("epoch_start"),
+			goqu.L("epoch_end"),
 			goqu.L("attestations_reward"),
 			goqu.L("attestations_ideal_reward"),
 			goqu.L("attestations_scheduled"),
@@ -604,6 +691,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	type QueryResult struct {
 		ValidatorIndex          uint32 `db:"validator_index"`
 		EpochStart              uint64 `db:"epoch_start"`
+		EpochEnd                uint64 `db:"epoch_end"`
 		AttestationReward       int64  `db:"attestations_reward"`
 		AttestationsIdealReward int64  `db:"attestations_ideal_reward"`
 
@@ -650,10 +738,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil
 	})
 
+	var minEpochStart, maxEpochEnd uint64
 	var lastBlockTs, lastSyncTs time.Time
 	errGroup.Go(func() error {
 		var err error
-		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		lastBlockTs, lastSyncTs, minEpochStart, maxEpochEnd, err = getLastScheduledBlockAndSyncDate()
 		return err
 	})
 
@@ -751,9 +840,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			totalInclusionDelayDivisor += row.AttestationsObserved
 		}
 	}
+
+	totalMissedRewardsEl, err := getMissedELRewards(minEpochStart, maxEpochEnd)
+	if err != nil {
+		return nil, err
+	}
+
 	ret.MissedRewards.Attestations = utils.GWeiToWei(big.NewInt(totalMissedRewardsAttestations))
 	ret.MissedRewards.Sync = utils.GWeiToWei(big.NewInt(totalMissedRewardsSync))
 	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsCl))
+	ret.MissedRewards.ProposerRewards.El = decimal.NewFromFloat(totalMissedRewardsEl)
 
 	ret.Rewards.El, ret.Apr.El, ret.Rewards.Cl, ret.Apr.Cl, err = d.getElClAPR(ctx, dashboardId, groupId, hours)
 	if err != nil {
