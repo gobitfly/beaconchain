@@ -103,4 +103,5 @@ func Init() {
 	log.Infof("starting user service")
 	go userservice.StripeEmailUpdater()
 	go userservice.CheckMobileSubscriptions()
+	go userservice.SubscriptionEndReminder()
 }

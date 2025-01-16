@@ -5,6 +5,9 @@ const GROUP_MOBILE = "mobile"
 const GROUP_ADDON = "addon"
 
 var ProductsGroups = map[string]string{
+	"sapphire":             GROUP_API,
+	"emerald":              GROUP_API,
+	"diamond":              GROUP_API,
 	"plankton":             GROUP_MOBILE,
 	"goldfish":             GROUP_MOBILE,
 	"whale":                GROUP_MOBILE,
@@ -57,6 +60,24 @@ func EffectiveProductId(productId string) string {
 func EffectiveProductName(productId string) string {
 	productId = EffectiveProductId(productId)
 	switch productId {
+	case "sapphire":
+		return "Sapphire"
+	case "emerald":
+		return "Emerald"
+	case "diamond":
+		return "Sapphire"
+	case "iron":
+		return "Iron"
+	case "iron.yearly":
+		return "Iron (yearly)"
+	case "silver":
+		return "Silver"
+	case "silver.yearly":
+		return "Silver (yearly)"
+	case "gold":
+		return "Gold"
+	case "gold.yearly":
+		return "Gold (yearly)"
 	case "plankton":
 		return "Plankton"
 	case "goldfish":
@@ -73,8 +94,14 @@ func EffectiveProductName(productId string) string {
 		return "Guppy (yearly)"
 	case "dolphin.yearly":
 		return "Dolphin (yearly)"
-	case "orca.yearly":
-		return "Orca (yearly)"
+	case "vdb_addon_1k":
+		return "1,000 dashboard validators Add-On"
+	case "vdb_addon_1k.yearly":
+		return "1,000 dashboard validators Add-On (yearly)"
+	case "vdb_addon_10k":
+		return "10,000 dashboard validators Add-On"
+	case "vdb_addon_10k.yearly":
+		return "10,000 dashboard validators Add-On) (yearly)"
 	default:
 		return ""
 	}
@@ -82,6 +109,12 @@ func EffectiveProductName(productId string) string {
 
 func PriceIdToProductId(priceId string) string {
 	switch priceId {
+	case Config.Frontend.Stripe.Sapphire:
+		return "sapphire"
+	case Config.Frontend.Stripe.Emerald:
+		return "emerald"
+	case Config.Frontend.Stripe.Diamond:
+		return "diamond"
 	case Config.Frontend.Stripe.Plankton:
 		return "plankton"
 	case Config.Frontend.Stripe.Goldfish:
