@@ -1924,8 +1924,8 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, types.RocketpoolCollateralMinReachedEventName, networkName, eventFilter, epoch, settings.MinCollateralThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSuccessSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalMissedSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSuccessSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalMissedSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {
