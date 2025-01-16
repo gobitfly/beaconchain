@@ -832,7 +832,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	if totalIdealAttestationRewards > 0 {
 		attestationEfficiency.Float64 = decimal.NewFromInt(totalAttestationRewards).Div(decimal.NewFromInt(totalIdealAttestationRewards)).InexactFloat64()
 		attestationEfficiency.Valid = true
-		ret.AttestationEfficiency = max(attestationEfficiency.Float64, 0)
+		ret.AttestationEfficiency = max(attestationEfficiency.Float64*100, 0)
 	}
 	if totalBlocksScheduled > 0 {
 		proposerEfficiency.Float64 = float64(totalBlocksProposed) / float64(totalBlocksScheduled)
