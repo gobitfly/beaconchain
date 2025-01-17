@@ -62,7 +62,8 @@ const {
   secondsPerEpoch,
 } = useNetworkStore()
 const { dashboardKey } = useDashboardKey()
-const { overview } = useValidatorDashboardOverviewStore()
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const { overview } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 const { latestState } = useLatestStateStore()
 const latestSlot = ref(latestState.value?.current_slot || 0)

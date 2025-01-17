@@ -85,9 +85,13 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
+const {
+  refreshOverview,
+} = validatorDashboardOverviewStore
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const { error: validatorOverviewError } = await useAsyncData(

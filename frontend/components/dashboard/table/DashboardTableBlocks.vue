@@ -30,9 +30,10 @@ const {
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 
 const { groups } = useValidatorDashboardGroups()
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+} = storeToRefs(validatorDashboardOverviewStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {

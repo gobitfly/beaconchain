@@ -32,9 +32,11 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
+const { refreshOverview } = validatorDashboardOverviewStore
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
