@@ -37,9 +37,10 @@ const {
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
+const validatorDashboardsOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+} = storeToRefs(validatorDashboardsOverviewStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {

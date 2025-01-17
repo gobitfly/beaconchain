@@ -6,22 +6,17 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
-const validatorOverviewStore = defineStore('validator_overview_store', () => {
-  const data = ref<null | undefined | VDBOverviewData>()
-  return { data }
-})
-
-export function useValidatorDashboardOverviewStore() {
+export const useValidatorDashboardOverviewStore = defineStore('validator_overview_store', () => {
+  const overview = ref<null | undefined | VDBOverviewData>()
+  const loading = ref(false)
   const { fetch } = useCustomFetch()
-  const { data } = storeToRefs(validatorOverviewStore())
   const { clearCache: clearRewardDetails }
     = useAllValidatorDashboardRewardsDetailsStore()
 
-  const overview = computed(() => data.value)
-
   async function refreshOverview(key: DashboardKey) {
+    loading.value = true
     if (!key) {
-      data.value = undefined
+      overview.value = undefined
       return
     }
     try {
@@ -30,14 +25,15 @@ export function useValidatorDashboardOverviewStore() {
         undefined,
         { dashboardKey: key },
       )
-      data.value = res.data
+      overview.value = res.data
+      loading.value = false
 
       clearOverviewDependentCaches()
 
       return overview.value
     }
     catch (e) {
-      data.value = undefined
+      overview.value = undefined
       clearOverviewDependentCaches()
 
       throw e
@@ -87,8 +83,10 @@ export function useValidatorDashboardOverviewStore() {
   return {
     hasAbilityCharthistory,
     hasValidators,
+    loading,
     overview,
     refreshOverview,
     validatorCount,
   }
-}
+},
+)

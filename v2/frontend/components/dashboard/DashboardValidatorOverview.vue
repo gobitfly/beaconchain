@@ -12,7 +12,8 @@ import { DashboardValidatorSubsetModal } from '#components'
 const { t: $t } = useTranslation()
 const { converter } = useValue()
 
-const { overview } = useValidatorDashboardOverviewStore()
+const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
+const { overview } = storeToRefs(validatorDashoboardOverviewStore)
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 4 })

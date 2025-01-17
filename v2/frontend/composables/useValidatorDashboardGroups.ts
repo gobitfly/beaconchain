@@ -1,7 +1,8 @@
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 
 export function useValidatorDashboardGroups() {
-  const { overview } = useValidatorDashboardOverviewStore()
+  const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+  const { overview } = storeToRefs(validatorDashboardOverviewStore)
   const { t: $t } = useTranslation()
 
   const groups = computed<VDBOverviewGroup[]>(() => {

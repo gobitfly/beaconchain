@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { orderBy } from 'lodash-es'
-import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
 const { dashboardKey } = useDashboardKey()
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   overview, validatorCount,
-} = useValidatorDashboardOverviewStore()
+} = storeToRefs(validatorDashboardOverviewStore)
 const { networkInfo } = useNetworkStore()
 const selectedGroups = ref<number[]>([])
 
@@ -36,7 +36,7 @@ watch(
       && (newValue[0] !== oldValue[0]
         || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)
     ) {
-      resetTick()
+    resetTick()
     }
     refreshSlotViz(dashboardKey.value, selectedGroups.value)
   },
