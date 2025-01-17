@@ -44,10 +44,10 @@ const {
 
 const showAbsoluteValues = ref<boolean | null>(null)
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators, overview, validatorCount,
-}
-  = useValidatorDashboardOverviewStore()
+} = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
 const timeFrames = computed(() =>
