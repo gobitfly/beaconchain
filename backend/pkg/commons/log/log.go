@@ -53,19 +53,27 @@ func WarnWithFields(additionalInfos Fields, msg string) {
 }
 
 func Tracef(format string, args ...interface{}) {
-	logrus.Tracef(format, args...)
+	if logrus.IsLevelEnabled(logrus.TraceLevel) { // performance optimization
+		logrus.Tracef(format, args...)
+	}
 }
 
 func TraceWithFields(additionalInfos Fields, msg string) {
-	logrus.WithFields(additionalInfos).Trace(msg)
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		logrus.WithFields(additionalInfos).Trace(msg)
+	}
 }
 
 func DebugWithFields(additionalInfos Fields, msg string) {
-	logrus.WithFields(additionalInfos).Debug(msg)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		logrus.WithFields(additionalInfos).Debug(msg)
+	}
 }
 
 func Debugf(format string, args ...interface{}) {
-	logrus.Debugf(format, args...)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		logrus.Debugf(format, args...)
+	}
 }
 
 func logErrorInfo(err error, callerSkip int, isWarning bool, additionalInfos ...Fields) *logrus.Entry {

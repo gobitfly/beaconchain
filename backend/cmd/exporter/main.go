@@ -54,12 +54,12 @@ func Run() {
 	}
 
 	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
+	}()
 	if !cfg.JustV2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			db.WriterDb, db.ReaderDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
-		}()
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -152,12 +152,12 @@ func Run() {
 	monitoring.Start()
 
 	if !cfg.JustV2 {
-		defer db.ReaderDb.Close()
-		defer db.WriterDb.Close()
 		defer db.AlloyReader.Close()
 		defer db.AlloyWriter.Close()
 		defer db.BigtableClient.Close()
 	}
+	defer db.ReaderDb.Close() // we need it to get the pectra workaround events
+	defer db.WriterDb.Close()
 	defer db.ClickHouseReader.Close()
 	defer db.ClickHouseWriter.Close()
 	defer db.ClickHouseNativeWriter.Close()

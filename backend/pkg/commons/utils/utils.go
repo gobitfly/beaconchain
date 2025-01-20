@@ -97,6 +97,20 @@ func SliceContains(list []string, target string) bool {
 
 // ForkVersionAtEpoch returns the forkversion active a specific epoch
 func ForkVersionAtEpoch(epoch uint64) *types.ForkVersion {
+	if epoch >= Config.Chain.ClConfig.ElectraForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.ElectraForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.ElectraForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.DenebForkVersion,
+		}
+	}
+	if epoch >= Config.Chain.ClConfig.DenebForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.DenebForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.DenebForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.CapellaForkVersion,
+		}
+	}
 	if epoch >= Config.Chain.ClConfig.CapellaForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.CapellaForkEpoch,
