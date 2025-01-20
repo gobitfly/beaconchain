@@ -1,10 +1,10 @@
 package utils
 
 import (
-	"encoding/json"
 	"io"
 
 	"github.com/pkg/errors"
+	"github.com/segmentio/encoding/json"
 )
 
 func Unmarshal[T any](source io.ReadCloser, err error) (*T, error) {

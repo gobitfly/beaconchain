@@ -72,7 +72,6 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
-
 	log.Infof("initialising exporter modules")
 
 	// Initialize modules
@@ -97,6 +96,7 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
 	})
+	log.Infof("subscribed to node events")
 
 	for event := range events {
 		if event.Error != nil {
@@ -163,6 +163,8 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 	}
 }
 func GetModuleContext() (ModuleContext, error) {
+	var moduleContext ModuleContext
+
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
 	spec, err := cl.GetSpec()
@@ -183,11 +185,8 @@ func GetModuleContext() (ModuleContext, error) {
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
-
-	moduleContext := ModuleContext{
-		CL:         cl,
-		ConsClient: clClient,
-	}
+	moduleContext.CL = cl
+	moduleContext.ConsClient = clClient
 
 	return moduleContext, nil
 }
@@ -215,6 +214,14 @@ func (m ModuleLog) Debug(message string) {
 
 func (m ModuleLog) Debugf(format string, args ...interface{}) {
 	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+}
+
+func (m ModuleLog) Trace(message string) {
+	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
+}
+
+func (m ModuleLog) Tracef(format string, args ...interface{}) {
+	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
 }
 
 func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {
