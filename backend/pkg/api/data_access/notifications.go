@@ -20,7 +20,6 @@ import (
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -193,27 +192,21 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 
 	// 24h counts
 	eg.Go(func() error {
-		var err error
-		day := time.Now().Truncate(utils.Day).Unix()
-		getMessageCount := func(prefix string) (uint64, error) {
-			key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
-			res := d.persistentRedisDbClient.Get(ctx, key)
-			if res.Err() == redis.Nil {
-				return 0, nil
-			} else if res.Err() != nil {
-				return 0, res.Err()
-			}
-			return res.Uint64()
-		}
-		response.Last24hEmailCount, err = getMessageCount(notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
+		notificationCount, err := db.GetSentMessagesCount(ctx, notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET, types.UserId(userId))
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = getMessageCount(notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET)
+		response.Last24hEmailCount = uint64(notificationCount)
+
+		notificationCount, err = db.GetSentMessagesCount(ctx, notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET, types.UserId(userId))
 		if err != nil {
 			return err
 		}
-		response.Last24hWebhookCount, err = getMessageCount(notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET)
+		response.Last24hPushCount = uint64(notificationCount)
+
+		notificationCount, err = db.GetSentMessagesCount(ctx, notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, types.UserId(userId))
+		response.Last24hWebhookCount = uint64(notificationCount)
+
 		return err
 	})
 

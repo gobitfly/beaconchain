@@ -252,7 +252,7 @@ func sendWebhookNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.CountSentMessage(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
+		_, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
 		if err != nil {
 			log.Error(err, "error counting sent webhook", 0)
 		}
@@ -369,7 +369,7 @@ func sendDiscordNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.CountSentMessage(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
+		_, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
 		if err != nil {
 			log.Error(err, "error counting sent webhook", 0)
 		}
@@ -489,7 +489,7 @@ func SendTestEmail(ctx context.Context, userId types.UserId, dbConn *sqlx.DB) er
 }
 
 func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webhookUrl string, isDiscordWebhook bool) error {
-	count, err := db.CountSentMessage("n_test_push", userId)
+	count, err := db.IncrSentMessagesCount("n_test_push", userId)
 	if err != nil {
 		return err
 	}
