@@ -13,8 +13,9 @@ type StandardBeaconHeadersResponse struct {
 }
 
 type BeaconHeaderData struct {
-	Root   hexutil.Bytes       `json:"root"`
-	Header BeaconHeaderMessage `json:"header"`
+	Root      hexutil.Bytes       `json:"root"`
+	Header    BeaconHeaderMessage `json:"header"`
+	Canonical bool                `json:"canonical"`
 }
 
 type BeaconHeaderMessage struct {

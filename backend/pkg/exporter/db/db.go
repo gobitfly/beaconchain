@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 
 	"regexp"
@@ -14,6 +15,8 @@ import (
 
 	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -946,7 +949,7 @@ func TransferEpochs(epochs []EpochMetadata) error {
 	const minEpochEntries = 1000
 	for _, e := range epochs {
 		var count int
-		err := db.ClickHouseReader.Get(&count, fmt.Sprintf(`
+		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
 			SELECT count() as count
 			FROM %s
 			FINAL
@@ -987,7 +990,7 @@ func TransferEpochs(epochs []EpochMetadata) error {
 
 func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
 	var epochs []EpochMetadata
-	err := db.ClickHouseReader.Select(&epochs,
+	err := db.ClickHouseWriter.Select(&epochs,
 		fmt.Sprintf(`
 			SELECT *
 			FROM %s
@@ -1007,7 +1010,7 @@ func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because 
 
 func GetLatestFinishedEpoch() (int64, error) {
 	var epoch int64
-	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
 		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
 		FROM %s
 		FINAL
@@ -1037,7 +1040,7 @@ func GetOldestUnfinishedTransferEpoch() (int64, error) {
 
 func GetLatestUnsafeEpoch() (int64, error) {
 	var epoch int64
-	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
 		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
 		FROM %s
 		FINAL
@@ -1094,7 +1097,7 @@ func GetRollingLastEpoch(rolling Rollings) (int64, error) {
 	// following doesnt handle epoch 0 correctly. fixing is left as an exercise for the reader
 	var epoch int64
 	// -1 if empty table
-	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
 		SELECT ifNull(max(toNullable(epoch_end::Int64)), -1) as epoch
 		FROM _final_%s
 		FINAL
@@ -1132,7 +1135,7 @@ func GetMinMaxForRollingSource(table RollingSources, start time.Time, end *time.
 		keys = append(keys, column+" < ?")
 		values = append(values, *end)
 	}
-	err := db.ClickHouseReader.Get(&result, fmt.Sprintf(`
+	err := db.ClickHouseWriter.Get(&result, fmt.Sprintf(`
 		SELECT min(toNullable(%[1]s)) as min, max(toNullable(%[1]s)) as max
 		FROM %[2]s
 		WHERE %[3]s
@@ -1232,7 +1235,11 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 		max(slashed) AS slashed,
 		max(last_executed_duty_epoch) AS last_executed_duty_epoch,
 		max(last_scheduled_sync_epoch) AS last_scheduled_sync_epoch,
-		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch
+		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch,
+		sum(consolidations_incoming_count) AS consolidations_incoming_count,
+		sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+		sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+		sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount
 	`
 	if source == RollingSourceEpochly {
 		column = "epoch_timestamp"
@@ -1312,7 +1319,11 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, min
 			max(slashed) AS slashed,
 			maxIfOrNull(foo.epoch, (foo.blocks_proposed != 0) OR (foo.sync_executed != 0) OR (foo.attestations_observed != 0)) AS last_executed_duty_epoch,
 			maxIfOrNull(foo.epoch, foo.sync_scheduled != 0) AS last_scheduled_sync_epoch,
-			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch
+			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch,
+			sum(consolidations_incoming_count) AS consolidations_incoming_count,
+			sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+			sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+			sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount
 		`
 	}
 	err := db.ClickHouseNativeWriter.Exec(ctx,
@@ -1358,7 +1369,7 @@ func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error
 	var epochs []EpochMetadata
 	// max epoch with assigned insert batch id
 	maxAssignedEpoch := int64(0)
-	err := db.ClickHouseReader.Get(&maxAssignedEpoch, fmt.Sprintf(`
+	err := db.ClickHouseWriter.Get(&maxAssignedEpoch, fmt.Sprintf(`
 		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as max_epoch
 		FROM %s
 		FINAL
@@ -1383,7 +1394,7 @@ func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error
 
 func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
 	var epochs []EpochMetadata
-	err := db.ClickHouseReader.Select(&epochs,
+	err := db.ClickHouseWriter.Select(&epochs,
 		fmt.Sprintf(`
 			SELECT *
 			FROM %[1]s
@@ -1404,11 +1415,11 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
 	}
 	return epochs, nil
-}
+}	
 
 func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	var epochs []EpochMetadata
-	err := db.ClickHouseReader.Select(&epochs,
+	err := db.ClickHouseWriter.Select(&epochs,
 		fmt.Sprintf(`
 			SELECT *
 			FROM %[1]s
@@ -1450,6 +1461,93 @@ func PushEpochMetadata(metdata []EpochMetadata) error {
 		return fmt.Errorf("error sending batch: %w", err)
 	}
 	return nil
+}
+
+func WorkaroundGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
+	var hashes [][]byte
+	/*
+		err := db.ReaderDb.Get(&hashes, fmt.Sprintf(`
+			SELECT block_root
+			FROM consensus_layer_events
+			WHERE event_name = 'EpochProcessedEvent' and slot = %d
+		`, (utils.Config.ClConfig.SlotsPerEpoch*epoch)-1))
+	*/
+	// use goqu
+	q := goqu.Dialect("postgres").Select("block_root").
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("EpochProcessedEvent"),
+			goqu.I("slot").Eq((utils.Config.ClConfig.SlotsPerEpoch*epoch)-1),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&hashes, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	return hashes, nil
+}
+
+func WorkaroundGetProcessedDeposits(blockhash []byte) ([]constypes.ElectraDeposit, error) {
+	var deposits []struct {
+		Amount uint64 `db:"amount"`
+		Pubkey string `db:"pubkey"`
+	}
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'pubkey'").As("pubkey"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("DepositProcessedEvent"),
+			goqu.I("block_root").Eq(blockhash),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching deposits for block %v: %w", blockhash, err)
+	}
+	err = db.ReaderDb.Select(&deposits, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching deposits for block %v: %w", blockhash, err)
+	}
+	var result []constypes.ElectraDeposit
+	// decode pubkey, is stored in base64
+	for i := range deposits {
+		decodedPubkey, err := base64.StdEncoding.DecodeString(deposits[i].Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding pubkey for deposit %v: %w", deposits[i].Pubkey, err)
+		}
+		result = append(result, constypes.ElectraDeposit{
+			Amount: deposits[i].Amount,
+			Pubkey: decodedPubkey,
+		})
+	}
+	return result, nil
+}
+
+func WorkaroundGetProcessedConsolidations(blockhash []byte) ([]constypes.ElectraConsolidation, error) {
+	var consolidations []constypes.ElectraConsolidation
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'source_index'").As("source_index"),
+		goqu.L("data->>'target_index'").As("target_index"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("ConsolidationProcessedEvent"),
+			goqu.I("block_root").Eq(blockhash),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching consolidations for block %v: %w", blockhash, err)
+	}
+	err = db.ReaderDb.Select(&consolidations, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching consolidations for block %v: %w", blockhash, err)
+	}
+	return consolidations, nil
 }
 
 const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil

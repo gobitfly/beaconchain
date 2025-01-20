@@ -97,6 +97,24 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Frontend.SiteBrand = "beaconcha.in"
 	}
 
+	// rewrite to match to allow trace as well
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	}
+
 	err = setCLConfig(cfg)
 	if err != nil {
 		return err
@@ -420,6 +438,10 @@ func setCLConfig(cfg *types.Config) error {
 			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
+		if jr.Data.ElectraForkEpoch == nil {
+			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
+			jr.Data.ElectraForkEpoch = &MaxForkEpoch
+		}
 
 		chainCfg := types.ClChainConfig{
 			PresetBase:                              jr.Data.PresetBase,
@@ -457,7 +479,7 @@ func setCLConfig(cfg *types.Config) error {
 			DepositContractAddress:                  jr.Data.DepositContractAddress,
 			MaxCommitteesPerSlot:                    uint64(jr.Data.MaxCommitteesPerSlot),
 			TargetCommitteeSize:                     uint64(jr.Data.TargetCommitteeSize),
-			MaxValidatorsPerCommittee:               uint64(jr.Data.TargetCommitteeSize),
+			MaxValidatorsPerCommittee:               uint64(jr.Data.MaxValidatorsPerCommittee),
 			ShuffleRoundCount:                       uint64(jr.Data.ShuffleRoundCount),
 			HysteresisQuotient:                      uint64(jr.Data.HysteresisQuotient),
 			HysteresisDownwardMultiplier:            uint64(jr.Data.HysteresisDownwardMultiplier),
@@ -531,24 +553,6 @@ func setCLConfig(cfg *types.Config) error {
 			return fmt.Errorf("error decoding Chain Config file %v: %v", cfg.Chain.ClConfigPath, err)
 		}
 		cfg.Chain.ClConfig = *chainConfig
-	}
-
-	// rewrite to match to allow trace as well
-	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
-	case "trace":
-		logrus.SetLevel(logrus.TraceLevel)
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "warn":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logrus.SetLevel(logrus.PanicLevel)
 	}
 
 	return nil
