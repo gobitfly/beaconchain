@@ -42,6 +42,23 @@ type AnySignedBlock struct {
 	Signature hexutil.Bytes `json:"signature"`
 }
 
+type LightAnySignedBlock struct {
+	BlockRoot      hexutil.Bytes
+	ParentRoot     hexutil.Bytes
+	Slot           uint64
+	ProposerIndex  uint64
+	SlashedIndices []uint64
+	Attestations   []Attestation
+	Deposits       []Deposit
+	Withdrawals    []LightWithdrawal
+	SyncAggregate  *SyncAggregate
+}
+
+type LightWithdrawal struct {
+	ValidatorIndex uint64
+	Amount         uint64
+}
+
 type ProposerSlashing struct {
 	SignedHeader1 struct {
 		Message struct {

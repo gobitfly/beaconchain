@@ -2,8 +2,8 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
 	"regexp"
@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	ch "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -19,12 +21,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-
-	"github.com/attestantio/go-eth2-client/spec/phase0"
 )
 
 func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
@@ -898,168 +898,561 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	return nil
 }
 
-func GetLatestDashboardEpoch() (uint64, error) {
-	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
-	return lastEpoch, err
+type EpochMetadata struct {
+	Epoch              uint64     `ch:"epoch" db:"epoch"`
+	InsertBatchID      *uuid.UUID `ch:"insert_batch_id" db:"insert_batch_id"`
+	SuccessfulInsert   *time.Time `ch:"successful_insert" db:"successful_insert"`
+	TransferBatchId    *uuid.UUID `ch:"transfer_batch_id" db:"transfer_batch_id"`
+	SuccessfulTransfer *time.Time `ch:"successful_transfer" db:"successful_transfer"`
 }
 
-func GetOldestDashboardEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
-	return epoch, err
-}
+//
+// |-GetIncompleteTransferEpochs
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+// |-GetPendingTransferEpochs
+// | - allocate transfer batch ids
+// | - PushEpochMetadata (transfer_batch_id)
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
 
-func GetMinOldHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
-	return epoch, err
-}
-
-type EpochBounds struct {
-	EpochStart uint64 `db:"epoch_start"`
-	EpochEnd   uint64 `db:"epoch_end"`
-}
-
-type DayBounds struct {
-	Day        time.Time `db:"day"`
-	EpochStart uint64    `db:"epoch_start"`
-	EpochEnd   uint64    `db:"epoch_end"`
-}
-
-func GetLastExportedTotalEpoch() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedHour() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedDay() (*DayBounds, error) {
-	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %[1]s WHERE day = (select max(day) from %[1]s) limit 1;", DayWriterTableName))
-	return &epoch, err
-}
-
-func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
+func TransferEpochs(epochs []EpochMetadata) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_batch").Observe(time.Since(start).Seconds())
+	}()
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	transferBatchID := epochs[0].TransferBatchId
+	for _, e := range epochs {
+		if e.TransferBatchId == nil || *e.TransferBatchId != *transferBatchID {
+			return fmt.Errorf("transfer batch id is not set or not identical for all epochs")
 		}
-		return false, err
 	}
-	return true, nil
-}
-
-// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
-func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
-	if start < 0 {
-		start = 0
-	}
-	if end <= start {
-		return nil, nil
-	}
-
-	if end-start > 100 {
-		// for large ranges we use a different approach to avoid making tons of selects
-		// this performs better for large ranges but is slow for short ranges
-		var epochs []uint64
-		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
-			WITH
-			epoch_range AS (
-				SELECT generate_series($1::bigint, $2::bigint) AS epoch
-			),
-			distinct_present_epochs AS (
-				SELECT DISTINCT epoch
-				FROM %s
-				WHERE epoch >= $1 AND epoch <= $2
-			)
-			SELECT epoch_range.epoch
-			FROM epoch_range
-			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
-			WHERE distinct_present_epochs.epoch IS NULL
-			ORDER BY epoch_range.epoch
-		`, EpochWriterTableName), start, end-1)
-		return epochs, err
-	}
-
-	query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
-
-	for epoch := start; epoch < end; epoch++ {
-		if epoch != start {
-			query += " UNION "
-		}
-		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
-	}
-
-	query += `) AS result_array;`
-
-	var jsonArray sql.NullString
-
-	err := db.AlloyReader.Get(&jsonArray, query)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query")
-	}
-
-	if !jsonArray.Valid {
-		return nil, nil
-	}
-
-	missingEpochs := make([]uint64, 0)
-	err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal")
-	}
-
-	// sort asc
-	sort.Slice(missingEpochs, func(i, j int) bool {
-		return missingEpochs[i] < missingEpochs[j]
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
 	})
-
-	return missingEpochs, nil
-}
-
-func GetPartitionNamesOfTable(tableName string) ([]string, error) {
-	var partitions []string
-	err := db.AlloyWriter.Select(&partitions, fmt.Sprintf(`
-		SELECT inhrelid::regclass AS partition_name
-		FROM pg_inherits
-		WHERE inhparent = 'public.%s'::regclass order by 1;`, tableName),
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    transferBatchID.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+	}))
+	now := time.Now()
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	for _, e := range epochs {
+		var count int
+		err := db.ClickHouseReader.Get(&count, fmt.Sprintf(`
+			SELECT count() as count
+			FROM %s
+			FINAL
+			WHERE epoch_timestamp = $1
+			SETTINGS select_sequential_consistency = 1, use_skip_indexes_if_final = 1
+		`, UnsafeEpochsTableName), utils.EpochToTime(e.Epoch))
+		if err != nil {
+			return fmt.Errorf("error fetching epoch count: %w", err)
+		}
+		if count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the unsafe table", e.Epoch)
+		}
+	}
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_sanity_check").Observe(time.Since(now).Seconds())
+	now = time.Now()
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into %s
+		select
+			* EXCEPT _inserted_at
+		from
+			%s FINAL
+		where
+			epoch_timestamp in $1
+	`, FinalEpochsTableName, UnsafeEpochsTableName),
+		epoch_timestamp,
 	)
-	return partitions, err
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_insert").Observe(time.Since(now).Seconds())
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
 }
 
-func AddToColumnEngine(table, columns string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		SELECT google_columnar_engine_add(
-			relation => '%s',
-			columns => '%s'
-		);
-		`, table, columns))
-	return err
+func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE 
+				(successful_insert IS NULL OR successful_insert < now() - interval 5 day) AND
+				(insert_batch_id IS NOT NULL) AND
+				(successful_transfer IS NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete insert epochs: %w", err)
+	}
+	return epochs, nil
 }
 
-func AddToColumnEngineAllColumns(table string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		SELECT google_columnar_engine_add(
-			relation => '%s'
-		);
-		`, table))
-	return err
+func GetLatestFinishedEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch: %w", err)
+	}
+	return epoch, nil
 }
 
-const EpochWriterTableName = "validator_dashboard_data_epoch"
-const DayWriterTableName = "validator_dashboard_data_daily"
-const HourWriterTableName = "validator_dashboard_data_hourly"
+func GetOldestUnfinishedTransferEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(min(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching oldest unfinished transfer epoch: %w", err)
+	}
+	return epoch, nil
+}
 
-const RollingTotalWriterTableName = "validator_dashboard_data_rolling_total"
-const RollingDailyWriterTable = "validator_dashboard_data_rolling_daily"
-const RollingWeeklyWriterTable = "validator_dashboard_data_rolling_weekly"
-const RollingMonthlyWriterTable = "validator_dashboard_data_rolling_monthly"
-const RollingNinetyDaysWriterTable = "validator_dashboard_data_rolling_90d"
+func GetLatestUnsafeEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_insert IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest unsafe epoch: %w", err)
+	}
+	return epoch, nil
+}
+
+// enum for rollings (hourly, daily, weekly, monthly, total)
+type Rollings string
+
+const (
+	Rolling1h    Rollings = `validator_dashboard_rolling_1h`
+	Rolling24h   Rollings = `validator_dashboard_rolling_24h`
+	Rolling7d    Rollings = `validator_dashboard_rolling_7d`
+	Rolling30d   Rollings = `validator_dashboard_rolling_30d`
+	Rolling90d   Rollings = `validator_dashboard_rolling_90d`
+	RollingTotal Rollings = `validator_dashboard_rolling_total`
+)
+
+func (r *Rollings) GetDuration() time.Duration {
+	switch *r {
+	case Rolling1h:
+		return time.Hour
+	case Rolling24h:
+		return 24 * time.Hour
+	case Rolling7d:
+		return 7 * 24 * time.Hour
+	case Rolling30d:
+		return 30 * 24 * time.Hour
+	case Rolling90d:
+		return 90 * 24 * time.Hour
+	case RollingTotal:
+		return 25 * 365 * 24 * time.Hour // 25 years
+	}
+	return 0
+}
+
+func NukeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		TRUNCATE TABLE _unsafe_%s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error truncating table %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func GetRollingLastEpoch(rolling Rollings) (int64, error) {
+	// following doesnt handle epoch 0 correctly. fixing is left as an exercise for the reader
+	var epoch int64
+	// -1 if empty table
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch_end::Int64)), -1) as epoch
+		FROM _final_%s
+		FINAL
+		SETTINGS select_sequential_consistency = 1
+	`, rolling))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch for rolling %s: %w", rolling, err)
+	}
+	return epoch, nil
+}
+
+type RollingSources string
+
+const (
+	RollingSourceEpochly RollingSources = `_final_validator_dashboard_data_epoch`
+	RollingSourceHourly  RollingSources = `_final_validator_dashboard_data_hourly`
+	RollingSourceDaily   RollingSources = `_final_validator_dashboard_data_daily`
+	RollingSourceMonthly RollingSources = `_final_validator_dashboard_data_monthly`
+)
+
+type MinMax struct {
+	Min *time.Time
+	Max *time.Time
+}
+
+func GetMinMaxForRollingSource(table RollingSources, start time.Time, end *time.Time) (*MinMax, error) {
+	var result MinMax
+	column := "t"
+	if table == RollingSourceEpochly { // we were so close to greatness
+		column = "epoch_timestamp"
+	}
+	keys := []string{column + " >= ?"}
+	values := []interface{}{start}
+	if end != nil {
+		keys = append(keys, column+" < ?")
+		values = append(values, *end)
+	}
+	err := db.ClickHouseReader.Get(&result, fmt.Sprintf(`
+		SELECT min(toNullable(%[1]s)) as min, max(toNullable(%[1]s)) as max
+		FROM %[2]s
+		WHERE %[3]s
+		SETTINGS select_sequential_consistency = 1
+	`, column, table, strings.Join(keys, " and ")), values...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching min max for rolling source %s: %w", table, err)
+	}
+	if result.Min == nil || result.Max == nil {
+		return nil, nil
+	}
+	return &result, nil
+}
+
+func TransferRollingSourceToRolling(rolling Rollings, source RollingSources, minMax MinMax) error {
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+		"max_threads":                   2,
+	}))
+	column := "t"
+	selector := `
+		validator_index AS validator_index,
+		any(foo.t) AS t,
+		
+		groupArraySortedIfMergeState(2048)(epoch_map) AS epoch_map,
+		min(epoch_start) AS epoch_start,
+		max(epoch_end) AS epoch_end,
+		
+		argMinStateMerge(balance_start) AS balance_start,
+		argMaxStateMerge(balance_end) AS balance_end,
+		min(balance_min) AS balance_min,
+		max(balance_max) AS balance_max,
+		
+		sum(deposits_count) AS deposits_count,
+		sum(deposits_amount) AS deposits_amount,
+		sum(withdrawals_count) AS withdrawals_count,
+		sum(withdrawals_amount) AS withdrawals_amount,
+		
+		sum(attestations_scheduled) AS attestations_scheduled,
+		sum(attestations_observed) AS attestations_observed,
+		sum(attestations_head_matched) AS attestations_head_matched,
+		sum(attestations_target_matched) AS attestations_target_matched,
+		sum(attestations_source_matched) AS attestations_source_matched,
+		
+		sum(attestations_head_executed) AS attestations_head_executed,
+		sum(attestations_target_executed) AS attestations_target_executed,
+		sum(attestations_source_executed) AS attestations_source_executed,
+		
+		sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+		sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+		
+		sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+		sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+		
+		sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+		sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+		
+		sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+		sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+		
+		sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+		sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+		sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+		sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+		sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+		sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+
+		sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+		sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+		
+		sum(inclusion_delay_sum) AS inclusion_delay_sum,
+		sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+		
+		sum(blocks_scheduled) AS blocks_scheduled,
+		sum(blocks_proposed) AS blocks_proposed,
+		sum(blocks_cl_reward) AS blocks_cl_reward,
+		sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+		sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+		sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+		sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+		sum(blocks_slashing_count) AS blocks_slashing_count,
+		sum(blocks_expected) AS blocks_expected,
+		
+		sum(sync_scheduled) AS sync_scheduled,
+		sum(sync_executed) AS sync_executed,
+		sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+		sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+		sum(sync_localized_max_reward) AS sync_localized_max_reward,
+		sum(sync_committees_expected) AS sync_committees_expected,
+		max(slashed) AS slashed,
+		max(last_executed_duty_epoch) AS last_executed_duty_epoch,
+		max(last_scheduled_sync_epoch) AS last_scheduled_sync_epoch,
+		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch
+	`
+	if source == RollingSourceEpochly {
+		column = "epoch_timestamp"
+		// this is gonna be ugly. but cant avoid sadly without code generation
+		selector = `
+			validator_index AS validator_index,
+			any(epoch_timestamp) AS t,
+			
+			groupArraySortedIfState(2048)(-foo.epoch, validator_index = 0) AS epoch_map,
+			min(foo.epoch) AS epoch_start,
+			max(foo.epoch) AS epoch_end,
+			
+			argMinState(foo.balance_start, foo.epoch) AS balance_start,
+			argMaxState(foo.balance_end, foo.epoch) AS balance_end,
+			least(min(foo.balance_start), min(foo.balance_end)) AS balance_min,
+			greatest(max(foo.balance_start), max(foo.balance_end)) AS balance_max,
+			
+			sum(deposits_count) AS deposits_count,
+			sum(deposits_amount) AS deposits_amount,
+			sum(withdrawals_count) AS withdrawals_count,
+			sum(withdrawals_amount) AS withdrawals_amount,
+			
+			sum(attestations_scheduled) AS attestations_scheduled,
+			sum(attestations_observed) AS attestations_observed,
+			sum(attestations_head_matched) AS attestations_head_matched,
+			sum(attestations_target_matched) AS attestations_target_matched,
+			sum(attestations_source_matched) AS attestations_source_matched,
+
+			sum(attestations_head_executed) AS attestations_head_executed,
+			sum(attestations_target_executed) AS attestations_target_executed,
+			sum(attestations_source_executed) AS attestations_source_executed,
+
+			sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+			sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+			
+			sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+			sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+			
+			sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+			sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+			
+			sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+			sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+			
+			sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+			sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+			sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+			sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+			sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+			sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+			
+			sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+			sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+
+			sum(inclusion_delay_sum) AS inclusion_delay_sum,
+			sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+
+			sum(blocks_scheduled) AS blocks_scheduled,
+			sum(blocks_proposed) AS blocks_proposed,
+			sum(blocks_cl_reward) AS blocks_cl_reward,
+			sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+			sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+			sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+			sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+
+			sum(blocks_slashing_count) AS blocks_slashing_count,
+			sum(blocks_expected) AS blocks_expected,
+			sum(sync_scheduled) AS sync_scheduled,
+			sum(sync_executed) AS sync_executed,
+			sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+			sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+			sum(sync_localized_max_reward) AS sync_localized_max_reward,
+			sum(sync_committees_expected) AS sync_committees_expected,
+			max(slashed) AS slashed,
+			maxIfOrNull(foo.epoch, (foo.blocks_proposed != 0) OR (foo.sync_executed != 0) OR (foo.attestations_observed != 0)) AS last_executed_duty_epoch,
+			maxIfOrNull(foo.epoch, foo.sync_scheduled != 0) AS last_scheduled_sync_epoch,
+			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch
+		`
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into _unsafe_%[1]s
+		select
+			%[2]s
+		from
+			%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
+		where
+			foo.%[4]s >= ? and foo.%[4]s <= ?
+		group by 
+			validator_index
+	`, rolling, selector, source, column), *minMax.Min, *minMax.Max)
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
+}
+
+func SwapRollingTables(rolling Rollings) error {
+	// swaps _unsafe_rolling with _final_rolling
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		EXCHANGE TABLES _unsafe_%[1]s AND _final_%[1]s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func OptimizeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		OPTIMIZE TABLE _unsafe_%s FINAL
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error optimizing table %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error) { // done
+	var epochs []EpochMetadata
+	// max epoch with assigned insert batch id
+	maxAssignedEpoch := int64(0)
+	err := db.ClickHouseReader.Get(&maxAssignedEpoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as max_epoch
+		FROM %s
+		FINAL
+		WHERE (insert_batch_id IS NOT NULL)
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching max assigned epoch: %w", err)
+	}
+	// cap the max epoch to the limit
+	if maxAssignedEpoch > maxEpoch {
+		return nil, fmt.Errorf("max assigned epoch %v is greater than the max epoch %v", maxAssignedEpoch, maxEpoch)
+	}
+	if maxEpoch > maxAssignedEpoch+limit {
+		maxEpoch = maxAssignedEpoch + limit
+	}
+	for i := maxAssignedEpoch + 1; i <= maxEpoch; i++ {
+		epochs = append(epochs, EpochMetadata{Epoch: uint64(i)})
+	}
+	return epochs, nil
+}
+
+func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE 
+				-- data has been inserted to the unsafe table
+			    (successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days within any transfer batch
+				(transfer_batch_id NOT IN (select transfer_batch_id from %[1]s WHERE successful_insert < now() - interval 5 day)) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL) AND
+				-- data has been assigned a transfer batch id
+				(transfer_batch_id IS NOT NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
+	}
+	return epochs, nil
+}
+
+func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
+	var epochs []EpochMetadata
+	err := db.ClickHouseReader.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE
+				-- data has been inserted to the unsafe table
+				(successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days
+				(successful_insert >= now() - interval 5 day) AND
+				-- data has not been assigned a transfer batch id
+				(transfer_batch_id IS NULL) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching pending transfer epochs: %w", err)
+	}
+	return epochs, nil
+}
+
+func PushEpochMetadata(metdata []EpochMetadata) error {
+	if len(metdata) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	for _, m := range metdata {
+		if err := batch.AppendStruct(&m); err != nil {
+			return fmt.Errorf("error appending struct to batch: %w", err)
+		}
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
+}
+
+const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
+const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
+const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
+const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"
