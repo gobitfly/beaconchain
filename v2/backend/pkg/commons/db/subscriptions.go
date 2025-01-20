@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -278,8 +279,8 @@ func UpdateSubscriptionLastSent(tx *sqlx.Tx, ts uint64, epoch uint64, subID uint
 	return err
 }
 
-// CountSentMessage increases the count of sent messages for this day given a specific prefix and userId
-func CountSentMessage(prefix string, userId types.UserId) (int64, error) {
+// IncrSentMessagesCount increases the count of sent messages for this day given a specific prefix and userId
+func IncrSentMessagesCount(prefix string, userId types.UserId) (int64, error) {
 	day := time.Now().Truncate(utils.Day).Unix()
 	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
 
@@ -293,4 +294,18 @@ func CountSentMessage(prefix string, userId types.UserId) (int64, error) {
 	}
 
 	return incr.Val(), err
+}
+
+// GetSentMessagesCount returns the number of sent messages for this day given a specific prefix and userId
+func GetSentMessagesCount(ctx context.Context, prefix string, userId types.UserId) (int64, error) {
+	day := time.Now().Truncate(utils.Day).Unix()
+	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
+
+	res := PersistentRedisDbClient.Get(ctx, key)
+	if res.Err() == redis.Nil {
+		return 0, nil
+	} else if res.Err() != nil {
+		return 0, res.Err()
+	}
+	return res.Int64()
 }

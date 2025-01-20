@@ -424,6 +424,7 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 
 func QueueEmailNotifications(epoch uint64, notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
 	// for emails multiple notifications will be rendered to one email per user for each run
+	// TODO filter out ratelimited users, don't need to queue or even render emails
 	emails, err := RenderEmailsForUserEvents(epoch, notificationsByUserID)
 	if err != nil {
 		return fmt.Errorf("error rendering emails: %w", err)
@@ -595,7 +596,7 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 }
 
 func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbConn *sqlx.DB, networkDbConn *sqlx.DB) error {
-	count, err := db.CountSentMessage("n_test_push", userId)
+	count, err := db.IncrSentMessagesCount("n_test_push", userId)
 	if err != nil {
 		return err
 	}
