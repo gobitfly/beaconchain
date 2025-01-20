@@ -106,6 +106,13 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to nuke unsafe rolling table")
 	}
+	// also create a defer that nukes it - exchange or not, we want it clean so clickhouse doesnt waste compute on it
+	defer func() {
+		err := edb.NukeUnsafeRollingTable(rolling)
+		if err != nil {
+			d.log.Error(err, "failed to nuke unsafe rolling table", 0)
+		}
+	}()
 	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_nuke_unsafe", rolling)).Observe(time.Since(now).Seconds())
 	// now we fetch the start & end for each pre-aggregated table we use
 	minTs := utils.EpochToTime(uint64(finishedEpoch)).Add(-rolling.GetDuration())
@@ -163,6 +170,14 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer all rolling sources")
 	}
+	// trigger an optimize final on the table. this should be fine since the size of the table is relatively small and calls are constrained
+	now = time.Now()
+	d.log.Infof("optimizing rolling %s", rolling)
+	err = edb.OptimizeUnsafeRollingTable(rolling)
+	if err != nil {
+		return errors.Wrap(err, "failed to optimize rolling table")
+	}
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_optimize", rolling)).Observe(time.Since(now).Seconds())
 	// now we swap the tables
 	now = time.Now()
 	err = edb.SwapRollingTables(rolling)

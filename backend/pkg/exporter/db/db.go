@@ -1301,6 +1301,16 @@ func SwapRollingTables(rolling Rollings) error {
 	return nil
 }
 
+func OptimizeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		OPTIMIZE TABLE _unsafe_%s FINAL
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error optimizing table %s: %w", rolling, err)
+	}
+	return nil
+}
+
 func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error) { // done
 	var epochs []EpochMetadata
 	// max epoch with assigned insert batch id
