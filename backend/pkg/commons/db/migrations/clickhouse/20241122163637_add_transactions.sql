@@ -30,15 +30,23 @@ CREATE TABLE IF NOT EXISTS transactions(
     is_contract_creation Boolean,
     logs Array(Nullable(String)) CODEC(ZSTD(3)), 
     logs_bloom Array(Nullable(UInt8)) CODEC(ZSTD(3)), 
-    inserted_timestamp DateTime DEFAULT now(), 
 
-    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
-    INDEX idx_method (method) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = ReplacingMergeTree(inserted_timestamp)
-ORDER BY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
-PRIMARY KEY (toStartOfWeek(timestamp), from_address, block_number, tx_index)
-PARTITION BY (chain_id, toStartOfQuarter(timestamp))
-SETTINGS index_granularity = 8192
+    INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_method method TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_tx_hash tx_hash TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_from_to_tx_hash (from_address, to_address, tx_hash) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_tx_hash (to_address, from_address, tx_hash) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_type type TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_type (from_address, to_address, type) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_type (to_address, from_address, type) TYPE bloom_filter(0.1) GRANULARITY 8
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY (toStartOfQuarter(timestamp), chain_id)
+ORDER BY (timestamp, block_number, tx_index)
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
 -- +goose StatementBegin
@@ -51,18 +59,26 @@ CREATE TABLE IF NOT EXISTS internal_transactions(
     type String CODEC(ZSTD(3)),
     value String CODEC(ZSTD(3)),
     path String,
+    internal_index UInt64 CODEC(T64, ZSTD(3)),
     gas UInt64 CODEC(ZSTD(3)),
     timestamp DateTime,
     error_msg Nullable(String) CODEC(ZSTD(3)),
-    inserted_timestamp DateTime DEFAULT now(),
 
-    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1
-    
-)ENGINE = ReplacingMergeTree(inserted_timestamp)
-ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
-PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, value)
-PARTITION BY (chain_id, toStartOfQuarter(timestamp))
-SETTINGS index_granularity = 8192
+    INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_parent_hash parent_hash TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_from_to_parent_hash (from_address, to_address, parent_hash) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_parent_hash (to_address, from_address, parent_hash) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_type type TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_type (from_address, to_address, type) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_type (to_address, from_address, type) TYPE bloom_filter(0.1) GRANULARITY 8
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY (toStartOfQuarter(timestamp), chain_id)
+ORDER BY (timestamp, block_number, parent_hash, internal_index)
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
 -- +goose StatementBegin
@@ -79,15 +95,20 @@ CREATE TABLE IF NOT EXISTS erc20_transfers (
     transaction_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
-    inserted_timestamp DateTime DEFAULT now(),
 
-    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
-    INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = ReplacingMergeTree(inserted_timestamp)
-ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY (chain_id, toStartOfQuarter(timestamp))
-SETTINGS index_granularity = 8192
+    INDEX idx_parent_hash parent_hash TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_token_address (from_address, to_address, token_address) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_token_address token_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_from_token_address (to_address, from_address, token_address) TYPE bloom_filter(0.3) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY (toStartOfQuarter(timestamp), chain_id)
+ORDER BY (timestamp, block_number, log_index)
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
 -- +goose StatementBegin
@@ -104,15 +125,19 @@ CREATE TABLE IF NOT EXISTS erc721_transfers(
     transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
-    inserted_timestamp DateTime DEFAULT now(),
 
-    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
-    INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = ReplacingMergeTree(inserted_timestamp)
-ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY (chain_id, toStartOfQuarter(timestamp))
-SETTINGS index_granularity = 8192
+    INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_parent_hash parent_hash TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_token_address (from_address, to_address, token_address) TYPE bloom_filter(0.1) GRANULARITY 4,
+    INDEX idx_token_address token_address TYPE bloom_filter(0.2) GRANULARITY 4,
+    INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY (toStartOfQuarter(timestamp), chain_id)
+ORDER BY (timestamp, block_number, log_index)
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
 -- +goose StatementBegin
@@ -131,15 +156,19 @@ CREATE TABLE IF NOT EXISTS erc1155_transfers(
     transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
-    inserted_timestamp DateTime DEFAULT now(),
 
-    INDEX idx_to_address (to_address) TYPE bloom_filter(0.5) GRANULARITY 1,
-    INDEX idx_token_address (token_address) TYPE bloom_filter(0.5) GRANULARITY 1
-) ENGINE = ReplacingMergeTree(inserted_timestamp)
-ORDER BY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PRIMARY KEY (toStartOfWeek(timestamp), parent_hash, from_address, block_number, log_index)
-PARTITION BY (chain_id, toStartOfQuarter(timestamp))
-SETTINGS index_granularity = 8192
+    INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 8,
+    INDEX idx_parent_hash parent_hash TYPE bloom_filter(0.1) GRANULARITY 1,
+    INDEX idx_from_to_token_address (from_address, to_address, token_address) TYPE bloom_filter(0.1) GRANULARITY 4,
+    INDEX idx_token_address token_address TYPE bloom_filter(0.2) GRANULARITY 4,
+    INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 1
+)
+ENGINE = ReplacingMergeTree()
+PARTITION BY (toStartOfQuarter(timestamp), chain_id)
+ORDER BY (timestamp, block_number, log_index)
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
 
