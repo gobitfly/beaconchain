@@ -450,7 +450,7 @@ func SendInternalTxBatch(data []InternalTxBatch) error {
 	itxBatch, err := ClickHouseNativeWriter.PrepareBatch(ctx, `
 		INSERT INTO internal_transactions (
 			chain_id, parent_hash, block_number, from_address, to_address,
-			type, value, path, gas, timestamp, error_msg
+			type, value, path, internal_index, gas, timestamp, error_msg
 		)
 	`)
 	if err != nil {
@@ -459,7 +459,7 @@ func SendInternalTxBatch(data []InternalTxBatch) error {
 
 	for _, d := range data {
 		err := itxBatch.Append(d.ChainID, d.ParentHash, d.BlockNumber, d.FromAddress,
-			d.ToAddress, d.Type, d.Value, d.Path, d.Gas, d.Timestamp, d.ErrorMsg)
+			d.ToAddress, d.Type, d.Value, d.Path, d.InternalIndex, d.Gas, d.Timestamp, d.ErrorMsg)
 		if err != nil {
 			return fmt.Errorf("error while appending ITX batch for ClickHouse: %v", err)
 		}
@@ -655,17 +655,18 @@ type TxBatch struct {
 }
 
 type InternalTxBatch struct {
-	ChainID     string
-	ParentHash  string
-	BlockNumber uint64
-	FromAddress string
-	ToAddress   string
-	Type        string
-	Value       string
-	Path        string
-	Gas         uint64
-	Timestamp   int64
-	ErrorMsg    string
+	ChainID       string
+	ParentHash    string
+	BlockNumber   uint64
+	FromAddress   string
+	ToAddress     string
+	Type          string
+	Value         string
+	Path          string
+	InternalIndex int64
+	Gas           uint64
+	Timestamp     int64
+	ErrorMsg      string
 }
 
 type ERC20Batch struct {
@@ -852,20 +853,21 @@ func parseItx(tx *types.Eth1Transaction, blockNumber uint64, blockTimestamp int6
 		lastTickTs := time.Now()
 		var currentProcessed int64
 
-		for _, itx := range tx.Itx {
+		for i, itx := range tx.Itx {
 
 			data := InternalTxBatch{
-				ChainID:     fmt.Sprintf("%d", utils.Config.Chain.Id),
-				ParentHash:  string(tx.Hash),
-				BlockNumber: blockNumber,
-				FromAddress: string(itx.From),
-				ToAddress:   string(itx.To),
-				Type:        itx.Type,
-				Value:       itx.Value,
-				Path:        itx.Path,
-				Gas:         itx.Gas,
-				Timestamp:   blockTimestamp,
-				ErrorMsg:    itx.ErrorMsg,
+				ChainID:       fmt.Sprintf("%d", utils.Config.Chain.Id),
+				ParentHash:    string(tx.Hash),
+				BlockNumber:   blockNumber,
+				FromAddress:   string(itx.From),
+				ToAddress:     string(itx.To),
+				Type:          itx.Type,
+				Value:         itx.Value,
+				Path:          itx.Path,
+				InternalIndex: int64(i),
+				Gas:           itx.Gas,
+				Timestamp:     blockTimestamp,
+				ErrorMsg:      itx.ErrorMsg,
 			}
 
 			*itxBatch = append(*itxBatch, data)
