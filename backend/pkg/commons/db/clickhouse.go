@@ -366,7 +366,7 @@ func IndexTxsToClickHouseFromRawBigtable(start, end, concurrency int64) error {
 			for b := range blocksChan {
 				block := b
 				subG.Go(func() error {
-					err = ParseDataToClickHouse(block, transformerList, &txBatch, &itxBatch, &erc20Batch, &erc721Batch, &erc1155Batch)
+					err := ParseDataToClickHouse(block, transformerList, &txBatch, &itxBatch, &erc20Batch, &erc721Batch, &erc1155Batch)
 					if err != nil {
 						log.Error(err, "error saving transactions to ClickHouse", 0)
 						return err
@@ -381,12 +381,21 @@ func IndexTxsToClickHouseFromRawBigtable(start, end, concurrency int64) error {
 				return fmt.Errorf("block processing error: %w", err)
 			}
 
-			if blockCount == batchSize || i == end && end-start < batchSize {
-				// send transactions to ClickHouse
-				err := SendAllBatches(txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
-				if err != nil {
-					log.Error(err, "error sending batches to ClickHouse", 0)
-					return err
+			if blockCount > 0 {
+				if blockCount == batchSize {
+					// send full batch to ClickHouse
+					err := SendAllBatches(txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
+					if err != nil {
+						log.Error(err, "error sending full batch to ClickHouse", 0)
+						return err
+					}
+				} else {
+					// send partial batch to ClickHouse
+					err := SendAllBatches(txBatch, itxBatch, erc20Batch, erc721Batch, erc1155Batch)
+					if err != nil {
+						log.Error(err, "error sending partial batch to ClickHouse", 0)
+						return err
+					}
 				}
 
 				// reset blockCount after sending the batches to ClickHouse
