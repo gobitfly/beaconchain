@@ -830,19 +830,20 @@ func parseTxs(tx *types.Eth1Transaction, txIndex int, blockNumber uint64, blockT
 			LogsBloom:            tx.LogsBloom,
 		}
 
+		currentBatchSize := len(*txBatch)
 		*txBatch = append(*txBatch, data)
 
-		// fmt.Printf("\n\n tx batch LEN in HERE %d \n", len(*txBatch))
-		// if err != nil {
-		// 	log.Error(err, "error appending tx data to batch", 0)
-		// 	if attempt < MAX_RETRY {
-		// 		log.Warn(fmt.Sprintf("Attempt %d failed to append tx data to batch. Retrying...", attempt))
-		// 		time.Sleep(RETRY_DELAY)
-		// 		continue
-		// 	}
-		// 	fmt.Errorf("failed to append tx data to batch after %d attempts: %v", MAX_RETRY, err)
-		// 	panic("failed to process tx")
-		// }
+		// check if appending was successful by checking if the size has increased
+		if len(*txBatch) == currentBatchSize {
+			log.Error(nil, "error appending TX data to batch", 0)
+			if attempt < MAX_RETRY {
+				log.Warn(fmt.Sprintf("Attempt %d failed to append tx data to batch. Retrying...", attempt))
+				time.Sleep(RETRY_DELAY)
+				continue
+			}
+			fmt.Printf("failed to append tx %s data to batch after %d attempts", string(tx.Hash), MAX_RETRY)
+			panic("failed to process TX")
+		}
 
 		return nil
 	}
@@ -879,18 +880,22 @@ func parseItx(tx *types.Eth1Transaction, blockNumber uint64, blockTimestamp int6
 				ErrorMsg:      itx.ErrorMsg,
 			}
 
+			currentBatchSize := len(*itxBatch)
 			*itxBatch = append(*itxBatch, data)
 
-			// if err != nil {
-			// 	log.Error(err, "error appending ITX data to batch", 0)
-			// 	if attempt < MAX_RETRY {
-			// 		log.Warn(fmt.Sprintf("Attempt %d failed to append ITX data to batch. Retrying...", attempt))
-			// 		time.Sleep(RETRY_DELAY)
-			// 		continue
-			// 	}
-			// 	fmt.Errorf("failed to append ITX data to batch after %d attempts: %v", MAX_RETRY, err)
-			// 	panic("failed to process ITX")
-			// }
+			// check if appending was successful by checking if the size has increased
+			if len(*itxBatch) == currentBatchSize {
+				log.Error(nil, "error appending ITX data to batch", 0)
+				if attempt < MAX_RETRY {
+					log.Warn(fmt.Sprintf("Attempt %d failed to append ITX data to batch. Retrying...", attempt))
+					time.Sleep(RETRY_DELAY)
+					continue
+				}
+
+				fmt.Printf("failed to append ITX data with parent hash: %s and index %d to batch after %d attempts", string(tx.Hash), int64(i), MAX_RETRY)
+				panic("failed to process ITX")
+			}
+
 			currentProcessed = atomic.AddInt64(&processedItx, 1)
 		}
 
@@ -964,18 +969,20 @@ func parseERC20Transfers(tx *types.Eth1Transaction, txIndex int, blockNumber uin
 				Timestamp:    blockTimestamp,
 			}
 
+			currentBatchSize := len(*erc20Batch)
 			*erc20Batch = append(*erc20Batch, parsedData)
 
-			// if err != nil {
-			// 	log.Error(err, "error appending ERC20 data to batch", 0)
-			// 	if attempt < MAX_RETRY {
-			// 		log.Warn(fmt.Sprintf("Attempt %d failed to append ERC20 data to batch. Retrying...", attempt))
-			// 		time.Sleep(RETRY_DELAY)
-			// 		continue
-			// 	}
-			// 	fmt.Errorf("failed to append ERC20 data to batch after %d attempts: %v", MAX_RETRY, err)
-			// 	panic("failed to process ERC20")
-			// }
+			// check if appending was successful by checking if the size has increased
+			if len(*erc20Batch) == currentBatchSize {
+				log.Error(nil, "error appending ERC20 data to batch", 0)
+				if attempt < MAX_RETRY {
+					log.Warn(fmt.Sprintf("Attempt %d failed to append ERC20 data to batch. Retrying...", attempt))
+					time.Sleep(RETRY_DELAY)
+					continue
+				}
+				fmt.Printf("failed to append ERC20 data with parent hash: %s and index %d to batch after %d attempts", string(tx.Hash), uint64(j), MAX_RETRY)
+				panic("failed to process ERC20")
+			}
 
 			currentProcessed = atomic.AddInt64(&processedERC20, 1)
 		}
@@ -1052,18 +1059,20 @@ func parseERC721Transfers(tx *types.Eth1Transaction, txIndex int, blockNumber ui
 				Timestamp:    blockTimestamp,
 			}
 
+			currentBatchSize := len(*erc721Batch)
 			*erc721Batch = append(*erc721Batch, data)
 
-			// if err != nil {
-			// 	log.Error(err, "error appending ERC721 data to batch", 0)
-			// 	if attempt < MAX_RETRY {
-			// 		log.Warn(fmt.Sprintf("Attempt %d failed to append ERC721 data to batch. Retrying...", attempt))
-			// 		time.Sleep(RETRY_DELAY)
-			// 		continue
-			// 	}
-			// 	fmt.Errorf("failed to append ERC721 data to batch after %d attempts: %v", MAX_RETRY, err)
-			// 	panic("failed to process ERC721")
-			// }
+			// check if appending was successful by checking if the size has increased
+			if len(*erc721Batch) == currentBatchSize {
+				log.Error(err, "error appending ERC721 data to batch", 0)
+				if attempt < MAX_RETRY {
+					log.Warn(fmt.Sprintf("Attempt %d failed to append ERC721 data to batch. Retrying...", attempt))
+					time.Sleep(RETRY_DELAY)
+					continue
+				}
+				fmt.Printf("failed to append ERC721 data with parent hash: %s and index %d to batch after %d attempts", string(tx.Hash), uint64(j), MAX_RETRY)
+				panic("failed to process ERC721")
+			}
 
 			currentProcessed = atomic.AddInt64(&processedERC721, 1)
 		}
@@ -1147,18 +1156,20 @@ func parseERC1155Transfers(tx *types.Eth1Transaction, txIndex int, blockNumber u
 						Timestamp:    blockTimestamp,
 					}
 
+					currentBatchSize := len(*erc1155Batch)
 					*erc1155Batch = append(*erc1155Batch, data)
 
-					// if err != nil {
-					// 	log.Error(err, "error appending ERC1155 data to batch", 0)
-					// 	if attempt < MAX_RETRY {
-					// 		log.Warn(fmt.Sprintf("Attempt %d failed to append ERC1155 data to batch. Retrying...", attempt))
-					// 		time.Sleep(RETRY_DELAY)
-					// 		continue
-					// 	}
-					// 	fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
-					// 	panic("failed to process ERC1155")
-					// }
+					// check if appending was successful by checking if the size has increased
+					if len(*erc1155Batch) == currentBatchSize {
+						log.Error(err, "error appending ERC1155 data to batch", 0)
+						if attempt < MAX_RETRY {
+							log.Warn(fmt.Sprintf("Attempt %d failed to append ERC1155 data to batch. Retrying...", attempt))
+							time.Sleep(RETRY_DELAY)
+							continue
+						}
+						fmt.Printf("failed to append ERC1155 data with parent hash: %s and index %d to batch after %d attempts", string(tx.Hash), uint64(j), MAX_RETRY)
+						panic("failed to process ERC1155")
+					}
 
 					currentProcessed = atomic.AddInt64(&processedERC1155, 1)
 				}
@@ -1181,17 +1192,20 @@ func parseERC1155Transfers(tx *types.Eth1Transaction, txIndex int, blockNumber u
 					Timestamp:    blockTimestamp,
 				}
 
+				currentBatchSize := len(*erc1155Batch)
 				*erc1155Batch = append(*erc1155Batch, data)
-				// if err != nil {
-				// 	log.Error(err, "error appending ERC1155 data to batch", 0)
-				// 	if attempt < MAX_RETRY {
-				// 		log.Warn(fmt.Sprintf("Attempt %d failed to append ERC1155 data to batch. Retrying...", attempt))
-				// 		time.Sleep(RETRY_DELAY)
-				// 		continue
-				// 	}
-				// 	fmt.Errorf("failed to append ERC1155 data to batch after %d attempts: %v", MAX_RETRY, err)
-				// 	panic("failed to process ERC1155")
-				// }
+
+				// check if appending was successful by checking if the size has increased
+				if len(*erc1155Batch) == currentBatchSize {
+					log.Error(err, "error appending ERC1155 data to batch", 0)
+					if attempt < MAX_RETRY {
+						log.Warn(fmt.Sprintf("Attempt %d failed to append ERC1155 data to batch. Retrying...", attempt))
+						time.Sleep(RETRY_DELAY)
+						continue
+					}
+					fmt.Printf("failed to append ERC1155 data with parent hash: %s and index %d to batch after %d attempts", string(tx.Hash), uint64(j), MAX_RETRY)
+					panic("failed to process ERC1155")
+				}
 
 				currentProcessed = atomic.AddInt64(&processedERC1155, 1)
 			}
