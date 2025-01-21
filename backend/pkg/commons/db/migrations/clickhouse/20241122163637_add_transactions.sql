@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS transactions(
     is_contract_creation Boolean,
     logs Array(Nullable(String)) CODEC(ZSTD(3)), 
     logs_bloom Array(Nullable(UInt8)) CODEC(ZSTD(3)), 
+    inserted_at DateTime MATERIALIZED now(), 
 
     INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 8,
@@ -43,7 +44,7 @@ CREATE TABLE IF NOT EXISTS transactions(
     INDEX idx_from_to_type (from_address, to_address, type) TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_from_type (to_address, from_address, type) TYPE bloom_filter(0.1) GRANULARITY 8
 )
-ENGINE = ReplacingMergeTree()
+ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
 ORDER BY (timestamp, block_number, tx_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
@@ -63,6 +64,7 @@ CREATE TABLE IF NOT EXISTS internal_transactions(
     gas UInt64 CODEC(ZSTD(3)),
     timestamp DateTime,
     error_msg Nullable(String) CODEC(ZSTD(3)),
+    inserted_at DateTime MATERIALIZED now(), 
 
     INDEX idx_from_to_address (from_address, to_address) TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 8,
@@ -75,7 +77,7 @@ CREATE TABLE IF NOT EXISTS internal_transactions(
     INDEX idx_from_to_type (from_address, to_address, type) TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_from_type (to_address, from_address, type) TYPE bloom_filter(0.1) GRANULARITY 8
 )
-ENGINE = ReplacingMergeTree()
+ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
 ORDER BY (timestamp, block_number, parent_hash, internal_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
@@ -95,6 +97,7 @@ CREATE TABLE IF NOT EXISTS erc20_transfers (
     transaction_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_at DateTime MATERIALIZED now(), 
 
     INDEX idx_parent_hash parent_hash TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_from_to_token_address (from_address, to_address, token_address) TYPE bloom_filter(0.1) GRANULARITY 1,
@@ -105,7 +108,7 @@ CREATE TABLE IF NOT EXISTS erc20_transfers (
     INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_from_token_address (to_address, from_address, token_address) TYPE bloom_filter(0.3) GRANULARITY 1
 )
-ENGINE = ReplacingMergeTree()
+ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
 ORDER BY (timestamp, block_number, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
@@ -125,6 +128,7 @@ CREATE TABLE IF NOT EXISTS erc721_transfers(
     transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_at DateTime MATERIALIZED now(), 
 
     INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
@@ -134,7 +138,7 @@ CREATE TABLE IF NOT EXISTS erc721_transfers(
     INDEX idx_token_address token_address TYPE bloom_filter(0.2) GRANULARITY 4,
     INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 1
 )
-ENGINE = ReplacingMergeTree()
+ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
 ORDER BY (timestamp, block_number, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
@@ -156,6 +160,7 @@ CREATE TABLE IF NOT EXISTS erc1155_transfers(
     transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
+    inserted_at DateTime MATERIALIZED now(), 
 
     INDEX idx_from_address from_address TYPE bloom_filter(0.1) GRANULARITY 1,
     INDEX idx_to_address to_address TYPE bloom_filter(0.1) GRANULARITY 1,
@@ -165,7 +170,7 @@ CREATE TABLE IF NOT EXISTS erc1155_transfers(
     INDEX idx_token_address token_address TYPE bloom_filter(0.2) GRANULARITY 4,
     INDEX idx_to_from_address (to_address, from_address) TYPE bloom_filter(0.1) GRANULARITY 1
 )
-ENGINE = ReplacingMergeTree()
+ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
 ORDER BY (timestamp, block_number, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
