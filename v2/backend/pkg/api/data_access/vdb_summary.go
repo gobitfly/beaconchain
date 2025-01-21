@@ -521,6 +521,39 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
+	getMinMaxEpochs := func() (uint64, uint64, error) {
+		ds := goqu.Dialect("postgres").
+			Select(
+				goqu.L("MIN(epoch_start) as min_epoch_start"),
+				goqu.L("MAX(epoch_end) as max_epoch_end")).
+			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+
+		if dashboardId.Validators == nil {
+			ds = ds.
+				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
+				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
+		} else {
+			ds = ds.
+				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
+		}
+
+		query, args, err := ds.Prepared(true).ToSQL()
+		if err != nil {
+			return 0, 0, err
+		}
+
+		var epoch_row struct {
+			MinEpochStart *uint64 `db:"min_epoch_start"`
+			MaxEpochEnd   *uint64 `db:"max_epoch_end"`
+		}
+		err = d.clickhouseReader.GetContext(ctx, &epoch_row, query, args...)
+		if err != nil {
+			return 0, 0, err
+		}
+		return *epoch_row.MinEpochStart, *epoch_row.MaxEpochEnd, nil
+	}
+
 	getMissedELRewards := func(epochStart, epochEnd uint64) (float64, error) {
 		// Initialize the result variable
 		var totalMissedRewardsEl float64
@@ -599,19 +632,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return totalMissedRewardsEl, nil
 	}
 
-	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, uint64, uint64, error) {
+	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
 		// we need to go to the all time table for last scheduled block/sync committee epoch
 		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
 		if err != nil {
-			return time.Time{}, time.Time{}, 0, 0, err
+			return time.Time{}, time.Time{}, err
 		}
 
 		ds := goqu.Dialect("postgres").
 			Select(
 				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
-				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch"),
-				goqu.L("MIN(epoch_start) as min_epoch_start"),
-				goqu.L("MAX(epoch_end) as max_epoch_end")).
+				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
 			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
 
 		if dashboardId.Validators == nil {
@@ -626,28 +657,24 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
-			return time.Time{}, time.Time{}, 0, 0, err
+			return time.Time{}, time.Time{}, err
 		}
 
 		var row struct {
-			LastScheduledBlockEpoch *int64  `db:"last_scheduled_block_epoch"`
-			LastSyncEpoch           *int64  `db:"last_scheduled_sync_epoch"`
-			MinEpochStart           *uint64 `db:"min_epoch_start"`
-			MaxEpochEnd             *uint64 `db:"max_epoch_end"`
+			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
+			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
 		}
 		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
 		if err != nil {
-			return time.Time{}, time.Time{}, 0, 0, err
+			return time.Time{}, time.Time{}, err
 		}
 
 		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
-			return time.Time{}, time.Time{}, 0, 0, nil
+			return time.Time{}, time.Time{}, nil
 		}
 
 		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
 			utils.EpochToTime(uint64(*row.LastSyncEpoch)),
-			*row.MinEpochStart,
-			*row.MaxEpochEnd,
 			nil
 	}
 
@@ -738,11 +765,17 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil
 	})
 
-	var minEpochStart, maxEpochEnd uint64
 	var lastBlockTs, lastSyncTs time.Time
 	errGroup.Go(func() error {
 		var err error
-		lastBlockTs, lastSyncTs, minEpochStart, maxEpochEnd, err = getLastScheduledBlockAndSyncDate()
+		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		return err
+	})
+
+	var minEpochStart, maxEpochEnd uint64
+	errGroup.Go(func() error {
+		var err error
+		minEpochStart, maxEpochEnd, err = getMinMaxEpochs()
 		return err
 	})
 
