@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
@@ -49,7 +51,7 @@ func (store Store) AddBlockTransactions(chainID string, transactions []*types.Et
 func (store Store) Get(addresses []common.Address, prefixes map[string]string, limit int64, opts ...Option) ([]*Interaction, map[string]string, error) {
 	options := apply(opts)
 
-	filter, err := newQueryFilter(options)
+	filter, err := newQueryFilterV3(options)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -82,50 +84,64 @@ func (store Store) Get(addresses []common.Address, prefixes map[string]string, l
 }
 
 func (store Store) getBy(addresses []common.Address, prefixes map[string]string, condition filter, databaseOptions []database.Option) ([]*interactionWithInfo, error) {
+	var g errgroup.Group
 	var interactions []*interactionWithInfo
+	var mu sync.Mutex
 	for _, address := range addresses {
-		root := condition.get(address)
-		prefix := root
-		if prefixes != nil && prefixes[root] != "" {
-			prefix = prefixes[root]
-		}
-		upper := condition.limit(root)
-		indexRows, err := store.db.GetRowsRange(upper, prefix, databaseOptions...)
-		if err != nil {
-			if errors.Is(err, database.ErrNotFound) {
-				continue
+		g.Go(func() error {
+			root := condition.get(address)
+			prefix := root
+			if prefixes != nil && prefixes[root] != "" {
+				prefix = prefixes[root]
 			}
-			return nil, err
-		}
-		txKeys := make(map[string]string)
-		for _, row := range indexRows {
-			for key := range row.Values {
-				txKey := strings.TrimPrefix(key, fmt.Sprintf("%s:", defaultFamily))
-				txKeys[txKey] = row.Key
+			upper := condition.limit(root)
+			rowKeyFilter := condition.rowKeyFilter(prefix)
+			if rowKeyFilter != "" {
+				databaseOptions = append(databaseOptions, database.WithRowKeyFilter(rowKeyFilter))
 			}
-		}
-		txRows, err := store.db.GetRowsWithKeys(maps.Keys(txKeys))
-		if err != nil {
-			return nil, err
-		}
-		for _, row := range txRows {
-			parts := strings.Split(row.Key, ":")
-			unMarshal := unMarshalTx
-			if parts[0] == "ERC20" {
-				unMarshal = unMarshalTransfer
-			}
-			interaction, err := unMarshal(row.Values[fmt.Sprintf("%s:%s", defaultFamily, dataColumn)])
+			indexRows, err := store.db.GetRowsRange(upper, prefix, databaseOptions...)
 			if err != nil {
-				return nil, err
+				if errors.Is(err, database.ErrNotFound) {
+					return nil
+				}
+				return err
 			}
-			interaction.ChainID = parts[1]
-			interactions = append(interactions, &interactionWithInfo{
-				Interaction: interaction,
-				chainID:     parts[1],
-				root:        root,
-				key:         txKeys[row.Key],
-			})
-		}
+			txKeys := make(map[string]string)
+			for _, row := range indexRows {
+				for key := range row.Values {
+					txKey := strings.TrimPrefix(key, fmt.Sprintf("%s:", defaultFamily))
+					txKeys[txKey] = row.Key
+				}
+			}
+			txRows, err := store.db.GetRowsWithKeys(maps.Keys(txKeys))
+			if err != nil {
+				return err
+			}
+			for _, row := range txRows {
+				parts := strings.Split(row.Key, ":")
+				unMarshal := unMarshalTx
+				if parts[0] == "ERC20" {
+					unMarshal = unMarshalTransfer
+				}
+				interaction, err := unMarshal(row.Values[fmt.Sprintf("%s:%s", defaultFamily, dataColumn)])
+				if err != nil {
+					return err
+				}
+				interaction.ChainID = parts[1]
+				mu.Lock()
+				interactions = append(interactions, &interactionWithInfo{
+					Interaction: interaction,
+					chainID:     parts[1],
+					root:        root,
+					key:         txKeys[row.Key],
+				})
+				mu.Unlock()
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	return interactions, nil
 }

@@ -2,16 +2,16 @@ package rpc
 
 import (
 	"context"
-
-	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-
-	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
-
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types/geth"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum"
@@ -20,9 +20,10 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -48,12 +49,7 @@ func NewErigonClient(endpoint string) (*ErigonClient, error) {
 		return nil, fmt.Errorf("error dialing rpc node: %w", err)
 	}
 	client.rpcClient = rpcClient
-
-	ethClient, err := ethclient.Dial(client.endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("error dialing rpc node: %w", err)
-	}
-	client.ethClient = ethClient
+	client.ethClient = ethclient.NewClient(rpcClient)
 
 	client.multiChecker, err = NewBalance(common.HexToAddress("0xb1F8e55c7f64D203C1400B9D8555d050F94aDF39"), client.ethClient)
 	if err != nil {
@@ -424,7 +420,7 @@ var gethTracerArg = map[string]string{
 	"tracer": "callTracer",
 }
 
-func extractCalls(r *GethTraceCallResult, d *[]*GethTraceCallResult) {
+func extractCalls(r *geth.TraceCall, d *[]*geth.TraceCall) {
 	if r == nil {
 		return
 	}
@@ -439,15 +435,15 @@ func extractCalls(r *GethTraceCallResult, d *[]*GethTraceCallResult) {
 	}
 }
 
-func (client *ErigonClient) TraceGeth(blockHash common.Hash) ([]*GethTraceCallResult, error) {
-	var res []*GethTraceCallResultWrapper
+func (client *ErigonClient) TraceGeth(blockHash common.Hash) ([]*geth.TraceCall, error) {
+	var res []*geth.Trace
 
 	err := client.rpcClient.Call(&res, "debug_traceBlockByHash", blockHash, gethTracerArg)
 	if err != nil {
 		return nil, err
 	}
 
-	data := make([]*GethTraceCallResult, 0, 20)
+	data := make([]*geth.TraceCall, 0, 20)
 	for i, r := range res {
 		r.Result.TransactionPosition = i
 		extractCalls(r.Result, &data)

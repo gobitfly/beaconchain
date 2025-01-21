@@ -20,7 +20,7 @@ func BlockTransactionsToItemsV2(chainID string, transactions []*types.Eth1Transa
 		if err != nil {
 			return nil, err
 		}
-		key, indexes := transactionKeys(chainID, transaction, i)
+		key, indexes := transactionKeysV3(chainID, transaction, i)
 		items[key] = []database.Item{{Family: defaultFamily, Column: dataColumn, Data: b}}
 		for _, index := range indexes {
 			items[index] = []database.Item{{Family: defaultFamily, Column: key}}
@@ -42,7 +42,7 @@ func BlockERC20TransfersToItemsV2(chainID string, transfers []TransferWithIndexe
 		if err != nil {
 			return nil, err
 		}
-		key, indexes := transferKeys(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)
+		key, indexes := transferKeysV3(chainID, transfer.Indexed, transfer.TxIndex, transfer.LogIndex)
 		items[key] = []database.Item{{Family: defaultFamily, Column: dataColumn, Data: b}}
 		for _, index := range indexes {
 			items[index] = []database.Item{{Family: defaultFamily, Column: key}}

@@ -7,6 +7,16 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
+type Bigtable struct {
+	Project             string `yaml:"project" envconfig:"BIGTABLE_PROJECT"`
+	Instance            string `yaml:"instance" envconfig:"BIGTABLE_INSTANCE"`
+	Emulator            bool   `yaml:"emulator" envconfig:"BIGTABLE_EMULATOR"`
+	EmulatorPort        int    `yaml:"emulatorPort" envconfig:"BIGTABLE_EMULATOR_PORT"`
+	EmulatorHost        string `yaml:"emulatorHost" envconfig:"BIGTABLE_EMULATOR_HOST"`
+	V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" envconfig:"BIGTABLE_V2_SCHEMA_CUTT_OFF_EPOCH"`
+	Remote              string `yaml:"remote"`
+}
+
 // Config is a struct to hold the configuration data
 type Config struct {
 	JustV2         bool   `yaml:"justV2" envconfig:"JUST_V2"` // temp, remove at some point
@@ -51,14 +61,8 @@ type Config struct {
 		MaxIdleConns int    `yaml:"maxIdleConns" envconfig:"ALLOY_WRITER_DB_MAX_IDLE_CONNS"`
 		SSL          bool   `yaml:"ssl" envconfig:"ALLOY_WRITER_DB_SSL"`
 	} `yaml:"alloyWriter"`
-	Bigtable struct {
-		Project             string `yaml:"project" envconfig:"BIGTABLE_PROJECT"`
-		Instance            string `yaml:"instance" envconfig:"BIGTABLE_INSTANCE"`
-		Emulator            bool   `yaml:"emulator" envconfig:"BIGTABLE_EMULATOR"`
-		EmulatorPort        int    `yaml:"emulatorPort" envconfig:"BIGTABLE_EMULATOR_PORT"`
-		EmulatorHost        string `yaml:"emulatorHost" envconfig:"BIGTABLE_EMULATOR_HOST"`
-		V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" envconfig:"BIGTABLE_V2_SCHEMA_CUTT_OFF_EPOCH"`
-	} `yaml:"bigtable"`
+	Bigtable    Bigtable `yaml:"bigtable"`
+	RawBigtable Bigtable `yaml:"rawBigtable"`
 	BlobIndexer struct {
 		S3 struct {
 			Endpoint        string `yaml:"endpoint" envconfig:"BLOB_INDEXER_S3_ENDPOINT"`                 // s3 endpoint

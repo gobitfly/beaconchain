@@ -6,19 +6,24 @@ const (
 )
 
 type options struct {
-	OpenRange      bool
-	OpenCloseRange bool
-	Limit          int64
-	BatchSize      int64
-	StatsReporter  func(msg string, args ...any)
+	OpenRange       bool
+	OpenCloseRange  bool
+	ClosedOpenRange bool
+	Limit           int64
+	BatchSize       int64
+	StatsReporter   func(msg string, args ...any)
+	RowKeyFilter    string
 }
 
 func apply(opts []Option) options {
 	options := options{
-		OpenRange:      false,
-		OpenCloseRange: false,
-		BatchSize:      defaultBatchSize,
-		Limit:          defaultLimit,
+		OpenRange:       false,
+		OpenCloseRange:  false,
+		ClosedOpenRange: false,
+		Limit:           defaultLimit,
+		BatchSize:       defaultBatchSize,
+		StatsReporter:   nil,
+		RowKeyFilter:    "",
 	}
 	for _, o := range opts {
 		o.apply(&options)
@@ -28,6 +33,16 @@ func apply(opts []Option) options {
 
 type Option interface {
 	apply(*options)
+}
+
+type rowKeyFilterOption string
+
+func (r rowKeyFilterOption) apply(opts *options) {
+	opts.RowKeyFilter = string(r)
+}
+
+func WithRowKeyFilter(regex string) Option {
+	return rowKeyFilterOption(regex)
 }
 
 type openRangeOption bool
@@ -44,6 +59,16 @@ type openCloseRangeOption bool
 
 func (r openCloseRangeOption) apply(opts *options) {
 	opts.OpenCloseRange = bool(r)
+}
+
+type closedOpenRangeOption bool
+
+func (r closedOpenRangeOption) apply(opts *options) {
+	opts.ClosedOpenRange = bool(r)
+}
+
+func WithClosedOpenRangeOption(r bool) Option {
+	return closedOpenRangeOption(r)
 }
 
 func WithOpenCloseRange(r bool) Option {

@@ -10,3 +10,4 @@ contract Token is ERC20 {
         _mint(account, value);
     }
 }
+

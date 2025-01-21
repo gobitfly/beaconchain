@@ -32,6 +32,14 @@ func apply(opts []Option) options {
 	return options
 }
 
+type noOption struct{}
+
+func WithNoOption() Option {
+	return noOption{}
+}
+
+func (n noOption) apply(o *options) {}
+
 type byTimeRangeOption struct {
 	from *timestamp.Timestamp
 	to   *timestamp.Timestamp

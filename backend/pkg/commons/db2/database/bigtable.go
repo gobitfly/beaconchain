@@ -316,7 +316,13 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 	if options.OpenCloseRange {
 		rowRange = bigtable.NewOpenClosedRange(low, high)
 	}
+	if options.ClosedOpenRange {
+		rowRange = bigtable.NewClosedOpenRange(low, high)
+	}
 	readOptions := bigtableReadOptions(options, rowRange)
+	if options.RowKeyFilter != "" {
+		readOptions = append(readOptions, bigtable.RowFilter(bigtable.RowKeyFilter(options.RowKeyFilter)))
+	}
 	var data []Row
 	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
 		values := make(map[string][]byte)

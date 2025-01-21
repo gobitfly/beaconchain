@@ -227,21 +227,6 @@ func (client *NodeClient) getTraceGeth(blockNumber *big.Int) ([]*Eth1InternalTra
 	return indexedTraces, nil
 }
 
-func extractTraceCalls(r *geth.TraceCall, d *[]*geth.TraceCall) {
-	if r == nil {
-		return
-	}
-	*d = append(*d, r)
-
-	if r.Calls == nil {
-		return
-	}
-	for _, c := range r.Calls {
-		c.TransactionPosition = r.TransactionPosition
-		extractTraceCalls(c, d)
-	}
-}
-
 func (client *NodeClient) traceGeth(blockNumber *big.Int) ([]*geth.TraceCall, error) {
 	var res []*geth.Trace
 
@@ -253,7 +238,7 @@ func (client *NodeClient) traceGeth(blockNumber *big.Int) ([]*geth.TraceCall, er
 	data := make([]*geth.TraceCall, 0, 20)
 	for i, r := range res {
 		r.Result.TransactionPosition = i
-		extractTraceCalls(r.Result, &data)
+		extractCalls(r.Result, &data)
 	}
 
 	return data, nil
@@ -295,7 +280,7 @@ func (client *RawStoreClient) GetBlocks(start, end int64, traceMode string) ([]*
 		}
 		parsedBlock := parseBlock(block, receipts, parseTraceGeth(traces), func(_ context.Context, tx *geth_types.Transaction, block common.Hash, _ uint) (common.Address, error) {
 			// Try to load the address from the cache.
-			return geth_types.Sender(&raw.SenderFromDBSigner{Blockhash: block}, tx)
+			return geth_types.Sender(raw.SignerForChainID(tx.ChainId(), block), tx)
 		})
 		blocks = append(blocks, parsedBlock)
 	}
@@ -313,7 +298,7 @@ func (client *RawStoreClient) GetBlock(number int64, traceMode string) (*types.E
 	}
 	return parseBlock(block, receipts, parseTraceGeth(traces), func(_ context.Context, tx *geth_types.Transaction, block common.Hash, _ uint) (common.Address, error) {
 		// Try to load the address from the cache.
-		return geth_types.Sender(&raw.SenderFromDBSigner{Blockhash: block}, tx)
+		return geth_types.Sender(raw.SignerForChainID(tx.ChainId(), block), tx)
 	}), nil
 }
 

@@ -28,7 +28,7 @@ var GethParse = func(rawBlock *FullBlockData) (*types.Block, []*types.Receipt, [
 	var unclesResp []jsonrpc.Message
 	_ = json.Unmarshal(rawBlock.Uncles, &unclesResp)
 
-	block, err := parseEthBlock(blockResp.Result, unclesResp)
+	block, err := parseEthBlock(big.NewInt(int64(rawBlock.ChainID)), blockResp.Result, unclesResp)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -94,7 +94,8 @@ type txExtraInfo struct {
 // parseEthBlock is a copy of ethclient.Client.getBlock
 // modified to work the with raw db
 // https://github.com/ethereum/go-ethereum/blob/v1.14.11/ethclient/ethclient.go#L129
-func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpc.Message) (*types.Block, error) {
+// receive the chainID because it cannot be extracted for sure from the transaction on certain chain (optimism)
+func parseEthBlock(chainID *big.Int, raw json.RawMessage, rawUncles []jsonrpc.Message) (*types.Block, error) {
 	// Decode header and transactions.
 	var head *types.Header
 	if err := json.Unmarshal(raw, &head); err != nil {
@@ -135,7 +136,7 @@ func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpc.Message) (*types.Blo
 	txs := make([]*types.Transaction, len(body.Transactions))
 	for i, tx := range body.Transactions {
 		if tx.From != nil {
-			setSenderFromDBSigner(tx.tx, *tx.From, body.Hash)
+			setSender(chainID, tx.tx, *tx.From, body.Hash)
 		}
 		txs[i] = tx.tx
 	}
@@ -146,43 +147,4 @@ func parseEthBlock(raw json.RawMessage, rawUncles []jsonrpc.Message) (*types.Blo
 			Withdrawals:  body.Withdrawals,
 			Requests:     body.Requests,
 		}), nil
-}
-
-// SenderFromDBSigner is a types.Signer that remembers the sender address returned by the RPC
-// server. It is stored in the transaction's sender address cache to avoid an additional
-// request in TransactionSender.
-// copy of senderFromServer
-// https://github.com/ethereum/go-ethereum/blob/v1.14.11/ethclient/signer.go#L30
-type SenderFromDBSigner struct {
-	addr      common.Address
-	Blockhash common.Hash
-}
-
-var errNotCached = errors.New("sender not cached")
-
-func setSenderFromDBSigner(tx *types.Transaction, addr common.Address, block common.Hash) {
-	// Use types.Sender for side-effect to store our signer into the cache.
-	_, _ = types.Sender(&SenderFromDBSigner{addr, block}, tx)
-}
-
-func (s *SenderFromDBSigner) Equal(other types.Signer) bool {
-	os, ok := other.(*SenderFromDBSigner)
-	return ok && os.Blockhash == s.Blockhash
-}
-
-func (s *SenderFromDBSigner) Sender(tx *types.Transaction) (common.Address, error) {
-	if s.addr == (common.Address{}) {
-		return common.Address{}, errNotCached
-	}
-	return s.addr, nil
-}
-
-func (s *SenderFromDBSigner) ChainID() *big.Int {
-	panic("can't sign with SenderFromDBSigner")
-}
-func (s *SenderFromDBSigner) Hash(tx *types.Transaction) common.Hash {
-	panic("can't sign with SenderFromDBSigner")
-}
-func (s *SenderFromDBSigner) SignatureValues(tx *types.Transaction, sig []byte) (R, S, V *big.Int, err error) {
-	panic("can't sign with SenderFromDBSigner")
 }
