@@ -110,7 +110,7 @@ func (d *executionRewardsFinalizer) maintainTable() (err error) {
 	gc := goqu.Dialect("postgres").From("blocks").
 		Select(
 			goqu.Func("count", goqu.Star()).As("total"),
-			goqu.Func("count", goqu.I("ep.fee_recipient_reward")).As("non_null"),
+			goqu.Func("count", goqu.I("ep.fee_recipient_reward").IsNot(nil)).As("non_null"),
 		).
 		LeftJoin(
 			goqu.T("execution_payloads").As("ep"),
