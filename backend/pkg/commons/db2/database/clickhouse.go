@@ -31,6 +31,7 @@ type ClickHouseDB interface {
 	Read(query string, args ...interface{}) ([]map[string]interface{}, error)
 
 	Close() error
+	Clear() error
 }
 
 func NewClickHouseClient(writer, reader *types.DatabaseConfig) (*ClickHouseClient, error) {
@@ -250,6 +251,39 @@ func (client *ClickHouseClient) Close() error {
 	if client.NativeReader != nil {
 		if err := client.NativeReader.Close(); err != nil {
 			return fmt.Errorf("failed to close ClickHouse reader connection: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func (client *ClickHouseClient) Clear() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	tablesList, err := client.NativeReader.Query(ctx, `
+		SELECT name 
+		FROM system.tables 
+		WHERE database = ?`,
+		client.writerCfg.Name,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to fetch tables list, error: %w", err)
+	}
+	defer tablesList.Close()
+
+	var tables []string
+	for tablesList.Next() {
+		var tableName string
+		if err := tablesList.Scan(&tableName); err != nil {
+			return fmt.Errorf("failed to scan table name %s, error: %w", tableName, err)
+		}
+		tables = append(tables, tableName)
+	}
+
+	for _, table := range tables {
+		if err := client.NativeWriter.Exec(ctx, fmt.Sprintf("DROP TABLE IF EXISTS %s.%s", client.writerCfg.Name, table)); err != nil {
+			return fmt.Errorf("failed to drop table %s, error: %w", table, err)
 		}
 	}
 
