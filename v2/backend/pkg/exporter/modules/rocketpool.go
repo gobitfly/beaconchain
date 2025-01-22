@@ -191,7 +191,7 @@ func (rp *RocketpoolExporter) Run() error {
 
 	for {
 		t0 := time.Now()
-		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, constants.Default, time.Second*12)
+		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, time.Hour*4, rp.UpdateInterval) // currently takes 2h40m on mainnet...
 		r(constants.Running, nil)
 		var err error
 		err = rp.Update(count)

@@ -10,6 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	monitoringServices "github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type HealthzRepository interface {
@@ -128,10 +129,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	for _, result := range results {
 		response.Reports[result.EventId] = append(response.Reports[result.EventId], result)
 	}
-	requiredEvents := constants.RequiredEvents
-	if utils.Config.DeploymentType == "production" {
-		requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
-	}
+	requiredEvents := monitoringServices.GetRequiredEvents()
 	for _, id := range requiredEvents {
 		if _, ok := response.Reports[string(id)]; !ok {
 			response.Reports[string(id)] = []types.HealthzResult{
