@@ -1031,6 +1031,13 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 	}
 
+	// need default or all groups for anon dashboards and shared dashboards without group sharing
+	// TODO could move this to API layer & generalize for all methods
+	if (dashboardId.Validators != nil && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) ||
+		(dashboardId.AggregateGroups && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) {
+		return ret, nil
+	}
+
 	totalLineRequested := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
 	averageNetworkLineRequested := requestedGroupsMap[t.NetworkAverage]
 
