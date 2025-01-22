@@ -43,35 +43,65 @@ func Wrap(db *BigTable, table string) TableWrapper {
 }
 
 func (w TableWrapper) Add(key string, item Item, allowDuplicate bool) error {
-	return w.BigTable.Add(w.table, key, item, allowDuplicate)
+	if err := w.BigTable.Add(w.table, key, item, allowDuplicate); err != nil {
+		return fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return nil
 }
 
 func (w TableWrapper) Read(prefix string) ([]Row, error) {
-	return w.BigTable.Read(w.table, prefix)
+	res, err := w.BigTable.Read(w.table, prefix)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 func (w TableWrapper) GetLatestValue(key string) (*Row, error) {
-	return w.BigTable.GetLatestValue(w.table, key)
+	res, err := w.BigTable.GetLatestValue(w.table, key)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 func (w TableWrapper) GetRow(key string) (*Row, error) {
-	return w.BigTable.GetRow(w.table, key)
+	res, err := w.BigTable.GetRow(w.table, key)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 func (w TableWrapper) GetRowKeys(prefix string, opts ...Option) ([]string, error) {
-	return w.BigTable.GetRowKeys(w.table, prefix, opts...)
+	res, err := w.BigTable.GetRowKeys(w.table, prefix, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
-	return w.BigTable.BulkAdd(w.table, itemsByKey, opts...)
+	if err := w.BigTable.BulkAdd(w.table, itemsByKey, opts...); err != nil {
+		return fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return nil
 }
 
 func (w TableWrapper) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
-	return w.BigTable.GetRowsRange(w.table, high, low, opts...)
+	res, err := w.BigTable.GetRowsRange(w.table, high, low, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 func (w TableWrapper) GetRowsWithKeys(keys []string) ([]Row, error) {
-	return w.BigTable.GetRowsWithKeys(w.table, keys)
+	res, err := w.BigTable.GetRowsWithKeys(w.table, keys)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
 }
 
 // BigTable is a wrapper around Google Cloud Bigtable for storing and retrieving data
@@ -91,6 +121,7 @@ func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminCl
 
 // NewBigTable initializes a new BigTable
 // It returns a BigTable and an error if any part of the setup fails
+// if tablesAndFamilies is not nil it will try to create the associated tables and families if not already presents
 func NewBigTable(project, instance string, tablesAndFamilies map[string][]string, options ...option.ClientOption) (*BigTable, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -124,27 +155,27 @@ func createTableAndFamilies(ctx context.Context, admin *bigtable.AdminClient, ta
 	// Get the list of existing tables
 	tables, err := admin.Tables(ctx)
 	if err != nil {
-		return fmt.Errorf("could not fetch table list: %v", err)
+		return fmt.Errorf("could not fetch table list: %w", err)
 	}
 
 	// Create the table if it doesn't exist
 	if !slices.Contains(tables, tableName) {
 		if err := admin.CreateTable(ctx, tableName); err != nil {
-			return fmt.Errorf("could not create table %s: %v", tableName, err)
+			return fmt.Errorf("could not create table %s: %w", tableName, err)
 		}
 	}
 
 	// Retrieve information about the table
 	tblInfo, err := admin.TableInfo(ctx, tableName)
 	if err != nil {
-		return fmt.Errorf("could not read info for table %s: %v", tableName, err)
+		return fmt.Errorf("could not read info for table %s: %w", tableName, err)
 	}
 
 	for _, familyName := range familyNames {
 		// Create the column family if it doesn't exist
 		if !slices.Contains(tblInfo.Families, familyName) {
 			if err := admin.CreateColumnFamily(ctx, tableName, familyName); err != nil {
-				return fmt.Errorf("could not create column family %s: %v", familyName, err)
+				return fmt.Errorf("could not create column family %s: %w", familyName, err)
 			}
 		}
 	}
@@ -211,7 +242,7 @@ func (b BigTable) Add(table, key string, item Item, allowDuplicate bool) error {
 	}
 	// Apply the mutation to the table using the given key
 	if err := tbl.Apply(ctx, key, mut); err != nil {
-		return fmt.Errorf("could not apply row mutation: %v", err)
+		return fmt.Errorf("could not apply row mutation: %w", err)
 	}
 	return nil
 }
@@ -240,7 +271,7 @@ func (b BigTable) Read(table, prefix string) ([]Row, error) {
 		return true
 	})
 	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
+		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 
 	return rows, nil
@@ -268,7 +299,7 @@ func (b BigTable) GetLatestValue(table, key string) (*Row, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
+		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 
 	return &data, nil
@@ -283,7 +314,7 @@ func (b BigTable) GetRow(table, key string) (*Row, error) {
 	var data *Row
 	row, err := tbl.ReadRow(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("could not read row: %v", err)
+		return nil, fmt.Errorf("could not read row: %w", err)
 	}
 	if row == nil {
 		return nil, ErrNotFound
@@ -338,7 +369,7 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 		return true
 	}, readOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
+		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 	if len(data) == 0 {
 		return nil, ErrNotFound
@@ -362,7 +393,7 @@ func (b BigTable) GetRowKeys(table, prefix string, opts ...Option) ([]string, er
 		return true
 	}, readOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
+		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 
 	return data, nil
@@ -389,7 +420,7 @@ func (b BigTable) GetRowsWithKeys(table string, keys []string) ([]Row, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %v", err)
+		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 	if len(data) == 0 {
 		return nil, ErrNotFound
@@ -408,7 +439,7 @@ func (b BigTable) Clear() error {
 	}
 	for _, table := range tables {
 		if err := b.admin.DropAllRows(ctx, table); err != nil {
-			return fmt.Errorf("could not drop all rows: %v", err)
+			return fmt.Errorf("could not drop all rows: %w", err)
 		}
 	}
 	return nil
@@ -421,11 +452,11 @@ func (b BigTable) Close() error {
 		return fmt.Errorf("cannot close client: bigtable client is nil")
 	}
 	if err := b.client.Close(); err != nil && status.Code(err) != codes.Canceled {
-		return fmt.Errorf("cannot close client: %v", err)
+		return fmt.Errorf("cannot close client: %w", err)
 	}
 	if b.admin != nil {
 		if err := b.admin.Close(); err != nil && status.Code(err) != codes.Canceled {
-			return fmt.Errorf("cannot close admin client: %v", err)
+			return fmt.Errorf("cannot close admin client: %w", err)
 		}
 	}
 	return nil

@@ -49,7 +49,7 @@ func TestBigTableClientRealCondition(t *testing.T) {
 			}
 
 			rawStore := NewStore(database.Wrap(bt, Table))
-			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+			rpcClient, err := rpc.DialOptions(context.Background(), "https://foo.bar", rpc.WithHTTPClient(&http.Client{
 				Transport: NewBigTableEthRaw(rawStore, chainID),
 			}))
 			if err != nil {
@@ -131,7 +131,7 @@ func BenchmarkRawBigTable(b *testing.B) {
 	}
 
 	rawStore := WithCache(NewStore(database.Wrap(bt, Table)))
-	rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+	rpcClient, err := rpc.DialOptions(context.Background(), "https://foo.bar", rpc.WithHTTPClient(&http.Client{
 		Transport: NewBigTableEthRaw(rawStore, chainID),
 	}))
 	if err != nil {
@@ -178,7 +178,7 @@ func TestBigTableClient(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			rpcClient, err := rpc.DialOptions(context.Background(), "http://foo.bar", rpc.WithHTTPClient(&http.Client{
+			rpcClient, err := rpc.DialOptions(context.Background(), "https://foo.bar", rpc.WithHTTPClient(&http.Client{
 				Transport: NewBigTableEthRaw(WithCache(rawStore), tt.block.ChainID),
 			}))
 			if err != nil {
