@@ -149,7 +149,7 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.NewStatusReport(module.GetMonitoringEventId(), constants.Default, constants.Default)
+			r := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
 			r(constants.Running, nil)
 			err := f(module)
 			if err != nil {
