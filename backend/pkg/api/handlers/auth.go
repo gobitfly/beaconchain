@@ -755,18 +755,7 @@ func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Reque
 		handleErr(w, r, newConflictErr("user has an active premium subscription or premium API plan, please cancel them first before deleting the account"))
 		return
 	}
-
-	err = h.daService.RemoveUser(ctx, userId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-
-	err = h.purgeAllSessionsForUser(ctx, userId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
+	// testing what would happen
 
 	returnNoContent(w, r)
 }
