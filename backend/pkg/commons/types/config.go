@@ -335,14 +335,18 @@ type InternalAlertDiscord struct {
 }
 
 type DatabaseConfig struct {
-	Username     string
-	Password     string
-	Name         string
-	Host         string
-	Port         string
-	MaxOpenConns int
-	MaxIdleConns int
-	SSL          bool
+	Username     string `yaml:"user" env:"DB_USERNAME"`
+	Password     string `yaml:"password" env:"DB_PASSWORD"`
+	Name         string `yaml:"name" env:"DB_NAME"`
+	Host         string `yaml:"host" env:"DB_HOST"`
+	Port         string `yaml:"port" env:"DB_PORT"`
+	MaxOpenConns int    `yaml:"maxOpenConns" env:"DB_MAX_OPEN_CONNS"`
+	MaxIdleConns int    `yaml:"maxIdleConns" env:"DB_MAX_IDLE_CONNS"`
+	SSL          bool   `yaml:"ssl" env:"DB_SSL"`
+	Failovers    []struct {
+		Host string `yaml:"host"`
+		Port string `yaml:"port"`
+	} `yaml:"failovers"`
 }
 
 type ServiceMonitoringConfiguration struct {
