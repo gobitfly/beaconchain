@@ -12,9 +12,10 @@ import (
 
 func UpdatePubkeyTag() {
 	log.Infof("Started Pubkey Tags Updater")
+	delay := time.Minute * 10
 	for {
 		start := time.Now()
-		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, constants.Default, time.Second*12)
+		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, delay, time.Second*12)
 		r(constants.Running, nil)
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
@@ -45,6 +46,6 @@ func UpdatePubkeyTag() {
 		r(constants.Success, map[string]string{"took": time.Since(start).String(), "took_raw": time.Since(start).String()})
 		metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(start).Seconds())
 
-		time.Sleep(time.Minute * 10)
+		time.Sleep(delay)
 	}
 }

@@ -109,3 +109,18 @@ func NewStatusReport(id constants.Event, timeout time.Duration, check_interval t
 		}()
 	}
 }
+
+func GetRequiredEvents() []constants.Event {
+	// i would hope this simple of a function doesnt need caching
+	requiredEvents := constants.RequiredEvents
+	if utils.Config.DeploymentType == "production" {
+		requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
+	}
+	if utils.Config.RocketpoolExporter.Enabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyRocketPool)
+	}
+	if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyPubkeyTags)
+	}
+	return requiredEvents
+}

@@ -1,6 +1,8 @@
 package constants
 
-import "time"
+import (
+	"time"
+)
 
 // status enum
 type StatusType string
@@ -69,8 +71,6 @@ var ProductionRequiredEvents = []Event{
 	Event_ExporterLegacyNetworkLiveness,
 	Event_ExporterLegacySyncCommittees,
 	Event_ExporterLegacySyncCommitteesCount,
-	Event_ExporterLegacyRocketPool,
-	Event_ExporterLegacyPubkeyTags,
 	Event_ExporterModuleELRewardsFinalizer,
 	Event_ExporterModuleELPayloadExporter,
 	Event_ExporterModuleELDepositsExporter,
