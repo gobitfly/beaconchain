@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -72,6 +73,9 @@ func (api RemoteServer) GetRowsRange(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := api.db.GetRowsRange(args.High, args.Low, WithOpenRange(args.OpenRange), WithLimit(args.Limit))
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			err = ErrNotFound
+		}
 		respondWithErr(w, http.StatusInternalServerError, err)
 		return
 	}
@@ -90,6 +94,9 @@ func (api RemoteServer) GetRow(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := api.db.GetRow(args.Key)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			err = ErrNotFound
+		}
 		respondWithErr(w, http.StatusInternalServerError, err)
 		return
 	}

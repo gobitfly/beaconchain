@@ -7,7 +7,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/hexutil"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
 type compressor interface {
@@ -30,6 +29,9 @@ func NewStore(store database.Database) Store {
 func (store Store) AddBlocks(blocks []FullBlockData) error {
 	itemsByKey := make(map[string][]database.Item)
 	for _, fullBlock := range blocks {
+		if err := validateBlock(fullBlock); err != nil {
+			return fmt.Errorf("block %d: %w", fullBlock.BlockNumber, err)
+		}
 		if len(fullBlock.Block) == 0 || len(fullBlock.BlockTxs) != 0 && len(fullBlock.Traces) == 0 {
 			return fmt.Errorf("block %d: empty data", fullBlock.BlockNumber)
 		}
@@ -64,10 +66,6 @@ func (store Store) AddBlocks(blocks []FullBlockData) error {
 				Data:   traces,
 			},
 		}
-		if len(fullBlock.Receipts) == 0 {
-			// todo move that log higher up
-			log.Warn(fmt.Sprintf("empty receipts at block %d lRec %d lTxs %d", fullBlock.BlockNumber, len(fullBlock.Receipts), len(fullBlock.BlockTxs)))
-		}
 		if fullBlock.BlockUnclesCount > 0 {
 			uncles, err := store.compressor.compress(fullBlock.Uncles)
 			if err != nil {
@@ -80,7 +78,10 @@ func (store Store) AddBlocks(blocks []FullBlockData) error {
 			})
 		}
 	}
-	return store.db.BulkAdd(itemsByKey)
+	if err := store.db.BulkAdd(itemsByKey); err != nil {
+		return fmt.Errorf("cannot add blocks [%d-%d] to database: %w", blocks[0].BlockNumber, blocks[len(blocks)-1].BlockNumber, err)
+	}
+	return nil
 }
 
 func (store Store) ReadBlockByNumber(chainID uint64, number int64) (*FullBlockData, error) {

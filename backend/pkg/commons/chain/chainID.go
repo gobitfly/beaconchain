@@ -9,6 +9,7 @@ type IDGetter struct {
 	Sepolia    *big.Int
 	Gnosis     *big.Int
 	Optimistic *big.Int
+	Arbitrum   *big.Int
 	Holesky    *big.Int
 }
 
@@ -17,6 +18,7 @@ var DefaultIDs = IDGetter{
 	Sepolia:    big.NewInt(11155111),
 	Gnosis:     big.NewInt(100),
 	Optimistic: big.NewInt(10),
+	Arbitrum:   big.NewInt(42161),
 	Holesky:    big.NewInt(17000),
 }
 
