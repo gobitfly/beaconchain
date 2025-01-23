@@ -13,7 +13,8 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const { latestState } = useLatestStateStore()
+const store = useLatestStateStore()
+const { latestState } = storeToRefs(store)
 
 // we don't want to be reactive to the current_slot
 const currentSlot = latestState.value?.current_slot || 0

@@ -14,12 +14,7 @@ import {
   IconSlotSync,
   IconSlotTargetAttestation,
 } from '#components'
-import type {
-  VDBGroupRewardsDetails,
-  VDBRewardsTableRow,
-} from '~/types/api/validator_dashboard'
-import type BcTooltip from '~/components/bc/BcTooltip.vue'
-import { formatRewardValueOption } from '~/utils/dashboard/table'
+import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 
 interface Props {
   groupName?: string,
@@ -45,25 +40,25 @@ const data = computed(() => {
 
   const proposer = [
     {
+      consensusLayerValue: details.value.proposal_cl_att_inc_reward,
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_att'),
-      value: details.value.proposal_cl_att_inc_reward,
     },
     {
+      consensusLayerValue: details.value.proposal_cl_sync_inc_reward,
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_sync'),
-      value: details.value.proposal_cl_sync_inc_reward,
     },
     {
+      consensusLayerValue: details.value.proposal_cl_slashing_inc_reward,
       label: $t('dashboard.validator.rewards.proposer_rewards_cl_slash'),
-      value: details.value.proposal_cl_slashing_inc_reward,
     },
     {
+      executionLayerValue: details.value.proposal_el_reward,
       label: $t('dashboard.validator.rewards.proposer_rewards_el'),
-      value: details.value.proposal_el_reward,
     },
-    {
-      label: $t('dashboard.validator.rewards.proposer_rewards_total'),
-      value: details.value.proposal.income,
-    },
+    // {
+    //   consensusLayerValue: details.value.proposal.income,
+    //   label: $t('dashboard.validator.rewards.proposer_rewards_total'),
+    // },
   ]
 
   const rewards = [
@@ -115,17 +110,8 @@ const data = computed(() => {
       label: $t('dashboard.validator.rewards.inactivity'),
       value: details.value.inactivity,
     },
-    {
-      icon: faSigma,
-      isTotal: true,
-      label: $t('dashboard.validator.rewards.total'),
-      value: { income: totalElCl(props.row.reward)?.toString() || '0' } as Partial<VDBGroupRewardsDetails>,
-    },
   ].map((reward) => {
-    const hasNoReward = reward.isTotal
-      ? reward.value.income === '0'
-      : !reward?.value?.status_count?.failed
-        && !reward?.value?.status_count?.success
+    const hasNoReward = !reward?.value?.status_count?.failed && !reward?.value?.status_count?.success
     const className = hasNoReward ? 'text-disabled' : ''
     return {
       ...reward,
@@ -137,6 +123,30 @@ const data = computed(() => {
     proposer,
     rewards,
   }
+})
+
+const {
+  addCurrencies,
+  elCurrency,
+} = useCurrency()
+const proposerTotal = computed(() => {
+  return addCurrencies({
+    currencyItems: [
+      {
+        value: details.value?.proposal_cl_att_inc_reward ?? 0,
+      },
+      {
+        value: details.value?.proposal_cl_sync_inc_reward ?? 0,
+      },
+      {
+        value: details.value?.proposal_cl_slashing_inc_reward ?? 0,
+      },
+      {
+        sourceCurrency: elCurrency,
+        value: details.value?.proposal_el_reward ?? 0,
+      },
+    ],
+  })
 })
 
 const openDuties = () => {
@@ -194,6 +204,13 @@ const openDuties = () => {
                 :icon="item.icon"
               />
             </div>
+            <div
+              class="row"
+            >
+              <FontAwesomeIcon
+                :icon="faSigma"
+              />
+            </div>
           </div>
           <div class="col label">
             <div
@@ -203,6 +220,11 @@ const openDuties = () => {
               :class="item.className"
             >
               {{ item.label }}
+            </div>
+            <div
+              class="label"
+            >
+              {{ $t('dashboard.validator.rewards.total') }}
             </div>
           </div>
           <div class="col count">
@@ -214,18 +236,8 @@ const openDuties = () => {
               :render-text-as-html="true"
               tooltip-class="text-align-left"
             >
-              <div
-                v-if="item.isTotal"
-                :class="item.className"
-              >
-                <FontAwesomeIcon
-                  class="link popout"
-                  :icon="faArrowUpRightFromSquare"
-                  @click="openDuties"
-                />
-              </div>
               <DashboardTableEfficiency
-                v-else-if="!item.hasNoReward"
+                v-if="!item.hasNoReward"
                 :success="item.value?.status_count?.success!"
                 :failed="item.value?.status_count?.failed!"
                 :absolute="true"
@@ -237,16 +249,39 @@ const openDuties = () => {
                 0 / 0
               </div>
             </BcTooltip>
+            <div>
+              <FontAwesomeIcon
+                class="link popout"
+                :icon="faArrowUpRightFromSquare"
+                @click="openDuties"
+              />
+            </div>
           </div>
           <div class="col value">
-            <BcFormatValue
+            <BcFormatAmount
               v-for="item in data?.rewards"
               :key="item.label"
-              :value="item.value.income"
-              :use-colors="item.value.income !== '0'"
+              :currency-items="[{
+                consensusLayerValue: item.value.income,
+              }]"
               :class="item.className"
-              :options="formatRewardValueOption"
+              has-color
+              has-sign-display
+              has-tooltip
+              target-unit-crypto="auto"
             />
+            <div>
+              <BcFormatAmount
+                :currency-items="[{
+                  executionLayerValue: props.row.reward.el,
+                  consensusLayerValue: props.row.reward.cl,
+                }]"
+                has-color
+                has-sign-display
+                has-tooltip
+                target-unit-crypto="auto"
+              />
+            </div>
           </div>
         </div>
         <div class="proposer-group">
@@ -254,15 +289,41 @@ const openDuties = () => {
             v-for="item in data?.proposer"
             :key="item.label"
             class="row"
-            :class="{ 'text-disabled': item.value === '0' }"
+            :class="{
+              'text-disabled': !(item.executionLayerValue && item.consensusLayerValue),
+            }"
           >
             <div class="label">
               {{ item.label }}
             </div>
-            <BcFormatValue
-              :value="item.value"
-              :use-colors="item.value !== '0'"
-              :options="formatRewardValueOption"
+            <BcFormatAmount
+              :currency-items="[{
+                consensusLayerValue: item.consensusLayerValue ?? '0',
+                executionLayerValue: item.executionLayerValue ?? '0',
+              }]"
+              has-color
+              has-tooltip
+              has-sign-display
+              target-unit-crypto="auto"
+            />
+          </div>
+          <div
+            class="row"
+            :class="{
+              'text-disabled': proposerTotal === '0',
+            }"
+          >
+            <div class="label">
+              {{ $t('dashboard.validator.rewards.proposer_rewards_total') }}
+            </div>
+            <BcFormatAmount
+              :currency-items="[{
+                consensusLayerValue: proposerTotal,
+              }]"
+              has-color
+              has-tooltip
+              has-sign-display
+              target-unit-crypto="auto"
             />
           </div>
         </div>

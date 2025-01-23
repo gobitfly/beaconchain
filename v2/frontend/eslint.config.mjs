@@ -154,3 +154,16 @@ export default withNuxt({
       },
     },
   )
+  .append({
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          message: 'Please use `useBcCookie()` instead.',
+          selector:
+          'CallExpression[callee.name="useCookie"]',
+        },
+      ],
+    },
+  },
+  )

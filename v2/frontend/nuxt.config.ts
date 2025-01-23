@@ -1,6 +1,7 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
+import { getSeconds } from './utils/time'
 
 let gitVersion = ''
 
@@ -21,7 +22,8 @@ catch {
     'The GitHub tag and hash of the explorer cannot be read with git-describe.',
   )
 }
-
+// https://developer.chrome.com/blog/cookie-max-age-expires
+const maxDaysForCookies = 400
 export default defineNuxtConfig({
   /* eslint-disable perfectionist/sort-objects  -- as there is a conflict with `nuxt specific eslint rules` */
   modules: [
@@ -31,6 +33,7 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
     ],
+    'pinia-plugin-persistedstate/nuxt',
     '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
@@ -118,5 +121,13 @@ export default defineNuxtConfig({
   },
   postcss: { plugins: { autoprefixer: {} } },
   eslint: { config: { stylistic: true } },
+  piniaPluginPersistedstate: {
+    storage: 'cookies',
+    cookieOptions: {
+      maxAge: getSeconds({ days: maxDaysForCookies }),
+    },
+    key: 'bc-store-%id',
+    debug: true,
+  },
   /* eslint-enable perfectionist/sort-objects */
 })

@@ -78,8 +78,9 @@
         "tx_batch": "Tx Batch | Tx Batches",
         "unavailable": "Unavailable",
         "units": {
-            "GWEI": "GWei",
-            "per_day": "per day"
+            "gwei": "GWei",
+            "per_day": "per day",
+            "wei": "Wei"
         },
         "upcoming": "Upcoming",
         "validator": "Validator | Validators",
@@ -104,7 +105,6 @@
             "GNO": "Gnosis",
             "JPY": "Japanese Yen",
             "NAT": "Native",
-            "RUB": "Russian Ruble",
             "USD": "United States Dollar",
             "mGNO": "mGnosis",
             "xDAI": "xDAI Stablecoin"

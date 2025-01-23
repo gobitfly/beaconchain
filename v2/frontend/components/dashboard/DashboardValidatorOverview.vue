@@ -10,15 +10,17 @@ import { totalElClNumbers } from '~/utils/bigMath'
 import { DashboardValidatorSubsetModal } from '#components'
 
 const { t: $t } = useTranslation()
-const { converter } = useValue()
 
 const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
 const { overview } = storeToRefs(validatorDashoboardOverviewStore)
-
-const formatValueWei = (value: NumberOrString): NumberOrString => {
-  return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 4 })
-    .label
-}
+const {
+  addCurrencies,
+  clCurrency,
+  displayCurrencyDefault,
+  elCurrency,
+  formatAmount,
+  selectedCurrencyMain,
+} = useCurrency()
 
 const createInfo = (
   key: string,
@@ -33,16 +35,20 @@ const createInfo = (
   }
 }
 
-const rewardFull = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
-    cl: '0',
-    el: '0',
-  }), { addPlus: true }).fullLabel)
-const reward = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
-    cl: '0',
-    el: '0',
-  }), { addPlus: true }).label)
+const rewardLast30d = computed(() => {
+  return addCurrencies({
+    currencyItems: [
+      {
+        sourceCurrency: clCurrency,
+        value: overview.value?.rewards.last_30d.cl ?? '0',
+      },
+      {
+        sourceCurrency: elCurrency,
+        value: overview.value?.rewards.last_30d.el ?? '0',
+      },
+    ],
+  })
+})
 
 const validatorsOffline = computed(() => overview.value?.validators.offline ?? 0)
 const validatorsOnline = computed(() => overview.value?.validators.online ?? 0)
@@ -50,15 +56,15 @@ const validatorsInfos = computed(() =>
   [
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_total_tooltip'),
-      value: formatValueWei(overview.value?.balances.total ?? 0),
+      value: `${formatAmount(overview.value?.balances.total ?? 0)}`,
     },
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_effective'),
-      value: formatValueWei(overview.value?.balances.effective ?? 0),
+      value: `${formatAmount(overview.value?.balances.effective ?? 0)}`,
     },
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_staked'),
-      value: formatValueWei(overview.value?.balances.staked_eth ?? 0),
+      value: `${formatAmount(overview.value?.balances.staked_eth ?? 0)}`,
     },
   ],
 )
@@ -84,12 +90,57 @@ const efficiencyInfos = computed(() =>
   })),
 )
 
-const rewardsInfos = TimeFrames.map(timeFrame =>
-  createInfo(timeFrame, overview.value?.rewards[timeFrame] ?? {
-    cl: '0',
-    el: '0',
-  }, formatValueWei),
-)
+const format = (value: string, type: 'consensusLayer' | 'executionLayer') => {
+  const sourceCurrency = type === 'consensusLayer' ? clCurrency : elCurrency
+  const targetCurrency = type === 'consensusLayer' ? displayCurrencyDefault.consensusLayer : displayCurrencyDefault.executionLayer
+  const amount = formatAmount(value, {
+    sourceCurrency,
+    targetCurrency,
+  })
+  const isDifferentCurrency = targetCurrency !== selectedCurrencyMain.value
+  if (isDifferentCurrency) {
+    const amountRelativeToSelectedCurrency = formatAmount(value, {
+      sourceCurrency,
+      targetCurrency: selectedCurrencyMain.value,
+    })
+    return `${amount} (${amountRelativeToSelectedCurrency})`
+  }
+  return `${amount}`
+}
+const rewardsInfos = computed(() => [
+  {
+    label: $t('statistics.last_24h'),
+    value: `CL: ${
+      format(overview.value?.rewards.last_24h.cl ?? '0', 'consensusLayer')
+    } EL: ${
+      format(overview.value?.rewards.last_24h.el ?? '0', 'executionLayer')
+    }`,
+  },
+  {
+    label: $t('statistics.last_7d'),
+    value: `CL: ${
+      format(overview.value?.rewards.last_7d.cl ?? '0', 'consensusLayer')
+    } EL: ${
+      format(overview.value?.rewards.last_7d.el ?? '0', 'executionLayer')
+    }`,
+  },
+  {
+    label: $t('statistics.last_30d'),
+    value: `CL: ${
+      format(overview.value?.rewards.last_30d.cl ?? '0', 'consensusLayer')
+    } EL: ${
+      format(overview.value?.rewards.last_30d.el ?? '0', 'executionLayer')
+    }`,
+  },
+  {
+    label: $t('statistics.all_time'),
+    value: `CL: ${
+      format(overview.value?.rewards.all_time.cl ?? '0', 'consensusLayer')
+    } EL: ${
+      format(overview.value?.rewards.all_time.el ?? '0', 'executionLayer')
+    }`,
+  },
+])
 
 const apr = computed(() => formatToPercent(totalElClNumbers(overview.value?.apr.last_30d ?? {
   cl: 0,
@@ -127,7 +178,7 @@ const aprInfos = TimeFrames.map(timeFrame =>
       <template #additionalInfo>
         {{ $t('dashboard.validator.overview.validators_balance.balance_total') }}
         <span class="bold">
-          {{ formatValueWei(overview?.balances.total ?? 0) }}
+          {{ formatAmount(overview?.balances.total ?? '0') }}
         </span>
       </template>
     </DashboardValidatorOverviewItem>
@@ -142,10 +193,15 @@ const aprInfos = TimeFrames.map(timeFrame =>
       :title="$t('dashboard.validator.overview.30d_rewards')"
     >
       <BcTooltip
-        :text="rewardFull"
+        :text="formatAmount(rewardLast30d, {
+          signDisplay: 'always',
+          hasHigherPrecision: true,
+        })"
         :fit-content="true"
       >
-        {{ reward }}
+        {{ formatAmount(rewardLast30d, {
+          signDisplay: 'always',
+        }) }}
       </BcTooltip>
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem

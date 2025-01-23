@@ -10,7 +10,7 @@ const {
 } = useFormat()
 
 interface Props {
-  format?: 'global-setting' | AgeFormat,
+  format?: AgeFormat,
   noUpdate?: boolean,
   type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
   unitLength?: StringUnitLength,
@@ -19,13 +19,13 @@ interface Props {
 const props = defineProps<Props>()
 const { t: $t } = useTranslation()
 const { timestamp } = useDate()
-const { setting } = useGlobalSetting<AgeFormat>('age-format')
+const { ageFormat } = storeToRefs(useSettingsStore())
 
 const initTs = ref(timestamp.value) // store the initial timestamp, in case we don't want to auto update
 
 const mappedSetting = computed(() => {
-  if (!props.format || props.format === 'global-setting') {
-    return setting.value
+  if (!props.format) {
+    return ageFormat.value
   }
   return props.format || 'relative'
 })

@@ -21,7 +21,8 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const { latestState } = useLatestStateStore()
+const store = useLatestStateStore()
+const { latestState } = storeToRefs(store)
 const { getEpochFromSlot } = useNetworkStore()
 const {
   getTotalAmount,
@@ -354,7 +355,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   v-else-if="!slotProps.data.is_missing_estimate"
                   class="value-with-tooltip-container"
                 >
-                  <BcFormatValue
+                  <BcFormatAmount
                     :value="slotProps.data.amount"
                     :class="{
                       'all-time-total':

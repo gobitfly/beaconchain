@@ -8,10 +8,8 @@ import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
 } from '~/types/dashboard'
-import { totalElCl } from '~/utils/bigMath'
 import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { formatRewardValueOption } from '~/utils/dashboard/table'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const {
@@ -244,11 +242,16 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatValue
+                <BcFormatAmount
                   v-else
-                  :value="totalElCl(slotProps.data.reward)"
-                  :use-colors="true"
-                  :options="formatRewardValueOption"
+                  :currency-items="[{
+                    executionLayerValue: slotProps.data.reward.el,
+                    consensusLayerValue: slotProps.data.reward.cl,
+                  }]"
+                  has-color
+                  has-tooltip
+                  has-sign-display
+                  target-unit-crypto="auto"
                 />
               </template>
             </Column>
@@ -265,11 +268,15 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatValue
+                <BcFormatAmount
                   v-else
-                  :value="slotProps.data.reward?.el"
-                  :use-colors="true"
-                  :options="formatRewardValueOption"
+                  :currency-items="[{
+                    executionLayerValue: slotProps.data.reward.el,
+                  }]"
+                  has-color
+                  has-tooltip
+                  has-sign-display
+                  target-unit-crypto="auto"
                 />
               </template>
             </Column>
@@ -286,11 +293,15 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatValue
+                <BcFormatAmount
                   v-else
-                  :value="slotProps.data.reward?.cl"
-                  :use-colors="true"
-                  :options="formatRewardValueOption"
+                  :currency-items="[{
+                    consensusLayerValue: slotProps.data.reward?.cl,
+                  }]"
+                  has-sign-display
+                  has-color
+                  has-tooltip
+                  target-unit-crypto="auto"
                 />
               </template>
             </Column>

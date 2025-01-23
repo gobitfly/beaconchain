@@ -41,7 +41,7 @@ const {
   networkInfo,
 } = useNetworkStore()
 const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
-const { currency } = useCurrency()
+const { currency } = useCurrencyOld()
 const currencyLabel = computed(() =>
   !currency.value || currency.value === 'NAT'
     ? networkNativeELcurrency.value
