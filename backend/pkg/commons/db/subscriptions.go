@@ -280,20 +280,52 @@ func UpdateSubscriptionLastSent(tx *sqlx.Tx, ts uint64, epoch uint64, subID uint
 }
 
 // IncrSentMessagesCount increases the count of sent messages for this day given a specific prefix and userId
-func IncrSentMessagesCount(prefix string, userId types.UserId) (int64, error) {
+func IncrSentMessagesCount(prefix string, userId types.UserId, step, maxCount int64) (int64, int64, error) {
+	var inc, curCount int64
+	var err error
+
+	ctx := context.Background()
 	day := time.Now().Truncate(utils.Day).Unix()
 	key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
 
-	pipe := PersistentRedisDbClient.TxPipeline()
-	incr := pipe.Incr(context.Background(), key)
-	pipe.Expire(context.Background(), key, utils.Day)
-	_, err := pipe.Exec(context.Background())
+	incToMax := func(tx *redis.Tx) error {
+		curCount, err = tx.Get(ctx, key).Int64()
+		if err != nil && err != redis.Nil {
+			return err
+		}
 
-	if incr.Err() != nil {
-		return 0, incr.Err()
+		if maxCount == -1 {
+			// no limit
+			inc = step
+		} else {
+			inc = min(step, max(maxCount-curCount, 0))
+			if curCount >= maxCount {
+				// max reached
+				return nil
+			}
+		}
+		curCount += inc
+
+		// committed only if the watched key remains unchanged
+		_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
+			pipe.Set(ctx, key, curCount, utils.Day)
+			return nil
+		})
+		return err
 	}
 
-	return incr.Val(), err
+	// retry optimistic lock on error
+	for range 100 {
+		err = PersistentRedisDbClient.Watch(ctx, incToMax, key)
+		if err != redis.TxFailedErr {
+			break
+		}
+	}
+	if err == redis.TxFailedErr {
+		return 0, 0, fmt.Errorf("optimistic locking failed: %w", err)
+	}
+
+	return inc, curCount, err
 }
 
 // GetSentMessagesCount returns the number of sent messages for this day given a specific prefix and userId

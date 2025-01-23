@@ -276,9 +276,9 @@ func sendWebhookNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
+		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
 		if err != nil {
-			log.Error(err, "error counting sent webhook", 0)
+			log.Error(err, "error increasing sent webhook count", 0)
 		}
 
 		// do not retry after 5 attempts
@@ -393,9 +393,9 @@ func sendDiscordNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
+		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
 		if err != nil {
-			log.Error(err, "error counting sent webhook", 0)
+			log.Error(err, "error increasing sent discord count", 0)
 		}
 
 		// do not retry after 5 attempts
@@ -513,11 +513,11 @@ func SendTestEmail(ctx context.Context, userId types.UserId, dbConn *sqlx.DB) er
 }
 
 func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webhookUrl string, isDiscordWebhook bool) error {
-	count, err := db.IncrSentMessagesCount("n_test_push", userId)
+	incr, _, err := db.IncrSentMessagesCount("n_test_push", userId, 1, 100)
 	if err != nil {
 		return err
 	}
-	if count > 100 {
+	if incr == 0 {
 		return fmt.Errorf("rate limit has been exceeded")
 	}
 
