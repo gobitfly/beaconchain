@@ -1,10 +1,8 @@
 <script lang="ts" setup>
-import {
-  COOKIE_KEY, type CookiesPreference,
-} from '~/types/cookie'
+import type { CookiesPreference } from '~/types/cookie'
 
-const cookiePreference = useCookie<CookiesPreference>(
-  COOKIE_KEY.COOKIES_PREFERENCE,
+const cookiePreference = useBcCookie<CookiesPreference>(
+  'bc-cookies-preference',
   { default: () => undefined },
 )
 const { isSharedDashboard } = useDashboardKey()

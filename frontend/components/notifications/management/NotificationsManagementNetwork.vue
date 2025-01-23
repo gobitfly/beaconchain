@@ -86,7 +86,7 @@ watchDebounced([
           <span class="">
             <BcInputUnit
               v-model="thresholdGasBelow"
-              :unit="$t('common.units.GWEI')"
+              :unit="$t('common.units.gwei')"
             />
           </span>
           <BcToggle
@@ -99,7 +99,7 @@ watchDebounced([
           <span class="">
             <BcInputUnit
               v-model="thresholdGasAbove"
-              :unit="$t('common.units.GWEI')"
+              :unit="$t('common.units.gwei')"
             />
           </span>
           <BcToggle

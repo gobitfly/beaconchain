@@ -55,7 +55,7 @@ const mapped = computed(() => {
 <template>
   <BcFormatValue
     :value="mapped.total"
-    :use-colors="true"
+    has-color
     :options="formatRewardValueOption"
   >
     <template
@@ -70,7 +70,7 @@ const mapped = computed(() => {
           <b>{{ detail.label }}: </b>
           <BcFormatValue
             :value="detail.value"
-            :use-colors="true"
+            has-color
             :options="formatRewardValueOption"
           />
         </div>

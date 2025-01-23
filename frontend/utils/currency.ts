@@ -1,17 +1,25 @@
-import {
-  CryptoCurrencies,
-  type CryptoCurrency,
-  type Currency,
-  FiatCurrencies,
-  type FiatCurrency,
-} from '~/types/currencies'
+const FiatCurrencyCodes = [
+  'AUD',
+  'CAD',
+  'CNY',
+  'EUR',
+  'GBP',
+  'JPY',
+  'USD',
+] as const
+export type CurrencyCodeFiat = (typeof FiatCurrencyCodes)[number]
+export const isFiat = (currencyCode: CurrencyCode): currencyCode is CurrencyCodeFiat =>
+  FiatCurrencyCodes.includes(currencyCode as CurrencyCodeFiat)
 
-const isFiat = (value?: Currency) =>
-  !!value && FiatCurrencies.includes(value as FiatCurrency)
-const isCrypto = (value?: Currency) =>
-  !!value && CryptoCurrencies.includes(value as CryptoCurrency)
-const isNative = (value?: Currency) => value === 'NAT'
+const CryptoCurrencyCodes = [
+  'ETH',
+  'GNO',
+  'DAI',
+  'xDAI',
+  'mGNO',
+] as const
+export type CurrencyCodeCrypto = (typeof CryptoCurrencyCodes)[number]
+export const isCrypto = (currencyCode: CurrencyCode): currencyCode is CurrencyCodeCrypto =>
+  CryptoCurrencyCodes.includes(currencyCode as CurrencyCodeCrypto)
 
-export {
-  isCrypto, isFiat, isNative,
-}
+export type CurrencyCode = CurrencyCodeCrypto | CurrencyCodeFiat

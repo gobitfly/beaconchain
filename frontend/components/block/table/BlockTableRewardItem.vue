@@ -6,41 +6,72 @@ interface Props {
   status?: 'missed' | 'orphaned' | 'scheduled' | 'success',
 }
 defineProps<Props>()
+
+const {
+  clCurrency,
+  displayCurrencyDefault,
+  elCurrency,
+  selectedCurrencyMain,
+} = useCurrency()
 </script>
 
 <template>
   <BcTooltip
     v-if="status === 'success' && reward"
     class="combine-rewards"
+    fit-content
   >
-    <BcFormatValue
+    <BcFormatAmount
       :value="reward?.el"
-      :no-tooltip="true"
+      :source-currency="elCurrency"
+      :target-currency="elCurrency"
     />
-    <BcFormatValue
+    <BcFormatAmount
       v-if="reward?.cl && reward.cl != '0'"
       :value="reward?.cl"
-      :no-tooltip="true"
+      :source-currency="clCurrency"
+      :target-currency="displayCurrencyDefault.consensusLayer"
     />
     <span v-else>{{ $t("dashboard.validator.blocks.cl_pending") }}</span>
     <template #tooltip>
       <div>
         <div class="tt-row">
           <span>{{ $t("dashboard.validator.blocks.el_rewards") }}: </span>
-          <BcFormatValue
+          <BcFormatAmount
             :value="reward?.el"
-            :no-tooltip="true"
-            :full-value="true"
+            :source-currency="elCurrency"
+            :target-currency="displayCurrencyDefault.executionLayer"
+            has-higher-precision
           />
+          <BcFormatAmount
+            v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
+            v-slot="{ value }"
+            :value="reward?.el"
+            :source-currency="elCurrency"
+            has-higher-precision
+          >
+            ({{ value }})
+          </BcFormatAmount>
         </div>
         <div class="tt-row">
           <span>{{ $t("dashboard.validator.blocks.cl_rewards") }}: </span>
-          <BcFormatValue
+          <template
             v-if="reward?.cl && reward.cl != '0'"
-            :value="reward?.cl"
-            :no-tooltip="true"
-            :full-value="true"
-          />
+          >
+            <BcFormatAmount
+              :value="reward?.cl"
+              :target-currency="displayCurrencyDefault.consensusLayer"
+              has-higher-precision
+            />
+            <BcFormatAmount
+              v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
+              v-slot="{ value }"
+              :value="reward?.cl"
+              has-higher-precision
+            >
+              ({{ value }})
+            </BcFormatAmount>
+          </template>
           <span v-else>{{ $t("dashboard.validator.blocks.pending") }}</span>
         </div>
       </div>

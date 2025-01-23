@@ -1,19 +1,13 @@
 <script setup lang="ts">
-import type { AgeFormat } from '~/types/settings'
-
 const {
-  changeSetting, setting,
-} = useGlobalSetting<AgeFormat>('age-format')
-
-const toggleAgeSetting = () => {
-  changeSetting(setting.value === 'absolute' ? 'relative' : 'absolute')
-}
+  toggleAgeFormat,
+} = useSettingsStore()
 </script>
 
 <template>
   <span
     class="age-header"
-    @click="toggleAgeSetting"
+    @click="toggleAgeFormat"
   >{{
     $t("table.age")
   }}</span>

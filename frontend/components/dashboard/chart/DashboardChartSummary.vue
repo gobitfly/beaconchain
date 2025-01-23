@@ -65,7 +65,8 @@ const { dashboardKey } = useDashboardKey()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const { overview } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
-const { latestState } = useLatestStateStore()
+const storeLatestState = useLatestStateStore()
+const { latestState } = storeToRefs(storeLatestState)
 const latestSlot = ref(latestState.value?.current_slot || 0)
 const {
   bounce: bounceTimeFrames,

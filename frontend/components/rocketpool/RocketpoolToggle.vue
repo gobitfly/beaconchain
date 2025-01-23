@@ -4,18 +4,8 @@ import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
-const {
-  changeSetting, setting,
-} = useGlobalSetting<boolean>('rpl')
-
-const rpActive = {
-  get value(): boolean {
-    return setting.value ?? true
-  },
-  set value(newValue: boolean) {
-    changeSetting(newValue)
-  },
-}
+const isRocketPoolMode = useBcCookie<boolean>('bc-rpl')
+isRocketPoolMode.value ??= false
 </script>
 
 <template>
@@ -38,7 +28,7 @@ const rpActive = {
       />
     </BcTooltip>
     <BcToggle
-      v-model="rpActive.value"
+      v-model="isRocketPoolMode"
       class="toggle"
       :disabled="!showInDevelopment"
     />
