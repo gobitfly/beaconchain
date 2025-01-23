@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS transactions(
     tx_hash FixedString(32) CODEC(NONE), 
     block_number UInt64 CODEC(T64, ZSTD(3)),           
     from_address FixedString(20) CODEC(ZSTD(3)), 
-    to_address Nullable(FixedString(20)) CODEC(ZSTD(3)),
+    to_address FixedString(20) CODEC(ZSTD(3)),
     type LowCardinality(String) CODEC(ZSTD(3)),  
     method String CODEC(ZSTD(3)), 
     value UInt64, 
