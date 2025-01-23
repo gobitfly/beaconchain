@@ -63,11 +63,9 @@ func SendPushBatch(userId types.UserId, messages []*messaging.Message, dryRun bo
 
 	currentMessages := messages
 
-	for range messages {
-		_, err := db.IncrSentMessagesCount(NOTIFICAION_PUSH_RATE_LIMIT_BUCKET, userId)
-		if err != nil {
-			log.Error(err, "error counting sent push", 0)
-		}
+	_, _, err = db.IncrSentMessagesCount(NOTIFICAION_PUSH_RATE_LIMIT_BUCKET, userId, int64(len(messages)), -1)
+	if err != nil {
+		log.Error(err, "error increasing sent push count", 0)
 	}
 
 	tries := 0

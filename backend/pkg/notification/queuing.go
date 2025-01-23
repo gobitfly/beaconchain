@@ -596,11 +596,11 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 }
 
 func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbConn *sqlx.DB, networkDbConn *sqlx.DB) error {
-	count, err := db.IncrSentMessagesCount("n_test_push", userId)
+	incr, _, err := db.IncrSentMessagesCount("n_test_push", userId, 1, 10)
 	if err != nil {
 		return err
 	}
-	if count > 10 {
+	if incr == 0 {
 		return fmt.Errorf("rate limit has been exceeded")
 	}
 	tokens, err := GetUserPushTokenByIds([]types.UserId{userId}, userDbConn)
