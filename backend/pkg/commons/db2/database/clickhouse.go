@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"math/big"
 	"net"
 	"runtime"
 	"time"
@@ -48,9 +49,9 @@ func NewClickHouseClient(writer, reader *types.DatabaseConfig) (*ClickHouseClien
 		return nil, fmt.Errorf("failed to initialize ClickHouse reader: %v", err)
 	}
 
-	if err := client.checkIfTablesExist(); err != nil {
-		return nil, fmt.Errorf("failed to check if tables exist in ClickHouse: %v", err)
-	}
+	// if err := client.CheckIfTablesExist(); err != nil {
+	// 	return nil, fmt.Errorf("failed to check if tables exist in ClickHouse: %v", err)
+	// }
 
 	return client, nil
 }
@@ -72,6 +73,14 @@ func (client *ClickHouseClient) initClickHouseWriter(writer *types.DatabaseConfi
 		writerHosts = append(writerHosts, net.JoinHostPort(f.Host, f.Port))
 	}
 
+	var tlsConfig *tls.Config
+	if writer.SSL {
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
+		}
+	}
+
 	log.Infof("initializing ClickHouse native writer db connection to %v/%v with %v/%v conn limit", writerHosts, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbWriter, err := ch.Open(&ch.Options{
 		MaxOpenConns: writer.MaxOpenConns,
@@ -89,7 +98,7 @@ func (client *ClickHouseClient) initClickHouseWriter(writer *types.DatabaseConfi
 			Database: writer.Name,
 		},
 		Debug: false,
-		TLS:   &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12},
+		TLS:   tlsConfig,
 		// this gets only called when debug is true
 		Debugf: func(s string, p ...interface{}) {
 			log.Debugf("CH NATIVE WRITER: "+s, p...)
@@ -131,6 +140,14 @@ func (client *ClickHouseClient) initClickHouseReader(reader *types.DatabaseConfi
 		readerHosts = append(readerHosts, net.JoinHostPort(f.Host, f.Port))
 	}
 
+	var tlsConfig *tls.Config
+	if reader.SSL {
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: false,
+			MinVersion:         tls.VersionTLS12,
+		}
+	}
+
 	log.Infof("initializing ClickHouse native reader db connection to %v/%v with %v/%v conn limit", readerHosts, reader.Name, reader.MaxIdleConns, reader.MaxOpenConns)
 	dbReader, err := ch.Open(&ch.Options{
 		MaxOpenConns: reader.MaxOpenConns,
@@ -148,7 +165,7 @@ func (client *ClickHouseClient) initClickHouseReader(reader *types.DatabaseConfi
 			Database: reader.Name,
 		},
 		Debug: false,
-		TLS:   &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12},
+		TLS:   tlsConfig,
 		// this gets only called when debug is true
 		Debugf: func(s string, p ...interface{}) {
 			log.Debugf("CH NATIVE READER: "+s, p...)
@@ -174,11 +191,11 @@ func (client *ClickHouseClient) initClickHouseReader(reader *types.DatabaseConfi
 	return nil
 }
 
-func (client *ClickHouseClient) checkIfTablesExist() error {
+func (client *ClickHouseClient) CheckIfTablesExist() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	var count int
+	var count uint64
 	err := client.NativeReader.QueryRow(ctx, `
 		SELECT count(*) 
 		FROM system.tables 
@@ -290,7 +307,38 @@ func (client *ClickHouseClient) Clear() error {
 	return nil
 }
 
-func (client *ClickHouseClient) Add(table string, rows []map[string]interface{}) error {
+type Transaction struct {
+	ChainID              string              `ch:"chain_id"`
+	TxIndex              int                 `ch:"tx_index"`
+	TxHash               string              `ch:"tx_hash"`
+	BlockNumber          uint64              `ch:"block_number"`
+	FromAddress          string              `ch:"from_address"`
+	ToAddress            string              `ch:"to_address"`
+	Type                 string              `ch:"type"`
+	Method               string              `ch:"method"`
+	Value                uint64              `ch:"value"`
+	Nonce                uint64              `ch:"nonce"`
+	Status               string              `ch:"status"`
+	Timestamp            int64               `ch:"timestamp"`
+	TxFee                *big.Int            `ch:"tx_fee"`
+	Gas                  uint64              `ch:"gas"`
+	GasPrice             uint64              `ch:"gas_price"`
+	GasUsed              uint64              `ch:"gas_used"`
+	MaxFeePerGas         uint64              `ch:"max_fee_per_gas"`
+	MaxPriorityFeePerGas uint64              `ch:"max_priority_fee_per_gas"`
+	MaxFeePerBlobGas     uint64              `ch:"max_fee_per_blob_gas"`
+	BlobGasPrice         uint64              `ch:"blob_gas_price"`
+	BlobGasUsed          uint64              `ch:"blob_gas_used"`
+	BlobTxFee            *big.Int            `ch:"blob_tx_fee"`
+	BlobVersionedHashes  []string            `ch:"blob_versioned_hashes"`
+	AccessList           []*types.AccessList `ch:"access_list"`
+	InputData            []byte              `ch:"input_data"`
+	IsContractCreation   bool                `ch:"is_contract_creation"`
+	Logs                 []*types.Eth1Log    `ch:"logs"`
+	LogsBloom            []byte              `ch:"logs_bloom"`
+}
+
+func (client *ClickHouseClient) Add(table string, rows []Transaction) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
@@ -310,7 +358,13 @@ func (client *ClickHouseClient) Add(table string, rows []map[string]interface{})
 	}()
 
 	for _, row := range rows {
-		if err := batch.AppendStruct(row); err != nil {
+		if row.TxHash == "" {
+			return fmt.Errorf("tx hash can't be an empty string")
+		}
+		if row.FromAddress == "" {
+			return fmt.Errorf("from address can't be an empty string")
+		}
+		if err := batch.AppendStruct(&row); err != nil {
 			return fmt.Errorf("failed to append row: %w", err)
 		}
 	}
