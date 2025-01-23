@@ -1,7 +1,5 @@
 import type { BigNumber } from '@ethersproject/bignumber'
-import type {
-  CryptoCurrency, CryptoUnits, Currency,
-} from '~/types/currencies'
+import type { CryptoUnits } from './currencies'
 
 export type ExtendedLabel = {
   fullLabel?: string,
@@ -18,9 +16,9 @@ export type ValueConvertOptions = {
   minDecimalCount?: number, // min decimal count
   minUnit?: CryptoUnits, // if output should only be in higher units (e.g. GWEI -> then it will never go down to WEI)
   minUnitDecimalCount?: number, // decimal count to check for value while unit conversion - default: max decimal count
-  sourceCurrency?: CryptoCurrency, // source crypto currency - default: ETH
+  sourceCurrency?: CurrencyCodeCrypto, // source crypto currency - default: ETH
   sourceUnit?: CryptoUnits, // source unit - default main unit (like eth)
-  targetCurrency?: Currency, // target currency - overrides the selected currency
+  targetCurrency?: CurrencyCode, // target currency - overrides the selected currency
 }
 
 export const TimeFrames = [

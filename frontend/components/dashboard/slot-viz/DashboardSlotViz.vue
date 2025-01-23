@@ -146,7 +146,7 @@ watch(
             :text="
               row.state === 'head'
                 ? $t('slot_viz.head')
-                : formatNumber(row.epoch)
+                : formatNumber(`${row.epoch}`)
             "
           />
         </div>

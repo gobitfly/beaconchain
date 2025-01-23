@@ -1,5 +1,44 @@
 import { BigNumber } from '@ethersproject/bignumber'
+import Big from 'big.js'
 import type { ClElValue } from '~/types/api/common'
+
+// const scaleNumber = (
+//   value: bigint | number | string,
+//   direction: 'down' | 'up',
+// ) => {
+//   assertIsNumber(value)
+//   // scaling by 10 ** 18 should get enough precision
+//   let exponent = ''
+//   if (direction === 'up') exponent = 'e+18'
+//   if (direction === 'down') exponent = 'e-18'
+//   // scaling via `scienfiic notation` (string manipulation) as we also need to scale numbers with fractions
+//   // which cannot accurately be represented by a `js number`, e.g. 9.00719925474099199 * 10 ** 18 (not accurate)
+//   const scaledInteger = new Intl.NumberFormat('en-US', {
+//     // scaling up for BigInt() calculations -> no fractions allowed
+//     // afterwards scaling down for display purposes -> we want to show precise values
+//     maximumFractionDigits: direction === 'up' ? 0 : 18,
+//     useGrouping: false,
+//   }).format(`${value}${exponent}` as `${number}`)
+
+//   return scaledInteger
+// }
+
+export const multiplyBigNumbers = (...numbers: (number | string)[]) => {
+  return numbers.reduce((product, number) => {
+    assertIsNumber(number)
+    return product = product.mul(Big(number))
+  }, Big(1))
+}
+
+export const addBigNumbers = (...numbers: (number | string)[]) => {
+  return numbers.reduce((sum, number) => {
+    assertIsNumber(number)
+    return sum = sum.add(Big(number))
+  }, Big(0))
+}
+export const isGreaterThanBigNumbers = (firstNumber: number | string, secondNumber: number | string) => {
+  return Big(firstNumber).gt(Big(secondNumber))
+}
 
 const getFactor = (str?: string): number => {
   const decimals = str?.length ?? 0
@@ -14,6 +53,15 @@ const split = (num: number) => {
     combined: split.join(''),
     factor,
   }
+}
+
+export const divideBigNumbers = (
+  dividend: number | string,
+  divisor: number | string,
+) => {
+  assertIsNumber(dividend, divisor)
+  const quotient = new Big(dividend).div(divisor)
+  return `${quotient}`
 }
 
 export const bigMul = (big: BigNumber, num: number): BigNumber => {

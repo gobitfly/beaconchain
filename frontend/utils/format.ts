@@ -82,9 +82,30 @@ export function formatGoTimestamp(
     withTime,
   )
 }
-
-export function formatNumber(value?: number): string {
-  return value?.toLocaleString('en-US') ?? ''
+export function formatNumber(value: string, {
+  locale = 'en-US',
+  maximumFractionDigits,
+  minimumFractionDigits,
+  scaleBy = 0,
+  signDisplay,
+}: {
+  locale?: string,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+  scaleBy?: number,
+  signDisplay?: Intl.NumberFormatOptions['signDisplay'],
+} = {}) {
+  const [
+    number,
+    exponent = 0,
+  ] = value.toLowerCase().split('e')
+  const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}` as `${number}`
+  console.log('👉', Number(exponent) + scaleBy)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    signDisplay,
+  }).format(numberInScientificNotation)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {

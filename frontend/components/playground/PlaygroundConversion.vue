@@ -1,20 +1,9 @@
 <script setup lang="ts">
-import type { Currency } from '~/types/currencies'
-import type { AgeFormat } from '~/types/settings'
-
 const {
-  currency, setCurrency,
-} = useCurrency()
-const { latestState } = useLatestStateStore()
-
-const { setting } = useGlobalSetting<AgeFormat>('age-format')
-
-const onCurrencyChange = (event: Event) => {
-  const select = event.target as HTMLSelectElement
-  if (select?.value) {
-    setCurrency(select?.value as Currency)
-  }
-}
+  currency,
+} = useCurrencyOld()
+const store = useLatestStateStore()
+const { latestState } = storeToRefs(store)
 
 const currentEpoch = computed(
   () => (latestState.value?.current_slot || 0) * 32,
@@ -26,7 +15,6 @@ const currentEpoch = computed(
     Conversions
     <select
       :value="currency"
-      @change="onCurrencyChange($event)"
     >
       <option value="NAT">
         Native
@@ -125,7 +113,6 @@ const currentEpoch = computed(
       Positive with color:<BcFormatValue
         value="1001000000000000000"
         :options="{ addPlus: true }"
-        :use-colors="true"
       />
     </div>
 
@@ -133,14 +120,12 @@ const currentEpoch = computed(
       Negative with color:<BcFormatValue
         value="-10010000000000"
         :options="{ addPlus: true }"
-        :use-colors="true"
       />
     </div>
     <div>
       Negative with custom color:<BcFormatValue
         value="-10010000000000"
         :options="{ addPlus: true }"
-        :use-colors="true"
         negative-class="bad-color"
       />
     </div>
@@ -241,7 +226,6 @@ const currentEpoch = computed(
       :compare-percent="84.5"
     />
   </div>
-  <b> Format Epochs time {{ setting }} <BcTableAgeHeader /> </b>
   <div>
     Epoch 1 ->
     <BcFormatTimePassed :value="1" />

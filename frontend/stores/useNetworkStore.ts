@@ -12,6 +12,9 @@ export function useNetworkStore() {
   const currentNetwork = computed(() => (Number(chainIdByDefault)) as ChainId)
   const networkInfo = computed(() => ChainInfo[currentNetwork.value])
   const {
+    clCurrency,
+    displayCurrencyDefault,
+    elCurrency,
     secondsPerSlot,
     slotsPerEpoch,
     timeStampSlot0,
@@ -43,7 +46,10 @@ export function useNetworkStore() {
   )
 
   return {
+    clCurrency,
     currentNetwork,
+    displayCurrencyDefault,
+    elCurrency,
     epochsPerDay,
     getEpochFromSlot,
     getEpochFromTimestamp,

@@ -4,7 +4,6 @@ import {
 import {
   provide, warn,
 } from 'vue'
-import { COOKIE_KEY } from '~/types/cookie'
 import type {
   DashboardKey,
   DashboardKeyData,
@@ -22,10 +21,10 @@ export function useDashboardKeyProvider(
   const router = useRouter()
   const dashboardType = ref(type)
   const dashboardKey = ref(mockKey)
-  const dashboardKeyCookie = useCookie(
+  const dashboardKeyCookie = useBcCookie(
     dashboardType.value === 'account'
-      ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY
-      : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY,
+      ? 'bc-account-dashboard-key'
+      : 'bc-validator-dashboard-key',
   )
   const { isLoggedIn } = useUserStore()
 

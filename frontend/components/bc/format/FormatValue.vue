@@ -4,48 +4,39 @@ import type { ValueConvertOptions } from '~/types/value'
 
 interface Props {
   fullValue?: boolean,
-  negativeClass?: string,
+  hasColor?: boolean,
   noTooltip?: boolean,
   options?: ValueConvertOptions,
-  positiveClass?: string,
-  useColors?: boolean,
   value?: BigNumber | string,
 }
-const props = withDefaults(defineProps<Props>(), {
-  negativeClass: 'negative',
-  options: undefined,
-  positiveClass: 'positive',
-  value: undefined,
-})
+const props = defineProps<Props>()
 
-const { converter } = useValue()
-
-const data = computed(() => {
-  if (!props.value) {
-    return {
-      label: '',
-      tooltip: '',
-    }
-  }
-  const res = converter.value.weiToValue(props.value, props.options)
-  let labelClass = ''
-  const label
-    = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
-  if (props.useColors) {
-    if (label.startsWith('-')) {
-      labelClass = props.negativeClass
-    }
-    else if (res.label !== '0') {
-      labelClass = props.positiveClass
-    }
-  }
-  return {
-    fullLabel: res.fullLabel,
-    label,
-    labelClass,
-    tooltip: props.noTooltip ? '' : res.fullLabel,
-  }
-})
+// const data = computed(() => {
+// if (!props.value) {
+//   return {
+//     label: '',
+//     tooltip: '',
+//   }
+// }
+// const labelClass = ''
+// const label
+//   = props.fullValue && res.fullLabel ? res.fullLabel : `${res.label}`
+// if (props.useColors) {
+//   // else if (res.label !== '0') {
+//   //   labelClass = props.positiveClass
+//   // }
+// }
+// return {
+//   fullLabel: res.fullLabel,
+//   label,
+//   labelClass,
+//   tooltip: props.noTooltip ? '' : res.fullLabel,
+// }
+// })
+const data = {
+  label: 'xxxxx',
+  tooltip: 'yyyy',
+}
 </script>
 
 <template>
@@ -63,7 +54,10 @@ const data = computed(() => {
     </template>
     <span>
       <BcFormatNumber
-        :class="data.labelClass"
+        :class="{
+          positive: hasColor && data.label.startsWith('+'),
+          negative: hasColor && data.label.startsWith('-'),
+        }"
         :text="data.label"
       />
     </span>

@@ -19,9 +19,10 @@ const { dashboardKey } = useDashboardKeyProvider(undefined, '100')
 
 useBcSeo()
 
-const {
-  latestState, refreshLatestState,
-} = useLatestStateStore()
+const storeLatestState = useLatestStateStore()
+const { latestState } = storeToRefs(storeLatestState)
+const { refreshLatestState } = useLatestStateStore()
+
 const slotVizData = ref<null | SlotVizEpoch[]>(null)
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 
@@ -95,7 +96,7 @@ const tabs: HashTabs = [
       </Button>
     </BcLink>
     <div class="row">
-      Latest Slot: {{ formatNumber(latestState?.current_slot) }}
+      Latest Slot: {{ formatNumber(`${latestState?.current_slot}`) }}
     </div>
 
     <BcTabList
