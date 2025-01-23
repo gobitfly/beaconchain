@@ -78,26 +78,21 @@ func createTextMessage(msg types.Email) string {
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
 func SendMailRateLimited(content types.TransitEmailContent, maxEmailsPerDay int64, bucket string) error {
 	sendThresholdReachedMail := false
-	count, err := db.GetSentMessagesCount(context.Background(), bucket, content.UserId)
+	incr, newCount, err := db.IncrSentMessagesCount(bucket, content.UserId, 1, maxEmailsPerDay)
 	if err != nil {
-		return err
+		log.Error(err, "error incrementing sent email count", 0)
 	}
 	timeLeft := time.Until(time.Now().Add(utils.Day).Truncate(utils.Day))
 
-	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, count, maxEmailsPerDay, timeLeft)
-	if count >= maxEmailsPerDay {
+	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, newCount, maxEmailsPerDay, timeLeft)
+	if incr == 0 {
 		return &types.RateLimitError{TimeLeft: timeLeft}
-	} else if count == maxEmailsPerDay {
-		sendThresholdReachedMail = true
 	}
+	sendThresholdReachedMail = newCount >= maxEmailsPerDay
 
 	err = SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
 	if err != nil {
 		log.Error(err, "error sending email", 0)
-	}
-	_, err = db.IncrSentMessagesCount(bucket, content.UserId)
-	if err != nil {
-		log.Error(err, "error incrementing sent email messages", 0)
 	}
 
 	// make sure the threshold reached email arrives last
