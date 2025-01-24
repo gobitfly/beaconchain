@@ -47,21 +47,38 @@ func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (u
 
 func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	// (password is already hashed)
-	var result uint64
-
-	apiKey, err := utils.GenerateRandomAPIKey()
+	var userId uint64
+	err := d.userWriter.GetContext(ctx, &userId, `
+    	INSERT INTO users (password, email, register_ts)
+      		VALUES ($1, $2, NOW())
+		RETURNING id`,
+		password, email,
+	)
 	if err != nil {
 		return 0, err
 	}
+	err = d.AddApiKey(ctx, userId, "")
 
-	err = d.userWriter.GetContext(ctx, &result, `
-    	INSERT INTO users (password, email, register_ts, api_key)
-      		VALUES ($1, $2, NOW(), $3)
-		RETURNING id`,
-		password, email, apiKey,
+	return userId, err
+}
+
+// generates new key if empty
+func (d *DataAccessService) AddApiKey(ctx context.Context, userId uint64, apiKey string) error {
+	var err error
+	if apiKey == "" {
+		apiKey, err = utils.GenerateRandomAPIKey()
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = d.userWriter.ExecContext(ctx, `
+    	INSERT INTO api_keys (api_key, user_id, valid_until, changed_at)
+      		VALUES ($1, $2, to_timestamp('9999-12-31 23:59:59', 'YYYY-MM-DD HH24:MI:SS'), NOW())`,
+		apiKey, userId,
 	)
 
-	return result, err
+	return err
 }
 
 func (d *DataAccessService) RemoveUser(ctx context.Context, userId uint64) error {
@@ -228,7 +245,7 @@ func (d *DataAccessService) GetUserCredentialInfo(ctx context.Context, userId ui
 
 func (d *DataAccessService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	var userId uint64
-	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 LIMIT 1`, apiKey)
+	err := d.userReader.GetContext(ctx, &userId, `SELECT user_id FROM api_keys WHERE api_key = $1 AND NOW() < valid_until`, apiKey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, fmt.Errorf("%w: user for api_key not found", ErrNotFound)
 	}
