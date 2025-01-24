@@ -20,6 +20,7 @@ require (
 	github.com/bwmarrin/snowflake v0.3.0
 	github.com/coocood/freecache v1.2.4
 	github.com/davecgh/go-spew v1.1.1
+	github.com/docker/go-connections v0.5.0
 	github.com/donovanhide/eventsource v0.0.0-20210830082556-c59027999da0
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/ethereum/go-ethereum v1.14.11
@@ -156,7 +157,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v27.1.1+incompatible // indirect
-	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/envoyproxy/go-control-plane v0.13.0 // indirect
