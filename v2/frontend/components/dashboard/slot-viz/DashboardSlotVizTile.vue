@@ -111,7 +111,7 @@ const data = computed(() => {
 </script>
 
 <template>
-  <SlotVizTooltip
+  <DashboardSlotVizTooltip
     :id="data.id"
     :data="props.data"
     :current-slot-id
@@ -129,20 +129,20 @@ const data = computed(() => {
           v-show="data.icons?.length > 2"
           class="plus"
         />
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           v-if="data.icons?.length"
           :icon="data.icons[0]"
           class="first_icon"
           :class="data.firstIconClass"
         />
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           v-if="data.icons?.length === 2"
           :icon="data.icons[1]"
           class="second_icon"
         />
       </div>
     </div>
-  </SlotVizTooltip>
+  </DashboardSlotVizTooltip>
 </template>
 
 <style lang="scss" scoped>

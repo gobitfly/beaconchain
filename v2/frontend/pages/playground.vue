@@ -102,14 +102,7 @@ const tabs: HashTabs = [
       :tabs
       default-tab="components"
       :use-route-hash="true"
-    >
-      <template #tab-panel-slotviz>
-        <SlotVizViewer
-          v-if="slotVizData"
-          :data="slotVizData"
-        />
-      </template>
-    </BcTabList>
+    />
     <BcFooterMain />
   </div>
 </template>
