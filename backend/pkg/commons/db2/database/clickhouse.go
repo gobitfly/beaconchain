@@ -339,6 +339,68 @@ type Transaction struct {
 	LogsBloom            []byte              `ch:"logs_bloom"`
 }
 
+type InternalTx struct {
+	ChainID       string    `ch:"chain_id"`
+	ParentHash    string    `ch:"parent_hash"`
+	BlockNumber   uint64    `ch:"block_number"`
+	FromAddress   string    `ch:"from_address"`
+	ToAddress     string    `ch:"to_address"`
+	Type          string    `ch:"type"`
+	Value         string    `ch:"value"`
+	Path          string    `ch:"path"`
+	InternalIndex int64     `ch:"internal_index"`
+	Gas           uint64    `ch:"gas"`
+	Timestamp     time.Time `ch:"timestamp"`
+	ErrorMsg      string    `ch:"error_msg"`
+}
+
+type ERC20 struct {
+	ChainID      string    `ch:"chain_id"`
+	ParentHash   string    `ch:"parent_hash"`
+	BlockNumber  uint64    `ch:"block_number"`
+	FromAddress  string    `ch:"from_address"`
+	ToAddress    string    `ch:"to_address"`
+	TokenAddress string    `ch:"token_address"`
+	Value        *big.Int  `ch:"value"`
+	LogIndex     uint64    `ch:"log_index"`
+	LogType      string    `ch:"log_type"`
+	TxLogIndex   uint64    `ch:"tx_log_index"`
+	Removed      bool      `ch:"removed"`
+	Timestamp    time.Time `ch:"timestamp"`
+}
+
+type ERC721 struct {
+	ChainID      string    `ch:"chain_id"`
+	ParentHash   string    `ch:"parent_hash"`
+	BlockNumber  uint64    `ch:"block_number"`
+	FromAddress  string    `ch:"from_address"`
+	ToAddress    string    `ch:"to_address"`
+	TokenAddress string    `ch:"token_address"`
+	TokenID      *big.Int  `ch:"token_id"`
+	LogIndex     uint64    `ch:"log_index"`
+	LogType      string    `ch:"log_type"`
+	TxLogIndex   uint64    `ch:"tx_log_index"`
+	Removed      bool      `ch:"removed"`
+	Timestamp    time.Time `ch:"timestamp"`
+}
+
+type ERC1155 struct {
+	ChainID      string    `ch:"chain_id"`
+	ParentHash   string    `ch:"parent_hash"`
+	BlockNumber  uint64    `ch:"block_number"`
+	FromAddress  string    `ch:"from_address"`
+	ToAddress    string    `ch:"to_address"`
+	Operator     string    `ch:"operator"`
+	TokenAddress string    `ch:"token_address"`
+	TokenID      *big.Int  `ch:"token_id"`
+	Value        *big.Int  `ch:"value"`
+	LogIndex     uint64    `ch:"log_index"`
+	LogType      string    `ch:"log_type"`
+	TxLogIndex   uint64    `ch:"tx_log_index"`
+	Removed      bool      `ch:"removed"`
+	Timestamp    time.Time `ch:"timestamp"`
+}
+
 func (client *ClickHouseClient) Add(table string, rows interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
@@ -374,19 +436,24 @@ func (client *ClickHouseClient) Add(table string, rows interface{}) error {
 }
 
 func validateFields(v reflect.Value) error {
+	chainID := v.FieldByName("ChainID")
+	if chainID.IsValid() && chainID.String() == "" {
+		return fmt.Errorf("chain_id can't be an empty string")
+	}
+
 	txHash := v.FieldByName("TxHash")
 	if txHash.IsValid() && txHash.String() == "" {
 		return fmt.Errorf("tx_hash can't be an empty string")
 	}
 
-	fromAddress := v.FieldByName("FromAddress")
-	if fromAddress.IsValid() && fromAddress.String() == "" {
-		return fmt.Errorf("from_address can't be an empty string")
-	}
-
 	parentHash := v.FieldByName("ParentHash")
 	if parentHash.IsValid() && parentHash.String() == "" {
 		return fmt.Errorf("parent_hash can't be an empty string")
+	}
+
+	fromAddress := v.FieldByName("FromAddress")
+	if fromAddress.IsValid() && fromAddress.String() == "" {
+		return fmt.Errorf("from_address can't be an empty string")
 	}
 
 	tokenAddress := v.FieldByName("TokenAddress")
@@ -397,11 +464,6 @@ func validateFields(v reflect.Value) error {
 	operator := v.FieldByName("Operator")
 	if operator.IsValid() && operator.String() == "" {
 		return fmt.Errorf("operator can't be an empty string")
-	}
-
-	logType := v.FieldByName("LogType")
-	if logType.IsValid() && logType.String() == "" {
-		return fmt.Errorf("log_type can't be an empty string")
 	}
 
 	return nil
