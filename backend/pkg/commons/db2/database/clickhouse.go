@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"reflect"
 	"runtime"
 	"time"
 
@@ -309,7 +310,7 @@ func (client *ClickHouseClient) Clear() error {
 
 type Transaction struct {
 	ChainID              string              `ch:"chain_id"`
-	TxIndex              int                 `ch:"tx_index"`
+	TxIndex              uint64              `ch:"tx_index"`
 	TxHash               string              `ch:"tx_hash"`
 	BlockNumber          uint64              `ch:"block_number"`
 	FromAddress          string              `ch:"from_address"`
@@ -319,7 +320,7 @@ type Transaction struct {
 	Value                uint64              `ch:"value"`
 	Nonce                uint64              `ch:"nonce"`
 	Status               string              `ch:"status"`
-	Timestamp            int64               `ch:"timestamp"`
+	Timestamp            time.Time           `ch:"timestamp"`
 	TxFee                *big.Int            `ch:"tx_fee"`
 	Gas                  uint64              `ch:"gas"`
 	GasPrice             uint64              `ch:"gas_price"`
@@ -338,7 +339,7 @@ type Transaction struct {
 	LogsBloom            []byte              `ch:"logs_bloom"`
 }
 
-func (client *ClickHouseClient) Add(table string, rows []Transaction) error {
+func (client *ClickHouseClient) Add(table string, rows interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 
@@ -346,31 +347,61 @@ func (client *ClickHouseClient) Add(table string, rows []Transaction) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare batch: %w", err)
 	}
-
 	defer func() {
-		if batch.IsSent() {
-			return
-		}
-		err := batch.Abort()
-		if err != nil {
-			log.Warnf("failed to abort batch: %v", err)
+		if !batch.IsSent() {
+			_ = batch.Abort()
 		}
 	}()
 
-	for _, row := range rows {
-		if row.TxHash == "" {
-			return fmt.Errorf("tx hash can't be an empty string")
+	val := reflect.ValueOf(rows)
+	for i := 0; i < val.Len(); i++ {
+		v := val.Index(i)
+		if err := validateFields(v); err != nil {
+			return err
 		}
-		if row.FromAddress == "" {
-			return fmt.Errorf("from address can't be an empty string")
-		}
-		if err := batch.AppendStruct(&row); err != nil {
+
+		row := val.Index(i).Addr().Interface()
+		if err := batch.AppendStruct(row); err != nil {
 			return fmt.Errorf("failed to append row: %w", err)
 		}
 	}
 
 	if err := batch.Send(); err != nil {
 		return fmt.Errorf("failed to send batch: %w", err)
+	}
+
+	return nil
+}
+
+func validateFields(v reflect.Value) error {
+	txHash := v.FieldByName("TxHash")
+	if txHash.IsValid() && txHash.String() == "" {
+		return fmt.Errorf("tx_hash can't be an empty string")
+	}
+
+	fromAddress := v.FieldByName("FromAddress")
+	if fromAddress.IsValid() && fromAddress.String() == "" {
+		return fmt.Errorf("from_address can't be an empty string")
+	}
+
+	parentHash := v.FieldByName("ParentHash")
+	if parentHash.IsValid() && parentHash.String() == "" {
+		return fmt.Errorf("parent_hash can't be an empty string")
+	}
+
+	tokenAddress := v.FieldByName("TokenAddress")
+	if tokenAddress.IsValid() && tokenAddress.String() == "" {
+		return fmt.Errorf("token_address can't be an empty string")
+	}
+
+	operator := v.FieldByName("Operator")
+	if operator.IsValid() && operator.String() == "" {
+		return fmt.Errorf("operator can't be an empty string")
+	}
+
+	logType := v.FieldByName("LogType")
+	if logType.IsValid() && logType.String() == "" {
+		return fmt.Errorf("log_type can't be an empty string")
 	}
 
 	return nil
