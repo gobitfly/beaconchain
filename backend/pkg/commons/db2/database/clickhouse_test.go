@@ -41,7 +41,7 @@ func (c *chContainer) SetupClickHouseContainer() {
 
 	host, err := c.container.Host(c.ctx)
 	if err != nil {
-		c.t.Fatalf("failed to get ClickHouse container IP: %v", err)
+		c.t.Fatalf("failed to get ClickHouse container host: %v", err)
 	}
 
 	port, err := c.container.MappedPort(c.ctx, "9000")
@@ -136,32 +136,36 @@ func TestClickHouseClient_Add(t *testing.T) {
 	}
 
 	t.Run("AddSingleRow", func(t *testing.T) {
-		row := Transaction{
-			ChainID:     "1",
-			TxIndex:     1,
-			BlockNumber: 1,
-			TxHash:      txHash[0],
-			FromAddress: fromAddress[0],
-			ToAddress:   toAddress[0],
-			Timestamp:   time.Now().Unix(),
+		row := []Transaction{
+			{
+				ChainID:     "1",
+				TxIndex:     1,
+				BlockNumber: 1,
+				TxHash:      txHash[0],
+				FromAddress: fromAddress[0],
+				ToAddress:   toAddress[0],
+				Timestamp:   time.Now(),
+			},
 		}
 
-		if err := client.Add(testTable, []Transaction{row}); err != nil {
+		if err := client.Add(testTable, row); err != nil {
 			t.Fatalf("AddSingleRow failed: %v", err)
 		}
 	})
 
 	t.Run("AddSingleRowWithEmptyToAddress", func(t *testing.T) {
-		row := Transaction{
-			ChainID:     "1",
-			TxIndex:     1,
-			BlockNumber: 1,
-			TxHash:      txHash[0],
-			FromAddress: fromAddress[0],
-			Timestamp:   time.Now().Unix(),
+		row := []Transaction{
+			{
+				ChainID:     "1",
+				TxIndex:     1,
+				BlockNumber: 1,
+				TxHash:      txHash[0],
+				FromAddress: fromAddress[0],
+				Timestamp:   time.Now(),
+			},
 		}
 
-		if err := client.Add(testTable, []Transaction{row}); err != nil {
+		if err := client.Add(testTable, row); err != nil {
 			t.Fatalf("AddSingleRowWithEmptyToAddress failed: %v", err)
 		}
 	})
@@ -175,7 +179,7 @@ func TestClickHouseClient_Add(t *testing.T) {
 				TxHash:      txHash[1],
 				FromAddress: fromAddress[0],
 				ToAddress:   toAddress[0],
-				Timestamp:   time.Now().Unix(),
+				Timestamp:   time.Now(),
 			},
 			{
 				ChainID:     "1",
@@ -184,7 +188,7 @@ func TestClickHouseClient_Add(t *testing.T) {
 				TxHash:      txHash[2],
 				FromAddress: fromAddress[1],
 				ToAddress:   toAddress[1],
-				Timestamp:   time.Now().Unix(),
+				Timestamp:   time.Now(),
 			},
 		}
 
@@ -194,32 +198,36 @@ func TestClickHouseClient_Add(t *testing.T) {
 	})
 
 	t.Run("AddInvalidRowWithEmptyFromAddress", func(t *testing.T) {
-		row := Transaction{
-			ChainID:     "1",
-			TxIndex:     1,
-			BlockNumber: 1,
-			TxHash:      txHash[1],
-			ToAddress:   toAddress[1],
-			Timestamp:   time.Now().Unix(),
+		row := []Transaction{
+			{
+				ChainID:     "1",
+				TxIndex:     1,
+				BlockNumber: 1,
+				TxHash:      txHash[1],
+				ToAddress:   toAddress[1],
+				Timestamp:   time.Now(),
+			},
 		}
 
-		err := client.Add(testTable, []Transaction{row})
+		err := client.Add(testTable, row)
 		if err == nil {
 			t.Fatalf("expected error for missing from_address field, but got none")
 		}
 	})
 
 	t.Run("AddInvalidRowWithEmptyTxHash", func(t *testing.T) {
-		row := Transaction{
-			ChainID:     "1",
-			TxIndex:     1,
-			BlockNumber: 1,
-			FromAddress: fromAddress[1],
-			ToAddress:   toAddress[1],
-			Timestamp:   time.Now().Unix(),
+		row := []Transaction{
+			{
+				ChainID:     "1",
+				TxIndex:     1,
+				BlockNumber: 1,
+				FromAddress: fromAddress[1],
+				ToAddress:   toAddress[1],
+				Timestamp:   time.Now(),
+			},
 		}
 
-		err := client.Add(testTable, []Transaction{row})
+		err := client.Add(testTable, row)
 		if err == nil {
 			t.Fatalf("expected error for missing tx_hash field, but got none")
 		}
