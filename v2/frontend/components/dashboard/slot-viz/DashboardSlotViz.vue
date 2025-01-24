@@ -55,29 +55,33 @@ const currentSlotId = computed(() => {
     getSlotFromTimestamp((tick.value ?? 0) / 1000) - 1)
 })
 
-const initiallyHideVisible = computed(() => {
-  if (validatorCount.value === undefined) {
-    return undefined
-  }
-  return validatorCount.value > 60
-})
 watch(
-  () => [
-    dashboardKey.value,
-    selectedGroups.value,
-    tick.value,
-  ],
-  (newValue, oldValue) => {
-    if (
-      oldValue
-      && (newValue[0] !== oldValue[0]
-        || (newValue[1] as number[]).length !== (oldValue[1] as number[]).length)
-    ) {
-      resetTick()
-    }
-    refreshSlotViz(dashboardKey.value, selectedGroups.value)
+  () =>
+    activeValidatorGroups.value,
+  () => {
+    selectedGroupIds.value = activeValidatorGroups.value.length > 1
+      ? activeValidatorGroups.value.map(group => group.id)
+      : []
   },
   { immediate: true },
+)
+watch(
+  () => selectedGroupIds.value,
+  () => {
+    useAsyncData('validator_dashboard_slot_viz', () =>
+      refreshSlotViz(dashboardKey.value, selectedGroupIds.value),
+    )
+      resetTick()
+  },
+  { immediate: true },
+)
+watch(
+  () => tick.value,
+  async () => {
+    refetchingSlotVizStoreData.value = true
+    await refreshSlotViz(dashboardKey.value, selectedGroupIds.value)
+    refetchingSlotVizStoreData.value = false
+  },
 )
 </script>
 

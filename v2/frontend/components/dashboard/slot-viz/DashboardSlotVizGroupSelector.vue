@@ -1,23 +1,19 @@
 <script setup lang="ts">
 import { orderBy } from 'lodash-es'
 import { getGroupLabel } from '~/utils/dashboard/group'
+import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
+
+const props = defineProps<{ validatorGroups: VDBOverviewGroup[] }>()
 
 const { t: $t } = useTranslation()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
 
 const selectedGroupIds = ref<number[]>([])
 
 const emit = defineEmits<{ (e: 'updateSelectedGroupIds', value: number[]): void }>()
 
 const groups = computed(() => {
-  if (!overview.value?.groups) {
-    return []
-  }
   return orderBy(
-    overview.value.groups.filter(g => !!g.count),
+    props.validatorGroups,
     [ g => g.name.toLowerCase() ],
     'asc',
   )
@@ -62,7 +58,8 @@ watch(
 )
 watch(() => selectedGroupIds.value, () => {
   emit('updateSelectedGroupIds', selectedGroupIds.value)
-})
+},
+)
 </script>
 
 <template>
