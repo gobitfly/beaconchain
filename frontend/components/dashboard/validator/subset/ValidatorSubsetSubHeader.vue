@@ -163,7 +163,7 @@ const infos = computed(() => {
       :class="info.className"
       class="info"
     >
-      <SlotVizIcon
+      <DashboardSlotVizDutyIcon
         v-if="info.slotVizCategory"
         :icon="info.slotVizCategory"
       />

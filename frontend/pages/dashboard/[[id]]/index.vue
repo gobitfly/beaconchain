@@ -210,7 +210,7 @@ watch(
       </template>
       <DashboardSharedDashboardModal />
       <div>
-        <DashboardValidatorSlotViz />
+        <DashboardSlotViz />
       </div>
       <BcTabList
         :tabs

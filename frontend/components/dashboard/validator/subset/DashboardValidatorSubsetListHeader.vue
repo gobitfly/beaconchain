@@ -100,7 +100,7 @@ const count = computed(() =>
       :icon="icon.icon"
       :class="icon.className"
     />
-    <SlotVizIcon
+    <DashboardSlotVizDutyIcon
       v-else-if="icon.slotVizCategory"
       :icon="icon.slotVizCategory"
       :class="icon.className"

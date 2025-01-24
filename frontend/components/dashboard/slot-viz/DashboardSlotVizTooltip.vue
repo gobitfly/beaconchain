@@ -286,7 +286,7 @@ const data = computed(() => {
               :class="row.class"
             >
               <span :style="{ minWidth: data.minWidth }">{{ row.count }}x</span>
-              <SlotVizIcon
+              <DashboardSlotVizDutyIcon
                 :icon="row.icon"
                 class="icon"
               />

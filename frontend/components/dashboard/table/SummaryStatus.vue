@@ -40,7 +40,7 @@ const mapped = computed(() => {
       :fit-content="true"
       class="tooltip"
     >
-      <SlotVizIcon
+      <DashboardSlotVizDutyIcon
         :class="item.className"
         :icon="item.icon"
       />
