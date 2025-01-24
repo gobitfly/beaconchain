@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS erc20_transfers (
     value UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(T64, ZSTD(3)),
     log_type FixedString(32) CODEC(ZSTD(3)),
-    transaction_log_index UInt32 CODEC(ZSTD(3)),
+    tx_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
     inserted_at DateTime MATERIALIZED now(), 
@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS erc20_transfers (
 )
 ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
-ORDER BY (timestamp, block_number, log_index)
+ORDER BY (timestamp, block_number, tx_log_index, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS erc721_transfers(
     token_id UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(ZSTD(3)),
     log_type FixedString(32) CODEC(ZSTD(3)),
-    transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
+    tx_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
     inserted_at DateTime MATERIALIZED now(), 
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS erc721_transfers(
 )
 ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
-ORDER BY (timestamp, block_number, log_index)
+ORDER BY (timestamp, block_number, tx_log_index, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS erc1155_transfers(
     value UInt256 CODEC(ZSTD(3)),
     log_index UInt32 CODEC(ZSTD(3)),
     log_type FixedString(32) CODEC(ZSTD(3)),
-    transaction_log_index Nullable(UInt32) CODEC(ZSTD(3)),
+    tx_log_index UInt32 CODEC(ZSTD(3)),
     removed Boolean,
     timestamp DateTime,
     inserted_at DateTime MATERIALIZED now(), 
@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS erc1155_transfers(
 )
 ENGINE = ReplacingMergeTree(inserted_at)
 PARTITION BY (toStartOfQuarter(timestamp), chain_id)
-ORDER BY (timestamp, block_number, log_index)
+ORDER BY (timestamp, block_number, tx_log_index, log_index)
 SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild'
 -- +goose StatementEnd
 
