@@ -97,7 +97,7 @@ func setup() error {
 
 	for _, user := range testUsers {
 		pHash, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
-		insertDs := goqu.Dialect("postgres").
+		userDs := goqu.Dialect("postgres").
 			Insert("users").
 			Rows(struct {
 				User
@@ -109,7 +109,26 @@ func setup() error {
 				string(pHash),
 			})
 
-		query, args, err := insertDs.Prepared(true).ToSQL()
+		apiKeyDs := goqu.Dialect("postgres").
+			Insert("api_keys").
+			Rows(struct {
+				ApiKey string `db:"api_key"`
+				UserId uint   `db:"user_id"`
+			}{
+				user.ApiKey,
+				user.Id,
+			})
+
+		query, args, err := userDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
+		_, err = tempDb.Exec(query, args...)
+		if err != nil {
+			return err
+		}
+
+		query, args, err = apiKeyDs.Prepared(true).ToSQL()
 		if err != nil {
 			return fmt.Errorf("error preparing query: %w", err)
 		}
@@ -514,7 +533,7 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 type User struct {
 	Email    string `db:"email"`
 	Password string
-	ApiKey   string `db:"api_key"`
+	ApiKey   string
 	// optional
 	Id             uint   `db:"id" goqu:"omitempty"`
 	UserGroup      string `db:"user_group" goqu:"omitempty"`
