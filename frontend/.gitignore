@@ -35,3 +35,5 @@ server.key
 
 /test-results
 /tests/results
+
+/tests/auth

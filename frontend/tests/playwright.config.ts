@@ -13,7 +13,7 @@ export default defineConfig<ConfigOptions>({
   projects: [ {
     name: 'chromium',
     use: {
-      ...devices['Desktop Chrome'], channel: 'chromium',
+      ...devices['Desktop Firefox'], channel: 'firefox',
     },
   } ],
   testMatch: '**/*.spec.ts',
