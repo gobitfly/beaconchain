@@ -13,9 +13,11 @@ const emit = defineEmits<{
   (e: 'remove-device', id: number): void,
   (e: 'toggle-notifications', {
     id,
+    name,
     value,
   }: {
     id: number,
+    name?: string,
     value: boolean,
   }): void,
 }>()
@@ -41,7 +43,7 @@ const hasNotifications = ref(props.device.is_notifications_enabled)
     <div class="toggle-row">
       <BcToggle
         v-model="hasNotifications"
-        @update:model-value="emit('toggle-notifications', { id: device.id, value: $event })"
+        @update:model-value="emit('toggle-notifications', { id: device.id, name: device.name, value: $event })"
       />
       {{ $t("notifications.general.paired_devices.mobile_notifications") }}
     </div>
