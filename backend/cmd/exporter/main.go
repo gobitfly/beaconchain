@@ -19,7 +19,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
-	"github.com/gobitfly/beaconchain/pkg/monitoring"
 )
 
 func Run() {
@@ -138,8 +137,8 @@ func Run() {
 	wg.Wait()
 
 	// enable light-weight db connection monitoring
-	monitoring.Init(false)
-	monitoring.Start()
+	// monitoring.Init(false)
+	// monitoring.Start()
 
 	if utils.Config.TieredCacheProvider != "redis" {
 		log.Fatal(fmt.Errorf("no cache provider set, please set TierdCacheProvider (example redis)"), "", 0)

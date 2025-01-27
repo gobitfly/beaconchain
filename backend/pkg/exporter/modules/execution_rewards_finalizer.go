@@ -80,7 +80,7 @@ func (d *executionRewardsFinalizer) maintainTable() (err error) {
 	var latestFinalizedSlot int64
 	err = db.ReaderDb.Get(&latestFinalizedSlot, `
 		SELECT
-			max(slot)
+			COALESCE(max(slot), 0)
 		FROM
 			blocks
 		WHERE

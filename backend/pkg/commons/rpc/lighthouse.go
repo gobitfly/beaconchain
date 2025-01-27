@@ -756,6 +756,10 @@ func (lc *LighthouseClient) GetExecutionRequestsFromState(epoch uint64) (*types.
 		Deposits:       make([]*types.DepositExecutionRequest, 0),
 	}
 
+	if epoch == 0 {
+		return queuedExecutionRequests, processedExecutionRequests, nil
+	}
+
 	lastSlotOfPreviousEpoch := epoch*utils.Config.ClConfig.SlotsPerEpoch - 1
 	firstSlotOfEpoch := epoch * utils.Config.ClConfig.SlotsPerEpoch
 
