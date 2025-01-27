@@ -44,7 +44,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				metadata
 			FROM status_reports
 			LEFT JOIN clean_shutdown_events cse ON status_reports.emitter = clean_shutdown_events.emitter
-			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null)
+			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null) AND event_id != {running_event_id:String}
 			ORDER BY
 				event_id ASC,
 				emitter ASC,
@@ -100,7 +100,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	response.Reports = make(map[string][]types.HealthzResult)
 	response.ReportingUUID = utils.GetUUID()
 	response.DeploymentType = utils.Config.DeploymentType
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)))
+	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)), ch.Named("running_event_id", string(constants.Running)))
 	if err != nil {
 		response.Reports["response_error"] = []types.HealthzResult{
 			{
