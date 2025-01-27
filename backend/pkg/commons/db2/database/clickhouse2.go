@@ -70,6 +70,15 @@ func (client *ClickHouse) Read(query string, scan func(driver.Rows) error) error
 	return rows.Err()
 }
 
+func (client *ClickHouse) clearTable(table string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	if err := client.db.Exec(ctx, fmt.Sprintf("ALTER TABLE %s DELETE WHERE 1=1", table)); err != nil {
+		return fmt.Errorf("failed to delete table entries: %w", err)
+	}
+	return nil
+}
+
 func ScanArray[S ~[]E, E any](s *S) func(rows driver.Rows) error {
 	return func(rows driver.Rows) error {
 		var temp E
