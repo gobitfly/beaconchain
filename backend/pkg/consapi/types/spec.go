@@ -23,6 +23,8 @@ type StandardSpec struct {
 	CapellaForkEpoch                        *uint64  `json:"CAPELLA_FORK_EPOCH,string"`
 	DenebForkVersion                        string   `json:"DENEB_FORK_VERSION"`
 	DenebForkEpoch                          *uint64  `json:"DENEB_FORK_EPOCH,string"`
+	ElectraForkVersion                      string   `json:"ELECTRA_FORK_VERSION"`
+	ElectraForkEpoch                        *uint64  `json:"ELECTRA_FORK_EPOCH,string"`
 	SecondsPerSlot                          int64    `json:"SECONDS_PER_SLOT,string"`
 	SecondsPerEth1Block                     int64    `json:"SECONDS_PER_ETH1_BLOCK,string"`
 	MinValidatorWithdrawabilityDelay        int64    `json:"MIN_VALIDATOR_WITHDRAWABILITY_DELAY,string"`

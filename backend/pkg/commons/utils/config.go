@@ -401,6 +401,8 @@ func setCLConfig(cfg *types.Config) error {
 			CappellaForkEpoch:                       *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
 			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
+			ElectraForkVersion:                      jr.Data.ElectraForkVersion,
+			ElectraForkEpoch:                        *jr.Data.ElectraForkEpoch,
 			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),
 			SecondsPerEth1Block:                     uint64(jr.Data.SecondsPerEth1Block),
 			MinValidatorWithdrawabilityDelay:        uint64(jr.Data.MinValidatorWithdrawabilityDelay),
