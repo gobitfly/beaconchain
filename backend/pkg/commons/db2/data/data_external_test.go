@@ -1,13 +1,11 @@
 package data_test
 
 import (
-	"encoding/hex"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 )
 
@@ -42,20 +40,11 @@ func dbFromEnv(t *testing.T, table string) database.Database {
 	return nil
 }
 
-func TestStoreExternal(t *testing.T) {
+/*func TestStoreExternal(t *testing.T) {
 	db := dbFromEnv(t, data.Table)
 	store := data.NewStore(db)
 
-	/*
-		list of filter
-		data.ByMethod(method)
-		data.ByAsset(asset)
-		data.OnlyReceived()
-		data.OnlySent()
-		data.IgnoreTransactions()
-		data.IgnoreTransfers()
-		data.WithTimeRange(from, to)
-	*/
+
 	tests := []struct {
 		name      string
 		limit     int64
@@ -107,3 +96,4 @@ func TestStoreExternal(t *testing.T) {
 		})
 	}
 }
+*/

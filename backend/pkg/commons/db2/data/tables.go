@@ -12,3 +12,5 @@ const (
 	defaultFamily = "f"
 	dataColumn    = "d"
 )
+
+const TableTransactions = "transactions"

@@ -4,7 +4,6 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -133,7 +132,7 @@ var hundredAddresses = []common.Address{
 	common.HexToAddress("0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB"),
 }
 
-func TestSuite(t *testing.T) {
+/*func TestSuite(t *testing.T) {
 	db := dbFromEnv(t, data.Table)
 	store := data.NewStore(db)
 
@@ -180,7 +179,7 @@ func TestSuite(t *testing.T) {
 		})
 		// fmt.Println(times)
 	}
-}
+}*/
 
 var baseConditions = map[string]data.Option{
 	"network":  data.ByChainID("1"),

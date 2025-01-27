@@ -76,28 +76,28 @@ type Eth1Block struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Hash         []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	ParentHash   []byte                 `protobuf:"bytes,2,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	UncleHash    []byte                 `protobuf:"bytes,3,opt,name=uncle_hash,json=uncleHash,proto3" json:"uncle_hash,omitempty"`
-	Coinbase     []byte                 `protobuf:"bytes,4,opt,name=coinbase,proto3" json:"coinbase,omitempty"`
-	Root         []byte                 `protobuf:"bytes,5,opt,name=root,proto3" json:"root,omitempty"`
-	TxHash       []byte                 `protobuf:"bytes,6,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty"`
-	ReceiptHash  []byte                 `protobuf:"bytes,7,opt,name=receipt_hash,json=receiptHash,proto3" json:"receipt_hash,omitempty"`
-	Difficulty   []byte                 `protobuf:"bytes,8,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
-	Number       uint64                 `protobuf:"varint,9,opt,name=number,proto3" json:"number,omitempty"`
-	GasLimit     uint64                 `protobuf:"varint,10,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-	GasUsed      uint64                 `protobuf:"varint,11,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	Time         *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=time,proto3" json:"time,omitempty"`
-	Extra        []byte                 `protobuf:"bytes,13,opt,name=extra,proto3" json:"extra,omitempty"`
-	MixDigest    []byte                 `protobuf:"bytes,14,opt,name=mix_digest,json=mixDigest,proto3" json:"mix_digest,omitempty"`
-	Bloom        []byte                 `protobuf:"bytes,17,opt,name=bloom,proto3" json:"bloom,omitempty"`
-	BaseFee      []byte                 `protobuf:"bytes,18,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty"`
-	Uncles       []*Eth1Block           `protobuf:"bytes,20,rep,name=uncles,proto3" json:"uncles,omitempty"`
-	Transactions []*Eth1Transaction     `protobuf:"bytes,21,rep,name=transactions,proto3" json:"transactions,omitempty"`
-	Withdrawals  []*Eth1Withdrawal      `protobuf:"bytes,22,rep,name=withdrawals,proto3" json:"withdrawals,omitempty"`
+	Hash         []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty" ch:"hash"`
+	ParentHash   []byte                 `protobuf:"bytes,2,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	UncleHash    []byte                 `protobuf:"bytes,3,opt,name=uncle_hash,json=uncleHash,proto3" json:"uncle_hash,omitempty" ch:"uncle_hash"`
+	Coinbase     []byte                 `protobuf:"bytes,4,opt,name=coinbase,proto3" json:"coinbase,omitempty" ch:"coinbase"`
+	Root         []byte                 `protobuf:"bytes,5,opt,name=root,proto3" json:"root,omitempty" ch:"root"`
+	TxHash       []byte                 `protobuf:"bytes,6,opt,name=tx_hash,json=txHash,proto3" json:"tx_hash,omitempty" ch:"tx_hash"`
+	ReceiptHash  []byte                 `protobuf:"bytes,7,opt,name=receipt_hash,json=receiptHash,proto3" json:"receipt_hash,omitempty" ch:"receipt_hash"`
+	Difficulty   []byte                 `protobuf:"bytes,8,opt,name=difficulty,proto3" json:"difficulty,omitempty" ch:"difficulty"`
+	Number       uint64                 `protobuf:"varint,9,opt,name=number,proto3" json:"number,omitempty" ch:"number"`
+	GasLimit     uint64                 `protobuf:"varint,10,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty" ch:"gas_limit"`
+	GasUsed      uint64                 `protobuf:"varint,11,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty" ch:"gas_used"`
+	Time         *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	Extra        []byte                 `protobuf:"bytes,13,opt,name=extra,proto3" json:"extra,omitempty" ch:"extra"`
+	MixDigest    []byte                 `protobuf:"bytes,14,opt,name=mix_digest,json=mixDigest,proto3" json:"mix_digest,omitempty" ch:"mix_digest"`
+	Bloom        []byte                 `protobuf:"bytes,17,opt,name=bloom,proto3" json:"bloom,omitempty" ch:"bloom"`
+	BaseFee      []byte                 `protobuf:"bytes,18,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty" ch:"base_fee"`
+	Uncles       []*Eth1Block           `protobuf:"bytes,20,rep,name=uncles,proto3" json:"uncles,omitempty" ch:"uncles"`
+	Transactions []*Eth1Transaction     `protobuf:"bytes,21,rep,name=transactions,proto3" json:"transactions,omitempty" ch:"transactions"`
+	Withdrawals  []*Eth1Withdrawal      `protobuf:"bytes,22,rep,name=withdrawals,proto3" json:"withdrawals,omitempty" ch:"withdrawals"`
 	// EIP 4844
-	BlobGasUsed   uint64 `protobuf:"varint,23,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty"`
-	ExcessBlobGas uint64 `protobuf:"varint,24,opt,name=excess_blob_gas,json=excessBlobGas,proto3" json:"excess_blob_gas,omitempty"`
+	BlobGasUsed   uint64 `protobuf:"varint,23,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty" ch:"blob_gas_used"`
+	ExcessBlobGas uint64 `protobuf:"varint,24,opt,name=excess_blob_gas,json=excessBlobGas,proto3" json:"excess_blob_gas,omitempty" ch:"excess_blob_gas"`
 }
 
 func (x *Eth1Block) Reset() {
@@ -284,10 +284,10 @@ type Eth1Withdrawal struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Index          uint64 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty"`
-	ValidatorIndex uint64 `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty"`
-	Address        []byte `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-	Amount         []byte `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Index          uint64 `protobuf:"varint,1,opt,name=index,proto3" json:"index,omitempty" ch:"index"`
+	ValidatorIndex uint64 `protobuf:"varint,2,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" ch:"validator_index"`
+	Address        []byte `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty" ch:"address"`
+	Amount         []byte `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty" ch:"amount"`
 }
 
 func (x *Eth1Withdrawal) Reset() {
@@ -355,36 +355,36 @@ type Eth1Transaction struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type                 uint32        `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty"`
-	Nonce                uint64        `protobuf:"varint,2,opt,name=nonce,proto3" json:"nonce,omitempty"`
-	GasPrice             uint64        `protobuf:"varint,3,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty"`
-	MaxPriorityFeePerGas uint64        `protobuf:"varint,4,opt,name=max_priority_fee_per_gas,json=maxPriorityFeePerGas,proto3" json:"max_priority_fee_per_gas,omitempty"`
-	MaxFeePerGas         uint64        `protobuf:"varint,5,opt,name=max_fee_per_gas,json=maxFeePerGas,proto3" json:"max_fee_per_gas,omitempty"`
-	Gas                  uint64        `protobuf:"varint,6,opt,name=gas,proto3" json:"gas,omitempty"`
-	Value                uint64        `protobuf:"varint,7,opt,name=value,proto3" json:"value,omitempty"`
-	Data                 []byte        `protobuf:"bytes,8,opt,name=data,proto3" json:"data,omitempty"`
-	To                   []byte        `protobuf:"bytes,12,opt,name=to,proto3" json:"to,omitempty"`
-	From                 []byte        `protobuf:"bytes,13,opt,name=from,proto3" json:"from,omitempty"`
-	ChainId              uint64        `protobuf:"varint,14,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
-	AccessList           []*AccessList `protobuf:"bytes,15,rep,name=access_list,json=accessList,proto3" json:"access_list,omitempty"`
-	Hash                 []byte        `protobuf:"bytes,16,opt,name=hash,proto3" json:"hash,omitempty"`
+	Type                 uint32        `protobuf:"varint,1,opt,name=type,proto3" json:"type,omitempty" ch:"type"`
+	Nonce                uint64        `protobuf:"varint,2,opt,name=nonce,proto3" json:"nonce,omitempty" ch:"nonce"`
+	GasPrice             uint64        `protobuf:"varint,3,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty" ch:"gas_price"`
+	MaxPriorityFeePerGas uint64        `protobuf:"varint,4,opt,name=max_priority_fee_per_gas,json=maxPriorityFeePerGas,proto3" json:"max_priority_fee_per_gas,omitempty" ch:"max_priority_fee_per_gas"`
+	MaxFeePerGas         uint64        `protobuf:"varint,5,opt,name=max_fee_per_gas,json=maxFeePerGas,proto3" json:"max_fee_per_gas,omitempty" ch:"max_fee_per_gas"`
+	Gas                  uint64        `protobuf:"varint,6,opt,name=gas,proto3" json:"gas,omitempty" ch:"gas"`
+	Value                uint64        `protobuf:"varint,7,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
+	Data                 []byte        `protobuf:"bytes,8,opt,name=data,proto3" json:"data,omitempty" ch:"data"`
+	To                   []byte        `protobuf:"bytes,12,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	From                 []byte        `protobuf:"bytes,13,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	ChainId              uint64        `protobuf:"varint,14,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty" ch:"chain_id"`
+	AccessList           []*AccessList `protobuf:"bytes,15,rep,name=access_list,json=accessList,proto3" json:"access_list,omitempty" ch:"access_list"`
+	Hash                 []byte        `protobuf:"bytes,16,opt,name=hash,proto3" json:"hash,omitempty" ch:"hash"`
 	// Receipt fields
-	ContractAddress    []byte `protobuf:"bytes,17,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty"`
-	CommulativeGasUsed uint64 `protobuf:"varint,18,opt,name=commulative_gas_used,json=commulativeGasUsed,proto3" json:"commulative_gas_used,omitempty"`
-	GasUsed            uint64 `protobuf:"varint,19,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	LogsBloom          []byte `protobuf:"bytes,20,opt,name=logs_bloom,json=logsBloom,proto3" json:"logs_bloom,omitempty"`
-	Status             uint64 `protobuf:"varint,21,opt,name=status,proto3" json:"status,omitempty"`
+	ContractAddress    []byte `protobuf:"bytes,17,opt,name=contract_address,json=contractAddress,proto3" json:"contract_address,omitempty" ch:"contract_address"`
+	CommulativeGasUsed uint64 `protobuf:"varint,18,opt,name=commulative_gas_used,json=commulativeGasUsed,proto3" json:"commulative_gas_used,omitempty" ch:"commulative_gas_used"`
+	GasUsed            uint64 `protobuf:"varint,19,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty" ch:"gas_used"`
+	LogsBloom          []byte `protobuf:"bytes,20,opt,name=logs_bloom,json=logsBloom,proto3" json:"logs_bloom,omitempty" ch:"logs_bloom"`
+	Status             uint64 `protobuf:"varint,21,opt,name=status,proto3" json:"status,omitempty" ch:"status"`
 	// reserved 22; // string error_msg = 22;
-	ErrorMsg string     `protobuf:"bytes,22,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
-	Logs     []*Eth1Log `protobuf:"bytes,23,rep,name=logs,proto3" json:"logs,omitempty"`
+	ErrorMsg string     `protobuf:"bytes,22,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty" ch:"error_msg"`
+	Logs     []*Eth1Log `protobuf:"bytes,23,rep,name=logs,proto3" json:"logs,omitempty" ch:"logs"`
 	// Internal transactions
-	Itx []*Eth1InternalTransaction `protobuf:"bytes,24,rep,name=itx,proto3" json:"itx,omitempty"`
+	Itx []*Eth1InternalTransaction `protobuf:"bytes,24,rep,name=itx,proto3" json:"itx,omitempty" ch:"itx"`
 	// EIP 4844 transaction
-	MaxFeePerBlobGas    uint64   `protobuf:"varint,25,opt,name=max_fee_per_blob_gas,json=maxFeePerBlobGas,proto3" json:"max_fee_per_blob_gas,omitempty"`
-	BlobVersionedHashes [][]byte `protobuf:"bytes,26,rep,name=blob_versioned_hashes,json=blobVersionedHashes,proto3" json:"blob_versioned_hashes,omitempty"`
+	MaxFeePerBlobGas    uint64   `protobuf:"varint,25,opt,name=max_fee_per_blob_gas,json=maxFeePerBlobGas,proto3" json:"max_fee_per_blob_gas,omitempty" ch:"max_fee_per_blob_gas"`
+	BlobVersionedHashes [][]byte `protobuf:"bytes,26,rep,name=blob_versioned_hashes,json=blobVersionedHashes,proto3" json:"blob_versioned_hashes,omitempty" ch:"blob_versioned_hashes"`
 	// EIP 4844 receipt
-	BlobGasPrice uint64 `protobuf:"varint,27,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty"`
-	BlobGasUsed  uint64 `protobuf:"varint,28,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty"`
+	BlobGasPrice uint64 `protobuf:"varint,27,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty" ch:"blob_gas_price"`
+	BlobGasUsed  uint64 `protobuf:"varint,28,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty" ch:"blob_gas_used"`
 }
 
 func (x *Eth1Transaction) Reset() {
@@ -599,8 +599,8 @@ type IsContractUpdate struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	IsContract bool `protobuf:"varint,1,opt,name=is_contract,json=isContract,proto3" json:"is_contract,omitempty"`
-	Success    bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	IsContract bool `protobuf:"varint,1,opt,name=is_contract,json=isContract,proto3" json:"is_contract,omitempty" ch:"is_contract"`
+	Success    bool `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty" ch:"success"`
 }
 
 func (x *IsContractUpdate) Reset() {
@@ -654,8 +654,8 @@ type AccessList struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Address     []byte   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	StorageKeys [][]byte `protobuf:"bytes,2,rep,name=storage_keys,json=storageKeys,proto3" json:"storage_keys,omitempty"`
+	Address     []byte   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty" ch:"address"`
+	StorageKeys [][]byte `protobuf:"bytes,2,rep,name=storage_keys,json=storageKeys,proto3" json:"storage_keys,omitempty" ch:"storage_keys"`
 }
 
 func (x *AccessList) Reset() {
@@ -709,10 +709,10 @@ type Eth1Log struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Address []byte   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	Data    []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
-	Removed bool     `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty"`
-	Topics  [][]byte `protobuf:"bytes,4,rep,name=topics,proto3" json:"topics,omitempty"`
+	Address []byte   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty" ch:"address"`
+	Data    []byte   `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty" ch:"data"`
+	Removed bool     `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty" ch:"removed"`
+	Topics  [][]byte `protobuf:"bytes,4,rep,name=topics,proto3" json:"topics,omitempty" ch:"topics"`
 }
 
 func (x *Eth1Log) Reset() {
@@ -780,13 +780,13 @@ type Eth1InternalTransaction struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Type     string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
-	From     []byte `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
-	To       []byte `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
-	Value    string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
-	ErrorMsg string `protobuf:"bytes,5,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
-	Path     string `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty"`
-	Gas      uint64 `protobuf:"varint,7,opt,name=gas,proto3" json:"gas,omitempty"`
+	Type     string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty" ch:"type"`
+	From     []byte `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To       []byte `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	Value    string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
+	ErrorMsg string `protobuf:"bytes,5,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty" ch:"error_msg"`
+	Path     string `protobuf:"bytes,6,opt,name=path,proto3" json:"path,omitempty" ch:"path"`
+	Gas      uint64 `protobuf:"varint,7,opt,name=gas,proto3" json:"gas,omitempty" ch:"gas"`
 }
 
 func (x *Eth1InternalTransaction) Reset() {
@@ -875,31 +875,31 @@ type Eth1BlockIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Hash             []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	ParentHash       []byte                 `protobuf:"bytes,2,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	UncleHash        []byte                 `protobuf:"bytes,3,opt,name=uncle_hash,json=uncleHash,proto3" json:"uncle_hash,omitempty"`
-	Coinbase         []byte                 `protobuf:"bytes,4,opt,name=coinbase,proto3" json:"coinbase,omitempty"`
-	Difficulty       []byte                 `protobuf:"bytes,8,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
-	Number           uint64                 `protobuf:"varint,9,opt,name=number,proto3" json:"number,omitempty"`
-	GasLimit         uint64                 `protobuf:"varint,10,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-	GasUsed          uint64                 `protobuf:"varint,11,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	Time             *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=time,proto3" json:"time,omitempty"`
-	BaseFee          []byte                 `protobuf:"bytes,18,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty"`
-	UncleCount       uint64                 `protobuf:"varint,19,opt,name=uncle_count,json=uncleCount,proto3" json:"uncle_count,omitempty"`
-	TransactionCount uint64                 `protobuf:"varint,20,opt,name=transaction_count,json=transactionCount,proto3" json:"transaction_count,omitempty"`
-	Mev              []byte                 `protobuf:"bytes,21,opt,name=mev,proto3" json:"mev,omitempty"`
-	LowestGasPrice   []byte                 `protobuf:"bytes,22,opt,name=lowest_gas_price,json=lowestGasPrice,proto3" json:"lowest_gas_price,omitempty"`
-	HighestGasPrice  []byte                 `protobuf:"bytes,23,opt,name=highest_gas_price,json=highestGasPrice,proto3" json:"highest_gas_price,omitempty"`
+	Hash             []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty" ch:"hash"`
+	ParentHash       []byte                 `protobuf:"bytes,2,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	UncleHash        []byte                 `protobuf:"bytes,3,opt,name=uncle_hash,json=uncleHash,proto3" json:"uncle_hash,omitempty" ch:"uncle_hash"`
+	Coinbase         []byte                 `protobuf:"bytes,4,opt,name=coinbase,proto3" json:"coinbase,omitempty" ch:"coinbase"`
+	Difficulty       []byte                 `protobuf:"bytes,8,opt,name=difficulty,proto3" json:"difficulty,omitempty" ch:"difficulty"`
+	Number           uint64                 `protobuf:"varint,9,opt,name=number,proto3" json:"number,omitempty" ch:"number"`
+	GasLimit         uint64                 `protobuf:"varint,10,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty" ch:"gas_limit"`
+	GasUsed          uint64                 `protobuf:"varint,11,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty" ch:"gas_used"`
+	Time             *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	BaseFee          []byte                 `protobuf:"bytes,18,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty" ch:"base_fee"`
+	UncleCount       uint64                 `protobuf:"varint,19,opt,name=uncle_count,json=uncleCount,proto3" json:"uncle_count,omitempty" ch:"uncle_count"`
+	TransactionCount uint64                 `protobuf:"varint,20,opt,name=transaction_count,json=transactionCount,proto3" json:"transaction_count,omitempty" ch:"transaction_count"`
+	Mev              []byte                 `protobuf:"bytes,21,opt,name=mev,proto3" json:"mev,omitempty" ch:"mev"`
+	LowestGasPrice   []byte                 `protobuf:"bytes,22,opt,name=lowest_gas_price,json=lowestGasPrice,proto3" json:"lowest_gas_price,omitempty" ch:"lowest_gas_price"`
+	HighestGasPrice  []byte                 `protobuf:"bytes,23,opt,name=highest_gas_price,json=highestGasPrice,proto3" json:"highest_gas_price,omitempty" ch:"highest_gas_price"`
 	// uint64 duration = 24;
-	TxReward    []byte `protobuf:"bytes,25,opt,name=tx_reward,json=txReward,proto3" json:"tx_reward,omitempty"`
-	UncleReward []byte `protobuf:"bytes,26,opt,name=uncle_reward,json=uncleReward,proto3" json:"uncle_reward,omitempty"`
+	TxReward    []byte `protobuf:"bytes,25,opt,name=tx_reward,json=txReward,proto3" json:"tx_reward,omitempty" ch:"tx_reward"`
+	UncleReward []byte `protobuf:"bytes,26,opt,name=uncle_reward,json=uncleReward,proto3" json:"uncle_reward,omitempty" ch:"uncle_reward"`
 	// bytes base_fee_change = 27;
 	// bytes block_utilization_change = 28;
-	InternalTransactionCount uint64 `protobuf:"varint,29,opt,name=internal_transaction_count,json=internalTransactionCount,proto3" json:"internal_transaction_count,omitempty"`
+	InternalTransactionCount uint64 `protobuf:"varint,29,opt,name=internal_transaction_count,json=internalTransactionCount,proto3" json:"internal_transaction_count,omitempty" ch:"internal_transaction_count"`
 	// https://eips.ethereum.org/EIPS/eip-4844
-	BlobGasUsed          uint64 `protobuf:"varint,30,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty"`
-	ExcessBlobGas        uint64 `protobuf:"varint,31,opt,name=excess_blob_gas,json=excessBlobGas,proto3" json:"excess_blob_gas,omitempty"`
-	BlobTransactionCount uint64 `protobuf:"varint,32,opt,name=blob_transaction_count,json=blobTransactionCount,proto3" json:"blob_transaction_count,omitempty"`
+	BlobGasUsed          uint64 `protobuf:"varint,30,opt,name=blob_gas_used,json=blobGasUsed,proto3" json:"blob_gas_used,omitempty" ch:"blob_gas_used"`
+	ExcessBlobGas        uint64 `protobuf:"varint,31,opt,name=excess_blob_gas,json=excessBlobGas,proto3" json:"excess_blob_gas,omitempty" ch:"excess_blob_gas"`
+	BlobTransactionCount uint64 `protobuf:"varint,32,opt,name=blob_transaction_count,json=blobTransactionCount,proto3" json:"blob_transaction_count,omitempty" ch:"blob_transaction_count"`
 }
 
 func (x *Eth1BlockIndexed) Reset() {
@@ -1086,14 +1086,14 @@ type Eth1UncleIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockNumber uint64                 `protobuf:"varint,1,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	Number      uint64                 `protobuf:"varint,2,opt,name=number,proto3" json:"number,omitempty"`
-	GasLimit    uint64                 `protobuf:"varint,3,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-	GasUsed     uint64                 `protobuf:"varint,4,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty"`
-	BaseFee     []byte                 `protobuf:"bytes,5,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty"`
-	Difficulty  []byte                 `protobuf:"bytes,6,opt,name=difficulty,proto3" json:"difficulty,omitempty"`
-	Time        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=time,proto3" json:"time,omitempty"`
-	Reward      []byte                 `protobuf:"bytes,8,opt,name=reward,proto3" json:"reward,omitempty"`
+	BlockNumber uint64                 `protobuf:"varint,1,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	Number      uint64                 `protobuf:"varint,2,opt,name=number,proto3" json:"number,omitempty" ch:"number"`
+	GasLimit    uint64                 `protobuf:"varint,3,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty" ch:"gas_limit"`
+	GasUsed     uint64                 `protobuf:"varint,4,opt,name=gas_used,json=gasUsed,proto3" json:"gas_used,omitempty" ch:"gas_used"`
+	BaseFee     []byte                 `protobuf:"bytes,5,opt,name=base_fee,json=baseFee,proto3" json:"base_fee,omitempty" ch:"base_fee"`
+	Difficulty  []byte                 `protobuf:"bytes,6,opt,name=difficulty,proto3" json:"difficulty,omitempty" ch:"difficulty"`
+	Time        *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	Reward      []byte                 `protobuf:"bytes,8,opt,name=reward,proto3" json:"reward,omitempty" ch:"reward"`
 }
 
 func (x *Eth1UncleIndexed) Reset() {
@@ -1189,12 +1189,12 @@ type Eth1WithdrawalIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	BlockNumber    uint64                 `protobuf:"varint,1,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	Index          uint64                 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
-	ValidatorIndex uint64                 `protobuf:"varint,3,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty"`
-	Address        []byte                 `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty"`
-	Amount         []byte                 `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	Time           *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=time,proto3" json:"time,omitempty"`
+	BlockNumber    uint64                 `protobuf:"varint,1,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	Index          uint64                 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty" ch:"index"`
+	ValidatorIndex uint64                 `protobuf:"varint,3,opt,name=validator_index,json=validatorIndex,proto3" json:"validator_index,omitempty" ch:"validator_index"`
+	Address        []byte                 `protobuf:"bytes,4,opt,name=address,proto3" json:"address,omitempty" ch:"address"`
+	Amount         []byte                 `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty" ch:"amount"`
+	Time           *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
 }
 
 func (x *Eth1WithdrawalIndexed) Reset() {
@@ -1276,23 +1276,23 @@ type Eth1TransactionIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Hash               []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	BlockNumber        uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	Time               *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=time,proto3" json:"time,omitempty"`
-	MethodId           []byte                 `protobuf:"bytes,4,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
-	From               []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
-	To                 []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
-	Value              []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty"`
-	TxFee              []byte                 `protobuf:"bytes,8,opt,name=tx_fee,json=txFee,proto3" json:"tx_fee,omitempty"`
-	GasPrice           []byte                 `protobuf:"bytes,9,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty"`
-	IsContractCreation bool                   `protobuf:"varint,10,opt,name=is_contract_creation,json=isContractCreation,proto3" json:"is_contract_creation,omitempty"`
+	Hash               []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty" ch:"hash"`
+	BlockNumber        uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	Time               *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	MethodId           []byte                 `protobuf:"bytes,4,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty" ch:"method_id"`
+	From               []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To                 []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	Value              []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
+	TxFee              []byte                 `protobuf:"bytes,8,opt,name=tx_fee,json=txFee,proto3" json:"tx_fee,omitempty" ch:"tx_fee"`
+	GasPrice           []byte                 `protobuf:"bytes,9,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty" ch:"gas_price"`
+	IsContractCreation bool                   `protobuf:"varint,10,opt,name=is_contract_creation,json=isContractCreation,proto3" json:"is_contract_creation,omitempty" ch:"is_contract_creation"`
 	// reserved 11; // bool invokes_contract = 11;
-	InvokesContract bool   `protobuf:"varint,11,opt,name=invokes_contract,json=invokesContract,proto3" json:"invokes_contract,omitempty"`
-	ErrorMsg        string `protobuf:"bytes,12,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
+	InvokesContract bool   `protobuf:"varint,11,opt,name=invokes_contract,json=invokesContract,proto3" json:"invokes_contract,omitempty" ch:"invokes_contract"`
+	ErrorMsg        string `protobuf:"bytes,12,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty" ch:"error_msg"`
 	// EIP 4844
-	BlobTxFee    []byte     `protobuf:"bytes,13,opt,name=blob_tx_fee,json=blobTxFee,proto3" json:"blob_tx_fee,omitempty"`
-	BlobGasPrice []byte     `protobuf:"bytes,14,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty"`
-	Status       StatusType `protobuf:"varint,15,opt,name=status,proto3,enum=types.StatusType" json:"status,omitempty"`
+	BlobTxFee    []byte     `protobuf:"bytes,13,opt,name=blob_tx_fee,json=blobTxFee,proto3" json:"blob_tx_fee,omitempty" ch:"blob_tx_fee"`
+	BlobGasPrice []byte     `protobuf:"bytes,14,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty" ch:"blob_gas_price"`
+	Status       StatusType `protobuf:"varint,15,opt,name=status,proto3,enum=types.StatusType" json:"status,omitempty" ch:"status"`
 }
 
 func (x *Eth1TransactionIndexed) Reset() {
@@ -1437,14 +1437,14 @@ type Eth1InternalTransactionIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ParentHash  []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	BlockNumber uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	Type        string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
-	Time        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty"`
-	From        []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
-	To          []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
-	Value       []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty"`
-	Reverted    bool                   `protobuf:"varint,8,opt,name=reverted,proto3" json:"reverted,omitempty"`
+	ParentHash  []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	BlockNumber uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	Type        string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty" ch:"type"`
+	Time        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	From        []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To          []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	Value       []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
+	Reverted    bool                   `protobuf:"varint,8,opt,name=reverted,proto3" json:"reverted,omitempty" ch:"reverted"`
 }
 
 func (x *Eth1InternalTransactionIndexed) Reset() {
@@ -1541,19 +1541,19 @@ type Eth1BlobTransactionIndexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Hash                []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty"`
-	BlockNumber         uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	Time                *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=time,proto3" json:"time,omitempty"`
-	From                []byte                 `protobuf:"bytes,4,opt,name=from,proto3" json:"from,omitempty"`
-	To                  []byte                 `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`
-	Value               []byte                 `protobuf:"bytes,6,opt,name=value,proto3" json:"value,omitempty"`
-	TxFee               []byte                 `protobuf:"bytes,7,opt,name=tx_fee,json=txFee,proto3" json:"tx_fee,omitempty"`
-	GasPrice            []byte                 `protobuf:"bytes,8,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty"`
-	BlobTxFee           []byte                 `protobuf:"bytes,9,opt,name=blob_tx_fee,json=blobTxFee,proto3" json:"blob_tx_fee,omitempty"`
-	BlobGasPrice        []byte                 `protobuf:"bytes,10,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty"`
-	InvokesContract     bool                   `protobuf:"varint,11,opt,name=invokes_contract,json=invokesContract,proto3" json:"invokes_contract,omitempty"`
-	ErrorMsg            string                 `protobuf:"bytes,12,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty"`
-	BlobVersionedHashes [][]byte               `protobuf:"bytes,13,rep,name=blob_versioned_hashes,json=blobVersionedHashes,proto3" json:"blob_versioned_hashes,omitempty"`
+	Hash                []byte                 `protobuf:"bytes,1,opt,name=hash,proto3" json:"hash,omitempty" ch:"hash"`
+	BlockNumber         uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	Time                *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	From                []byte                 `protobuf:"bytes,4,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To                  []byte                 `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	Value               []byte                 `protobuf:"bytes,6,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
+	TxFee               []byte                 `protobuf:"bytes,7,opt,name=tx_fee,json=txFee,proto3" json:"tx_fee,omitempty" ch:"tx_fee"`
+	GasPrice            []byte                 `protobuf:"bytes,8,opt,name=gas_price,json=gasPrice,proto3" json:"gas_price,omitempty" ch:"gas_price"`
+	BlobTxFee           []byte                 `protobuf:"bytes,9,opt,name=blob_tx_fee,json=blobTxFee,proto3" json:"blob_tx_fee,omitempty" ch:"blob_tx_fee"`
+	BlobGasPrice        []byte                 `protobuf:"bytes,10,opt,name=blob_gas_price,json=blobGasPrice,proto3" json:"blob_gas_price,omitempty" ch:"blob_gas_price"`
+	InvokesContract     bool                   `protobuf:"varint,11,opt,name=invokes_contract,json=invokesContract,proto3" json:"invokes_contract,omitempty" ch:"invokes_contract"`
+	ErrorMsg            string                 `protobuf:"bytes,12,opt,name=error_msg,json=errorMsg,proto3" json:"error_msg,omitempty" ch:"error_msg"`
+	BlobVersionedHashes [][]byte               `protobuf:"bytes,13,rep,name=blob_versioned_hashes,json=blobVersionedHashes,proto3" json:"blob_versioned_hashes,omitempty" ch:"blob_versioned_hashes"`
 }
 
 func (x *Eth1BlobTransactionIndexed) Reset() {
@@ -1684,13 +1684,13 @@ type Eth1ERC20Indexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty"`
-	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty"`
-	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
-	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
-	Value        []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty"`
+	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty" ch:"token_address"`
+	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	Value        []byte                 `protobuf:"bytes,7,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
 }
 
 func (x *Eth1ERC20Indexed) Reset() {
@@ -1779,13 +1779,13 @@ type Eth1ERC721Indexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty"`
-	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty"`
-	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
-	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
-	TokenId      []byte                 `protobuf:"bytes,7,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
+	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty" ch:"token_address"`
+	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	TokenId      []byte                 `protobuf:"bytes,7,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty" ch:"token_id"`
 }
 
 func (x *Eth1ERC721Indexed) Reset() {
@@ -1875,16 +1875,16 @@ type ETh1ERC1155Indexed struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty"`
-	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`
-	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty"`
-	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty"`
-	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
-	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
-	TokenId      []byte                 `protobuf:"bytes,7,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty"`
-	Value        []byte                 `protobuf:"bytes,8,opt,name=value,proto3" json:"value,omitempty"`
+	ParentHash   []byte                 `protobuf:"bytes,1,opt,name=parent_hash,json=parentHash,proto3" json:"parent_hash,omitempty" ch:"parent_hash"`
+	BlockNumber  uint64                 `protobuf:"varint,2,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty" ch:"block_number"`
+	TokenAddress []byte                 `protobuf:"bytes,3,opt,name=token_address,json=tokenAddress,proto3" json:"token_address,omitempty" ch:"token_address"`
+	Time         *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=time,proto3" json:"time,omitempty" ch:"time"`
+	From         []byte                 `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty" ch:"from"`
+	To           []byte                 `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty" ch:"to"`
+	TokenId      []byte                 `protobuf:"bytes,7,opt,name=token_id,json=tokenId,proto3" json:"token_id,omitempty" ch:"token_id"`
+	Value        []byte                 `protobuf:"bytes,8,opt,name=value,proto3" json:"value,omitempty" ch:"value"`
 	// the address approved to make the transfer
-	Operator []byte `protobuf:"bytes,9,opt,name=operator,proto3" json:"operator,omitempty"`
+	Operator []byte `protobuf:"bytes,9,opt,name=operator,proto3" json:"operator,omitempty" ch:"operator"`
 }
 
 func (x *ETh1ERC1155Indexed) Reset() {

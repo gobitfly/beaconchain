@@ -80,6 +80,30 @@ message Eth1Transaction {
     uint64 blob_gas_used = 28;
 }
 
+
+
+message Eth1TransactionIndexed {
+    bytes hash = 1;
+    uint64 block_number = 2; // added
+    google.protobuf.Timestamp time = 3;
+    bytes method_id = 4;// added
+    bytes from = 5;
+    bytes to = 6; // added
+    bytes value = 7;
+    bytes tx_fee = 8; // added
+    bytes gas_price = 9;
+    bool is_contract_creation = 10; // added
+    //    reserved 11; // bool invokes_contract = 11;
+    bool invokes_contract = 11; // added
+    string error_msg = 12;
+
+    // EIP 4844
+    bytes blob_tx_fee = 13;
+    bytes blob_gas_price = 14;
+
+    StatusType status = 15;
+}
+
 message IsContractUpdate {
     bool is_contract = 1;
     bool success = 2;
@@ -162,28 +186,6 @@ enum StatusType {
     FAILED = 0;
     SUCCESS = 1;
     PARTIAL = 2;
-}
-
-message Eth1TransactionIndexed {
-    bytes hash = 1;
-    uint64 block_number = 2;
-    google.protobuf.Timestamp time = 3;
-    bytes method_id = 4;
-    bytes from = 5;
-    bytes to = 6;
-    bytes value = 7;
-    bytes tx_fee = 8;
-    bytes gas_price = 9;
-    bool is_contract_creation = 10;
-//    reserved 11; // bool invokes_contract = 11;
-    bool invokes_contract = 11;
-    string error_msg = 12;
-
-    // EIP 4844
-    bytes blob_tx_fee = 13;
-    bytes blob_gas_price = 14;
-
-    StatusType status = 15;
 }
 
 message Eth1InternalTransactionIndexed {

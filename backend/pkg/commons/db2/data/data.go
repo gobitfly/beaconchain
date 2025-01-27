@@ -2,53 +2,77 @@ package data
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"sort"
-	"strings"
-	"sync"
+	"math/big"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/ethereum/go-ethereum/common"
-	"golang.org/x/exp/maps"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
-type Store struct {
-	db database.Database
+type db interface {
+	Add(table string, rows []any) error
+	Read(query string, scan func(driver.Rows) error) error
+	ClearTable(table string) error
 }
 
-func NewStore(store database.Database) Store {
+type Store struct {
+	db db
+}
+
+func NewStore(db db) Store {
 	return Store{
-		db: store,
+		db: db,
 	}
 }
 
-func (store Store) AddItems(items map[string][]database.Item) error {
+/*func (store Store) AddItems(items map[string][]database.Item) error {
 	return store.db.BulkAdd(items)
 }
-
-func (store Store) AddBlockERC20Transfers(chainID string, transactions []TransferWithIndexes) error {
+*/
+/*func (store Store) AddBlockERC20Transfers(chainID string, transactions []TransferWithIndexes) error {
 	items, err := BlockERC20TransfersToItemsV2(chainID, transactions)
 	if err != nil {
 		return err
 	}
 	return store.db.BulkAdd(items)
-}
+}*/
 
 func (store Store) AddBlockTransactions(chainID string, transactions []*types.Eth1TransactionIndexed) error {
-	items, err := BlockTransactionsToItemsV2(chainID, transactions)
-	if err != nil {
-		return err
+	var dbTransactions []*DBTransaction
+	for i, transaction := range transactions {
+		dbTransactions = append(dbTransactions, &DBTransaction{
+			ChainID:            chainID,
+			TxHash:             hex.EncodeToString(transaction.Hash),
+			TxIndex:            uint64(i),
+			BlockNumber:        transaction.BlockNumber,
+			Timestamp:          transaction.Time.AsTime(),
+			Method:             hex.EncodeToString(transaction.MethodId),
+			From:               hex.EncodeToString(transaction.From),
+			To:                 hex.EncodeToString(transaction.To),
+			Value:              new(big.Int).SetBytes(transaction.Value).String(),
+			TxFee:              new(big.Int).SetBytes(transaction.TxFee),
+			GasPrice:           new(big.Int).SetBytes(transaction.GasPrice).Uint64(),
+			IsContractCreation: transaction.IsContractCreation,
+			ErrorMsg:           transaction.ErrorMsg,
+			BlobTxFee:          new(big.Int).SetBytes(transaction.BlobTxFee),
+			BlobGasPrice:       new(big.Int).SetBytes(transaction.BlobGasPrice).Uint64(),
+			Status:             transaction.Status.String(),
+			Type:               "transaction", // TODO put correct value
+			InsertedAt:         time.Time{},
+		})
 	}
-	return store.db.BulkAdd(items)
+	if err := store.db.Add(TableTransactions, toAnyArray(dbTransactions)); err != nil {
+		return fmt.Errorf("canot add transactions: %w", err)
+	}
+	return nil
 }
 
-func (store Store) Get(addresses []common.Address, prefixes map[string]string, limit int64, opts ...Option) ([]*Interaction, map[string]string, error) {
+func (store Store) Get(addresses []common.Address, prefixes map[string]string, limit int64, opts ...Option) ([]DBTransaction, map[string]string, error) {
 	options := apply(opts)
 
 	filter, err := newQueryFilterV3(options)
@@ -67,7 +91,7 @@ func (store Store) Get(addresses []common.Address, prefixes map[string]string, l
 		return nil, nil, err
 	}
 
-	sort.Sort(byTimeDesc(interactions))
+	/*sort.Sort(byTimeDesc(interactions))
 	if int64(len(interactions)) > limit {
 		interactions = interactions[:limit]
 	}
@@ -79,11 +103,11 @@ func (store Store) Get(addresses []common.Address, prefixes map[string]string, l
 	for i := 0; i < len(interactions); i++ {
 		prefixes[interactions[i].root] = interactions[i].key
 		res = append(res, interactions[i].Interaction)
-	}
-	return res, prefixes, nil
+	}*/
+	return interactions, nil, nil
 }
 
-func (store Store) getBy(addresses []common.Address, prefixes map[string]string, condition filter, databaseOptions []database.Option) ([]*interactionWithInfo, error) {
+/*func (store Store) getBy(addresses []common.Address, prefixes map[string]string, condition filter, databaseOptions []database.Option) ([]*interactionWithInfo, error) {
 	var g errgroup.Group
 	var interactions []*interactionWithInfo
 	var mu sync.Mutex
@@ -144,6 +168,17 @@ func (store Store) getBy(addresses []common.Address, prefixes map[string]string,
 		return nil, err
 	}
 	return interactions, nil
+}
+*/
+
+func (store Store) getBy(addresses []common.Address, prefixes map[string]string, condition filter, databaseOptions []database.Option) ([]DBTransaction, error) {
+	var transactions []DBTransaction
+
+	if err := store.db.Read(fmt.Sprintf(`SELECT * FROM %s`, TableTransactions), database.ScanArray(&transactions)); err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
 }
 
 type interactionWithInfo struct {
@@ -222,4 +257,12 @@ func parseTx(tx *types.Eth1TransactionIndexed) *Interaction {
 		From:    hex.EncodeToString(tx.From),
 		To:      hex.EncodeToString(tx.To),
 	}
+}
+
+func toAnyArray[T any](array []T) []any {
+	ret := make([]any, len(array))
+	for i, v := range array {
+		ret[i] = v
+	}
+	return ret
 }
