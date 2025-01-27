@@ -9,13 +9,16 @@ const close = () => {
 
 const handleToggleNotifications = ({
   id,
+  name,
   value,
 }: {
   id: number,
+  name?: string,
   value: boolean,
 }) => {
   notificationsManagementStore.setNotificationForPairedDevice({
     id,
+    name,
     value,
   })
   const device = notificationsManagementStore.settings.paired_devices.find(device => device.id === id)

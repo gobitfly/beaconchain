@@ -55,14 +55,16 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     ).then(() => {
       // using optimistic ui here to avoid calling the api after delete
       settings.value.paired_devices
-      = [ ...settings.value.paired_devices.filter(device => device.id !== id) ]
+        = [ ...settings.value.paired_devices.filter(device => device.id !== id) ]
     }).then(() => refreshOverview())
   }
   const setNotificationForPairedDevice = async ({
     id,
+    name,
     value,
   }: {
     id: number,
+    name?: string,
     value: boolean,
   }) => {
     await fetch<PutUserNotificationSettingsPairedDevicesResponse>(
@@ -70,7 +72,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         body: {
           is_notifications_enabled: value,
-          name: id,
+          name,
         },
       },
       {
