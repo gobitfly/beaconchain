@@ -50,7 +50,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				emitter ASC,
 				run_id ASC,
 				insert_id DESC
-		), latest_report_per_run as (
+		), latest_report_per_emitter as (
 			SELECT
 				event_id,
 				emitter,
@@ -64,20 +64,8 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				active_reports
 			GROUP BY
 				event_id,
-				emitter,
-				run_id
+				emitter
 			order by insert_id desc
-		), latest_report_per_status as (
-			select 
-				event_id,
-				emitter,
-				status,
-				any(inserted_at) as inserted_at, 
-				any(expires_at) as expires_at,
-				any(timeouts_at) as timeouts_at,
-				any(metadata) AS metadata
-			from latest_report_per_run
-			group by event_id, emitter, status
 		)
 		SELECT
 			event_id,
@@ -97,7 +85,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 						)
 					) as result
 		FROM
-			latest_report_per_status
+			latest_report_per_emitter
 		GROUP BY
 			event_id, 
 			status
