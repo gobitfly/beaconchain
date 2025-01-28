@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"github.com/shopspring/decimal"
 )
@@ -554,9 +557,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	var limit uint64
-	if isUserAdmin(userInfo) {
-		limit = math.MaxUint32 // no limit for admins
-	} else if dashboardLimit >= existingValidatorCount {
+	if dashboardLimit > existingValidatorCount {
 		limit = dashboardLimit - existingValidatorCount
 	}
 
@@ -574,10 +575,25 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 			handleErr(w, r, err)
 			return
 		}
-		if len(validators) > int(limit) {
-			validators = validators[:limit]
+		// get validators that are already in the dashboard
+		existingValidatorsInDashboard, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
+		if err != nil {
+			handleErr(w, r, err)
+			return
 		}
-		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators)
+		// add up to `limit` validators that are not already in the dashboard to the list
+		validatorMap := utils.SliceToMap(existingValidatorsInDashboard)
+		slices.Sort(validators)
+		for i := 0; i < len(validators) && limit > 0; i++ {
+			validator := validators[i]
+			if _, ok := validatorMap[validator]; ok {
+				continue
+			}
+			validatorMap[validator] = struct{}{}
+			limit--
+		}
+		// add validators to dashboard
+		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, slices.Collect(maps.Keys(validatorMap)))
 
 	case req.DepositAddress != "":
 		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
