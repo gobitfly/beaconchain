@@ -803,6 +803,28 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	return result, nil
 }
 
+func (d *DataAccessService) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error) {
+	var result []uint64
+
+	ds := goqu.Dialect("postgres").
+		Select(goqu.L("DISTINCT uvdv.validator_index")).
+		From(goqu.I("users_val_dashboards_validators").As("uvdv")).
+		Where(goqu.L("uvdv.dashboard_id = ?", dashboardId)).
+		Where(goqu.L("uvdv.validator_index = ANY(?)", pq.Array(validators)))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	err = d.alloyReader.SelectContext(ctx, &result, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 // Updates the group for validators already in the dashboard linked to the deposit address.
 // Adds up to limit new validators associated with the deposit address, if not already in the dashboard.
 func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
