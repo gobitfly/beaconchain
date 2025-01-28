@@ -2,11 +2,11 @@
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
+import { useStorage } from '@vueuse/core'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import {
@@ -16,9 +16,14 @@ import {
   SummaryTimeFrames,
 } from '~/types/dashboard/summary'
 
+type ShowAbsoluteValuesStorage = {
+  [dashboardId: string]: boolean,
+}
+
 const {
   dashboardKey,
   isGuestDashboard,
+  isSharedDashboard,
 } = useDashboardKey()
 
 const cursor = ref<Cursor>()
@@ -41,15 +46,17 @@ const {
   temp: tempQuery,
   value: query,
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-
-const showAbsoluteValues = ref<boolean | null>(null)
-
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview, validatorCount,
+  hasValidators, isLargeDashboard, overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
+const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
+
+const storageDashboardKey = computed(() => {
+  return dashboardKey.value || 'guest-dashboard'
+})
 const timeFrames = computed(() =>
   SummaryTimeFrames.map(t => ({
     id: t,
@@ -68,6 +75,20 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
     validatorsSortable: width.value >= 571,
   }
 })
+const searchPlaceholder = computed(() =>
+  $t(
+    isGuestDashboard.value && (groups.value?.length ?? 0) <= 1
+      ? 'dashboard.validator.summary.search_placeholder_public'
+      : 'dashboard.validator.summary.search_placeholder',
+  ),
+)
+
+onMounted(() => {
+  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
+    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
+  }
+})
+
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
     q = query.value
@@ -79,17 +100,34 @@ const loadData = (q?: TableQueryParams) => {
   }
   setQuery(q, true, true)
 }
+const groupNameLabel = (groupId?: number) => {
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
+}
+const onSort = (sort: DataTableSortEvent) => {
+  loadData(setQuerySort(sort, lastQuery?.value))
+}
+const setCursor = (value: Cursor) => {
+  cursor.value = value
+  loadData(setQueryCursor(value, lastQuery?.value))
+}
+const setPageSize = (value: number) => {
+  pageSize.value = value
+  loadData(setQueryPageSize(value, lastQuery?.value))
+}
+const setSearch = (value?: string) => {
+  loadData(setQuerySearch(value, lastQuery?.value))
+}
+const getRowClass = (row: VDBSummaryTableRow) => {
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+    return 'total-row'
+  }
+}
 
-watch(
-  validatorCount,
-  (count) => {
-    if (count !== undefined && showAbsoluteValues.value === null) {
-      showAbsoluteValues.value = count < 100_000
-    }
-  },
-  { immediate: true },
-)
-
+watch(() => overview.value, () => {
+  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
+    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
+  }
+})
 watch(
   [
     dashboardKey,
@@ -116,48 +154,12 @@ watch(
   },
   { immediate: true },
 )
-
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery?.value))
-}
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery?.value))
-}
-
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery?.value))
-}
-
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery?.value))
-}
-
-const getRowClass = (row: VDBSummaryTableRow) => {
-  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
-    return 'total-row'
-  }
-}
-
-const searchPlaceholder = computed(() =>
-  $t(
-    isGuestDashboard.value && (groups.value?.length ?? 0) <= 1
-      ? 'dashboard.validator.summary.search_placeholder_public'
-      : 'dashboard.validator.summary.search_placeholder',
-  ),
-)
 </script>
 
 <template>
   <div>
     <BcTableControl
-      v-model:="showAbsoluteValues"
+      v-model:="showAbsoluteValuesPersisted[storageDashboardKey]"
       :search-placeholder
       @set-search="setSearch"
     >
@@ -244,7 +246,7 @@ const searchPlaceholder = computed(() =>
               </template>
               <template #body="slotProps">
                 <DashboardTableSummaryValidators
-                  :absolute="showAbsoluteValues ?? true"
+                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
                   :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key
@@ -279,7 +281,7 @@ const searchPlaceholder = computed(() =>
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="attestations"
-                  :absolute="showAbsoluteValues ?? true"
+                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -296,7 +298,7 @@ const searchPlaceholder = computed(() =>
                   :class="slotProps.data.className"
                   property="proposals"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValues ?? true"
+                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -313,7 +315,7 @@ const searchPlaceholder = computed(() =>
                   :class="slotProps.data.className"
                   property="reward"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValues ?? true"
+                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
                   :time-frame="selectedTimeFrame"
                   :row="slotProps.data"
                 />
@@ -324,7 +326,7 @@ const searchPlaceholder = computed(() =>
                 :table-visibility="colsVisible"
                 :row="slotProps.data"
                 :time-frame="selectedTimeFrame"
-                :absolute="showAbsoluteValues ?? true"
+                :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
               />
             </template>
             <template #empty>
