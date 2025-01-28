@@ -13,6 +13,7 @@ const validatorSlotVizStore = defineStore('validator_slotViz', () => {
 export function useValidatorSlotVizStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorSlotVizStore())
+  const loading = ref(false)
 
   const slotViz = computed(() => data.value)
 
@@ -21,6 +22,7 @@ export function useValidatorSlotVizStore() {
     if (groups?.length) {
       query = { group_ids: groups.join(',') }
     }
+    loading.value = true
     const res = await fetch<GetValidatorDashboardSlotVizResponse>(
       'DASHBOARD_SLOTVIZ',
       {
@@ -44,11 +46,12 @@ export function useValidatorSlotVizStore() {
     else {
       data.value = res.data
     }
-
+    loading.value = false
     return slotViz.value
   }
 
   return {
+    loading,
     refreshSlotViz,
     slotViz,
   }

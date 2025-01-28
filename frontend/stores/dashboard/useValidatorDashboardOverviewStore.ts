@@ -6,20 +6,20 @@ import type {
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 
-export const useValidatorDashboardOverviewStore = defineStore('validator_overview_store', () => {
-  const overview = ref<null | undefined | VDBOverviewData>()
+export const useValidatorDashboardOverviewStore = defineStore('validator-dashboard-overview', () => {
+  const overview = ref<undefined | VDBOverviewData>()
   const loading = ref(false)
   const { fetch } = useCustomFetch()
   const { clearCache: clearRewardDetails }
     = useAllValidatorDashboardRewardsDetailsStore()
 
   async function refreshOverview(key: DashboardKey) {
-    loading.value = true
     if (!key) {
       overview.value = undefined
       return
     }
     try {
+      loading.value = true
       const res = await fetch<GetValidatorDashboardResponse>(
         'DASHBOARD_OVERVIEW',
         undefined,
@@ -80,9 +80,19 @@ export const useValidatorDashboardOverviewStore = defineStore('validator_overvie
     weekly: (overview.value?.chart_history_seconds?.weekly ?? 0) > 0,
   }))
 
+  const isLargeDashboard = computed(() => {
+    if (!validatorCount.value) return false
+
+    // This amount is a product decision
+    const VALIDATOR_DASHBOARD_SIZE_THRESHOLD = 64
+
+    return validatorCount.value > VALIDATOR_DASHBOARD_SIZE_THRESHOLD
+  })
+
   return {
     hasAbilityCharthistory,
     hasValidators,
+    isLargeDashboard,
     loading,
     overview,
     refreshOverview,

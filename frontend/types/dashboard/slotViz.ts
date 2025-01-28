@@ -1,6 +1,5 @@
 export type SlotVizCategories =
   | 'attestation'
-  | 'initial'
   | 'proposal'
   | 'slashing'
   | 'sync'

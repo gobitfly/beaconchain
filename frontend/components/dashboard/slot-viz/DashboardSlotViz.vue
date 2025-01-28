@@ -1,30 +1,33 @@
 <script setup lang="ts">
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { formatNumber } from '~/utils/format'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 
 const {
-  getSlotFromTimestamp, networkInfo,
-} = useNetworkStore()
-const { t: $t } = useTranslation()
+  dashboardKey,
+} = useDashboardKey()
+const { networkInfo } = useNetworkStore()
+const {
+  loading: loadingSlotViz, refreshSlotViz, slotViz,
+} = useValidatorSlotVizStore()
 const { secondsPerSlot = 12 } = networkInfo.value
 const {
   resetTick, tick,
 } = useInterval(secondsPerSlot)
+const { getSlotFromTimestamp } = useNetworkStore()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  overview, validatorCount,
+  loading: loadingOverview, overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 
 const selectedCategories = ref<SlotVizCategories[]>([])
 const selectedGroupIds = ref<number[]>([])
+const refetchingSlotViz = ref(false)
 
 const activeValidatorGroups = computed(() =>
   overview.value?.groups.filter(group => !!group.count) || [],
 )
-
 const mostRecentScheduledSlotId = computed(() => {
   if (!slotViz.value?.length) {
     return
@@ -47,7 +50,6 @@ const mostRecentScheduledSlotId = computed(() => {
   }
   return id
 })
-
 const currentSlotId = computed(() => {
   // in case of some backend issues Inan want's us to tick in the future ... so let's tick
   return Math.max(
@@ -71,16 +73,16 @@ watch(
     useAsyncData('validator_dashboard_slot_viz', () =>
       refreshSlotViz(dashboardKey.value, selectedGroupIds.value),
     )
-      resetTick()
+    resetTick()
   },
   { immediate: true },
 )
 watch(
   () => tick.value,
   async () => {
-    refetchingSlotVizStoreData.value = true
+    refetchingSlotViz.value = true
     await refreshSlotViz(dashboardKey.value, selectedGroupIds.value)
-    refetchingSlotVizStoreData.value = false
+    refetchingSlotViz.value = false
   },
 )
 </script>
@@ -116,12 +118,23 @@ watch(
 
       <DashboardSlotVizGroupSelector
         v-if="activeValidatorGroups.length > 1"
+        :validator-groups="activeValidatorGroups"
         class="dashboard-slot-viz-group-selector"
         @update-selected-group-ids="(newGroupIdSelection) => selectedGroupIds = newGroupIdSelection"
       />
     </div>
 
     <div
+      v-if="(loadingSlotViz && !refetchingSlotViz) || loadingOverview"
+      class="dashboard-slot-viz-grid-loading-skeleton"
+    >
+      <BcLoadingSpinner
+        loading
+        alignment="center"
+      />
+    </div>
+    <div
+      v-else
       class="dashboard-slot-viz-grid"
     >
       <template
@@ -221,6 +234,10 @@ watch(
       height: 30px;
       gap: var(--padding);
       justify-self: center;
+    }
+
+    &-loading-skeleton {
+      height: 165px
     }
   }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { faEye } from '@fortawesome/pro-solid-svg-icons'
+import { useStorage } from '@vueuse/core'
 import type { MultiBarItem } from '~/types/multiBar'
 import {
   IconSlotAttestation,
@@ -8,46 +9,39 @@ import {
   IconSlotSync,
 } from '#components'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
-import { COOKIE_KEY } from '~/types/cookie'
-
-interface Props {
-  initiallyHideVisible?: boolean,
-}
-const props = defineProps<Props>()
 
 type SlotVizCategoriesStorage = {
   [dashboardId: string]: SlotVizCategories[],
 }
 
 const { t: $t } = useTranslation()
-const { dashboardKey } = useDashboardKey()
+const {
+  dashboardKey, isSharedDashboard,
+} = useDashboardKey()
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const {
+  isLargeDashboard, overview,
+} = storeToRefs(validatorDashboardOverviewStore)
 
-const persistedSlotVizCategories = useCookie<SlotVizCategoriesStorage>('selected-slotviz-categories', { default: () => ref({}) })
+const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-dashboard-slot-viz-visibile-categories', {})
 
 const emit = defineEmits<{ (e: 'updateCategories', value: SlotVizCategories[]): void }>()
 
-const selectedCategories = useCookie<SlotVizCategories[]>(
-  COOKIE_KEY.SLOT_VIZ_SELECTED_CATEGORIES,
-  {
-    default: () => [
-      'attestation',
-      'proposal',
-      'slashing',
-      'sync',
-      'visible',
-      'initial',
-    ],
-  },
-)
+const storageDashboardKey = computed(() => {
+  return dashboardKey.value || 'guest-dashboard'
+})
+const selectedCategories = computed(() => {
+  const categories: SlotVizCategories[] = [
+    'attestation',
+    'proposal',
+    'slashing',
+    'sync',
+  ]
 
-watch(() => persistedSlotVizCategories.value[dashboardKey.value],
-  () => {
-    if (persistedSlotVizCategories.value[dashboardKey.value]) {
-      emit('updateCategories', persistedSlotVizCategories.value[dashboardKey.value])
-    }
-  },
-)
+  if (!isSharedDashboard.value || !isLargeDashboard.value) categories.push('visible')
 
+  return categories
+})
 const icons: MultiBarItem[] = [
   {
     component: IconSlotBlockProposal,
@@ -77,27 +71,21 @@ const icons: MultiBarItem[] = [
   },
 ]
 
-watch(
-  () => props,
-  () => {
-    if (props.initiallyHideVisible !== undefined) {
-      const initialIndex = selectedCategories.value.indexOf('initial')
-      if (initialIndex < 0) {
-        return
-      }
-      const categories = selectedCategories.value
-      if (props.initiallyHideVisible) {
-        categories.splice(initialIndex, 1)
-        const visibleIndex = categories.indexOf('visible')
-        if (visibleIndex >= 0) {
-          categories.splice(visibleIndex, 1)
-        }
-      }
-      else {
-        categories.splice(initialIndex, 1, 'visible')
-      }
+onMounted(() => {
+  if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
+    persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
+  }
+})
 
-      selectedCategories.value = categories
+watch(() => overview.value, () => {
+  if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
+    persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
+  }
+})
+watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
+  () => {
+    if (persistedSelectedCategories.value[storageDashboardKey.value]) {
+      emit('updateCategories', persistedSelectedCategories.value[storageDashboardKey.value])
     }
   },
   { immediate: true },
@@ -105,19 +93,24 @@ watch(
 </script>
 
 <template>
-  <BcToggleMultiBar
-    v-model="selectedCategories"
-    :buttons="icons"
-  />
+  <div>
+    <div
+      v-if="!persistedSelectedCategories[storageDashboardKey]"
+      class="dashboard-slot-viz-duty-toggle-loading-skeleton"
+    >
+      <div class="dashboard-slot-viz-duty-toggle-loading-skeleton-content" />
+    </div>
+    <ClientOnly v-else>
+      <BcToggleMultiBar
+        v-model="persistedSelectedCategories[storageDashboardKey]"
+        :buttons="icons"
+      />
+    </ClientOnly>
+  </div>
 </template>
 
 <style lang="scss" scoped>
 @use "~/assets/css/main.scss";
- .dashboard-slot-viz-duty-toggle-loading-skeleton {
-   @include main.container;
-  height: 46px;
-  width: 196px;
- }
 
 :deep(.visible-icon) {
   margin-left: 4px;
@@ -132,5 +125,28 @@ watch(
   width: 1px;
   position: absolute;
   left: -5px;
+}
+
+.dashboard-slot-viz-duty-toggle-loading-skeleton {
+   @include main.container;
+  height: 46px;
+  width: 196px;
+  padding: 7px 10px;
+  animation: pulse 1.2s infinite;
+
+  &-content {
+    width: 100%;
+    height: 100%;
+    background-color: var(--container-border-color);
+    border-radius: var(--border-radius);
+  }
+
+  // this keyframe imitates Tailwind's 'pulse' animation until we install it.
+  // https://tailwindcss.com/docs/animation
+  @keyframes pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
 }
 </style>
