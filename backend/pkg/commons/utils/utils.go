@@ -241,10 +241,10 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 	}
 }
 
-func SliceToMap[T comparable](s []T) map[T]bool {
-	m := make(map[T]bool)
+func SliceToMap[T comparable](s []T) map[T]struct{} {
+	m := make(map[T]struct{})
 	for _, v := range s {
-		m[v] = true
+		m[v] = struct{}{}
 	}
 	return m
 }
