@@ -25,16 +25,6 @@ const {
   isGuestDashboard,
   isSharedDashboard,
 } = useDashboardKey()
-
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
-const { t: $t } = useTranslation()
-const chartFilter = ref<SummaryChartFilter>({
-  aggregation: 'hourly',
-  efficiency: 'all',
-  groupIds: [],
-})
-
 const {
   getSummary,
   isLoading,
@@ -51,21 +41,29 @@ const {
   hasValidators, isLargeDashboard, overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
-
-const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
-
+const { width } = useWindowSize()
 const storageDashboardKey = computed(() => {
   return dashboardKey.value || 'guest-dashboard'
 })
+
+const cursor = ref<Cursor>()
+const pageSize = ref<number>(10)
+const { t: $t } = useTranslation()
+const chartFilter = ref<SummaryChartFilter>({
+  aggregation: 'hourly',
+  efficiency: 'all',
+  groupIds: [],
+})
+const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
+const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
+
 const timeFrames = computed(() =>
   SummaryTimeFrames.map(t => ({
     id: t,
     name: $t(`time_frames.${t}`),
   })),
 )
-const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
 
-const { width } = useWindowSize()
 const colsVisible = computed<SummaryTableVisibility>(() => {
   return {
     attestations: width.value >= 1015,
@@ -82,13 +80,6 @@ const searchPlaceholder = computed(() =>
       : 'dashboard.validator.summary.search_placeholder',
   ),
 )
-
-onMounted(() => {
-  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
-    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
-  }
-})
-
 const loadData = (q?: TableQueryParams) => {
   if (!q) {
     q = query.value
@@ -123,6 +114,12 @@ const getRowClass = (row: VDBSummaryTableRow) => {
   }
 }
 
+onMounted(() => {
+  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
+    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
+  }
+})
+
 watch(() => overview.value, () => {
   if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
     showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
@@ -138,7 +135,6 @@ watch(
   },
   { immediate: true },
 )
-
 watch(
   [
     query,
