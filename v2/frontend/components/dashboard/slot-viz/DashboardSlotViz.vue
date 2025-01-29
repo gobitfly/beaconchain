@@ -171,8 +171,10 @@ watch(
 .dashboard-slot-viz {
   @include main.container;
   position: relative;
-  padding: var(--padding-large);
+  padding-top: var(--padding-large);
   padding-bottom: var(--padding);
+  padding-left: var(--padding-small);
+  padding-right: var(--padding);
 
   &-header {
     display: grid;
