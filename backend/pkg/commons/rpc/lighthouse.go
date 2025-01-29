@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"bytes"
-	"encoding/hex"
 	"net/http"
 
 	"fmt"
@@ -661,12 +660,6 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 					Status:                     string(validator.Status),
 				})
 			}
-
-			log.Infof("retrieving execution requests queue info for epoch %d", epoch)
-			block.QueuedExecutionRequest, block.ProcessedExecutionRequests, err = lc.GetExecutionRequestsFromState(epoch)
-			if err != nil {
-				return nil, fmt.Errorf("error retrieving execution requests for epoch %v: %w", epoch, err)
-			}
 		}
 
 		return block, nil
@@ -728,12 +721,6 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 				Status:                     string(validator.Status),
 			})
 		}
-
-		log.Infof("retrieving execution requests queue info for epoch %d", epoch)
-		block.QueuedExecutionRequest, block.ProcessedExecutionRequests, err = lc.GetExecutionRequestsFromState(epoch)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving execution requests for epoch %v: %w", epoch, err)
-		}
 	}
 
 	lc.slotsCacheMux.Lock()
@@ -741,142 +728,6 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	lc.slotsCacheMux.Unlock()
 
 	return block, nil
-}
-
-// GetExecutionRequestsFromState will get the execution requests from state from Lighthouse RPC api
-func (lc *LighthouseClient) GetExecutionRequestsFromState(epoch uint64) (*types.ExecutionRequests, *types.ExecutionRequests, error) {
-	queuedExecutionRequests := &types.ExecutionRequests{
-		Consolidations: make([]*types.ConsolidationExecutionRequest, 0),
-		Withdrawals:    make([]*types.WithdrawalExecutionRequest, 0),
-		Deposits:       make([]*types.DepositExecutionRequest, 0),
-	}
-	processedExecutionRequests := &types.ExecutionRequests{
-		Consolidations: make([]*types.ConsolidationExecutionRequest, 0),
-		Withdrawals:    make([]*types.WithdrawalExecutionRequest, 0),
-		Deposits:       make([]*types.DepositExecutionRequest, 0),
-	}
-
-	if epoch == 0 {
-		return queuedExecutionRequests, processedExecutionRequests, nil
-	}
-
-	lastSlotOfPreviousEpoch := epoch*utils.Config.ClConfig.SlotsPerEpoch - 1
-	firstSlotOfEpoch := epoch * utils.Config.ClConfig.SlotsPerEpoch
-
-	log.Infof("epoch:%d, lastSlotOfPreviousEpoch:%d, firstSlotOfEpoch:%d", epoch, lastSlotOfPreviousEpoch, firstSlotOfEpoch)
-	stateAtLastSlotOfPreviousEpoch, err := lc.GetStandardBeaconState(lastSlotOfPreviousEpoch)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting stateAtLastSlotOfPreviousEpoch: %w", err)
-	}
-
-	indexToPubkeyMap := make(map[uint64][]byte)
-	for i, validator := range stateAtLastSlotOfPreviousEpoch.Data.Validators {
-		indexToPubkeyMap[uint64(i)] = validator.Pubkey
-	}
-
-	pubkeyToIndexMap := make(map[string]uint64)
-	for i, validator := range stateAtLastSlotOfPreviousEpoch.Data.Validators {
-		pubkeyToIndexMap[hex.EncodeToString(validator.Pubkey)] = uint64(i)
-	}
-
-	stateAtFirstSlotOfEpoch, err := lc.GetStandardBeaconState(firstSlotOfEpoch)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting stateAtFirstSlotOfEpoch: %w", err)
-	}
-
-	for _, cr := range stateAtLastSlotOfPreviousEpoch.Data.PendingConsolidations {
-		queuedExecutionRequests.Consolidations = append(queuedExecutionRequests.Consolidations, &types.ConsolidationExecutionRequest{
-			SourceIndex:  cr.SourceIndex,
-			SourcePubkey: indexToPubkeyMap[cr.SourceIndex],
-			TargetIndex:  cr.TargetIndex,
-			TargetPubkey: indexToPubkeyMap[cr.TargetIndex],
-		})
-		// check if the cr is also present in the state of the first slot of the epoch
-		found := false
-		for _, cr2 := range stateAtFirstSlotOfEpoch.Data.PendingConsolidations {
-			if cr.SourceIndex == cr2.SourceIndex && cr.TargetIndex == cr2.TargetIndex {
-				found = true
-				break
-			}
-		}
-		if !found {
-			// source_effective_balance = min(state.balances[pending_consolidation.source_index], source_validator.effective_balance)
-			amountConsolidated := uint64(0)
-			if stateAtFirstSlotOfEpoch.Data.Balances[cr.SourceIndex] == 0 {
-				amountConsolidated = uint64(stateAtLastSlotOfPreviousEpoch.Data.Balances[cr.SourceIndex])
-				if amountConsolidated > stateAtLastSlotOfPreviousEpoch.Data.Validators[cr.SourceIndex].EffectiveBalance {
-					amountConsolidated = stateAtLastSlotOfPreviousEpoch.Data.Validators[cr.SourceIndex].EffectiveBalance
-				}
-			}
-			log.Infof("CR %d -> %d was processed in epoch %d, consolidation amount: %d", cr.SourceIndex, cr.TargetIndex, epoch, amountConsolidated)
-			processedExecutionRequests.Consolidations = append(processedExecutionRequests.Consolidations, &types.ConsolidationExecutionRequest{
-				SourceIndex:        cr.SourceIndex,
-				SourcePubkey:       indexToPubkeyMap[cr.SourceIndex],
-				TargetIndex:        cr.TargetIndex,
-				TargetPubkey:       indexToPubkeyMap[cr.TargetIndex],
-				AmountConsolidated: amountConsolidated,
-			})
-		}
-	}
-
-	for _, wr := range stateAtLastSlotOfPreviousEpoch.Data.PendingPartialWithdrawals {
-		queuedExecutionRequests.Withdrawals = append(queuedExecutionRequests.Withdrawals, &types.WithdrawalExecutionRequest{
-			ValidatorIndex:    wr.ValidatorIndex,
-			ValidatorPubkey:   indexToPubkeyMap[wr.ValidatorIndex],
-			Amount:            wr.Amount,
-			WithdrawableEpoch: wr.WithdrawableEpopch,
-		})
-		found := false
-		for _, wr2 := range stateAtFirstSlotOfEpoch.Data.PendingPartialWithdrawals {
-			if wr.ValidatorIndex == wr2.ValidatorIndex && wr.Amount == wr2.Amount && wr.WithdrawableEpopch == wr2.WithdrawableEpopch {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			log.Infof("withdrawal request of %d from validator %d was processed in epoch %d", wr.Amount, wr.ValidatorIndex, epoch)
-			log.Infof("balances of validator %d: %d -> %d", wr.ValidatorIndex, stateAtLastSlotOfPreviousEpoch.Data.Balances[wr.ValidatorIndex], stateAtFirstSlotOfEpoch.Data.Balances[wr.ValidatorIndex])
-			processedExecutionRequests.Withdrawals = append(processedExecutionRequests.Withdrawals, &types.WithdrawalExecutionRequest{
-				ValidatorIndex:    wr.ValidatorIndex,
-				ValidatorPubkey:   indexToPubkeyMap[wr.ValidatorIndex],
-				Amount:            wr.Amount,
-				WithdrawableEpoch: wr.WithdrawableEpopch,
-			})
-		}
-	}
-
-	for _, dr := range stateAtLastSlotOfPreviousEpoch.Data.PendingDeposits {
-		queuedExecutionRequests.Deposits = append(queuedExecutionRequests.Deposits, &types.DepositExecutionRequest{
-			Pubkey:                dr.Pubkey,
-			WithdrawalCredentials: dr.WithdrawalCredentials,
-			Amount:                dr.Amount,
-			Signature:             dr.Signature,
-			Index:                 pubkeyToIndexMap[hex.EncodeToString(dr.Pubkey)],
-			SlotFromState:         dr.Slot,
-		})
-		found := false
-		for _, dr2 := range stateAtFirstSlotOfEpoch.Data.PendingDeposits {
-			if bytes.Equal(dr.Pubkey, dr2.Pubkey) && bytes.Equal(dr.Signature, dr2.Signature) && bytes.Equal(dr.WithdrawalCredentials, dr2.WithdrawalCredentials) && dr.Slot == dr2.Slot && dr.Amount == dr2.Amount {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			log.Infof("deposit of %d from validator %x was processed in epoch %d", dr.Amount, dr.Pubkey, epoch)
-			processedExecutionRequests.Deposits = append(processedExecutionRequests.Deposits, &types.DepositExecutionRequest{
-				Pubkey:                dr.Pubkey,
-				WithdrawalCredentials: dr.WithdrawalCredentials,
-				Amount:                dr.Amount,
-				Signature:             dr.Signature,
-				Index:                 pubkeyToIndexMap[hex.EncodeToString(dr.Pubkey)],
-				SlotFromState:         dr.Slot,
-			})
-		}
-	}
-
-	return queuedExecutionRequests, processedExecutionRequests, nil
 }
 
 func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardBeaconHeaderResponse, parsedResponse *constypes.StandardBeaconSlotResponse) (*types.Block, error) {

@@ -153,33 +153,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 	}
 	defer stmtProposalAssignments.Close()
 
-	stmtConsolidationExecutionRequest, err := tx.Prepare(`
-		INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_address, source_pubkey, target_pubkey)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
-	if err != nil {
-		return fmt.Errorf("error preparing stmtConsolidationExecutionRequest: %w", err)
-	}
-	defer stmtConsolidationExecutionRequest.Close()
-
-	stmtWithdrawalExecutionRequest, err := tx.Prepare(`
-		INSERT INTO blocks_withdrawal_requests (block_slot, block_root, request_index, source_address, validator_pubkey, amount)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
-	if err != nil {
-		return fmt.Errorf("error preparing stmtWithdrawalExecutionRequest: %w", err)
-	}
-	defer stmtWithdrawalExecutionRequest.Close()
-
-	stmtDepositExecutionRequest, err := tx.Prepare(`
-		INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature, index)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (block_slot, block_root, request_index) DO NOTHING`)
-	if err != nil {
-		return fmt.Errorf("error preparing stmtDepositExecutionRequest: %w", err)
-	}
-	defer stmtDepositExecutionRequest.Close()
-
 	slots := make([]uint64, 0, len(blocks))
 	for slot := range blocks {
 		slots = append(slots, slot)
@@ -388,30 +361,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			_, err = stmtProposalAssignments.Exec(b.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, b.Proposer, b.Slot, b.Status)
 			if err != nil {
 				return fmt.Errorf("error executing stmtProposalAssignments for block %v: %w", b.Slot, err)
-			}
-
-			for i, c := range b.ExecutionRequests.Consolidations {
-				_, err := stmtConsolidationExecutionRequest.Exec(b.Slot, b.BlockRoot, i, c.SourceAddress, c.SourcePubkey, c.TargetPubkey)
-				if err != nil {
-					return fmt.Errorf("error executing stmtConsolidationExecutionRequest for block %v index %v: %w", b.Slot, i, err)
-				}
-			}
-
-			for i, w := range b.ExecutionRequests.Withdrawals {
-				if w.Amount > db.MaxSqlNumber {
-					w.Amount = db.MaxSqlNumber
-				}
-				_, err := stmtWithdrawalExecutionRequest.Exec(b.Slot, b.BlockRoot, i, w.SourceAddress, w.ValidatorPubkey, w.Amount)
-				if err != nil {
-					return fmt.Errorf("error executing stmtWithdrawalExecutionRequest for block %v index %v: %w", b.Slot, i, err)
-				}
-			}
-
-			for i, d := range b.ExecutionRequests.Deposits {
-				_, err := stmtDepositExecutionRequest.Exec(b.Slot, b.BlockRoot, i, d.Pubkey, d.WithdrawalCredentials, d.Amount, d.Signature, d.Index)
-				if err != nil {
-					return fmt.Errorf("error executing stmtDepositExecutionRequest for block %v index %v: %w", b.Slot, i, err)
-				}
 			}
 
 			// save the graffitiwall data of the block the db

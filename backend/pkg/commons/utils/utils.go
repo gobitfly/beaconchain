@@ -406,3 +406,10 @@ func FirstN(input string, n int) string {
 	}
 	return input[:n]
 }
+
+func Min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
