@@ -7,6 +7,7 @@ import (
 	"maps"
 	"math"
 	"net/http"
+	"regexp"
 	"slices"
 	"time"
 
@@ -565,59 +566,16 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	var dataErr error
 	switch {
 	case req.Validators != nil:
-		indices, pubkeys := v.checkValidators(req.Validators, forbidEmpty)
-		if v.hasErrors() {
-			handleErr(w, r, v)
-			return
-		}
-		validators, err := h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, indices, pubkeys)
-		if err != nil {
-			handleErr(w, r, err)
-			return
-		}
-		// get validators that are already in the dashboard
-		existingValidatorsInDashboard, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
-		if err != nil {
-			handleErr(w, r, err)
-			return
-		}
-		// add up to `limit` validators that are not already in the dashboard to the list
-		validatorMap := utils.SliceToMap(existingValidatorsInDashboard)
-		slices.Sort(validators)
-		for i := 0; i < len(validators) && limit > 0; i++ {
-			validator := validators[i]
-			if _, ok := validatorMap[validator]; ok {
-				continue
-			}
-			validatorMap[validator] = struct{}{}
-			limit--
-		}
-		// add validators to dashboard
-		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, slices.Collect(maps.Keys(validatorMap)))
+		data, dataErr = h.addValidatorDashboardValidatorsBySlice(r, dashboardId, groupId, limit, req.Validators)
 
 	case req.DepositAddress != "":
-		depositAddress := v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
-		if v.hasErrors() {
-			handleErr(w, r, v)
-			return
-		}
-		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByDepositAddress(ctx, dashboardId, groupId, depositAddress, limit)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByDepositAddress)
 
 	case req.WithdrawalCredential != "":
-		withdrawalCredential := v.checkRegex(reWithdrawalCredential, req.WithdrawalCredential, "withdrawal_credential")
-		if v.hasErrors() {
-			handleErr(w, r, v)
-			return
-		}
-		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByWithdrawalCredential(ctx, dashboardId, groupId, withdrawalCredential, limit)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByWithdrawalCredential)
 
 	case req.Graffiti != "":
-		graffiti := v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
-		if v.hasErrors() {
-			handleErr(w, r, v)
-			return
-		}
-		data, dataErr = h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByGraffiti(ctx, dashboardId, groupId, graffiti, limit)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByGraffiti)
 	}
 
 	if dataErr != nil {
@@ -629,6 +587,55 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	}
 
 	returnCreated(w, r, response)
+}
+
+func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request, dashboardId types.VDBIdPrimary, groupId uint64, limit uint64, validatorsParam []intOrString) ([]types.VDBPostValidatorsData, error) {
+	var v validationError
+	indices, pubkeys := v.checkValidators(validatorsParam, forbidEmpty)
+	if v.hasErrors() {
+		return nil, v
+	}
+	ctx := r.Context()
+	validators, err := h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, indices, pubkeys)
+	if err != nil {
+		return nil, err
+	}
+	// get validators that are already in the dashboard
+	existingValidatorsInDashboard, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
+	if err != nil {
+		return nil, err
+	}
+	// add up to `limit` validators that are not already in the dashboard to the list
+	validatorMap := utils.SliceToMap(existingValidatorsInDashboard)
+	slices.Sort(validators)
+	for i := 0; i < len(validators) && limit > 0; i++ {
+		validator := validators[i]
+		if _, ok := validatorMap[validator]; ok {
+			continue
+		}
+		validatorMap[validator] = struct{}{}
+		limit--
+	}
+	// add validators to dashboard
+	return h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, slices.Collect(maps.Keys(validatorMap)))
+}
+
+func (h *HandlerService) addValidatorDashboardValidators(
+	r *http.Request,
+	dashboardId types.VDBIdPrimary,
+	groupId uint64,
+	limit uint64,
+	param string,
+	paramName string,
+	validationRegex *regexp.Regexp,
+	addFunc func(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]types.VDBPostValidatorsData, error),
+) ([]types.VDBPostValidatorsData, error) {
+	var v validationError
+	validatedParam := v.checkRegex(validationRegex, param, paramName)
+	if v.hasErrors() {
+		return nil, v
+	}
+	return addFunc(r.Context(), dashboardId, groupId, validatedParam, limit)
 }
 
 // PublicGetValidatorDashboardValidators godoc
