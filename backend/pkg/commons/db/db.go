@@ -2504,3 +2504,73 @@ func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 	}
 	return nil
 }
+
+func HasEventsForEpoch(epoch uint64) (bool, error) {
+	if epoch == 0 {
+		return true, nil
+	}
+
+	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+	var count uint64
+	err := ReaderDb.Get(&count, `
+		SELECT 
+			COUNT(*) 
+		FROM 
+			consensus_layer_events 
+		WHERE 
+			slot >= $1 AND slot <= $2`, firstSlot, lastSlot)
+	if err != nil {
+		return false, fmt.Errorf("error checking for events for epoch: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+func TransformConsolidationsAndDeposits(epoch uint64, tx *sqlx.Tx) (int64, int64, error) {
+	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+
+	res, err := tx.Exec(`
+	insert into blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
+		SELECT
+				slot AS slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				(data->>'source_index')::int AS source_index,
+				(data->>'target_index')::int AS target_index,
+				(data->>'amount')::bigint AS amount_consolidated
+			FROM consensus_layer_events WHERE event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	_, err = tx.Exec(`
+	INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature)
+		SELECT
+				slot AS block_slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				decode((data->>'pubkey'), 'base64') AS pubkey,
+				decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
+				(data->>'amount')::bigint AS amount,
+				decode((data->>'signature'), 'base64')::bytea AS signature
+		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error transforming deposit requests: %w", err)
+	}
+
+	depositRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, depositRequestsProcessed, nil
+}

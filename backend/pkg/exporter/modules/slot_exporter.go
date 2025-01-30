@@ -354,8 +354,24 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		epoch := utils.EpochOfSlot(block.Slot)
 
-		log.Infof("exporting duties & balances for epoch %v", epoch)
+		log.Infof("checking that events have been loaded for epoch %v", epoch)
+		for ; ; time.Sleep(time.Second) {
+			exported, err := db.HasEventsForEpoch(epoch)
+			if err != nil {
+				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
+			}
+			if exported {
+				break
+			}
+		}
+		log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
+		consolidationRequestsProcessed, depositRequestsProcessed, err := db.TransformConsolidationsAndDeposits(epoch, tx)
+		if err != nil {
+			return fmt.Errorf("error transforming consolidations & deposits for epoch %v: %w", epoch, err)
+		}
+		log.Infof("transformed consolidations & deposits for epoch %v, processed %v consolidation requests and %v deposit requests", epoch, consolidationRequestsProcessed, depositRequestsProcessed)
 
+		log.Infof("exporting duties & balances for epoch %v", epoch)
 		// prepare the duties for export to bigtable
 		syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
 		attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
@@ -640,12 +656,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		err = g.Wait()
 		if err != nil {
 			return err
-		}
-
-		// save the execution layer request status
-		err = edb.SaveExecutionLayerRequestStatus(epoch, block, tx)
-		if err != nil {
-			return fmt.Errorf("error saving execution layer request status: %w", err)
 		}
 
 		// save the epoch metadata to the database
