@@ -2527,10 +2527,7 @@ func HasEventsForEpoch(epoch uint64) (bool, error) {
 	return count > 0, nil
 }
 
-func TransformConsolidationsAndDeposits(epoch uint64, tx *sqlx.Tx) (int64, int64, error) {
-	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
-
+func TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	res, err := tx.Exec(`
 	insert into blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
 		SELECT
@@ -2543,15 +2540,19 @@ func TransformConsolidationsAndDeposits(epoch uint64, tx *sqlx.Tx) (int64, int64
 			FROM consensus_layer_events WHERE event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
 	`, firstSlot, lastSlot)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
 	}
 
 	consolidationRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
-		return 0, 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
 	}
 
-	_, err = tx.Exec(`
+	return consolidationRequestsProcessed, nil
+}
+
+func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
 	INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature)
 		SELECT
 				slot AS block_slot,
@@ -2564,13 +2565,13 @@ func TransformConsolidationsAndDeposits(epoch uint64, tx *sqlx.Tx) (int64, int64
 		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
 `, firstSlot, lastSlot)
 	if err != nil {
-		return 0, 0, fmt.Errorf("error transforming deposit requests: %w", err)
+		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
 	}
 
 	depositRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
-		return 0, 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
+		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
 	}
 
-	return consolidationRequestsProcessed, depositRequestsProcessed, nil
+	return depositRequestsProcessed, nil
 }

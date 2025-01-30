@@ -363,13 +363,26 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			if exported {
 				break
 			}
+			log.Infof("events for epoch %v have not been loaded yet, waiting", epoch)
 		}
 		log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
-		consolidationRequestsProcessed, depositRequestsProcessed, err := db.TransformConsolidationsAndDeposits(epoch, tx)
-		if err != nil {
-			return fmt.Errorf("error transforming consolidations & deposits for epoch %v: %w", epoch, err)
+
+		if epoch > 0 {
+			firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+			lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+
+			consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
+			if err != nil {
+				return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+			}
+
+			depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
+			if err != nil {
+				return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
+			}
+
+			log.Infof("transformed consolidations & deposits for epoch %v, processed %v consolidation requests and %v deposit requests", epoch, consolidationRequestsProcessed, depositRequestsProcessed)
 		}
-		log.Infof("transformed consolidations & deposits for epoch %v, processed %v consolidation requests and %v deposit requests", epoch, consolidationRequestsProcessed, depositRequestsProcessed)
 
 		log.Infof("exporting duties & balances for epoch %v", epoch)
 		// prepare the duties for export to bigtable
