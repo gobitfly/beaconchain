@@ -494,6 +494,163 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	return result, &paging, nil
 }
 
+func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context, dashboardId t.VDBId, groupId int64) (time.Time, time.Time, error) {
+	// we need to go to the all time table for last scheduled block/sync committee epoch
+	clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
+			goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
+
+	if dashboardId.Validators == nil {
+		ds = ds.
+			With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
+	} else {
+		ds = ds.
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	var row struct {
+		LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
+		LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
+	}
+	err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
+		return time.Time{}, time.Time{}, nil
+	}
+
+	return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
+		utils.EpochToTime(uint64(*row.LastSyncEpoch)),
+		nil
+}
+
+func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, clickhouseTable string) (uint64, uint64, error) {
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("MIN(epoch_start) as min_epoch_start"),
+			goqu.L("MAX(epoch_end) as max_epoch_end")).
+		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+
+	if dashboardId.Validators == nil {
+		ds = ds.
+			With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
+	} else {
+		ds = ds.
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	var epoch_row struct {
+		MinEpochStart *uint64 `db:"min_epoch_start"`
+		MaxEpochEnd   *uint64 `db:"max_epoch_end"`
+	}
+	err = d.clickhouseReader.GetContext(ctx, &epoch_row, query, args...)
+	if err != nil {
+		return 0, 0, err
+	}
+	return *epoch_row.MinEpochStart, *epoch_row.MaxEpochEnd, nil
+}
+
+func (d *DataAccessService) getMissedELRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epochStart, epochEnd uint64) (float64, error) {
+	// Initialize the result variable
+	var totalMissedRewardsEl float64
+
+	// Define the `targets` CTE
+	targets := goqu.Dialect("postgres").
+		From("blocks").
+		Select(goqu.I("blocks.slot").As("slot")).
+		Where(
+			goqu.I("blocks.status").Neq("1"),
+			goqu.I("epoch").Gte(epochStart),
+			goqu.I("epoch").Lte(epochEnd),
+		)
+
+	if dashboardId.Validators == nil {
+		targets = targets.
+			Join(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(goqu.I("blocks.proposer").Eq(goqu.I("uvdv.validator_index"))),
+			).
+			Where(
+				goqu.And(
+					goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id),
+					goqu.Or(
+						goqu.I("uvdv.group_id").Eq(groupId),
+						goqu.L("?::smallint = -1", groupId),
+					),
+				),
+			)
+	} else {
+		targets = targets.
+			Where(
+				goqu.I("blocks.proposer").In(dashboardId.Validators),
+			)
+	}
+
+	slots := utils.Config.Chain.ClConfig.SlotsPerEpoch / 2
+
+	// Define the `res` CTE
+	res := goqu.
+		From("targets").
+		LeftJoin(
+			goqu.T("execution_rewards_finalized").As("b"),
+			goqu.On(
+				goqu.L(fmt.Sprintf(
+					`"b"."slot" >= "targets"."slot" - %d AND "b"."slot" < "targets"."slot" + %d`,
+					slots, slots,
+				)),
+			),
+		).
+		Select(
+			goqu.I("targets.slot"),
+			goqu.L("percentile_cont(0.5) WITHIN GROUP (ORDER BY b.value)::numeric(76,0)").As("v"),
+		).
+		GroupBy(goqu.I("targets.slot"))
+
+	// Build the final query
+	query := goqu.From("res").
+		With("targets", targets).
+		With("res", res).
+		Select(goqu.L("COALESCE(SUM(v), 0)"))
+
+	// Generate SQL and arguments
+	sql, args, err := query.Prepared(true).ToSQL()
+	if err != nil {
+		return 0, fmt.Errorf("failed to generate SQL: %w", err)
+	}
+
+	// Execute the query with the generated SQL and arguments
+	err = d.readerDb.GetContext(ctx, &totalMissedRewardsEl, sql, args...)
+	if err != nil {
+		return 0, fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	// Return the computed total median rewards
+	return totalMissedRewardsEl, nil
+}
+
 func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
 	// TODO: implement data retrieval for the following new field
 	// Fetch validator list for user dashboard from the dashboard table when querying the past sync committees as the rolling table might miss exited validators
@@ -520,163 +677,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	clickhouseTable, hours, err := d.getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
-	}
-
-	getMinMaxEpochs := func() (uint64, uint64, error) {
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("MIN(epoch_start) as min_epoch_start"),
-				goqu.L("MAX(epoch_end) as max_epoch_end")).
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
-
-		if dashboardId.Validators == nil {
-			ds = ds.
-				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
-		} else {
-			ds = ds.
-				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		var epoch_row struct {
-			MinEpochStart *uint64 `db:"min_epoch_start"`
-			MaxEpochEnd   *uint64 `db:"max_epoch_end"`
-		}
-		err = d.clickhouseReader.GetContext(ctx, &epoch_row, query, args...)
-		if err != nil {
-			return 0, 0, err
-		}
-		return *epoch_row.MinEpochStart, *epoch_row.MaxEpochEnd, nil
-	}
-
-	getMissedELRewards := func(epochStart, epochEnd uint64) (float64, error) {
-		// Initialize the result variable
-		var totalMissedRewardsEl float64
-
-		// Define the `targets` CTE
-		targets := goqu.Dialect("postgres").
-			From("blocks").
-			Select(goqu.I("blocks.slot").As("slot")).
-			Where(
-				goqu.I("blocks.status").Neq("1"),
-				goqu.I("epoch").Gte(epochStart),
-				goqu.I("epoch").Lte(epochEnd),
-			)
-
-		if dashboardId.Validators == nil {
-			targets = targets.
-				Join(
-					goqu.T("users_val_dashboards_validators").As("uvdv"),
-					goqu.On(goqu.I("blocks.proposer").Eq(goqu.I("uvdv.validator_index"))),
-				).
-				Where(
-					goqu.And(
-						goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id),
-						goqu.Or(
-							goqu.I("uvdv.group_id").Eq(groupId),
-							goqu.L("?::smallint = -1", groupId),
-						),
-					),
-				)
-		} else {
-			targets = targets.
-				Where(
-					goqu.I("blocks.proposer").In(dashboardId.Validators),
-				)
-		}
-
-		slots := utils.Config.Chain.ClConfig.SlotsPerEpoch / 2
-
-		// Define the `res` CTE
-		res := goqu.
-			From("targets").
-			LeftJoin(
-				goqu.T("execution_rewards_finalized").As("b"),
-				goqu.On(
-					goqu.L(fmt.Sprintf(
-						`"b"."slot" >= "targets"."slot" - %d AND "b"."slot" < "targets"."slot" + %d`,
-						slots, slots,
-					)),
-				),
-			).
-			Select(
-				goqu.I("targets.slot"),
-				goqu.L("percentile_cont(0.5) WITHIN GROUP (ORDER BY b.value)::numeric(76,0)").As("v"),
-			).
-			GroupBy(goqu.I("targets.slot"))
-
-		// Build the final query
-		query := goqu.From("res").
-			With("targets", targets).
-			With("res", res).
-			Select(goqu.L("COALESCE(SUM(v), 0)"))
-
-		// Generate SQL and arguments
-		sql, args, err := query.Prepared(true).ToSQL()
-		if err != nil {
-			return 0, fmt.Errorf("failed to generate SQL: %w", err)
-		}
-
-		// Execute the query with the generated SQL and arguments
-		err = d.readerDb.GetContext(ctx, &totalMissedRewardsEl, sql, args...)
-		if err != nil {
-			return 0, fmt.Errorf("failed to execute query: %w", err)
-		}
-
-		// Return the computed total median rewards
-		return totalMissedRewardsEl, nil
-	}
-
-	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
-		// we need to go to the all time table for last scheduled block/sync committee epoch
-		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
-				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
-
-		if dashboardId.Validators == nil {
-			ds = ds.
-				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
-		} else {
-			ds = ds.
-				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		var row struct {
-			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
-			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
-		}
-		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
-			return time.Time{}, time.Time{}, nil
-		}
-
-		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
-			utils.EpochToTime(uint64(*row.LastSyncEpoch)),
-			nil
 	}
 
 	ds := goqu.Dialect("postgres").
@@ -769,14 +769,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var lastBlockTs, lastSyncTs time.Time
 	errGroup.Go(func() error {
 		var err error
-		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		lastBlockTs, lastSyncTs, err = d.getLastScheduledBlockAndSyncDate(ctx, dashboardId, groupId)
 		return err
 	})
 
 	var minEpochStart, maxEpochEnd uint64
 	errGroup.Go(func() error {
 		var err error
-		minEpochStart, maxEpochEnd, err = getMinMaxEpochs()
+		minEpochStart, maxEpochEnd, err = d.getMinMaxEpochs(ctx, dashboardId, groupId, clickhouseTable)
 		return err
 	})
 
@@ -875,7 +875,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	totalMissedRewardsEl, err := getMissedELRewards(minEpochStart, maxEpochEnd)
+	totalMissedRewardsEl, err := d.getMissedELRewards(ctx, dashboardId, groupId, minEpochStart, maxEpochEnd)
 	if err != nil {
 		return nil, err
 	}
@@ -1000,26 +1000,6 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return ret, nil
 	}
 
-	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
-	dataTable := ""
-	dateColumn := ""
-	switch aggregation {
-	case enums.IntervalEpoch:
-		dataTable = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
-	case enums.IntervalHourly:
-		dataTable = "validator_dashboard_data_hourly"
-		dateColumn = "t"
-	case enums.IntervalDaily:
-		dataTable = "validator_dashboard_data_daily"
-		dateColumn = "t"
-	case enums.IntervalWeekly:
-		dataTable = "validator_dashboard_data_weekly"
-		dateColumn = "t"
-	default:
-		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
-	}
-
 	var queryResults []*t.VDBValidatorSummaryChartRow
 
 	containsGroups := false
@@ -1036,6 +1016,11 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	if (dashboardId.Validators != nil && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) ||
 		(dashboardId.AggregateGroups && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) {
 		return ret, nil
+	}
+
+	dataTable, dateColumn, err := d.getTableAndDateColumn(aggregation)
+	if err != nil {
+		return nil, err
 	}
 
 	totalLineRequested := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
@@ -1198,28 +1183,14 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 }
 
 func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
-	var table string
-	var dateColumn string
-	switch aggregation {
-	case enums.IntervalEpoch:
-		table = "view_validator_dashboard_data_epoch_max_ts"
-		dateColumn = "t"
-	case enums.IntervalHourly:
-		table = "view_validator_dashboard_data_hourly_max_ts"
-		dateColumn = "t"
-	case enums.IntervalDaily:
-		table = "view_validator_dashboard_data_daily_max_ts"
-		dateColumn = "t"
-	case enums.IntervalWeekly:
-		table = "view_validator_dashboard_data_weekly_max_ts"
-		dateColumn = "t"
-	default:
-		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	table, dateColumn, err := d.getViewAndDateColumn(aggregation)
+	if err != nil {
+		return 0, err
 	}
 
 	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
 	var ts time.Time
-	err := d.clickhouseReader.GetContext(ctx, &ts, query)
+	err = d.clickhouseReader.GetContext(ctx, &ts, query)
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %w", err)
 	}
@@ -1347,27 +1318,19 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	var resultMutex = &sync.RWMutex{}
 	wg := errgroup.Group{}
 
-	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the validator indices
 	var groupIds []uint64
 	if !dashboardId.AggregateGroups && groupId != t.AllGroups {
 		groupIds = append(groupIds, uint64(groupId))
 	}
-
 	validatorIndices, err := d.getDashboardValidators(ctx, dashboardId, groupIds)
 	if err != nil {
 		return nil, err
 	}
 
 	// Get the current and next sync committee validators
-	latestEpoch := cache.LatestEpoch.Get()
 	wg.Go(func() error {
-		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
+		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(ctx, cache.LatestEpoch.Get())
 		if err != nil {
 			return err
 		}
@@ -1388,48 +1351,14 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 	// Get the past sync committee validators
 	wg.Go(func() error {
-		// Get the cutoff period for past sync committees
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("epoch_start")).
-			From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
-			Order(goqu.L("epoch_start").Asc()).
-			Limit(1)
-
-		query, args, err := ds.Prepared(true).ToSQL()
+		epochStart, err := d.getEpochStart(ctx, period)
 		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
+			return err
 		}
 
-		var epochStart uint64
-		err = d.clickhouseReader.GetContext(ctx, &epochStart, query, args...)
+		validatorCountMap, err := d.getPastSyncCommittees(ctx, validatorIndices, epochStart, cache.LatestEpoch.Get())
 		if err != nil {
-			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
-		}
-		pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
-
-		// Get the past sync committee validators
-		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-		ds = goqu.Dialect("postgres").
-			Select(
-				goqu.L("sc.validatorindex")).
-			From(goqu.L("sync_committees sc")).
-			Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
-
-		query, args, err = ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		var validatorIndices []uint64
-		err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
-		}
-
-		validatorCountMap := make(map[uint64]uint64)
-		for _, validatorIndex := range validatorIndices {
-			validatorCountMap[validatorIndex]++
+			return err
 		}
 
 		resultMutex.Lock()
@@ -1829,29 +1758,131 @@ func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Cont
 	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
 }
 
+func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.TimePeriod) (uint64, error) {
+	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return 0, err
+	}
+
+	ds := goqu.Dialect("postgres").
+		Select(goqu.L("epoch_start")).
+		From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
+		Order(goqu.L("epoch_start").Asc()).
+		Limit(1)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return 0, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	var epochStart uint64
+	err = d.clickhouseReader.GetContext(ctx, &epochStart, query, args...)
+	if err != nil {
+		return 0, fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
+	}
+
+	return epochStart, nil
+}
+
+func (d *DataAccessService) getPastSyncCommittees(ctx context.Context, indicies []uint64, epochStart uint64, latestEpoch uint64) (map[uint64]uint64, error) {
+	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+
+	// Get the past sync committee validators
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.L("sc.validatorindex")).
+		From(goqu.L("sync_committees sc")).
+		Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(indicies)))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	var validatorIndices []uint64
+	err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving data for past sync committees: %w", err)
+	}
+
+	validatorCountMap := make(map[uint64]uint64)
+	for _, validatorIndex := range validatorIndices {
+		validatorCountMap[validatorIndex]++
+	}
+
+	return validatorCountMap, nil
+}
+
 func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
-	clickhouseTable := ""
+	table := ""
 	hours := 0
 
 	switch period {
 	case enums.TimePeriods.Last1h:
-		clickhouseTable = "validator_dashboard_data_rolling_1h"
+		table = "validator_dashboard_data_rolling_1h"
 		hours = 1
 	case enums.TimePeriods.Last24h:
-		clickhouseTable = "validator_dashboard_data_rolling_24h"
+		table = "validator_dashboard_data_rolling_24h"
 		hours = 24
 	case enums.TimePeriods.Last7d:
-		clickhouseTable = "validator_dashboard_data_rolling_7d"
+		table = "validator_dashboard_data_rolling_7d"
 		hours = 7 * 24
 	case enums.TimePeriods.Last30d:
-		clickhouseTable = "validator_dashboard_data_rolling_30d"
+		table = "validator_dashboard_data_rolling_30d"
 		hours = 30 * 24
 	case enums.TimePeriods.AllTime:
-		clickhouseTable = "validator_dashboard_data_rolling_total"
+		table = "validator_dashboard_data_rolling_total"
 		hours = -1
 	default:
 		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	return clickhouseTable, hours, nil
+	return table, hours, nil
+}
+
+func (d *DataAccessService) getTableAndDateColumn(aggregation enums.ChartAggregation) (string, string, error) {
+	var table, dateColumn string
+
+	switch aggregation {
+	case enums.IntervalEpoch:
+		table = "validator_dashboard_data_epoch"
+		dateColumn = "epoch_timestamp"
+	case enums.IntervalHourly:
+		table = "validator_dashboard_data_hourly"
+		dateColumn = "t"
+	case enums.IntervalDaily:
+		table = "validator_dashboard_data_daily"
+		dateColumn = "t"
+	case enums.IntervalWeekly:
+		table = "validator_dashboard_data_weekly"
+		dateColumn = "t"
+	default:
+		return "", "", fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
+
+	return table, dateColumn, nil
+}
+
+func (d *DataAccessService) getViewAndDateColumn(aggregation enums.ChartAggregation) (string, string, error) {
+	var view, dateColumn string
+
+	switch aggregation {
+	case enums.IntervalEpoch:
+		view = "view_validator_dashboard_data_epoch_max_ts"
+		dateColumn = "t"
+	case enums.IntervalHourly:
+		view = "view_validator_dashboard_data_hourly_max_ts"
+		dateColumn = "t"
+	case enums.IntervalDaily:
+		view = "view_validator_dashboard_data_daily_max_ts"
+		dateColumn = "t"
+	case enums.IntervalWeekly:
+		view = "view_validator_dashboard_data_weekly_max_ts"
+		dateColumn = "t"
+	default:
+		return "", "", fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
+
+	return view, dateColumn, nil
 }
