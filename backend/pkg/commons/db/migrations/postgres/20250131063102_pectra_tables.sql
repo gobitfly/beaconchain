@@ -62,6 +62,35 @@ SELECT
 ALTER TABLE blocks_attestations
 ADD COLUMN IF NOT EXISTS committeebits BYTEA;
 
+SELECT
+    'creating eth1_consolidation_requests table'
+
+CREATE TABLE
+    IF NOT EXISTS eth1_consolidation_requests (
+        tx_hash bytea NOT NULL,
+        tx_index int NOT NULL,
+        block_number int NOT NULL,
+        block_ts timestamp without time zone not null,
+        source_address bytea NOT NULL,
+        source_pubkey bytea NOT NULL,
+        target_pubkey bytea NOT NULL,
+        PRIMARY KEY (tx_hash, tx_index)
+    );
+
+SELECT
+    'creating eth1_withdrawal_requests table'
+
+CREATE TABLE
+    IF NOT EXISTS eth1_withdrawal_requests (
+        tx_hash bytea NOT NULL,
+        tx_index int NOT NULL,
+        block_number int NOT NULL,
+        block_ts timestamp without time zone not null,
+        source_address bytea NOT NULL,
+        validator_pubkey bytea NOT NULL,
+        amount bigint NOT NULL,
+        PRIMARY KEY (tx_hash, tx_index)
+    );
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
@@ -85,4 +114,13 @@ SELECT
 
 DROP TABLE IF EXISTS blocks_switch_to_compounding_requests;
 
+SELECT
+    'dropping eth1_consolidation_requests table';
+
+DROP TABLE IF EXISTS eth1_consolidation_requests;
+
+SELECT
+    'dropping eth1_withdrawal_requests table';
+
+DROP TABLE IF EXISTS eth1_withdrawal_requests;
 -- +goose StatementEnd
