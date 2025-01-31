@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -105,6 +107,99 @@ func TestGetCurrentAndUpcomingSyncCommittees(t *testing.T) {
 
 			assert.Equal(t, tt.expectedCurrent, current)
 			assert.Equal(t, tt.expectedUpcoming, upcoming)
+
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestGetPastSyncCommittees(t *testing.T) {
+	mockDB, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer mockDB.Close()
+
+	cfg := types.Config{
+		Chain: types.Chain{
+			ClConfig: types.ClChainConfig{
+				EpochsPerSyncCommitteePeriod: 32,
+				AltairForkEpoch:              0,
+			},
+		},
+	}
+	utils.Config = &cfg
+
+	sqlxDB := sqlx.NewDb(mockDB, "sqlmock")
+	dataService := &DataAccessService{
+		alloyReader: sqlxDB,
+	}
+
+	tests := []struct {
+		name          string
+		indicies      []uint64
+		epochStart    uint64
+		latestEpoch   uint64
+		mockRows      *sqlmock.Rows
+		mockError     error
+		expectedMap   map[uint64]uint64
+		expectedError string
+	}{
+		{
+			name:        "Valid data",
+			indicies:    []uint64{1, 2, 3},
+			epochStart:  100,
+			latestEpoch: 200,
+			mockRows: sqlmock.NewRows([]string{"validatorindex"}).
+				AddRow(1).
+				AddRow(2).
+				AddRow(2),
+			mockError:     nil,
+			expectedMap:   map[uint64]uint64{1: 1, 2: 2},
+			expectedError: "",
+		},
+		{
+			name:          "Empty result",
+			indicies:      []uint64{4, 5, 6},
+			epochStart:    100,
+			latestEpoch:   200,
+			mockRows:      sqlmock.NewRows([]string{"validatorindex"}),
+			mockError:     nil,
+			expectedMap:   map[uint64]uint64{},
+			expectedError: "",
+		},
+		{
+			name:          "Query error",
+			indicies:      []uint64{1, 2, 3},
+			epochStart:    100,
+			latestEpoch:   200,
+			mockRows:      nil,
+			mockError:     fmt.Errorf("db query failed"),
+			expectedMap:   nil,
+			expectedError: "error retrieving data for past sync committees: db query failed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(tt.epochStart)
+			currentSyncPeriod := utils.SyncPeriodOfEpoch(tt.latestEpoch)
+
+			query := "SELECT sc.validatorindex FROM sync_committees sc WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)"
+
+			if tt.mockError != nil {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(tt.indicies)).WillReturnError(tt.mockError)
+			} else {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WithArgs(pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(tt.indicies)).WillReturnRows(tt.mockRows)
+			}
+
+			ctx := context.Background()
+			result, err := dataService.getPastSyncCommittees(ctx, tt.indicies, tt.epochStart, tt.latestEpoch)
+
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
+			assert.Equal(t, tt.expectedMap, result)
 
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
