@@ -2,6 +2,7 @@ package executionlayer
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"reflect"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
@@ -24,6 +26,7 @@ var (
 	aliceAddress = common.BytesToAddress(leftPad(alice, 20))
 	bob          = []byte("bob")
 	bobAddress   = common.BytesToAddress(leftPad(bob, 20))
+	john         = []byte("john")
 	contract     = []byte("contract")
 	usdc         = []byte("usdc")
 )
@@ -1207,6 +1210,1015 @@ func TestTransformer_FromList(t *testing.T) {
 			}
 			if got, want := got[0], tt.want; reflect.DeepEqual(got, want) {
 				t.Errorf("got %v, want %v", got, want)
+			}
+		})
+	}
+}
+
+// TestIsValidERC20Log tests the isValidERC20Log function to verify
+// if the log is a valid ERC20 transfer log
+func TestIsValidERC20Log(t *testing.T) {
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected bool
+	}{
+		{
+			name: "valid ERC20 transfer log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc20.TransferTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid ERC20 transfer log with incorrect event topic",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash("0x0123").Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC20 transfer log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc20.TransferTopic.Bytes(),
+					alice,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC20 transfer log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc20.TransferTopic.Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidERC20Log(tt.log)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsValidERC721Log tests the isValidERC721Log function to verify
+// if the log is a valid ERC721 transfer log
+func TestIsValidERC721Log(t *testing.T) {
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected bool
+	}{
+		{
+			name: "valid ERC721 transfer log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+					[]byte("tokenID"),
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid ERC721 transfer log with incorrect topic",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash("0x1234").Bytes(),
+					alice,
+					bob,
+					[]byte("tokenID"),
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC721 transfer log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC721 transfer log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+					[]byte("tokenID"),
+					john,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidERC721Log(tt.log)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsValidERC1155Log tests the isValidERC1155Log function to verify
+// if the log is a valid ERC1155 transfer log
+func TestIsValidERC1155Log(t *testing.T) {
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected bool
+	}{
+		{
+			name: "valid TransferSingleTopic log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid TransferBulkTopic log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid log with invalid topic",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash("0x1234").Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferSingleTopic log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferBulkTopic log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferSingleTopic log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+					john,
+					contract,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferBulkTopic log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+					john,
+					contract,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidERC1155Log(tt.log)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsValidItx tests the isValidItx function to verify
+// if the internal transactions are valid and can be indexed
+func TestIsValidItx(t *testing.T) {
+	tests := []struct {
+		name     string
+		itx      *types.Eth1InternalTransaction
+		expected bool
+	}{
+		{
+			name: "valid internal transaction",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0,1",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: true,
+		},
+		{
+			name: "invalid internal transaction with path '0'",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: false,
+		},
+		{
+			name: "invalid internal transaction with path is '[]'",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "[]",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: false,
+		},
+		{
+			name: "invalid internal transaction with value 0",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0,1",
+				Value: []byte{0x0},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidItx(tt.itx)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetLogTopics tests the getLogTopics function to verify
+// if the function correctly extracts the topics from the log
+func TestGetLogTopics(t *testing.T) {
+	topic1 := "0x1234"
+	topic2 := "0x2345"
+	topic3 := "0x3456"
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected []common.Hash
+	}{
+		{
+			name: "log with topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash(topic1).Bytes(),
+					common.HexToHash(topic2).Bytes(),
+					common.HexToHash(topic3).Bytes(),
+				},
+			},
+			expected: []common.Hash{
+				common.HexToHash(topic1),
+				common.HexToHash(topic2),
+				common.HexToHash(topic3),
+			},
+		},
+		{
+			name: "log with no topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{},
+			},
+			expected: []common.Hash{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getLogTopics(tt.log)
+			if len(result) != len(tt.expected) {
+				t.Errorf("got %v topics, want %v topics", len(result), len(tt.expected))
+			}
+			for i := range result {
+				if result[i] != tt.expected[i] {
+					t.Errorf("got topic %v, want %v", result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestGetTxRecipient tests the getTxRecipient function to verify
+// if the function correctly extracts the recipients from the transaction
+func TestGetTxRecipient(t *testing.T) {
+	tests := []struct {
+		name               string
+		tx                 *types.Eth1Transaction
+		expectedTo         []byte
+		expectedIsContract bool
+	}{
+		{
+			name: "normal transaction with recipient",
+			tx: &types.Eth1Transaction{
+				To:              alice,
+				ContractAddress: common.Address{}.Bytes(),
+			},
+			expectedTo:         alice,
+			expectedIsContract: false,
+		},
+		{
+			name: "contract creation transaction",
+			tx: &types.Eth1Transaction{
+				ContractAddress: contract,
+			},
+			expectedTo:         contract,
+			expectedIsContract: true,
+		},
+		{
+			name: "transaction with no recipient",
+			tx: &types.Eth1Transaction{
+				To:              common.Address{}.Bytes(),
+				ContractAddress: common.Address{}.Bytes(),
+			},
+			expectedTo:         common.Address{}.Bytes(),
+			expectedIsContract: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			to, isContract := getTxRecipient(tt.tx)
+			if !bytes.Equal(to, tt.expectedTo) {
+				t.Errorf("got %v, want %v", to, tt.expectedTo)
+			}
+			if isContract != tt.expectedIsContract {
+				t.Errorf("got %v, want %v", isContract, tt.expectedIsContract)
+			}
+		})
+	}
+}
+
+// TestGetTokenID tests the getTokenID function to verify
+// if the function correctly extracts the token ID from the transfer
+func TestGetTokenID(t *testing.T) {
+	tests := []struct {
+		name     string
+		transfer *contracts.ERC721Transfer
+		expected *big.Int
+	}{
+		{
+			name: "transfer with token ID",
+			transfer: &contracts.ERC721Transfer{
+				TokenId: big.NewInt(123),
+			},
+			expected: big.NewInt(123),
+		},
+		{
+			name: "transfer with empty token ID",
+			transfer: &contracts.ERC721Transfer{
+				TokenId: nil,
+			},
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getTokenID(tt.transfer)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetMethodsSignature tests the getMethodSignature function to verify
+// if the function correctly extracts the method signature from the transaction
+func TestGetMethodSignature(t *testing.T) {
+	tests := []struct {
+		name     string
+		tx       *types.Eth1Transaction
+		expected []byte
+	}{
+		{
+			name: "transaction with data longer than 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("123456789"),
+			},
+			expected: []byte("1234"),
+		},
+		{
+			name: "transaction with data exactly 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("1234"),
+			},
+			expected: []byte("1234"),
+		},
+		{
+			name: "transaction with data shorter than 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("12"),
+			},
+			expected: []byte{},
+		},
+		{
+			name: "transaction with no data",
+			tx: &types.Eth1Transaction{
+				Data: []byte{},
+			},
+			expected: []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			method := getMethodSignature(tt.tx)
+			if !bytes.Equal(method, tt.expected) {
+				t.Errorf("got %v, want %v", method, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetContractAddress tests the getContractAddress function to verify
+// if the function correctly extracts the contract address from the internal transaction
+func TestGetContractAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		itx      *types.Eth1InternalTransaction
+		expected []byte
+	}{
+		{
+			name: "create type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "create",
+				From: alice,
+				To:   contract,
+			},
+			expected: contract,
+		},
+		{
+			name: "suicide type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "suicide",
+				From: contract,
+				To:   alice,
+			},
+			expected: contract,
+		},
+		{
+			name: "invalid type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "invalid",
+				From: alice,
+				To:   contract,
+			},
+			expected: contract,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getContractAddress(tt.itx)
+			if !bytes.Equal(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetERC20TransferValue tests getERC20TransferValue function to verify
+// if the function correctly extracts the ERC20 transfer value from the ERC20 transfer contract
+func TestGetERC20TransferValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		transfer *contracts.ERC20Transfer
+		expected []byte
+	}{
+		{
+			name: "transfer with value",
+			transfer: &contracts.ERC20Transfer{
+				Value: big.NewInt(1),
+			},
+			expected: big.NewInt(1).Bytes(),
+		},
+		{
+			name: "transfer with empty value",
+			transfer: &contracts.ERC20Transfer{
+				Value: nil,
+			},
+			expected: []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getERC20TransferValue(tt.transfer)
+			if !bytes.Equal(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetERC1155TransferIDs tests getERC1155TransferIDs function to verify
+// if the function correctly extracts the ERC1155 transfer IDs from the ID list
+func TestGetERC1155TransferIDs(t *testing.T) {
+	tests := []struct {
+		name     string
+		idList   []*big.Int
+		expected [][]byte
+	}{
+		{
+			name: "single ID",
+			idList: []*big.Int{
+				big.NewInt(1),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+			},
+		},
+		{
+			name: "multiple IDs",
+			idList: []*big.Int{
+				big.NewInt(1),
+				big.NewInt(2),
+				big.NewInt(3),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+				big.NewInt(2).Bytes(),
+				big.NewInt(3).Bytes(),
+			},
+		},
+		{
+			name:     "empty ID list",
+			idList:   []*big.Int{},
+			expected: [][]byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getERC1155TransferIDs(tt.idList)
+			if len(result) != len(tt.expected) {
+				t.Errorf("got %v IDs, want %v IDs", len(result), len(tt.expected))
+			}
+			for i := range result {
+				if !bytes.Equal(result[i], tt.expected[i]) {
+					t.Errorf("got ID %v, want %v", result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestGetERC1155TransferValues tests getERC1155TransferValues function to verify
+// if the function correctly extracts the ERC1155 transfer values from the value list
+func TestGetERC1155TransferValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		values   []*big.Int
+		expected [][]byte
+	}{
+		{
+			name: "single value",
+			values: []*big.Int{
+				big.NewInt(1),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+			},
+		},
+		{
+			name: "multiple values",
+			values: []*big.Int{
+				big.NewInt(1),
+				big.NewInt(2),
+				big.NewInt(3),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+				big.NewInt(2).Bytes(),
+				big.NewInt(3).Bytes(),
+			},
+		},
+		{
+			name:     "empty values list",
+			values:   []*big.Int{},
+			expected: [][]byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getERC1155TransferValues(tt.values)
+			if len(result) != len(tt.expected) {
+				t.Errorf("got %v values, want %v values", len(result), len(tt.expected))
+			}
+			for i := range result {
+				if !bytes.Equal(result[i], tt.expected[i]) {
+					t.Errorf("got value %v, want %v", result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestUpdateITxStatus tests the updateITxStatus function to verify
+// if the function correctly updates the status of the internal transaction
+func TestUpdateITxStatus(t *testing.T) {
+	tests := []struct {
+		name             string
+		internalTx       []*types.Eth1InternalTransaction
+		indexedTx        *types.Eth1TransactionIndexed
+		expectedStatus   types.StatusType
+		expectedErrorMsg string
+	}{
+		{
+			name:       "no internal transactions",
+			internalTx: []*types.Eth1InternalTransaction{},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_SUCCESS,
+			expectedErrorMsg: "",
+		},
+		{
+			name: "internal transaction with error",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_PARTIAL,
+			expectedErrorMsg: "fail",
+		},
+		{
+			name: "internal transaction with error and status failed",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_FAILED,
+			},
+			expectedStatus:   types.StatusType_FAILED,
+			expectedErrorMsg: "fail",
+		},
+		{
+			name: "multiple internal transactions, one with error",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "",
+				},
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_PARTIAL,
+			expectedErrorMsg: "fail",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updateITxStatus(tt.indexedTx, tt.internalTx)
+			if tt.indexedTx.Status != tt.expectedStatus {
+				t.Errorf("got status %v, want %v", tt.indexedTx.Status, tt.expectedStatus)
+			}
+			if tt.indexedTx.ErrorMsg != tt.expectedErrorMsg {
+				t.Errorf("got error message %v, want %v", tt.indexedTx.ErrorMsg, tt.expectedErrorMsg)
+			}
+		})
+	}
+}
+
+// TestCalculateTxFee tests the calculateTxFee function to verify
+// if the function correctly calculates the transaction fee
+func TestCalculateTxFee(t *testing.T) {
+	tests := []struct {
+		name     string
+		tx       *types.Eth1Transaction
+		baseFee  []byte
+		expected *big.Int
+	}{
+		{
+			name: "transaction with no base fee",
+			tx: &types.Eth1Transaction{
+				GasPrice: big.NewInt(10).Bytes(),
+				GasUsed:  1000,
+			},
+			baseFee:  []byte{},
+			expected: big.NewInt(10 * 1000),
+		},
+		{
+			name: "transaction with priority and base fee",
+			tx: &types.Eth1Transaction{
+				GasPrice:             big.NewInt(100).Bytes(),
+				MaxPriorityFeePerGas: big.NewInt(10).Bytes(),
+				MaxFeePerGas:         big.NewInt(200).Bytes(),
+				GasUsed:              1000,
+			},
+			baseFee:  big.NewInt(50).Bytes(),
+			expected: big.NewInt(10 * 1000),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateTxFee(tt.tx, tt.baseFee)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCalculateMevFromBlock tests the calculateMevFromBlock function to verify
+// if the function correctly calculates the MEV from the block
+func TestCalculateMevFromBlock(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    *types.Eth1Block
+		expected *big.Int
+	}{
+		{
+			name: "no MEV",
+			block: &types.Eth1Block{
+				Coinbase: []byte("coinbase"),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    common.Address{}.Bytes(),
+								Value: big.NewInt(100).Bytes(),
+							},
+						},
+					},
+				},
+			},
+			expected: big.NewInt(0),
+		},
+		{
+			name: "MEV from one transaction",
+			block: &types.Eth1Block{
+				Coinbase: []byte("coinbase"),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    []byte("coinbase"),
+								Value: big.NewInt(100).Bytes(),
+							},
+						},
+					},
+				},
+			},
+			expected: big.NewInt(100),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateMevFromBlock(tt.block)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCalculateBlockUncleReward tests the calculateBlockUncleReward function to verify
+// if the function correctly calculates the uncle reward from the block
+func TestCalculateBlockUncleReward(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    *types.Eth1Block
+		chainID  string
+		expected *big.Int
+	}{
+		{
+			name: "no uncles",
+			block: &types.Eth1Block{
+				Uncles: []*types.Eth1Block{},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+		{
+			name: "one uncle",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32)),
+		},
+		{
+			name: "two uncles",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+					{
+						Number: 2,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: new(big.Int).Mul(big.NewInt(2), new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32))),
+		},
+		{
+			name: "no uncle rewards",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: []byte{},
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateBlockUncleReward(tt.block, tt.chainID)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestCalculateUncleReward tests the calculateUncleReward function to verify
+// if the function correctly calculates the single uncle reward
+func TestCalculateUncleReward(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    *types.Eth1Block
+		uncle    *types.Eth1Block
+		chainID  string
+		expected *big.Int
+	}{
+		{
+			name: "no uncles",
+			block: &types.Eth1Block{
+				Uncles: []*types.Eth1Block{},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+		{
+			name: "one uncle",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+			},
+			uncle: &types.Eth1Block{
+				Number: 1,
+			},
+			chainID:  "1",
+			expected: new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32)),
+		},
+		{
+			name: "no uncle rewards",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: []byte{},
+			},
+			uncle: &types.Eth1Block{
+				Number: 1,
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateUncleReward(tt.block, tt.uncle, tt.chainID)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestVerifyName tests the verifyName function to verify
+// if the function correctly validates the name based on the length
+func TestVerifyName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected error
+	}{
+		{
+			name:     "valid name",
+			input:    "test",
+			expected: nil,
+		},
+		{
+			name:     "empty name",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "maximum length name",
+			input:    string(make([]byte, 2048)),
+			expected: nil,
+		},
+		{
+			name:     "name too long",
+			input:    string(make([]byte, 2049)),
+			expected: fmt.Errorf("name too long: %v", string(make([]byte, 2049))),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := verifyName(tt.input)
+
+			if result != nil {
+				if tt.expected == nil {
+					t.Errorf("got %v, want %v", result, tt.expected)
+				}
+				if tt.expected != nil {
+					if result.Error() != tt.expected.Error() {
+						t.Errorf("got %v, want %v", result, tt.expected)
+					}
+				}
+			}
+			if result == nil {
+				if tt.expected != nil {
+					t.Errorf("got %v, want %v", result, tt.expected)
+				}
 			}
 		})
 	}

@@ -142,27 +142,10 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
-	// we cannot trust block.Hash(), some chain (gnosis) have extra field that are included in the hash computation
-	// so extract it from the receipts or from the node again if no receipt (it should be very rare)
-	var blockHash common.Hash
-	if len(receipts) != 0 {
-		blockHash = receipts[0].BlockHash
-	} else {
-		var res minimalBlock
-		if err := client.rpcClient.CallContext(ctx, &res, "eth_getBlockByNumber", fmt.Sprintf("0x%x", number), false); err != nil {
-			return nil, nil, fmt.Errorf("error retrieving blockHash %v: %w", number, err)
-		}
-		blockHash = common.HexToHash(res.Hash)
-	}
 
-	withdrawals := make([]*types.Eth1Withdrawal, len(block.Withdrawals()))
-	for i, withdrawal := range block.Withdrawals() {
-		withdrawals[i] = &types.Eth1Withdrawal{
-			Index:          withdrawal.Index,
-			ValidatorIndex: withdrawal.Validator,
-			Address:        withdrawal.Address.Bytes(),
-			Amount:         new(big.Int).SetUint64(withdrawal.Amount).Bytes(),
-		}
+	blockHash, err := client.getBlockHash(number, receipts)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	transactions := make([]*types.Eth1Transaction, len(block.Transactions()))
@@ -171,25 +154,6 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		return nil, nil, fmt.Errorf("block %s receipts length [%d] mismatch with transactions length [%d]", block.Number(), len(receipts), len(block.Transactions()))
 	}
 	for txPosition, receipt := range receipts {
-		logs := make([]*types.Eth1Log, len(receipt.Logs))
-		for i, log := range receipt.Logs {
-			topics := make([][]byte, len(log.Topics))
-			for j, topic := range log.Topics {
-				topics[j] = topic.Bytes()
-			}
-			logs[i] = &types.Eth1Log{
-				Address: log.Address.Bytes(),
-				Data:    log.Data,
-				Removed: log.Removed,
-				Topics:  topics,
-			}
-		}
-
-		var internals []*types.Eth1InternalTransaction
-		for ; traceIndex < len(traces) && traces[traceIndex].txPosition == txPosition; traceIndex++ {
-			internals = append(internals, &traces[traceIndex].Eth1InternalTransaction)
-		}
-
 		tx := block.Transactions()[txPosition]
 		transactions[txPosition] = &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
@@ -200,114 +164,47 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 			Gas:                  tx.Gas(),
 			Value:                tx.Value().Bytes(),
 			Data:                 tx.Data(),
-			To: func() []byte {
-				if tx.To() != nil {
-					return tx.To().Bytes()
-				}
-				return nil
-			}(),
-			From: func() []byte {
-				// this won't make a request in most cases as the sender is already present in the cache
-				// context https://github.com/ethereum/go-ethereum/blob/v1.14.11/ethclient/ethclient.go#L268
-				sender, err := client.ethClient.TransactionSender(context.Background(), tx, blockHash, uint(txPosition))
-				if err != nil {
-					sender = common.HexToAddress("abababababababababababababababababababab")
-					log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
-				}
-				return sender.Bytes()
-			}(),
-			ChainId:            tx.ChainId().Bytes(),
-			AccessList:         []*types.AccessList{},
-			Hash:               tx.Hash().Bytes(),
-			ContractAddress:    receipt.ContractAddress[:],
-			CommulativeGasUsed: receipt.CumulativeGasUsed,
-			GasUsed:            receipt.GasUsed,
-			LogsBloom:          receipt.Bloom[:],
-			Status:             receipt.Status,
-			Logs:               logs,
-			Itx:                internals,
-			MaxFeePerBlobGas: func() []byte {
-				if tx.BlobGasFeeCap() != nil {
-					return tx.BlobGasFeeCap().Bytes()
-				}
-				return nil
-			}(),
-			BlobVersionedHashes: func() (b [][]byte) {
-				for _, h := range tx.BlobHashes() {
-					b = append(b, h.Bytes())
-				}
-				return b
-			}(),
-			BlobGasPrice: func() []byte {
-				if receipt.BlobGasPrice != nil {
-					return receipt.BlobGasPrice.Bytes()
-				}
-				return nil
-			}(),
-			BlobGasUsed: receipt.BlobGasUsed,
-		}
-	}
-
-	uncles := make([]*types.Eth1Block, len(block.Uncles()))
-	for i, uncle := range block.Uncles() {
-		uncles[i] = &types.Eth1Block{
-			Hash:        uncle.Hash().Bytes(),
-			ParentHash:  uncle.ParentHash.Bytes(),
-			UncleHash:   uncle.UncleHash.Bytes(),
-			Coinbase:    uncle.Coinbase.Bytes(),
-			Root:        uncle.Root.Bytes(),
-			TxHash:      uncle.TxHash.Bytes(),
-			ReceiptHash: uncle.ReceiptHash.Bytes(),
-			Difficulty:  uncle.Difficulty.Bytes(),
-			Number:      uncle.Number.Uint64(),
-			GasLimit:    uncle.GasLimit,
-			GasUsed:     uncle.GasUsed,
-			Time:        timestamppb.New(time.Unix(int64(uncle.Time), 0)),
-			Extra:       uncle.Extra,
-			MixDigest:   uncle.MixDigest.Bytes(),
-			Bloom:       uncle.Bloom.Bytes(),
+			To:                   getReceiver(tx),
+			From:                 client.getSender(tx, blockHash, txPosition),
+			ChainId:              tx.ChainId().Bytes(),
+			AccessList:           []*types.AccessList{},
+			Hash:                 tx.Hash().Bytes(),
+			ContractAddress:      receipt.ContractAddress[:],
+			CommulativeGasUsed:   receipt.CumulativeGasUsed,
+			GasUsed:              receipt.GasUsed,
+			LogsBloom:            receipt.Bloom[:],
+			Status:               receipt.Status,
+			Logs:                 getLogsFromReceipts(receipt.Logs),
+			Itx:                  getInternalTxs(traceIndex, traces, txPosition),
+			MaxFeePerBlobGas:     getMaxFeePerBlobGas(tx),
+			BlobVersionedHashes:  getBlobVersionedHashes(tx),
+			BlobGasPrice:         getBlobGasPrice(receipt),
+			BlobGasUsed:          receipt.BlobGasUsed,
 		}
 	}
 
 	return &types.Eth1Block{
-		Hash:        blockHash.Bytes(),
-		ParentHash:  block.ParentHash().Bytes(),
-		UncleHash:   block.UncleHash().Bytes(),
-		Coinbase:    block.Coinbase().Bytes(),
-		Root:        block.Root().Bytes(),
-		TxHash:      block.TxHash().Bytes(),
-		ReceiptHash: block.ReceiptHash().Bytes(),
-		Difficulty:  block.Difficulty().Bytes(),
-		Number:      block.NumberU64(),
-		GasLimit:    block.GasLimit(),
-		GasUsed:     block.GasUsed(),
-		Time:        timestamppb.New(time.Unix(int64(block.Time()), 0)),
-		Extra:       block.Extra(),
-		MixDigest:   block.MixDigest().Bytes(),
-		Bloom:       block.Bloom().Bytes(),
-		BaseFee: func() []byte {
-			if block.BaseFee() != nil {
-				return block.BaseFee().Bytes()
-			}
-			return nil
-		}(),
-		Uncles:       uncles,
-		Transactions: transactions,
-		Withdrawals:  withdrawals,
-		BlobGasUsed: func() uint64 {
-			blobGasUsed := block.BlobGasUsed()
-			if blobGasUsed != nil {
-				return *blobGasUsed
-			}
-			return 0
-		}(),
-		ExcessBlobGas: func() uint64 {
-			excessBlobGas := block.ExcessBlobGas()
-			if excessBlobGas != nil {
-				return *excessBlobGas
-			}
-			return 0
-		}(),
+		Hash:          blockHash.Bytes(),
+		ParentHash:    block.ParentHash().Bytes(),
+		UncleHash:     block.UncleHash().Bytes(),
+		Coinbase:      block.Coinbase().Bytes(),
+		Root:          block.Root().Bytes(),
+		TxHash:        block.TxHash().Bytes(),
+		ReceiptHash:   block.ReceiptHash().Bytes(),
+		Difficulty:    block.Difficulty().Bytes(),
+		Number:        block.NumberU64(),
+		GasLimit:      block.GasLimit(),
+		GasUsed:       block.GasUsed(),
+		Time:          timestamppb.New(time.Unix(int64(block.Time()), 0)),
+		Extra:         block.Extra(),
+		MixDigest:     block.MixDigest().Bytes(),
+		Bloom:         block.Bloom().Bytes(),
+		BaseFee:       getBaseFee(block),
+		Uncles:        getBlockUncles(block.Uncles()),
+		Transactions:  transactions,
+		Withdrawals:   getBlockWithdrawals(block.Withdrawals()),
+		BlobGasUsed:   getBlobGasUsed(block),
+		ExcessBlobGas: getExcessBlobGas(block),
 	}, timings, nil
 }
 
@@ -458,8 +355,6 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 			Token:   pair.Token,
 		}
 
-		// log.LogInfo("retrieving balance for %x / %x", ret[i].Address, ret[i].Token)
-
 		if len(pair.Token) < 20 {
 			batchElements = append(batchElements, gethrpc.BatchElem{
 				Method: "eth_getBalance",
@@ -494,35 +389,25 @@ func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addre
 
 		res := strings.TrimPrefix(*el.Result.(*string), "0x")
 		ret[i].Balance = new(big.Int).SetBytes(common.FromHex(res)).Bytes()
-
-		// log.LogInfo("retrieved balance %x / %x: %x (%v)", ret[i].Address, ret[i].Token, ret[i].Balance, *el.Result.(*string))
 	}
 
 	return ret, nil
 }
 
-func (client *ErigonClient) GetBalancesForAddresse(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
+func (client *ErigonClient) GetBalancesForAddress(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
 	opts := &bind.CallOpts{
 		BlockNumber: nil,
 	}
 
-	tokens := make([]common.Address, 0, len(tokenStr))
-
-	for _, token := range tokenStr {
-		tokens = append(tokens, common.HexToAddress(token))
-	}
+	tokens := getTokens(tokenStr)
 	balancesInt, err := client.multiChecker.Balances(opts, []common.Address{common.HexToAddress(address)}, tokens)
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]*types.Eth1AddressBalance, len(tokenStr))
-	for tokenIdx := range tokens {
-		res[tokenIdx] = &types.Eth1AddressBalance{
-			Address: common.FromHex(address),
-			Token:   common.FromHex(string(tokens[tokenIdx].Bytes())),
-			Balance: balancesInt[tokenIdx].Bytes(),
-		}
+	res, err := parseAddressBalance(tokens, address, balancesInt)
+	if err != nil {
+		return nil, err
 	}
 
 	return res, nil
@@ -575,45 +460,19 @@ func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Met
 	ret := &types.ERC20Metadata{}
 
 	g.Go(func() error {
-		symbol, err := contract.Symbol(nil)
-		if err != nil {
-			if strings.Contains(err.Error(), "abi") {
-				ret.Symbol = "UNKNOWN"
-				return nil
-			}
-
-			return fmt.Errorf("error retrieving symbol: %w", err)
-		}
-
-		ret.Symbol = symbol
-		return nil
+		return getERC20ContractSymbol(contract, ret)
 	})
 
 	g.Go(func() error {
-		totalSupply, err := contract.TotalSupply(nil)
-		if err != nil {
-			return fmt.Errorf("error retrieving total supply: %w", err)
-		}
-		ret.TotalSupply = totalSupply.Bytes()
-		return nil
+		return getERC20ContractTotalSupply(contract, ret)
 	})
 
 	g.Go(func() error {
-		decimals, err := contract.Decimals(nil)
-		if err != nil {
-			return fmt.Errorf("error retrieving decimals: %w", err)
-		}
-		ret.Decimals = big.NewInt(int64(decimals)).Bytes()
-		return nil
+		return getERC20ContractDecimals(contract, ret)
 	})
 
 	g.Go(func() error {
-		rate, err := oracle.GetRateToEth(nil, common.BytesToAddress(token), false)
-		if err != nil {
-			return fmt.Errorf("error calling oneinchoracle.GetRateToEth: %w", err)
-		}
-		ret.Price = rate.Bytes()
-		return nil
+		return getRateFromOracle(oracle, token, ret)
 	})
 
 	err = g.Wait()
@@ -622,7 +481,8 @@ func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Met
 	}
 
 	if err == nil && len(ret.Decimals) == 0 && ret.Symbol == "" && len(ret.TotalSupply) == 0 {
-		// it's possible that a token contract implements the ERC20 interfaces but does not return any values; we use a backup in this case
+		// it's possible that a token contract implements the ERC20 interfaces but does not
+		// return any values; we use a backup in this case
 		ret = &types.ERC20Metadata{
 			Decimals:    []byte{0x0},
 			Symbol:      "UNKNOWN",
@@ -752,4 +612,88 @@ func (client *ErigonClient) getTraceGeth(blockNumber *big.Int) ([]*Eth1InternalT
 		})
 	}
 	return indexedTraces, nil
+}
+
+func (client *ErigonClient) getBlockHash(blockNumber int64, receipts []*gethtypes.Receipt) (common.Hash, error) {
+	var blockHash common.Hash
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	// we cannot trust block.Hash(), some chain (gnosis) have extra field that are included in the hash computation
+	// so extract it from the receipts or from the node again if no receipt (it should be very rare)
+	if len(receipts) != 0 {
+		blockHash = receipts[0].BlockHash
+	} else {
+		var res minimalBlock
+		if err := client.rpcClient.CallContext(ctx, &res, "eth_getBlockByNumber", fmt.Sprintf("0x%x", blockNumber), false); err != nil {
+			return common.Hash{}, fmt.Errorf("error retrieving blockHash %v: %w", blockNumber, err)
+		}
+		blockHash = common.HexToHash(res.Hash)
+	}
+
+	return blockHash, nil
+}
+
+func (client *ErigonClient) getSender(tx *gethtypes.Transaction, blockHash common.Hash, txPosition int) []byte {
+	// this won't make a request in most cases as the sender is already present in the cache
+	// context https://github.com/ethereum/go-ethereum/blob/v1.14.11/ethclient/ethclient.go#L268
+	sender, err := client.ethClient.TransactionSender(context.Background(), tx, blockHash, uint(txPosition))
+	if err != nil {
+		sender = common.HexToAddress("abababababababababababababababababababab")
+		log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+	}
+	return sender.Bytes()
+}
+
+func getInternalTxs(traceIndex int, traces []*Eth1InternalTransactionWithPosition, txPosition int) []*types.Eth1InternalTransaction {
+	var internals []*types.Eth1InternalTransaction
+	for ; traceIndex < len(traces) && traces[traceIndex].txPosition == txPosition; traceIndex++ {
+		internals = append(internals, &traces[traceIndex].Eth1InternalTransaction)
+	}
+	return internals
+}
+
+func getMaxFeePerBlobGas(tx *gethtypes.Transaction) []byte {
+	if tx.BlobGasFeeCap() != nil {
+		return tx.BlobGasFeeCap().Bytes()
+	}
+	return nil
+}
+
+func getBlobVersionedHashes(tx *gethtypes.Transaction) [][]byte {
+	var hashes [][]byte
+	for _, h := range tx.BlobHashes() {
+		hashes = append(hashes, h.Bytes())
+	}
+	return hashes
+}
+
+func getBlobGasPrice(receipt *gethtypes.Receipt) []byte {
+	if receipt.BlobGasPrice != nil {
+		return receipt.BlobGasPrice.Bytes()
+	}
+	return nil
+}
+
+func getBaseFee(block *gethtypes.Block) []byte {
+	if block.BaseFee() != nil {
+		return block.BaseFee().Bytes()
+	}
+	return nil
+}
+
+func getBlobGasUsed(block *gethtypes.Block) uint64 {
+	blobGasUsed := block.BlobGasUsed()
+	if blobGasUsed != nil {
+		return *blobGasUsed
+	}
+	return 0
+}
+
+func getExcessBlobGas(block *gethtypes.Block) uint64 {
+	excessBlobGas := block.ExcessBlobGas()
+	if excessBlobGas != nil {
+		return *excessBlobGas
+	}
+	return 0
 }
