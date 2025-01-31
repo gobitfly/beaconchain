@@ -371,17 +371,23 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 			lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
 
+			switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
+			if err != nil {
+				return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+			}
+			log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
+
 			consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
 			if err != nil {
 				return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
 			}
+			log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
 
 			depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
 			if err != nil {
 				return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
 			}
-
-			log.Infof("transformed consolidations & deposits for epoch %v, processed %v consolidation requests and %v deposit requests", epoch, consolidationRequestsProcessed, depositRequestsProcessed)
+			log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
 		}
 
 		log.Infof("exporting duties & balances for epoch %v", epoch)

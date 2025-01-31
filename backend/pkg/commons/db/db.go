@@ -2527,9 +2527,32 @@ func HasEventsForEpoch(epoch uint64) (bool, error) {
 	return count > 0, nil
 }
 
+func TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_switch_to_compounding_requests (block_slot, block_root, request_index, address, validator_index)
+		SELECT
+				slot AS slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				decode((data->>'address'), 'base64') AS address,
+				(data->>'index')::int AS validator_index
+			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
 func TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	res, err := tx.Exec(`
-	insert into blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
+	INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
 		SELECT
 				slot AS slot,
 				block_root AS block_root,
