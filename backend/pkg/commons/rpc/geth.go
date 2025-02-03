@@ -103,67 +103,41 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 	timings.Headers = time.Since(start)
 	start = time.Now()
 
+	uncles := getBlockUncles(block.Uncles())
+
 	c := &types.Eth1Block{
-		Hash:         block.Hash().Bytes(),
-		ParentHash:   block.ParentHash().Bytes(),
-		UncleHash:    block.UncleHash().Bytes(),
-		Coinbase:     block.Coinbase().Bytes(),
-		Root:         block.Root().Bytes(),
-		TxHash:       block.TxHash().Bytes(),
-		ReceiptHash:  block.ReceiptHash().Bytes(),
-		Difficulty:   block.Difficulty().Bytes(),
-		Number:       block.NumberU64(),
-		GasLimit:     block.GasLimit(),
-		GasUsed:      block.GasUsed(),
-		Time:         timestamppb.New(time.Unix(int64(block.Time()), 0)),
-		Extra:        block.Extra(),
-		MixDigest:    block.MixDigest().Bytes(),
-		Bloom:        block.Bloom().Bytes(),
-		Uncles:       []*types.Eth1Block{},
+		Hash:        block.Hash().Bytes(),
+		ParentHash:  block.ParentHash().Bytes(),
+		UncleHash:   block.UncleHash().Bytes(),
+		Coinbase:    block.Coinbase().Bytes(),
+		Root:        block.Root().Bytes(),
+		TxHash:      block.TxHash().Bytes(),
+		ReceiptHash: block.ReceiptHash().Bytes(),
+		Difficulty:  block.Difficulty().Bytes(),
+		Number:      block.NumberU64(),
+		GasLimit:    block.GasLimit(),
+		GasUsed:     block.GasUsed(),
+		Time:        timestamppb.New(time.Unix(int64(block.Time()), 0)),
+		Extra:       block.Extra(),
+		MixDigest:   block.MixDigest().Bytes(),
+		Bloom:       block.Bloom().Bytes(),
+		BaseFee: func() []byte {
+			if block.BaseFee() != nil {
+				return block.BaseFee().Bytes()
+			}
+			return nil
+		}(),
+		Uncles:       uncles,
 		Transactions: []*types.Eth1Transaction{},
-	}
-
-	if block.BaseFee() != nil {
-		c.BaseFee = block.BaseFee().Bytes()
-	}
-
-	for _, uncle := range block.Uncles() {
-		pbUncle := &types.Eth1Block{
-			Hash:        uncle.Hash().Bytes(),
-			ParentHash:  uncle.ParentHash.Bytes(),
-			UncleHash:   uncle.UncleHash.Bytes(),
-			Coinbase:    uncle.Coinbase.Bytes(),
-			Root:        uncle.Root.Bytes(),
-			TxHash:      uncle.TxHash.Bytes(),
-			ReceiptHash: uncle.ReceiptHash.Bytes(),
-			Difficulty:  uncle.Difficulty.Bytes(),
-			Number:      uncle.Number.Uint64(),
-			GasLimit:    uncle.GasLimit,
-			GasUsed:     uncle.GasUsed,
-			Time:        timestamppb.New(time.Unix(int64(uncle.Time), 0)),
-			Extra:       uncle.Extra,
-			MixDigest:   uncle.MixDigest.Bytes(),
-			Bloom:       uncle.Bloom.Bytes(),
-		}
-
-		c.Uncles = append(c.Uncles, pbUncle)
 	}
 
 	receipts := make([]*gethtypes.Receipt, len(block.Transactions()))
 	reqs := make([]gethrpc.BatchElem, len(block.Transactions()))
 
 	txs := block.Transactions()
-
 	for _, tx := range txs {
-		var from []byte
-		sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
-		if err != nil {
-			from, _ = hex.DecodeString("abababababababababababababababababababab")
-			log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
-		} else {
-			from = sender.Bytes()
-		}
-
+		from := getGethSender(tx)
+		to := getReceiver(tx)
 		pbTx := &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
 			Nonce:                tx.Nonce(),
@@ -174,15 +148,13 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 			Value:                tx.Value().Bytes(),
 			Data:                 tx.Data(),
 			From:                 from,
+			To:                   to,
 			ChainId:              tx.ChainId().Bytes(),
 			AccessList:           []*types.AccessList{},
 			Hash:                 tx.Hash().Bytes(),
 			Itx:                  []*types.Eth1InternalTransaction{},
 		}
 
-		if tx.To() != nil {
-			pbTx.To = tx.To().Bytes()
-		}
 		c.Transactions = append(c.Transactions, pbTx)
 	}
 
@@ -214,21 +186,7 @@ func (client *GethClient) GetBlock(number int64) (*types.Eth1Block, *types.GetBl
 		c.Transactions[i].CommulativeGasUsed = r.CumulativeGasUsed
 		c.Transactions[i].GasUsed = r.GasUsed
 		c.Transactions[i].LogsBloom = r.Bloom[:]
-		c.Transactions[i].Logs = make([]*types.Eth1Log, 0, len(r.Logs))
-
-		for _, l := range r.Logs {
-			pbLog := &types.Eth1Log{
-				Address: l.Address.Bytes(),
-				Data:    l.Data,
-				Removed: l.Removed,
-				Topics:  make([][]byte, 0, len(l.Topics)),
-			}
-
-			for _, t := range l.Topics {
-				pbLog.Topics = append(pbLog.Topics, t.Bytes())
-			}
-			c.Transactions[i].Logs = append(c.Transactions[i].Logs, pbLog)
-		}
+		c.Transactions[i].Logs = getLogsFromReceipts(r.Logs)
 	}
 
 	return c, timings, nil
@@ -321,29 +279,18 @@ func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalan
 	return ret, nil
 }
 
-func (client *GethClient) GetBalancesForAddresse(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
+func (client *GethClient) GetBalancesForAddress(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
 	opts := &bind.CallOpts{
 		BlockNumber: nil,
 	}
 
-	tokens := make([]common.Address, 0, len(tokenStr))
-
-	for _, token := range tokenStr {
-		tokens = append(tokens, common.HexToAddress(token))
-	}
+	tokens := getTokens(tokenStr)
 	balancesInt, err := client.multiChecker.Balances(opts, []common.Address{common.HexToAddress(address)}, tokens)
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]*types.Eth1AddressBalance, len(tokenStr))
-	for tokenIdx := range tokens {
-		res[tokenIdx] = &types.Eth1AddressBalance{
-			Address: common.FromHex(address),
-			Token:   common.FromHex(string(tokens[tokenIdx].Bytes())),
-			Balance: balancesInt[tokenIdx].Bytes(),
-		}
-	}
+	res := parseAddressBalance(tokens, address, balancesInt)
 
 	return res, nil
 }
@@ -380,6 +327,11 @@ func (client *GethClient) GetERC20TokenBalance(address string, token string) ([]
 func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
 	log.Infof("retrieving metadata for token %x", token)
 
+	oracle, err := oneinchoracle.NewOneInchOracleByChainID(client.GetChainID(), client.ethClient)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing oneinchoracle.NewOneInchOracleByChainID: %w", err)
+	}
+
 	contract, err := contracts.NewIERC20Metadata(common.BytesToAddress(token), client.ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("error getting token-contract: erc20.NewErc20: %w", err)
@@ -390,52 +342,22 @@ func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metad
 	ret := &types.ERC20Metadata{}
 
 	g.Go(func() error {
-		symbol, err := contract.Symbol(nil)
-		if err != nil {
-			if strings.Contains(err.Error(), "abi") {
-				ret.Symbol = "UNKNOWN"
-				return nil
-			}
-
-			return fmt.Errorf("error retrieving token symbol: %w", err)
-		}
-
-		ret.Symbol = symbol
-		return nil
+		return getContractSymbol(contract, ret)
 	})
 
 	g.Go(func() error {
-		totalSupply, err := contract.TotalSupply(nil)
-		if err != nil {
-			return fmt.Errorf("error retrieving token total supply: %w", err)
-		}
-		ret.TotalSupply = totalSupply.Bytes()
-		return nil
+		return getContractTotalSupply(contract, ret)
 	})
 
 	g.Go(func() error {
-		decimals, err := contract.Decimals(nil)
-		if err != nil {
-			return fmt.Errorf("error retrieving token decimals: %w", err)
-		}
-		ret.Decimals = big.NewInt(int64(decimals)).Bytes()
-		return nil
+		return getContractDecimals(contract, ret)
 	})
 
 	g.Go(func() error {
 		if !oneinchoracle.SupportedChainId(client.GetChainID()) {
 			return nil
 		}
-		oracle, err := oneinchoracle.NewOneInchOracleByChainID(client.GetChainID(), client.ethClient)
-		if err != nil {
-			return fmt.Errorf("error initializing oneinchoracle.NewOneInchOracleByChainID: %w", err)
-		}
-		rate, err := oracle.GetRateToEth(nil, common.BytesToAddress(token), false)
-		if err != nil {
-			return fmt.Errorf("error calling oneinchoracle.GetRateToEth: %w", err)
-		}
-		ret.Price = rate.Bytes()
-		return nil
+		return getRateFromOracle(oracle, token, ret)
 	})
 
 	err = g.Wait()
@@ -444,7 +366,8 @@ func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metad
 	}
 
 	if err == nil && len(ret.Decimals) == 0 && ret.Symbol == "" && len(ret.TotalSupply) == 0 {
-		// it's possible that a token contract implements the ERC20 interfaces but does not return any values; we use a backup in this case
+		// it's possible that a token contract implements the ERC20 interfaces but does not
+		// return any values; we use a backup in this case
 		ret = &types.ERC20Metadata{
 			Decimals:    []byte{0x0},
 			Symbol:      "UNKNOWN",
@@ -452,4 +375,16 @@ func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metad
 	}
 
 	return ret, err
+}
+
+func getGethSender(tx *gethtypes.Transaction) []byte {
+	var from []byte
+	sender, err := gethtypes.Sender(gethtypes.NewCancunSigner(tx.ChainId()), tx)
+	if err != nil {
+		from, _ = hex.DecodeString("abababababababababababababababababababab")
+		log.Error(err, "error converting tx to msg", 0, map[string]interface{}{"tx": tx.Hash()})
+	} else {
+		from = sender.Bytes()
+	}
+	return from
 }
