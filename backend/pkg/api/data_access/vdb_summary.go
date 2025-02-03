@@ -29,48 +29,130 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+type ElRewardsQueryResult struct {
+	GroupId   int64           `db:"result_group_id"`
+	ElRewards decimal.Decimal `db:"el_rewards"`
+}
+
+type ValidatorDashboardSummaryRow struct {
+	GroupId                int64           `db:"result_group_id"`
+	GroupName              string          `db:"group_name"`
+	ValidatorIndices       []uint64        `db:"validator_indices"`
+	ClRewards              int64           `db:"cl_rewards"`
+	AttestationReward      decimal.Decimal `db:"attestations_reward"`
+	AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
+	AttestationsObserved   uint64          `db:"attestations_observed"`
+	AttestationsScheduled  uint64          `db:"attestations_scheduled"`
+	BlocksProposed         uint64          `db:"blocks_proposed"`
+	BlocksScheduled        uint64          `db:"blocks_scheduled"`
+	SyncExecuted           uint64          `db:"sync_executed"`
+	SyncScheduled          uint64          `db:"sync_scheduled"`
+	MinEpochStart          int64           `db:"min_epoch_start"`
+	MaxEpochEnd            int64           `db:"max_epoch_end"`
+}
+
+type ValidatorDashboardSummaryResult []ValidatorDashboardSummaryRow
+
+func (d *DataAccessService) addValidatorsToQuery(ds *goqu.SelectDataset, dashboardId t.VDBId, validators []t.VDBValidator) *goqu.SelectDataset {
+	if len(validators) > 0 {
+		// If validators are provided, use the default group ID and filter by the validators
+		ds = ds.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
+	} else {
+		// If no validators are provided, handle based on whether groups are aggregated
+		if dashboardId.AggregateGroups {
+			// Use the default group ID if groups are aggregated
+			ds = ds.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
+		} else {
+			// Use the group ID from the validators table if groups are not aggregated
+			ds = ds.
+				SelectAppend(goqu.L("v.group_id AS result_group_id"))
+		}
+
+		// Join with the validators table and filter by dashboard ID
+		ds = ds.
+			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+	}
+
+	return ds
+}
+
 func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// @DATA-ACCESS incorporate protocolModes
-	result := make([]t.VDBSummaryTableRow, 0)
-	var paging t.Paging
-
-	wg := errgroup.Group{}
-
-	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	// Step 1: Build the query
+	query, args, err := d.buildValidatorDashboardSummaryQuery(ctx, dashboardId, period, colSort, search, protocolModes)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Searching for a group name is not supported when aggregating groups or for guest dashboards
-	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
-
-	// Analyze the search term
-	searchValidator := -1
-	if search != "" {
-		if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
-			search = strings.ToLower(search)
-
-			// Get the current validator state to convert pubkey to index
-			validatorMapping, err := d.services.GetCurrentValidatorMapping()
-			if err != nil {
-				return nil, nil, err
-			}
-			if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-				searchValidator = int(index)
-			} else {
-				// No validator index for pubkey found, return empty results
-				return result, &paging, nil
-			}
-		} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
-			searchValidator = int(number)
-		} else if !groupNameSearchEnabled {
-			return result, &paging, nil
-		}
+	// Step 2: Execute the query
+	queryResult, err := d.executeValidatorDashboardSummaryQuery(ctx, query, args)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// ------------------------------------------------------------------------------------------------------------------
-	// Fill the validators list if we have a guest dashboard
+	// Step 3: Process the result
+	result, paging, err := d.processValidatorDashboardSummaryResult(ctx, queryResult, dashboardId, period, colSort, search, protocolModes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return result, paging, nil
+}
+
+func (d *DataAccessService) getSearchValidator(ctx context.Context, search string, groupNameSearchEnabled bool) (int, error) {
+	searchValidator := -1
+
+	if search == "" {
+		return searchValidator, nil
+	}
+
+	// Handle search term that starts with "0x" (validator public key)
+	if strings.HasPrefix(search, "0x") && utils.IsHash(search) {
+		search = strings.ToLower(search)
+
+		// Fetch the current validator mapping
+		validatorMapping, err := d.services.GetCurrentValidatorMapping()
+		if err != nil {
+			return -1, fmt.Errorf("error fetching validator mapping: %w", err)
+		}
+
+		// Check if the search term matches a validator public key
+		if index, ok := validatorMapping.ValidatorIndices[search]; ok {
+			searchValidator = int(index)
+		} else {
+			// No validator index found for the public key
+			return -1, nil
+		}
+	} else if number, err := strconv.ParseUint(search, 10, 64); err == nil {
+		// Handle search term as a validator index (number)
+		searchValidator = int(number)
+	} else if !groupNameSearchEnabled {
+		// If group name search is not enabled and the search term is not a number, return no results
+		return -1, nil
+	}
+
+	return searchValidator, nil
+}
+
+func (d *DataAccessService) buildValidatorDashboardSummaryQuery(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, colSort t.Sort[enums.VDBSummaryColumn], search string, protocolModes t.VDBProtocolModes) (string, []interface{}, error) {
+	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return "", nil, err
+	}
+
+	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
+	searchValidator, err := d.getSearchValidator(ctx, search, groupNameSearchEnabled)
+	if err != nil {
+		return "", nil, err
+	}
+	if searchValidator == -1 {
+		// No validator found for the search term
+		return "", nil, nil
+	}
+
 	validators := make([]t.VDBValidator, 0)
 	if dashboardId.Validators != nil {
 		validatorFound := false
@@ -81,37 +163,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			validators = append(validators, validator)
 		}
 		if searchValidator != -1 && !validatorFound {
-			// The searched validator is not part of the dashboard
-			return result, &paging, nil
+			return "", nil, nil
 		}
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get the average network efficiency
-	efficiency, err := d.services.GetCurrentEfficiencyInfo()
-	if err != nil {
-		return nil, nil, err
-	}
-	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
-		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Build the main query and get the data
-	var queryResult []struct {
-		GroupId                int64           `db:"result_group_id"`
-		GroupName              string          `db:"group_name"`
-		ValidatorIndices       []uint64        `db:"validator_indices"`
-		ClRewards              int64           `db:"cl_rewards"`
-		AttestationReward      decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		AttestationsObserved   uint64          `db:"attestations_observed"`
-		AttestationsScheduled  uint64          `db:"attestations_scheduled"`
-		BlocksProposed         uint64          `db:"blocks_proposed"`
-		BlocksScheduled        uint64          `db:"blocks_scheduled"`
-		SyncExecuted           uint64          `db:"sync_executed"`
-		SyncScheduled          uint64          `db:"sync_scheduled"`
-		MinEpochStart          int64           `db:"min_epoch_start"`
-		MaxEpochEnd            int64           `db:"max_epoch_end"`
 	}
 
 	ds := goqu.Dialect("postgres").
@@ -157,7 +210,6 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
 		if groupNameSearchEnabled && (search != "" || colSort.Column == enums.VDBSummaryColumns.Group) {
-			// Get the group names since we can filter and/or sort for them
 			ds = ds.
 				SelectAppend(goqu.L("g.name AS group_name")).
 				InnerJoin(goqu.L("users_val_dashboards_groups g"), goqu.On(goqu.L("v.group_id = g.id AND v.dashboard_id = g.dashboard_id"))).
@@ -165,20 +217,43 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		}
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
+	return ds.Prepared(true).ToSQL()
+}
+
+func (d *DataAccessService) executeValidatorDashboardSummaryQuery(ctx context.Context, query string, args []interface{}) (ValidatorDashboardSummaryResult, error) {
+	var queryResult ValidatorDashboardSummaryResult
+
+	err := d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %w", err)
+		return nil, fmt.Errorf("error retrieving data from table: %w", err)
 	}
 
-	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving data from table %s: %w", clickhouseTable, err)
-	}
+	return queryResult, nil
+}
 
+func (d *DataAccessService) processValidatorDashboardSummaryResult(ctx context.Context, queryResult ValidatorDashboardSummaryResult, dashboardId t.VDBId, period enums.TimePeriod, colSort t.Sort[enums.VDBSummaryColumn], search string, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+	result := make([]t.VDBSummaryTableRow, 0)
+	var paging t.Paging
 	if len(queryResult) == 0 {
-		// No groups to show
 		return result, &paging, nil
 	}
+
+	groupNameSearchEnabled := !dashboardId.AggregateGroups && dashboardId.Validators == nil
+	searchValidator, err := d.getSearchValidator(ctx, search, groupNameSearchEnabled)
+	if err != nil {
+		return nil, nil, err
+	}
+	if searchValidator == -1 {
+		// No validator found for the search term
+		return nil, nil, nil
+	}
+
+	efficiency, err := d.services.GetCurrentEfficiencyInfo()
+	if err != nil {
+		return nil, nil, err
+	}
+	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
+		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
 
 	epochMin := int64(math.MaxInt32)
 	epochMax := int64(0)
@@ -191,67 +266,15 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 			epochMax = row.MaxEpochEnd
 		}
 	}
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get the EL rewards
-	elRewards := make(map[int64]decimal.Decimal)
-	ds = goqu.Dialect("postgres").
-		Select(
-			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
-		From(goqu.I("execution_rewards_finalized").As("b")).
-		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", epochMin, epochMax)).
-		GroupBy(goqu.L("result_group_id"))
 
-	if len(validators) > 0 {
-		ds = ds.
-			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("b.proposer = ANY(?)", pq.Array(validators)))
-	} else {
-		if dashboardId.AggregateGroups {
-			ds = ds.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
-		} else {
-			ds = ds.
-				SelectAppend(goqu.L("v.group_id AS result_group_id"))
-		}
-
-		ds = ds.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-	}
-
-	var elRewardsQueryResult []struct {
-		GroupId   int64           `db:"result_group_id"`
-		ElRewards decimal.Decimal `db:"el_rewards"`
-	}
-
-	query, args, err = ds.Prepared(true).ToSQL()
+	elRewards, err := d.getElRewards(ctx, epochMin, epochMax, dashboardId, queryResult[0].ValidatorIndices)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %w", err)
+		return nil, nil, err
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &elRewardsQueryResult, query, args...)
+	currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err := d.getCurrentAndUpcomingSyncCommittees(ctx, cache.LatestEpoch.Get())
 	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
-	}
-
-	for _, entry := range elRewardsQueryResult {
-		elRewards[entry.GroupId] = entry.ElRewards
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Get the current and next sync committee validators
-	latestEpoch := cache.LatestEpoch.Get()
-	currentSyncCommitteeValidators := make(map[uint64]bool)
-	upcomingSyncCommitteeValidators := make(map[uint64]bool)
-	wg.Go(func() error {
-		var err error
-		currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, err = d.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
-		return err
-	})
-
-	err = wg.Wait()
-	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving validator dashboard summary data: %w", err)
+		return nil, nil, err
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -494,6 +517,51 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	return result, &paging, nil
 }
 
+func (d *DataAccessService) getElRewards(ctx context.Context, epochMin, epochMax int64, dashboardId t.VDBId, validators []t.VDBValidator) (map[int64]decimal.Decimal, error) {
+	query, args, err := d.buildElRewardsQuery(epochMin, epochMax, dashboardId, validators)
+	if err != nil {
+		return nil, fmt.Errorf("error building EL rewards query: %w", err)
+	}
+
+	elRewardsQueryResult, err := d.executeElRewardsQuery(ctx, query, args)
+	if err != nil {
+		return nil, fmt.Errorf("error executing EL rewards query: %w", err)
+	}
+
+	elRewards := d.processElRewardsQueryResult(elRewardsQueryResult)
+	return elRewards, nil
+}
+
+func (d *DataAccessService) buildElRewardsQuery(epochMin, epochMax int64, dashboardId t.VDBId, validators []t.VDBValidator) (string, []interface{}, error) {
+	ds := goqu.Dialect("postgres").
+		Select(
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
+		From(goqu.I("execution_rewards_finalized").As("b")).
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", epochMin, epochMax)).
+		GroupBy(goqu.L("result_group_id"))
+	ds = d.addValidatorsToQuery(ds, dashboardId, validators)
+	return ds.Prepared(true).ToSQL()
+}
+
+func (d *DataAccessService) executeElRewardsQuery(ctx context.Context, query string, args []interface{}) ([]ElRewardsQueryResult, error) {
+	var elRewardsQueryResult []ElRewardsQueryResult
+
+	err := d.alloyReader.SelectContext(ctx, &elRewardsQueryResult, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
+	}
+
+	return elRewardsQueryResult, nil
+}
+
+func (d *DataAccessService) processElRewardsQueryResult(elRewardsQueryResult []ElRewardsQueryResult) map[int64]decimal.Decimal {
+	elRewards := make(map[int64]decimal.Decimal)
+	for _, entry := range elRewardsQueryResult {
+		elRewards[entry.GroupId] = entry.ElRewards
+	}
+	return elRewards
+}
+
 func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context, dashboardId t.VDBId, groupId int64) (time.Time, time.Time, error) {
 	// we need to go to the all time table for last scheduled block/sync committee epoch
 	clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
@@ -540,7 +608,12 @@ func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context
 		nil
 }
 
-func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, clickhouseTable string) (uint64, uint64, error) {
+func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (uint64, uint64, error) {
+	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("MIN(epoch_start) as min_epoch_start"),
@@ -776,7 +849,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var minEpochStart, maxEpochEnd uint64
 	errGroup.Go(func() error {
 		var err error
-		minEpochStart, maxEpochEnd, err = d.getMinMaxEpochs(ctx, dashboardId, groupId, clickhouseTable)
+		minEpochStart, maxEpochEnd, err = d.getMinMaxEpochs(ctx, dashboardId, groupId, period)
 		return err
 	})
 
