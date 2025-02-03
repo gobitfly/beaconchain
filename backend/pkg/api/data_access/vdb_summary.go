@@ -29,11 +29,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type ElRewardsQueryResult struct {
-	GroupId   int64           `db:"result_group_id"`
-	ElRewards decimal.Decimal `db:"el_rewards"`
-}
-
 type ValidatorDashboardSummaryRow struct {
 	GroupId                int64           `db:"result_group_id"`
 	GroupName              string          `db:"group_name"`
@@ -81,19 +76,16 @@ func (d *DataAccessService) addValidatorsToQuery(ds *goqu.SelectDataset, dashboa
 }
 
 func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
-	// Step 1: Build the query
 	query, args, err := d.buildValidatorDashboardSummaryQuery(ctx, dashboardId, period, colSort, search, protocolModes)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Step 2: Execute the query
 	queryResult, err := d.executeValidatorDashboardSummaryQuery(ctx, query, args)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Step 3: Process the result
 	result, paging, err := d.processValidatorDashboardSummaryResult(ctx, queryResult, dashboardId, period, colSort, search, protocolModes)
 	if err != nil {
 		return nil, nil, err
@@ -517,6 +509,11 @@ func (d *DataAccessService) processValidatorDashboardSummaryResult(ctx context.C
 	return result, &paging, nil
 }
 
+type ElRewardsQueryResult struct {
+	GroupId   int64           `db:"result_group_id"`
+	ElRewards decimal.Decimal `db:"el_rewards"`
+}
+
 func (d *DataAccessService) getElRewards(ctx context.Context, epochMin, epochMax int64, dashboardId t.VDBId, validators []t.VDBValidator) (map[int64]decimal.Decimal, error) {
 	query, args, err := d.buildElRewardsQuery(epochMin, epochMax, dashboardId, validators)
 	if err != nil {
@@ -562,11 +559,39 @@ func (d *DataAccessService) processElRewardsQueryResult(elRewardsQueryResult []E
 	return elRewards
 }
 
+type LastScheduledBlockAndSyncResult struct {
+	LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
+	LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
+}
+
 func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context, dashboardId t.VDBId, groupId int64) (time.Time, time.Time, error) {
-	// we need to go to the all time table for last scheduled block/sync committee epoch
+	ds, err := d.buildLastScheduledBlockAndSyncQuery(dashboardId, groupId)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("error building query: %w", err)
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	row, err := d.executeLastScheduledBlockAndSyncQuery(ctx, query, args)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("error executing query: %w", err)
+	}
+
+	lastScheduledBlockTime, lastSyncTime, err := d.processLastScheduledBlockAndSyncResult(row)
+	if err != nil {
+		return time.Time{}, time.Time{}, fmt.Errorf("error processing result: %w", err)
+	}
+
+	return lastScheduledBlockTime, lastSyncTime, nil
+}
+
+func (d *DataAccessService) buildLastScheduledBlockAndSyncQuery(dashboardId t.VDBId, groupId int64) (*goqu.SelectDataset, error) {
 	clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
 	if err != nil {
-		return time.Time{}, time.Time{}, err
+		return nil, fmt.Errorf("error getting table for period: %w", err)
 	}
 
 	ds := goqu.Dialect("postgres").
@@ -585,35 +610,64 @@ func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return time.Time{}, time.Time{}, err
-	}
+	return ds, nil
+}
 
-	var row struct {
-		LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
-		LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
-	}
-	err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
+func (d *DataAccessService) executeLastScheduledBlockAndSyncQuery(ctx context.Context, query string, args []interface{}) (LastScheduledBlockAndSyncResult, error) {
+	var row LastScheduledBlockAndSyncResult
+	err := d.clickhouseReader.GetContext(ctx, &row, query, args...)
 	if err != nil {
-		return time.Time{}, time.Time{}, err
+		return LastScheduledBlockAndSyncResult{}, fmt.Errorf("error executing query: %w", err)
 	}
+	return row, nil
+}
 
+func (d *DataAccessService) processLastScheduledBlockAndSyncResult(row LastScheduledBlockAndSyncResult) (time.Time, time.Time, error) {
 	if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
 		return time.Time{}, time.Time{}, nil
 	}
 
-	return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
-		utils.EpochToTime(uint64(*row.LastSyncEpoch)),
-		nil
+	lastScheduledBlockTime := utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch))
+	lastSyncTime := utils.EpochToTime(uint64(*row.LastSyncEpoch))
+
+	return lastScheduledBlockTime, lastSyncTime, nil
+}
+
+type MinMaxEpochsResult struct {
+	MinEpochStart *uint64 `db:"min_epoch_start"`
+	MaxEpochEnd   *uint64 `db:"max_epoch_end"`
 }
 
 func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (uint64, uint64, error) {
 	clickhouseTable, _, err := d.getTablesForPeriod(period)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("error getting table for period: %w", err)
 	}
 
+	ds, err := d.buildMinMaxEpochsQuery(dashboardId, groupId, clickhouseTable)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error building query: %w", err)
+	}
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return 0, 0, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	row, err := d.executeMinMaxEpochsQuery(ctx, query, args)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error executing query: %w", err)
+	}
+
+	minEpochStart, maxEpochEnd, err := d.processMinMaxEpochsResult(row)
+	if err != nil {
+		return 0, 0, fmt.Errorf("error processing result: %w", err)
+	}
+
+	return minEpochStart, maxEpochEnd, nil
+}
+
+func (d *DataAccessService) buildMinMaxEpochsQuery(dashboardId t.VDBId, groupId int64, clickhouseTable string) (*goqu.SelectDataset, error) {
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("MIN(epoch_start) as min_epoch_start"),
@@ -630,26 +684,40 @@ func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.V
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return 0, 0, err
-	}
+	return ds, nil
+}
 
-	var epoch_row struct {
-		MinEpochStart *uint64 `db:"min_epoch_start"`
-		MaxEpochEnd   *uint64 `db:"max_epoch_end"`
-	}
-	err = d.clickhouseReader.GetContext(ctx, &epoch_row, query, args...)
+func (d *DataAccessService) executeMinMaxEpochsQuery(ctx context.Context, query string, args []interface{}) (MinMaxEpochsResult, error) {
+	var row MinMaxEpochsResult
+	err := d.clickhouseReader.GetContext(ctx, &row, query, args...)
 	if err != nil {
-		return 0, 0, err
+		return MinMaxEpochsResult{}, fmt.Errorf("error executing query: %w", err)
 	}
-	return *epoch_row.MinEpochStart, *epoch_row.MaxEpochEnd, nil
+	return row, nil
+}
+
+func (d *DataAccessService) processMinMaxEpochsResult(row MinMaxEpochsResult) (uint64, uint64, error) {
+	if row.MinEpochStart == nil || row.MaxEpochEnd == nil {
+		return 0, 0, fmt.Errorf("no epoch data found")
+	}
+	return *row.MinEpochStart, *row.MaxEpochEnd, nil
 }
 
 func (d *DataAccessService) getMissedELRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epochStart, epochEnd uint64) (float64, error) {
-	// Initialize the result variable
-	var totalMissedRewardsEl float64
+	query, err := d.buildMissedELRewardsQuery(dashboardId, groupId, epochStart, epochEnd)
+	if err != nil {
+		return 0, fmt.Errorf("error building query: %w", err)
+	}
 
+	totalMissedRewardsEl, err := d.executeMissedELRewardsQuery(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("error executing query: %w", err)
+	}
+
+	return totalMissedRewardsEl, nil
+}
+
+func (d *DataAccessService) buildMissedELRewardsQuery(dashboardId t.VDBId, groupId int64, epochStart, epochEnd uint64) (*goqu.SelectDataset, error) {
 	// Define the `targets` CTE
 	targets := goqu.Dialect("postgres").
 		From("blocks").
@@ -708,19 +776,23 @@ func (d *DataAccessService) getMissedELRewards(ctx context.Context, dashboardId 
 		With("res", res).
 		Select(goqu.L("COALESCE(SUM(v), 0)"))
 
+	return query, nil
+}
+
+func (d *DataAccessService) executeMissedELRewardsQuery(ctx context.Context, query *goqu.SelectDataset) (float64, error) {
 	// Generate SQL and arguments
 	sql, args, err := query.Prepared(true).ToSQL()
 	if err != nil {
 		return 0, fmt.Errorf("failed to generate SQL: %w", err)
 	}
 
-	// Execute the query with the generated SQL and arguments
+	// Execute the query
+	var totalMissedRewardsEl float64
 	err = d.readerDb.GetContext(ctx, &totalMissedRewardsEl, sql, args...)
 	if err != nil {
 		return 0, fmt.Errorf("failed to execute query: %w", err)
 	}
 
-	// Return the computed total median rewards
 	return totalMissedRewardsEl, nil
 }
 
