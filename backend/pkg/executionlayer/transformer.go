@@ -107,10 +107,7 @@ func TransformERC20(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 				continue
 			}
 
-			var value []byte
-			if transfer.Value != nil {
-				value = transfer.Value.Bytes()
-			}
+			value := getERC20TransferValue(transfer)
 
 			indexedLog := &types.Eth1ERC20Indexed{
 				ParentHash:   tx.GetHash(),
@@ -178,24 +175,11 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 			minGasPrice = price
 		}
 
-		txFee := new(big.Int).Mul(new(big.Int).SetBytes(t.GasPrice), big.NewInt(int64(t.GasUsed)))
-
-		if len(block.BaseFee) > 0 {
-			effectiveGasPrice := math.BigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(block.BaseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
-			proposerGasPricePart := new(big.Int).Sub(effectiveGasPrice, new(big.Int).SetBytes(block.BaseFee))
-
-			if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
-				txFee = new(big.Int).Mul(proposerGasPricePart, big.NewInt(int64(t.GasUsed)))
-			} else {
-				log.Error(fmt.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart), "", 0)
-				txFee = big.NewInt(0)
-			}
-		}
-
+		txFee := calculateTxFee(t, block.BaseFee)
 		txReward.Add(txReward, txFee)
 
 		for _, itx := range t.Itx {
-			if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) { // skip top level call & empty calls
+			if isValidItx(itx) { // skip top level call & empty calls
 				continue
 			}
 			idx.InternalTransactionCount++
@@ -262,16 +246,15 @@ func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock
 					// also use success status of enclosing transaction, as even successful sub-calls can still be reverted later in the tx
 					Success: itx.GetErrorMsg() == "" && tx.GetErrorMsg() == "",
 				}
-				address := itx.GetTo()
-				if itx.GetType() == "suicide" {
-					address = itx.GetFrom()
+				address := getContractAddress(itx)
+				ts, err := encodeIsContractUpdateTs(block.GetNumber(), uint64(i), uint64(j))
+				if err != nil {
+					return nil, nil, fmt.Errorf("error generating bigtable isContract timestamp: %w", err)
 				}
-
-				contracts = append(contracts, metadataupdates.ContractUpdateWithAddress{
-					Indexed:       contractUpdate,
-					Address:       address,
-					TxIndex:       i,
-					InternalIndex: j,
+				updates = append(updates, metadataupdates.ContractUpdateWithAddress{
+					Indexed:   contractUpdate,
+					Address:   address,
+					Timestamp: ts,
 				})
 			}
 		}
@@ -346,15 +329,8 @@ func TransformERC1155(chainID string, block *types.Eth1Block, res *IndexedBlock)
 			}
 			indexedLog := &types.ETh1ERC1155Indexed{}
 			if transferBatch != nil {
-				ids := make([][]byte, 0, len(transferBatch.Ids))
-				for _, id := range transferBatch.Ids {
-					ids = append(ids, id.Bytes())
-				}
-
-				values := make([][]byte, 0, len(transferBatch.Values))
-				for _, val := range transferBatch.Values {
-					values = append(values, val.Bytes())
-				}
+				ids := getERC1155TransferIDs(transferBatch.Ids)
+				values := getERC1155TransferValues(transferBatch.Values)
 
 				// TODO - Tangui this is probably a bug, only the last transfer will be saved
 				for ti := range ids {
@@ -663,7 +639,7 @@ func isBlobTx(txType uint32) bool {
 }
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
-	return itx.Path == "0" || itx.Path != "[]" || bytes.Equal(itx.Value, []byte{0x0})
+	return itx.Path == "0" || itx.Path == "[]" || bytes.Equal(itx.Value, []byte{0x0})
 }
 
 func getLogTopics(log *types.Eth1Log) []common.Hash {
@@ -701,6 +677,38 @@ func getMethodSignature(tx *types.Eth1Transaction) []byte {
 	return method
 }
 
+func getContractAddress(itx *types.Eth1InternalTransaction) []byte {
+	address := itx.GetTo()
+	if itx.GetType() == "suicide" {
+		address = itx.GetFrom()
+	}
+	return address
+}
+
+func getERC20TransferValue(transfer *contracts.ERC20Transfer) []byte {
+	var value []byte
+	if transfer.Value != nil {
+		value = transfer.Value.Bytes()
+	}
+	return value
+}
+
+func getERC1155TransferIDs(idList []*big.Int) [][]byte {
+	ids := make([][]byte, 0, len(idList))
+	for _, id := range idList {
+		ids = append(ids, id.Bytes())
+	}
+	return ids
+}
+
+func getERC1155TransferValues(values []*big.Int) [][]byte {
+	v := make([][]byte, 0, len(values))
+	for _, val := range values {
+		v = append(v, val.Bytes())
+	}
+	return v
+}
+
 func updateITxStatus(internalTx []*types.Eth1InternalTransaction, indexedTx *types.Eth1TransactionIndexed) {
 	for _, itx := range internalTx {
 		if itx.ErrorMsg != "" {
@@ -711,6 +719,24 @@ func updateITxStatus(internalTx []*types.Eth1InternalTransaction, indexedTx *typ
 			break
 		}
 	}
+}
+
+// calculates tx fee and priority fee
+func calculateTxFee(t *types.Eth1Transaction, baseFee []byte) *big.Int {
+	txFee := new(big.Int).Mul(new(big.Int).SetBytes(t.GasPrice), big.NewInt(int64(t.GasUsed)))
+
+	if len(baseFee) > 0 {
+		effectiveGasPrice := math.BigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(baseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
+		proposerGasPricePart := new(big.Int).Sub(effectiveGasPrice, new(big.Int).SetBytes(baseFee))
+
+		if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
+			txFee = new(big.Int).Mul(proposerGasPricePart, big.NewInt(int64(t.GasUsed)))
+		} else {
+			log.Error(fmt.Errorf("error minerGasPricePart is below 0 for tx %v: %v", t.Hash, proposerGasPricePart), "", 0)
+			txFee = big.NewInt(0)
+		}
+	}
+	return txFee
 }
 
 // calculates the total value of uncle rewards for a block
