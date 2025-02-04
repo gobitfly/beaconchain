@@ -2,6 +2,7 @@ package executionlayer
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -950,86 +951,219 @@ func TestCalculateTxFee(t *testing.T) {
 	}
 }
 
-func addPrefix(b []byte, length int) []byte {
-	for len(b) != length {
-		b = append([]byte{0}, b...)
-	}
-	return b
-}
-
-func rightPad(b []byte) []byte {
-	for len(b) != 32 {
-		b = append(b, 0)
-	}
-	return b
-}
-
-func TestTransformer_FromList(t *testing.T) {
+func TestCalculateMevFromBlock(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    TransformFunc
-		wantErr bool
+		name     string
+		block    *types.Eth1Block
+		expected *big.Int
 	}{
 		{
-			name: "TransformBlock",
-			want: TransformBlock,
+			name: "no MEV",
+			block: &types.Eth1Block{
+				Coinbase: []byte("coinbase"),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    common.Address{}.Bytes(),
+								Value: big.NewInt(100).Bytes(),
+							},
+						},
+					},
+				},
+			},
+			expected: big.NewInt(0),
 		},
 		{
-			name: "TransformTx",
-			want: TransformTx,
-		},
-		{
-			name: "TransformBlobTx",
-			want: TransformBlob,
-		},
-		{
-			name: "TransformItx",
-			want: TransformITx,
-		},
-		{
-			name: "TransformERC20",
-			want: TransformERC20,
-		},
-		{
-			name: "TransformERC721",
-			want: TransformERC721,
-		},
-		{
-			name: "TransformERC1155",
-			want: TransformERC1155,
-		},
-		{
-			name: "TransformWithdrawals",
-			want: TransformWithdrawal,
-		},
-		{
-			name: "TransformUncle",
-			want: TransformUncle,
-		},
-		{
-			name: "TransformEnsNameRegistered",
-			want: TransformEnsNameRegistered,
-		},
-		{
-			name: "TransformContract",
-			want: TransformContract,
-		},
-		{
-			name:    "invalid",
-			wantErr: true,
+			name: "MEV from one transaction",
+			block: &types.Eth1Block{
+				Coinbase: []byte("coinbase"),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    []byte("coinbase"),
+								Value: big.NewInt(100).Bytes(),
+							},
+						},
+					},
+				},
+			},
+			expected: big.NewInt(100),
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := TransformerFromList([]string{tt.name})
-			if err != nil {
-				if tt.wantErr {
-					return
-				}
-				t.Errorf("got %v, want nil", err)
+			result := calculateMevFromBlock(tt.block)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
 			}
-			if got, want := got[0], tt.want; reflect.DeepEqual(got, want) {
-				t.Errorf("got %v, want %v", got, want)
+		})
+	}
+}
+
+func TestCalculateBlockUncleReward(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    *types.Eth1Block
+		chainID  string
+		expected *big.Int
+	}{
+		{
+			name: "no uncles",
+			block: &types.Eth1Block{
+				Uncles: []*types.Eth1Block{},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+		{
+			name: "one uncle",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32)),
+		},
+		{
+			name: "two uncles",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+					{
+						Number: 2,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: new(big.Int).Mul(big.NewInt(2), new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32))),
+		},
+		{
+			name: "no uncle rewards",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: []byte{},
+				Uncles: []*types.Eth1Block{
+					{
+						Number: 1,
+					},
+				},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateBlockUncleReward(tt.block, tt.chainID)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCalculateUncleReward(t *testing.T) {
+	tests := []struct {
+		name     string
+		block    *types.Eth1Block
+		uncle    *types.Eth1Block
+		chainID  string
+		expected *big.Int
+	}{
+		{
+			name: "no uncles",
+			block: &types.Eth1Block{
+				Uncles: []*types.Eth1Block{},
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+		{
+			name: "one uncle",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: big.NewInt(100).Bytes(),
+			},
+			uncle: &types.Eth1Block{
+				Number: 1,
+			},
+			chainID:  "1",
+			expected: new(big.Int).Div(eth1BlockReward("1", 10, big.NewInt(100).Bytes()), big.NewInt(32)),
+		},
+		{
+			name: "no uncle rewards",
+			block: &types.Eth1Block{
+				Number:     10,
+				Difficulty: []byte{},
+			},
+			uncle: &types.Eth1Block{
+				Number: 1,
+			},
+			chainID:  "1",
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateUncleReward(tt.block, tt.uncle, tt.chainID)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestVerifyName(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected error
+	}{
+		{
+			name:     "valid name",
+			input:    "test",
+			expected: nil,
+		},
+		{
+			name:     "empty name",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "maximum length name",
+			input:    string(make([]byte, 2048)),
+			expected: nil,
+		},
+		{
+			name:     "name too long",
+			input:    string(make([]byte, 2049)),
+			expected: fmt.Errorf("name too long: %v", string(make([]byte, 2049))),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := verifyName(tt.input)
+			if (result == nil && tt.expected != nil) || (result != nil && tt.expected == nil) {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			} else if result != nil && tt.expected != nil && result.Error() != tt.expected.Error() {
+				t.Errorf("got %v, want %v", result, tt.expected)
 			}
 		})
 	}
