@@ -7,17 +7,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
+	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 var (
-	alice        = []byte("alice")
-	aliceAddress = common.BytesToAddress(leftPad(alice, 20))
-	bob          = []byte("bob")
-	bobAddress   = common.BytesToAddress(leftPad(bob, 20))
-	contract     = []byte("contract")
-	usdc         = []byte("usdc")
+	alice    = []byte("alice")
+	bob      = []byte("bob")
+	john     = []byte("john")
+	contract = []byte("contract")
+	usdc     = []byte("usdc")
+	tokenID  = []byte("tokenID")
 )
 
 func TestTransformTX(t *testing.T) {
@@ -373,9 +375,6 @@ func TestUpdateITxStatus(t *testing.T) {
 }
 
 func TestIsValidERC20Log(t *testing.T) {
-	transferTopic := common.HexToHash("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef") // ERC20 Transfer event topic
-	senderAddress := common.HexToHash("0x0000000000000000000000000000000000001").Bytes()
-	receiverAddress := common.HexToHash("0x0000000000000000000000000000000000002").Bytes()
 	tests := []struct {
 		name     string
 		log      *types.Eth1Log
@@ -385,9 +384,9 @@ func TestIsValidERC20Log(t *testing.T) {
 			name: "valid ERC20 transfer log",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					transferTopic.Bytes(),
-					senderAddress,
-					receiverAddress,
+					erc20.TransferTopic.Bytes(),
+					alice,
+					bob,
 				},
 			},
 			expected: true,
@@ -397,8 +396,8 @@ func TestIsValidERC20Log(t *testing.T) {
 			log: &types.Eth1Log{
 				Topics: [][]byte{
 					common.HexToHash("0x0123").Bytes(),
-					senderAddress,
-					receiverAddress,
+					alice,
+					bob,
 				},
 			},
 			expected: false,
@@ -407,8 +406,8 @@ func TestIsValidERC20Log(t *testing.T) {
 			name: "invalid ERC20 transfer log with too little topics",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					transferTopic.Bytes(),
-					senderAddress,
+					erc20.TransferTopic.Bytes(),
+					alice,
 				},
 			},
 			expected: false,
@@ -417,10 +416,10 @@ func TestIsValidERC20Log(t *testing.T) {
 			name: "invalid ERC20 transfer log with too many topics",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					transferTopic.Bytes(),
-					senderAddress,
-					receiverAddress,
-					senderAddress,
+					erc20.TransferTopic.Bytes(),
+					alice,
+					bob,
+					john,
 				},
 			},
 			expected: false,
@@ -430,6 +429,174 @@ func TestIsValidERC20Log(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := isValidERC20Log(tt.log)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsValidERC721Log(t *testing.T) {
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected bool
+	}{
+		{
+			name: "valid ERC721 transfer log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+					tokenID,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid ERC721 transfer log with incorrect topic",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash("0x1234").Bytes(),
+					alice,
+					bob,
+					tokenID,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC721 transfer log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid ERC721 transfer log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc721.TransferTopic.Bytes(),
+					alice,
+					bob,
+					tokenID,
+					john,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidERC721Log(tt.log)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestIsValidERC1155Log(t *testing.T) {
+	tests := []struct {
+		name     string
+		log      *types.Eth1Log
+		expected bool
+	}{
+		{
+			name: "valid TransferSingleTopic log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "valid TransferBulkTopic log",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "invalid log with invalid topic",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					common.HexToHash("0x1234").Bytes(),
+					alice,
+					bob,
+					john,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferSingleTopic log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferBulkTopic log with too little topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferSingleTopic log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferSingleTopic.Bytes(),
+					alice,
+					bob,
+					john,
+					contract,
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "invalid TransferBulkTopic log with too many topics",
+			log: &types.Eth1Log{
+				Topics: [][]byte{
+					erc1155.TransferBulkTopic.Bytes(),
+					alice,
+					bob,
+					john,
+					contract,
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidERC1155Log(tt.log)
 			if result != tt.expected {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}
