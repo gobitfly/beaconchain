@@ -7,3 +7,4 @@ local_deployment/.env
 __gitignore
 cmd/playground
 pkg/api/docs/swagger.json
+coverage.out

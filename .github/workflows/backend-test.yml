@@ -1,0 +1,39 @@
+name: backend-test.yml
+
+env:
+  # raise that threshold over time
+  COVERAGE_THRESHOLD: 2
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: unit tests
+        working-directory: ./backend
+        run: |
+          export TERM=xterm
+          go test `go list ./... | grep -v "pkg/consapi\|pkg/api\|internal/th\|internal/contracts\|pkg/commons/types\|pkg/commons/contracts\|cmd"` -coverprofile coverage.out -covermode atomic -race
+
+      - name: coverage
+        working-directory: ./backend
+        run: |
+          echo "Quality Gate: checking test coverage is above threshold ..."
+          echo "Threshold             : $COVERAGE_THRESHOLD %"
+          totalCoverage=`go tool cover -func=coverage.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "Current test coverage : $totalCoverage %"
+          if (( $(echo "$totalCoverage $COVERAGE_THRESHOLD" | awk '{print ($1 > $2)}') )); then
+              echo "OK"
+          else
+              echo "Current test coverage is below threshold. Please add more unit tests or adjust threshold to a lower value."
+              echo "Failed"
+              exit 1
+          fi

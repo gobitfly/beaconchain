@@ -202,7 +202,7 @@ func TestGetEvents(t *testing.T) {
 
 	for event := range res {
 		if event.Error != nil {
-			t.Errorf("Error getting event: %v", event.Error)
+			t.Fatalf("Error getting event: %v", event.Error)
 		}
 
 		if event.Event == types.EventHead {
