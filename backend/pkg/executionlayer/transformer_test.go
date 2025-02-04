@@ -206,80 +206,6 @@ func TestTransformERC20(t *testing.T) {
 	}
 }
 
-func TestUpdateITxStatus(t *testing.T) {
-	tests := []struct {
-		name             string
-		internalTx       []*types.Eth1InternalTransaction
-		indexedTx        *types.Eth1TransactionIndexed
-		expectedStatus   types.StatusType
-		expectedErrorMsg string
-	}{
-		{
-			name:       "no internal transactions",
-			internalTx: []*types.Eth1InternalTransaction{},
-			indexedTx: &types.Eth1TransactionIndexed{
-				Status: types.StatusType_SUCCESS,
-			},
-			expectedStatus:   types.StatusType_SUCCESS,
-			expectedErrorMsg: "",
-		},
-		{
-			name: "internal transaction with error",
-			internalTx: []*types.Eth1InternalTransaction{
-				{
-					ErrorMsg: "fail",
-				},
-			},
-			indexedTx: &types.Eth1TransactionIndexed{
-				Status: types.StatusType_SUCCESS,
-			},
-			expectedStatus:   types.StatusType_PARTIAL,
-			expectedErrorMsg: "fail",
-		},
-		{
-			name: "internal transaction with error and status failed",
-			internalTx: []*types.Eth1InternalTransaction{
-				{
-					ErrorMsg: "fail",
-				},
-			},
-			indexedTx: &types.Eth1TransactionIndexed{
-				Status: types.StatusType_FAILED,
-			},
-			expectedStatus:   types.StatusType_FAILED,
-			expectedErrorMsg: "fail",
-		},
-		{
-			name: "multiple internal transactions, one with error",
-			internalTx: []*types.Eth1InternalTransaction{
-				{
-					ErrorMsg: "",
-				},
-				{
-					ErrorMsg: "fail",
-				},
-			},
-			indexedTx: &types.Eth1TransactionIndexed{
-				Status: types.StatusType_SUCCESS,
-			},
-			expectedStatus:   types.StatusType_PARTIAL,
-			expectedErrorMsg: "fail",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			updateITxStatus(tt.internalTx, tt.indexedTx)
-			if tt.indexedTx.Status != tt.expectedStatus {
-				t.Errorf("got status %v, want %v", tt.indexedTx.Status, tt.expectedStatus)
-			}
-			if tt.indexedTx.ErrorMsg != tt.expectedErrorMsg {
-				t.Errorf("got error message %v, want %v", tt.indexedTx.ErrorMsg, tt.expectedErrorMsg)
-			}
-		})
-	}
-}
-
 func TestIsValidERC20Log(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -805,6 +731,219 @@ func TestGetERC20TransferValue(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getERC20TransferValue(tt.transfer)
 			if !bytes.Equal(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetERC1155TransferIDs(t *testing.T) {
+	tests := []struct {
+		name     string
+		idList   []*big.Int
+		expected [][]byte
+	}{
+		{
+			name: "single ID",
+			idList: []*big.Int{
+				big.NewInt(1),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+			},
+		},
+		{
+			name: "multiple IDs",
+			idList: []*big.Int{
+				big.NewInt(1),
+				big.NewInt(2),
+				big.NewInt(3),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+				big.NewInt(2).Bytes(),
+				big.NewInt(3).Bytes(),
+			},
+		},
+		{
+			name:     "empty ID list",
+			idList:   []*big.Int{},
+			expected: [][]byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getERC1155TransferIDs(tt.idList)
+			if len(result) != len(tt.expected) {
+				t.Errorf("got %v IDs, want %v IDs", len(result), len(tt.expected))
+			}
+			for i := range result {
+				if !bytes.Equal(result[i], tt.expected[i]) {
+					t.Errorf("got ID %v, want %v", result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestGetERC1155TransferValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		values   []*big.Int
+		expected [][]byte
+	}{
+		{
+			name: "single value",
+			values: []*big.Int{
+				big.NewInt(1),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+			},
+		},
+		{
+			name: "multiple values",
+			values: []*big.Int{
+				big.NewInt(1),
+				big.NewInt(2),
+				big.NewInt(3),
+			},
+			expected: [][]byte{
+				big.NewInt(1).Bytes(),
+				big.NewInt(2).Bytes(),
+				big.NewInt(3).Bytes(),
+			},
+		},
+		{
+			name:     "empty values list",
+			values:   []*big.Int{},
+			expected: [][]byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getERC1155TransferValues(tt.values)
+			if len(result) != len(tt.expected) {
+				t.Errorf("got %v values, want %v values", len(result), len(tt.expected))
+			}
+			for i := range result {
+				if !bytes.Equal(result[i], tt.expected[i]) {
+					t.Errorf("got value %v, want %v", result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateITxStatus(t *testing.T) {
+	tests := []struct {
+		name             string
+		internalTx       []*types.Eth1InternalTransaction
+		indexedTx        *types.Eth1TransactionIndexed
+		expectedStatus   types.StatusType
+		expectedErrorMsg string
+	}{
+		{
+			name:       "no internal transactions",
+			internalTx: []*types.Eth1InternalTransaction{},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_SUCCESS,
+			expectedErrorMsg: "",
+		},
+		{
+			name: "internal transaction with error",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_PARTIAL,
+			expectedErrorMsg: "fail",
+		},
+		{
+			name: "internal transaction with error and status failed",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_FAILED,
+			},
+			expectedStatus:   types.StatusType_FAILED,
+			expectedErrorMsg: "fail",
+		},
+		{
+			name: "multiple internal transactions, one with error",
+			internalTx: []*types.Eth1InternalTransaction{
+				{
+					ErrorMsg: "",
+				},
+				{
+					ErrorMsg: "fail",
+				},
+			},
+			indexedTx: &types.Eth1TransactionIndexed{
+				Status: types.StatusType_SUCCESS,
+			},
+			expectedStatus:   types.StatusType_PARTIAL,
+			expectedErrorMsg: "fail",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updateITxStatus(tt.internalTx, tt.indexedTx)
+			if tt.indexedTx.Status != tt.expectedStatus {
+				t.Errorf("got status %v, want %v", tt.indexedTx.Status, tt.expectedStatus)
+			}
+			if tt.indexedTx.ErrorMsg != tt.expectedErrorMsg {
+				t.Errorf("got error message %v, want %v", tt.indexedTx.ErrorMsg, tt.expectedErrorMsg)
+			}
+		})
+	}
+}
+
+func TestCalculateTxFee(t *testing.T) {
+	tests := []struct {
+		name     string
+		tx       *types.Eth1Transaction
+		baseFee  []byte
+		expected *big.Int
+	}{
+		{
+			name: "transaction with no base fee",
+			tx: &types.Eth1Transaction{
+				GasPrice: big.NewInt(10).Bytes(),
+				GasUsed:  1000,
+			},
+			baseFee:  []byte{},
+			expected: big.NewInt(10 * 1000),
+		},
+		{
+			name: "transaction with priority and base fee",
+			tx: &types.Eth1Transaction{
+				GasPrice:             big.NewInt(100).Bytes(),
+				MaxPriorityFeePerGas: big.NewInt(10).Bytes(),
+				MaxFeePerGas:         big.NewInt(200).Bytes(),
+				GasUsed:              1000,
+			},
+			baseFee:  big.NewInt(50).Bytes(),
+			expected: big.NewInt(10 * 1000),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := calculateTxFee(tt.tx, tt.baseFee)
+			if result.Cmp(tt.expected) != 0 {
 				t.Errorf("got %v, want %v", result, tt.expected)
 			}
 		})
