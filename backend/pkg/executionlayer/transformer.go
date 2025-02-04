@@ -185,7 +185,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 			idx.InternalTransactionCount++
 		}
 
-		if t.GetType() == gethtypes.BlobTxType {
+		if isBlobTx(t.GetType()) {
 			idx.BlobTransactionCount++
 		}
 	}
@@ -635,7 +635,7 @@ func isValidERC1155Log(log *types.Eth1Log) bool {
 }
 
 func isBlobTx(txType uint32) bool {
-	return txType == 3
+	return txType == gethtypes.BlobTxType
 }
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
