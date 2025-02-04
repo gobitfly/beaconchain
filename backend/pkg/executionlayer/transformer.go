@@ -639,7 +639,10 @@ func isBlobTx(txType uint32) bool {
 }
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
-	return itx.Path != "0" || itx.Path != "[]" || !bytes.Equal(itx.Value, []byte{0x0})
+	if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) {
+		return false
+	}
+	return true
 }
 
 func getLogTopics(log *types.Eth1Log) []common.Hash {
