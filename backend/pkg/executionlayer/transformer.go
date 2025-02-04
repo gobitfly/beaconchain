@@ -618,7 +618,7 @@ func isValidERC20Log(log *types.Eth1Log) bool {
 }
 
 func isValidERC721Log(log *types.Eth1Log) bool {
-	return len(log.GetTopics()) == 4 || bytes.Equal(log.GetTopics()[0], erc721.TransferTopic.Bytes())
+	return len(log.GetTopics()) == 4 && bytes.Equal(log.GetTopics()[0], erc721.TransferTopic.Bytes())
 }
 
 func isValidERC1155Log(log *types.Eth1Log) bool {
