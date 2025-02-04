@@ -179,7 +179,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 		txReward.Add(txReward, txFee)
 
 		for _, itx := range t.Itx {
-			if isValidItx(itx) { // skip top level call & empty calls
+			if !isValidItx(itx) { // skip top level call & empty calls
 				continue
 			}
 			idx.InternalTransactionCount++
@@ -639,7 +639,7 @@ func isBlobTx(txType uint32) bool {
 }
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
-	return itx.Path == "0" || itx.Path == "[]" || bytes.Equal(itx.Value, []byte{0x0})
+	return itx.Path != "0" || itx.Path != "[]" || !bytes.Equal(itx.Value, []byte{0x0})
 }
 
 func getLogTopics(log *types.Eth1Log) []common.Hash {
