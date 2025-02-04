@@ -206,100 +206,6 @@ func TestTransformERC20(t *testing.T) {
 	}
 }
 
-func TestGetTxRecipient(t *testing.T) {
-	tests := []struct {
-		name               string
-		tx                 *types.Eth1Transaction
-		expectedTo         []byte
-		expectedIsContract bool
-	}{
-		{
-			name: "normal transaction with recipient",
-			tx: &types.Eth1Transaction{
-				To:              alice,
-				ContractAddress: common.Address{}.Bytes(),
-			},
-			expectedTo:         alice,
-			expectedIsContract: false,
-		},
-		{
-			name: "contract creation transaction",
-			tx: &types.Eth1Transaction{
-				ContractAddress: contract,
-			},
-			expectedTo:         contract,
-			expectedIsContract: true,
-		},
-		{
-			name: "transaction with no recipient",
-			tx: &types.Eth1Transaction{
-				To:              common.Address{}.Bytes(),
-				ContractAddress: common.Address{}.Bytes(),
-			},
-			expectedTo:         common.Address{}.Bytes(),
-			expectedIsContract: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			to, isContract := getTxRecipient(tt.tx)
-			if !bytes.Equal(to, tt.expectedTo) {
-				t.Errorf("got %v, want %v", to, tt.expectedTo)
-			}
-			if isContract != tt.expectedIsContract {
-				t.Errorf("got %v, want %v", isContract, tt.expectedIsContract)
-			}
-		})
-	}
-}
-
-func TestGetMethodSignature(t *testing.T) {
-	tests := []struct {
-		name     string
-		tx       *types.Eth1Transaction
-		expected []byte
-	}{
-		{
-			name: "transaction with data longer than 4 bytes",
-			tx: &types.Eth1Transaction{
-				Data: []byte("123456789"),
-			},
-			expected: []byte("1234"),
-		},
-		{
-			name: "transaction with data exactly 4 bytes",
-			tx: &types.Eth1Transaction{
-				Data: []byte("1234"),
-			},
-			expected: []byte("1234"),
-		},
-		{
-			name: "transaction with data shorter than 4 bytes",
-			tx: &types.Eth1Transaction{
-				Data: []byte("12"),
-			},
-			expected: []byte{},
-		},
-		{
-			name: "transaction with no data",
-			tx: &types.Eth1Transaction{
-				Data: []byte{},
-			},
-			expected: []byte{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			method := getMethodSignature(tt.tx)
-			if !bytes.Equal(method, tt.expected) {
-				t.Errorf("got %v, want %v", method, tt.expected)
-			}
-		})
-	}
-}
-
 func TestUpdateITxStatus(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -604,6 +510,56 @@ func TestIsValidERC1155Log(t *testing.T) {
 	}
 }
 
+func TestIsValidItx(t *testing.T) {
+	tests := []struct {
+		name     string
+		itx      *types.Eth1InternalTransaction
+		expected bool
+	}{
+		{
+			name: "valid internal transaction",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0,1",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: true,
+		},
+		{
+			name: "invalid internal transaction with path '0'",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: false,
+		},
+		{
+			name: "invalid internal transaction with path is '[]'",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "[]",
+				Value: big.NewInt(100).Bytes(),
+			},
+			expected: false,
+		},
+		{
+			name: "invalid internal transaction with value 0",
+			itx: &types.Eth1InternalTransaction{
+				Path:  "0,1",
+				Value: []byte{0x0},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isValidItx(tt.itx)
+			if result != tt.expected {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestGetLogTopics(t *testing.T) {
 	topic1 := "0x1234"
 	topic2 := "0x2345"
@@ -647,6 +603,177 @@ func TestGetLogTopics(t *testing.T) {
 				if result[i] != tt.expected[i] {
 					t.Errorf("got topic %v, want %v", result[i], tt.expected[i])
 				}
+			}
+		})
+	}
+}
+
+func TestGetTxRecipient(t *testing.T) {
+	tests := []struct {
+		name               string
+		tx                 *types.Eth1Transaction
+		expectedTo         []byte
+		expectedIsContract bool
+	}{
+		{
+			name: "normal transaction with recipient",
+			tx: &types.Eth1Transaction{
+				To:              alice,
+				ContractAddress: common.Address{}.Bytes(),
+			},
+			expectedTo:         alice,
+			expectedIsContract: false,
+		},
+		{
+			name: "contract creation transaction",
+			tx: &types.Eth1Transaction{
+				ContractAddress: contract,
+			},
+			expectedTo:         contract,
+			expectedIsContract: true,
+		},
+		{
+			name: "transaction with no recipient",
+			tx: &types.Eth1Transaction{
+				To:              common.Address{}.Bytes(),
+				ContractAddress: common.Address{}.Bytes(),
+			},
+			expectedTo:         common.Address{}.Bytes(),
+			expectedIsContract: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			to, isContract := getTxRecipient(tt.tx)
+			if !bytes.Equal(to, tt.expectedTo) {
+				t.Errorf("got %v, want %v", to, tt.expectedTo)
+			}
+			if isContract != tt.expectedIsContract {
+				t.Errorf("got %v, want %v", isContract, tt.expectedIsContract)
+			}
+		})
+	}
+}
+
+func TestGetTokenID(t *testing.T) {
+	tests := []struct {
+		name     string
+		transfer *contracts.ERC721Transfer
+		expected *big.Int
+	}{
+		{
+			name: "transfer with token ID",
+			transfer: &contracts.ERC721Transfer{
+				TokenId: big.NewInt(123),
+			},
+			expected: big.NewInt(123),
+		},
+		{
+			name: "transfer with empty token ID",
+			transfer: &contracts.ERC721Transfer{
+				TokenId: nil,
+			},
+			expected: big.NewInt(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getTokenID(tt.transfer)
+			if result.Cmp(tt.expected) != 0 {
+				t.Errorf("got %v, want %v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetMethodSignature(t *testing.T) {
+	tests := []struct {
+		name     string
+		tx       *types.Eth1Transaction
+		expected []byte
+	}{
+		{
+			name: "transaction with data longer than 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("123456789"),
+			},
+			expected: []byte("1234"),
+		},
+		{
+			name: "transaction with data exactly 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("1234"),
+			},
+			expected: []byte("1234"),
+		},
+		{
+			name: "transaction with data shorter than 4 bytes",
+			tx: &types.Eth1Transaction{
+				Data: []byte("12"),
+			},
+			expected: []byte{},
+		},
+		{
+			name: "transaction with no data",
+			tx: &types.Eth1Transaction{
+				Data: []byte{},
+			},
+			expected: []byte{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			method := getMethodSignature(tt.tx)
+			if !bytes.Equal(method, tt.expected) {
+				t.Errorf("got %v, want %v", method, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetContractAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		itx      *types.Eth1InternalTransaction
+		expected []byte
+	}{
+		{
+			name: "create type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "create",
+				From: alice,
+				To:   contract,
+			},
+			expected: contract,
+		},
+		{
+			name: "suicide type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "suicide",
+				From: contract,
+				To:   alice,
+			},
+			expected: contract,
+		},
+		{
+			name: "invalid type transaction",
+			itx: &types.Eth1InternalTransaction{
+				Type: "invalid",
+				From: alice,
+				To:   contract,
+			},
+			expected: contract,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getContractAddress(tt.itx)
+			if !bytes.Equal(result, tt.expected) {
+				t.Errorf("got %v, want %v", result, tt.expected)
 			}
 		})
 	}
