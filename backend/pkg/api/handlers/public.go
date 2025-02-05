@@ -168,7 +168,7 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 		Network intOrString `json:"network" swaggertype:"string" enums:"ethereum,gnosis"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -312,7 +312,7 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 		Name string `json:"name"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -353,7 +353,7 @@ func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWrite
 		Name string `json:"name"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -419,7 +419,7 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 		Name string `json:"name"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -557,7 +557,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	req := request{
 		GroupId: types.DefaultGroupId, // default value
 	}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -766,7 +766,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidatorBulkDeletions(w ht
 		Validators []intOrString `json:"validators"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -813,7 +813,7 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		} `json:"share_settings"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -869,7 +869,7 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 		} `json:"share_settings"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -962,7 +962,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		IsArchived bool `json:"is_archived"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2271,7 +2271,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 		return
 	}
 	var req types.NotificationSettingsGeneral
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2347,7 +2347,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 		IsNewRewardRoundSubscribed    bool    `json:"is_new_reward_round_subscribed"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2411,7 +2411,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2512,7 +2512,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.Response
 		IsSubscribed bool `json:"is_subscribed"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2622,7 +2622,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 	}
 
 	var req types.NotificationSettingsValidatorDashboard
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2695,7 +2695,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		IsERC1155TokenTransfersSubscribed bool    `json:"is_erc1155_token_transfers_subscribed"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -2802,7 +2802,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled,omitempty"`
 	}
 	var req request
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}

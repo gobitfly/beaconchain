@@ -106,7 +106,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 	}
 
 	var req types.AdConfigurationData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -183,7 +183,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
 	var req types.AdConfigurationUpdateData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
