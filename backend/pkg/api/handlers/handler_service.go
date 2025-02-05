@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -123,33 +122,6 @@ type validatorSet struct {
 	PublicKeys []string
 }
 
-// parseDashboardId is a helper function to validate the string dashboard id param.
-func parseDashboardId(id string) (interface{}, error) {
-	var v validationError
-	if reInteger.MatchString(id) {
-		// given id is a normal id
-		id := v.checkUint(id, "dashboard_id")
-		if v.hasErrors() {
-			return nil, v
-		}
-		return types.VDBIdPrimary(id), nil
-	}
-	if reValidatorDashboardPublicId.MatchString(id) {
-		// given id is a public id
-		return types.VDBIdPublic(id), nil
-	}
-	// given id must be an encoded set of validators
-	decodedId, err := base64.RawURLEncoding.DecodeString(id)
-	if err != nil {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	indexes, publicKeys := v.checkValidatorList(string(decodedId), forbidEmpty)
-	if v.hasErrors() {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, nil
-}
-
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
 func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
@@ -187,8 +159,9 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 		return dashboardId, nil
 	}
 	// validate dashboard id param
-	dashboardIdParam, err := parseDashboardId(param)
-	if err != nil {
+	var v validationError
+	dashboardIdParam := v.checkDashboardId(param)
+	if err := v.AsError(); err != nil {
 		return nil, err
 	}
 	// convert to VDBId
