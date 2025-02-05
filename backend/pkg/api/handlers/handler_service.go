@@ -338,7 +338,7 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 	if body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize)); len(body) > 0 {
 		requestFields["request_body"] = string(body)
 	}
-	if userId, _ := GetUserIdByContext(r); userId != 0 {
+	if userId, _ := GetUserIdByContext(r.Context()); userId != 0 {
 		requestFields["request_user_id"] = userId
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
