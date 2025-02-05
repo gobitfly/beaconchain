@@ -476,15 +476,15 @@ func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Met
 	ret := &types.ERC20Metadata{}
 
 	g.Go(func() error {
-		return getContractSymbol(contract, ret)
+		return getERC20ContractSymbol(contract, ret)
 	})
 
 	g.Go(func() error {
-		return getContractTotalSupply(contract, ret)
+		return getERC20ContractTotalSupply(contract, ret)
 	})
 
 	g.Go(func() error {
-		return getContractDecimals(contract, ret)
+		return getERC20ContractDecimals(contract, ret)
 	})
 
 	g.Go(func() error {

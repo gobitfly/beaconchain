@@ -84,7 +84,7 @@ func getLogsFromReceipts(logs []*gethtypes.Log) []*types.Eth1Log {
 	return eth1Logs
 }
 
-func getContractSymbol(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
+func getERC20ContractSymbol(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
 	symbol, err := contract.Symbol(nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "abi") {
@@ -99,7 +99,7 @@ func getContractSymbol(contract *contracts.IERC20Metadata, ret *types.ERC20Metad
 	return nil
 }
 
-func getContractTotalSupply(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
+func getERC20ContractTotalSupply(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
 	totalSupply, err := contract.TotalSupply(nil)
 	if err != nil {
 		return fmt.Errorf("error retrieving total supply: %w", err)
@@ -108,7 +108,7 @@ func getContractTotalSupply(contract *contracts.IERC20Metadata, ret *types.ERC20
 	return nil
 }
 
-func getContractDecimals(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
+func getERC20ContractDecimals(contract *contracts.IERC20Metadata, ret *types.ERC20Metadata) error {
 	decimals, err := contract.Decimals(nil)
 	if err != nil {
 		return fmt.Errorf("error retrieving decimals: %w", err)
