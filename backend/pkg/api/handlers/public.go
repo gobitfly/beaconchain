@@ -333,70 +333,6 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 	returnOk(w, r, response)
 }
 
-// PublicPostValidatorDashboardGroups godoc
-//
-//	@Description	Create a new group in a specified validator dashboard.
-//	@Security		ApiKeyInHeader || ApiKeyInQuery
-//	@Tags			Validator Dashboard Management
-//	@Accept			json
-//	@Produce		json
-//	@Param			dashboard_id	path		integer												true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardGroups.request	true	"request"
-//	@Success		201				{object}	types.ApiDataResponse[types.VDBPostCreateGroupData]
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their group limit."
-//	@Router			/validator-dashboards/{dashboard_id}/groups [post]
-func (h *HandlerService) PublicPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	type request struct {
-		Name string `json:"name"`
-	}
-	var req request
-	if err := v.checkBody(&req, r.Body); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	name := v.checkNameNotEmpty(req.Name)
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	ctx := r.Context()
-	// check if user has reached the maximum number of groups
-	userId, err := GetUserIdByContext(ctx)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	userInfo, err := h.getDataAccessor(ctx).GetUserInfo(ctx, userId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	groupCount, err := h.getDataAccessor(ctx).GetValidatorDashboardGroupCount(ctx, dashboardId)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	if groupCount >= userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
-		returnConflict(w, r, errors.New("maximum number of validator dashboard groups reached"))
-		return
-	}
-
-	data, err := h.getDataAccessor(ctx).CreateValidatorDashboardGroup(ctx, dashboardId, name)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-
-	response := types.ApiDataResponse[types.VDBPostCreateGroupData]{
-		Data: *data,
-	}
-
-	returnCreated(w, r, response)
-}
-
 // PublicGetValidatorDashboardGroups godoc
 //
 //	@Description	Update a groups name in a specified validator dashboard.
@@ -1115,51 +1051,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	response := types.GetValidatorDashboardSummaryResponse{
 		Data:   data,
 		Paging: *paging,
-	}
-	returnOk(w, r, response)
-}
-
-// PublicGetValidatorDashboardGroupSummary godoc
-//
-//	@Description	Get summary information for a specified group in a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_id		path		integer	true	"The ID of the group."
-//	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
-//	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
-func (h *HandlerService) PublicGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	ctx := r.Context()
-	dashboardId, err := h.handleDashboardId(ctx, vars["dashboard_id"])
-	q := r.URL.Query()
-	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
-	period := checkEnum[enums.TimePeriod](&v, r.URL.Query().Get("period"), "period")
-	if v.hasErrors() {
-		handleErr(w, r, v)
-		return
-	}
-
-	data, err := h.getDataAccessor(ctx).GetValidatorDashboardGroupSummary(ctx, *dashboardId, groupId, period, protocolModes)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardGroupSummaryResponse{
-		Data: *data,
 	}
 	returnOk(w, r, response)
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cmp"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -92,6 +93,13 @@ func (v *validationError) add(paramName, problem string) {
 
 func (v *validationError) hasErrors() bool {
 	return v != nil && len(*v) > 0
+}
+
+func (v *validationError) AsError() error {
+	if v.hasErrors() {
+		return newBadRequestErr("%s", v.Error())
+	}
+	return nil
 }
 
 // --------------------------------------
@@ -552,4 +560,29 @@ func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTime
 
 		return afterTs, beforeTs
 	}
+}
+
+func (v *validationError) checkDashboardId(id string) interface{} {
+	if reInteger.MatchString(id) {
+		// given id is a normal id
+		id := v.checkUint(id, "dashboard_id")
+		return types.VDBIdPrimary(id)
+	}
+	if reValidatorDashboardPublicId.MatchString(id) {
+		// given id is a public id
+		return types.VDBIdPublic(id)
+	}
+	// given id must be an encoded set of validators
+	decodedId, err := base64.RawURLEncoding.DecodeString(id)
+	if err != nil {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	var validatorListError validationError
+	indexes, publicKeys := validatorListError.checkValidatorList(string(decodedId), forbidEmpty)
+	if validatorListError.hasErrors() {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}
 }

@@ -331,3 +331,6 @@ export interface PostValidatorDashboardValidatorsRequest {
   withdrawal_credential?: string;
   graffiti?: string;
 }
+export interface PostValidatorDashboardGroupsRequest {
+  name: string;
+}
