@@ -24,13 +24,14 @@ const maxJsInt uint64 = 9007199254740991 // 2^53-1 (max safe int in JS)
 var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 	ProductName: "Free",
 	PremiumPerks: t.PremiumPerks{
-		AdFree:                      false,
-		ValidatorDashboards:         1,
-		ValidatorsPerDashboard:      20,
-		ValidatorGroupsPerDashboard: 1,
-		ShareCustomDashboards:       false,
-		ManageDashboardViaApi:       false,
-		BulkAdding:                  false,
+		AdFree:                       false,
+		ValidatorDashboards:          1,
+		ValidatorsPerDashboard:       20,
+		EffectiveBalancePerDashboard: 20 * 1e9,
+		ValidatorGroupsPerDashboard:  1,
+		ShareCustomDashboards:        false,
+		ManageDashboardViaApi:        false,
+		BulkAdding:                   false,
 		ChartHistorySeconds: t.ChartHistorySeconds{
 			Epoch:  0,
 			Hourly: 12 * hour,
@@ -55,13 +56,14 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 }
 
 var adminPerks = t.PremiumPerks{
-	AdFree:                      false, // admins want to see ads to check ad configuration
-	ValidatorDashboards:         maxJsInt,
-	ValidatorsPerDashboard:      maxJsInt,
-	ValidatorGroupsPerDashboard: maxJsInt,
-	ShareCustomDashboards:       true,
-	ManageDashboardViaApi:       true,
-	BulkAdding:                  true,
+	AdFree:                       false, // admins want to see ads to check ad configuration
+	ValidatorDashboards:          maxJsInt,
+	ValidatorsPerDashboard:       maxJsInt,
+	EffectiveBalancePerDashboard: maxJsInt,
+	ValidatorGroupsPerDashboard:  maxJsInt,
+	ShareCustomDashboards:        true,
+	ManageDashboardViaApi:        true,
+	BulkAdding:                   true,
 	ChartHistorySeconds: t.ChartHistorySeconds{
 		Epoch:  maxJsInt,
 		Hourly: maxJsInt,
@@ -233,6 +235,7 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 				foundAddon = true
 				for i := 0; i < addon.Quantity; i++ {
 					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
+					userInfo.PremiumPerks.EffectiveBalancePerDashboard += p.ExtraDashboardEffectiveBalance
 					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 						ProductId:       utils.PriceIdToProductId(addon.PriceId),
 						ProductName:     p.ProductName,
@@ -251,6 +254,10 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 
 	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
 		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
+	}
+
+	if productSummary.EffectiveBalancePerDashboardLimit < userInfo.PremiumPerks.EffectiveBalancePerDashboard {
+		userInfo.PremiumPerks.EffectiveBalancePerDashboard = productSummary.EffectiveBalancePerDashboardLimit
 	}
 
 	if userInfo.UserGroup == t.UserGroupAdmin {
@@ -335,13 +342,14 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			{
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         1,
-					ValidatorsPerDashboard:      100,
-					ValidatorGroupsPerDashboard: 3,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       false,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          1,
+					ValidatorsPerDashboard:       100,
+					EffectiveBalancePerDashboard: uint64(100 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorGroupsPerDashboard:  3,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        false,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  day,
 						Hourly: 7 * day,
@@ -369,13 +377,14 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			{
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         2,
-					ValidatorsPerDashboard:      300,
-					ValidatorGroupsPerDashboard: 10,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       false,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          2,
+					ValidatorsPerDashboard:       300,
+					EffectiveBalancePerDashboard: uint64(300 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorGroupsPerDashboard:  10,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        false,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  5 * day,
 						Hourly: month,
@@ -403,13 +412,14 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			{
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         2,
-					ValidatorsPerDashboard:      1000,
-					ValidatorGroupsPerDashboard: 30,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       true,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          2,
+					ValidatorsPerDashboard:       1000,
+					EffectiveBalancePerDashboard: uint64(1000 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorGroupsPerDashboard:  30,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        true,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  3 * week,
 						Hourly: 6 * month,
