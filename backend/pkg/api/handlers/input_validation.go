@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"cmp"
 	"encoding/json"
 	"fmt"
@@ -142,14 +141,8 @@ func (v *validationError) checkUserEmailToken(token string) string {
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
-func (v *validationError) checkBody(data interface{}, r *http.Request) error {
-	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
-		v.add("request body", "'Content-Type' header must be 'application/json'")
-	}
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(bodyBytes)) // unconsume body for error logging
+func (v *validationError) checkBody(data interface{}, requestBody io.ReadCloser) error {
+	bodyBytes, err := io.ReadAll(requestBody)
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
