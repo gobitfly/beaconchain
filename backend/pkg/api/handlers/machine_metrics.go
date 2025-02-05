@@ -23,8 +23,9 @@ func (h *HandlerService) InternalGetUserMachineMetrics(w http.ResponseWriter, r 
 }
 
 func (h *HandlerService) PublicGetUserMachineMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var v validationError
-	userId, err := GetUserIdByContext(r)
+	userId, err := GetUserIdByContext(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -51,7 +52,7 @@ func (h *HandlerService) PublicGetUserMachineMetrics(w http.ResponseWriter, r *h
 		offset = 0
 	}
 
-	data, err := h.daService.GetUserMachineMetrics(r.Context(), userId, int(limit), int(offset))
+	data, err := h.daService.GetUserMachineMetrics(ctx, userId, int(limit), int(offset))
 	if err != nil {
 		handleErr(w, r, err)
 		return
