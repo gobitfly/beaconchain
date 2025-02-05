@@ -207,6 +207,16 @@ func (b *BlockchainBackend) DeployContract(t *testing.T, contractData []byte) co
 	return receipt.ContractAddress
 }
 
+func (b *BlockchainBackend) NewERC20Metadata(t *testing.T, address common.Address) (*contracts.IERC20Metadata, error) {
+	t.Helper()
+	contract, err := contracts.NewIERC20Metadata(address, b.Client())
+	if err != nil {
+		return nil, err
+	}
+
+	return contract, nil
+}
+
 func (b *BlockchainBackend) DeployERC20(t *testing.T, name string, symbol string, accounts ...common.Address) (common.Address, *contracts.ERC20) {
 	t.Helper()
 	address, _, token, err := contracts.DeployERC20(b.BankAccount.TransactOpts, b.Client(), name, symbol)

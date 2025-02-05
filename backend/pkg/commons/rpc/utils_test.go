@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -620,6 +621,169 @@ func TestGetBlockUncles(t *testing.T) {
 				if !bytes.Equal(uncle.Bloom, tt.expected[i].Bloom) {
 					t.Errorf("got Bloom %v, want %v", uncle.Bloom, tt.expected[i].Bloom)
 				}
+			}
+		})
+	}
+}
+
+// TestGetContractSymbol tests the getERC20ContractSymbol function which extracts
+// the symbol of an ERC20 contract
+func TestGetContractSymbol(t *testing.T) {
+	backend := th.NewBackend(t)
+	ret := &types.ERC20Metadata{}
+
+	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
+	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	if err != nil {
+		t.Fatalf("could not create contract: %v", err)
+	}
+
+	test := []struct {
+		name        string
+		err         error
+		expected    string
+		expectedErr error
+	}{
+		{
+			name:        "valid symbol",
+			err:         nil,
+			expected:    "USDT",
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			err := getERC20ContractSymbol(contractMetadata, ret)
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			}
+			if ret.Symbol != tt.expected {
+				t.Errorf("got Symbol %v, want %v", ret.Symbol, tt.expected)
+			}
+		})
+	}
+
+	contractAddress2, _ := backend.DeployERC20(t, "usdt", "", backend.BankAccount.From)
+	contractMetadata2, err := backend.NewERC20Metadata(t, contractAddress2)
+	if err != nil {
+		t.Fatalf("could not create contract: %v", err)
+	}
+
+	test2 := []struct {
+		name        string
+		err         error
+		expected    string
+		expectedErr error
+	}{
+		{
+			name:        "empty symbol",
+			err:         nil,
+			expected:    "",
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range test2 {
+		t.Run(tt.name, func(t *testing.T) {
+			err := getERC20ContractSymbol(contractMetadata2, ret)
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			}
+			if ret.Symbol != tt.expected {
+				t.Errorf("got Symbol %v, want %v", ret.Symbol, tt.expected)
+			}
+		})
+	}
+
+}
+
+// TestGetContractTotalSupply tests the getERC20ContractTotalSupply function which
+// extracts the total supply of an ERC20 contract
+func TestGetContractTotalSupply(t *testing.T) {
+	backend := th.NewBackend(t)
+	ret := &types.ERC20Metadata{}
+
+	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
+	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	if err != nil {
+		t.Fatalf("could not create contract: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		err         error
+		expected    []byte
+		expectedErr error
+	}{
+		{
+			name:        "valid total supply",
+			err:         nil,
+			expected:    big.NewInt(100).Bytes(),
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := getERC20ContractTotalSupply(contractMetadata, ret)
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			}
+			if !bytes.Equal(ret.TotalSupply, tt.expected) {
+				t.Errorf("got TotalSupply %v, want %v", ret.TotalSupply, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetContractDecimals tests the getERC20ContractDecimals function which
+// extracts the decimals of an ERC20 contract
+func TestGetContractDecimals(t *testing.T) {
+	backend := th.NewBackend(t)
+	ret := &types.ERC20Metadata{}
+
+	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
+	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	if err != nil {
+		t.Fatalf("could not create contract: %v", err)
+	}
+
+	tests := []struct {
+		name        string
+		err         error
+		expected    []byte
+		expectedErr error
+	}{
+		{
+			name:        "valid decimals",
+			err:         nil,
+			expected:    big.NewInt(18).Bytes(),
+			expectedErr: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			err := getERC20ContractDecimals(contractMetadata, ret)
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			}
+			if !bytes.Equal(ret.Decimals, tt.expected) {
+				t.Errorf("got Decimals %v, want %v", ret.Decimals, tt.expected)
 			}
 		})
 	}
