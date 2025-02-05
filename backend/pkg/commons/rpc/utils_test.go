@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -426,6 +428,197 @@ func TestParseAddressBalance(t *testing.T) {
 					if !bytes.Equal(res.Balance, tt.expected[i].Balance) {
 						t.Errorf("got Balance %v, want %v", res.Balance, tt.expected[i].Balance)
 					}
+				}
+			}
+		})
+	}
+}
+
+// TestGetBlockUncles tests the getBlockUncles function which extracts a list of
+// uncles from a block into a list of Eth1Block type
+func TestGetBlockUncles(t *testing.T) {
+	var (
+		hash1 = common.HexToHash("0x1234567890abcdef1234567890abcdef12345678")
+		hash2 = common.HexToHash("0xabcdef1234567890abcdef1234567890abcdef12")
+		hash3 = common.HexToHash("0xabcdef1234567890abcdef1234567890abcdef13")
+		hash4 = common.HexToHash("0xabcdef1234567890abcdef1234567890abcdef14")
+		hash5 = common.HexToHash("0xabcdef1234567890abcdef1234567890abcdef15")
+		hash6 = common.HexToHash("0xabcdef1234567890abcdef1234567890abcdef16")
+	)
+	tests := []struct {
+		name      string
+		blkUncles []*gethtypes.Header
+		expected  []*types.Eth1Block
+	}{
+		{
+			name: "block with single uncle",
+			blkUncles: []*gethtypes.Header{
+				{
+					Number:      big.NewInt(1),
+					ParentHash:  hash1,
+					UncleHash:   hash2,
+					Coinbase:    common.HexToAddress("0xcoinbase"),
+					Root:        hash3,
+					TxHash:      hash4,
+					ReceiptHash: hash5,
+					Difficulty:  big.NewInt(100),
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        123456789,
+					Extra:       []byte("extra"),
+					MixDigest:   hash6,
+					Bloom:       gethtypes.Bloom{},
+				},
+			},
+			expected: []*types.Eth1Block{
+				{
+					Hash:        hash2.Bytes(),
+					ParentHash:  hash1.Bytes(),
+					UncleHash:   hash2.Bytes(),
+					Coinbase:    common.HexToAddress("0xcoinbase").Bytes(),
+					Root:        hash3.Bytes(),
+					TxHash:      hash4.Bytes(),
+					ReceiptHash: hash5.Bytes(),
+					Difficulty:  big.NewInt(100).Bytes(),
+					Number:      1,
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        timestamppb.New(time.Unix(123456789, 0)),
+					Extra:       []byte("extra"),
+					MixDigest:   hash6.Bytes(),
+					Bloom:       gethtypes.Bloom{}.Bytes(),
+				},
+			},
+		},
+		{
+			name: "block with two uncles",
+			blkUncles: []*gethtypes.Header{
+				{
+					Number:      big.NewInt(1),
+					ParentHash:  hash1,
+					UncleHash:   hash2,
+					Coinbase:    common.HexToAddress("0xcoinbase"),
+					Root:        hash3,
+					TxHash:      hash4,
+					ReceiptHash: hash5,
+					Difficulty:  big.NewInt(10),
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        123456789,
+					Extra:       []byte("extra"),
+					MixDigest:   hash6,
+					Bloom:       gethtypes.Bloom{},
+				},
+				{
+					Number:      big.NewInt(1),
+					ParentHash:  hash2,
+					UncleHash:   hash3,
+					Coinbase:    common.HexToAddress("0xcoinbase"),
+					Root:        hash4,
+					TxHash:      hash5,
+					ReceiptHash: hash6,
+					Difficulty:  big.NewInt(100),
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        987654321,
+					Extra:       []byte("extra"),
+					MixDigest:   hash1,
+					Bloom:       gethtypes.Bloom{},
+				},
+			},
+			expected: []*types.Eth1Block{
+				{
+					Hash:        hash2.Bytes(),
+					ParentHash:  hash1.Bytes(),
+					UncleHash:   hash2.Bytes(),
+					Coinbase:    common.HexToAddress("0xcoinbase").Bytes(),
+					Root:        hash3.Bytes(),
+					TxHash:      hash4.Bytes(),
+					ReceiptHash: hash5.Bytes(),
+					Difficulty:  big.NewInt(10).Bytes(),
+					Number:      1,
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        timestamppb.New(time.Unix(123456789, 0)),
+					Extra:       []byte("extra"),
+					MixDigest:   hash6.Bytes(),
+					Bloom:       gethtypes.Bloom{}.Bytes(),
+				},
+				{
+					Hash:        hash3.Bytes(),
+					ParentHash:  hash2.Bytes(),
+					UncleHash:   hash3.Bytes(),
+					Coinbase:    common.HexToAddress("0xcoinbase").Bytes(),
+					Root:        hash4.Bytes(),
+					TxHash:      hash5.Bytes(),
+					ReceiptHash: hash6.Bytes(),
+					Difficulty:  big.NewInt(100).Bytes(),
+					Number:      1,
+					GasLimit:    1000000,
+					GasUsed:     500000,
+					Time:        timestamppb.New(time.Unix(987654321, 0)),
+					Extra:       []byte("extra"),
+					MixDigest:   hash1.Bytes(),
+					Bloom:       gethtypes.Bloom{}.Bytes(),
+				},
+			},
+		},
+		{
+			name:      "block with no uncles",
+			blkUncles: []*gethtypes.Header{},
+			expected:  nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getBlockUncles(tt.blkUncles)
+			if len(result) != len(tt.expected) {
+				t.Fatalf("got %v uncles, want %v uncles", len(result), len(tt.expected))
+			}
+			for i, uncle := range result {
+
+				if !bytes.Equal(uncle.ParentHash, tt.expected[i].ParentHash) {
+					t.Errorf("got ParentHash %v, want %v", uncle.ParentHash, tt.expected[i].ParentHash)
+				}
+				if !bytes.Equal(uncle.UncleHash, tt.expected[i].UncleHash) {
+					t.Errorf("got Hash %v, want %v", uncle.UncleHash, tt.expected[i].UncleHash)
+				}
+				if !bytes.Equal(uncle.Coinbase, tt.expected[i].Coinbase) {
+					t.Errorf("got Coinbase %v, want %v", uncle.Coinbase, tt.expected[i].Coinbase)
+				}
+				if !bytes.Equal(uncle.Root, tt.expected[i].Root) {
+					t.Errorf("got Root %v, want %v", uncle.Root, tt.expected[i].Root)
+				}
+				if !bytes.Equal(uncle.TxHash, tt.expected[i].TxHash) {
+					t.Errorf("got TxHash %v, want %v", uncle.TxHash, tt.expected[i].TxHash)
+				}
+				if !bytes.Equal(uncle.ReceiptHash, tt.expected[i].ReceiptHash) {
+					t.Errorf("got ReceiptHash %v, want %v", uncle.ReceiptHash, tt.expected[i].ReceiptHash)
+				}
+				if !bytes.Equal(uncle.Difficulty, tt.expected[i].Difficulty) {
+					t.Errorf("got Difficulty %v, want %v", uncle.Difficulty, tt.expected[i].Difficulty)
+				}
+				if uncle.Number != tt.expected[i].Number {
+					t.Errorf("got Number %v, want %v", uncle.Number, tt.expected[i].Number)
+				}
+				if uncle.GasLimit != tt.expected[i].GasLimit {
+					t.Errorf("got GasLimit %v, want %v", uncle.GasLimit, tt.expected[i].GasLimit)
+				}
+				if uncle.GasUsed != tt.expected[i].GasUsed {
+					t.Errorf("got GasUsed %v, want %v", uncle.GasUsed, tt.expected[i].GasUsed)
+				}
+				if !uncle.Time.AsTime().Equal(tt.expected[i].Time.AsTime()) {
+					t.Errorf("got Time %v, want %v", uncle.Time.AsTime(), tt.expected[i].Time.AsTime())
+				}
+				if !bytes.Equal(uncle.Extra, tt.expected[i].Extra) {
+					t.Errorf("got Extra %v, want %v", uncle.Extra, tt.expected[i].Extra)
+				}
+				if !bytes.Equal(uncle.MixDigest, tt.expected[i].MixDigest) {
+					t.Errorf("got MixDigest %v, want %v", uncle.MixDigest, tt.expected[i].MixDigest)
+				}
+				if !bytes.Equal(uncle.Bloom, tt.expected[i].Bloom) {
+					t.Errorf("got Bloom %v, want %v", uncle.Bloom, tt.expected[i].Bloom)
 				}
 			}
 		})
