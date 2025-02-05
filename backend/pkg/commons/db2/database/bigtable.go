@@ -111,7 +111,6 @@ type BigTable struct {
 }
 
 func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminClient *bigtable.AdminClient, tablesAndFamilies map[string][]string) (*BigTable, error) {
-	// Initialize the Bigtable table and column family
 	if err := initTable(ctx, adminClient, tablesAndFamilies); err != nil {
 		return nil, err
 	}
@@ -306,7 +305,6 @@ func (b BigTable) GetLatestValue(table, key string) (*Row, error) {
 }
 
 func (b BigTable) GetRow(table, key string) (*Row, error) {
-	// Open the transfer table for reading
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
