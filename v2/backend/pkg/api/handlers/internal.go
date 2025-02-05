@@ -348,10 +348,6 @@ func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter
 	h.PublicPutValidatorDashboardName(w, r)
 }
 
-func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	h.PublicPostValidatorDashboardGroups(w, r)
-}
-
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	h.PublicPutValidatorDashboardGroups(w, r)
 }
@@ -431,11 +427,6 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummary(w, r)
 }
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardGroupSummary(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummaryChart(w, r)
 }
