@@ -626,9 +626,9 @@ func TestGetBlockUncles(t *testing.T) {
 	}
 }
 
-// TestGetContractSymbol tests the getERC20ContractSymbol function which extracts
+// TestGetERC20ContractSymbol tests the getERC20ContractSymbol function which extracts
 // the symbol of an ERC20 contract
-func TestGetContractSymbol(t *testing.T) {
+func TestGetERC20ContractSymbol(t *testing.T) {
 	backend := th.NewBackend(t)
 	ret := &types.ERC20Metadata{}
 
@@ -704,9 +704,9 @@ func TestGetContractSymbol(t *testing.T) {
 
 }
 
-// TestGetContractTotalSupply tests the getERC20ContractTotalSupply function which
+// TestGetERC20ContractTotalSupply tests the getERC20ContractTotalSupply function which
 // extracts the total supply of an ERC20 contract
-func TestGetContractTotalSupply(t *testing.T) {
+func TestGetERC20ContractTotalSupply(t *testing.T) {
 	backend := th.NewBackend(t)
 	ret := &types.ERC20Metadata{}
 
@@ -746,9 +746,9 @@ func TestGetContractTotalSupply(t *testing.T) {
 	}
 }
 
-// TestGetContractDecimals tests the getERC20ContractDecimals function which
+// TestGetERC20ContractDecimals tests the getERC20ContractDecimals function which
 // extracts the decimals of an ERC20 contract
-func TestGetContractDecimals(t *testing.T) {
+func TestGetERC20ContractDecimals(t *testing.T) {
 	backend := th.NewBackend(t)
 	ret := &types.ERC20Metadata{}
 
