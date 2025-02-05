@@ -17,6 +17,8 @@ var (
 	token2       = common.HexToAddress("0xabcdef1234567890abcdef1234567890abcdef12")
 )
 
+// TestGetReceiver tests the getReceiver function, which extracts the recipient
+// address from a transaction.
 func TestGetReceiver(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -45,6 +47,8 @@ func TestGetReceiver(t *testing.T) {
 	}
 }
 
+// TestGetBlockWithdrawals tests the getBlockWithdrawals function, which
+// converts a list of withdrawals from a block into a list of Eth1Withdrawal type.
 func TestGetBlockWithdrawals(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -132,6 +136,8 @@ func TestGetBlockWithdrawals(t *testing.T) {
 	}
 }
 
+// TestGetLogsFromReceipts tests the getLogsFromReceipts function, which converts
+// a list of logs from a receipt into a list of Eth1Log type
 func TestGetLogsFromReceipts(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -240,6 +246,8 @@ func TestGetLogsFromReceipts(t *testing.T) {
 	}
 }
 
+// TestGetTokens tests the getTokens function, which converts a list of token
+// addresses from a transaction into a list of common.Address type
 func TestGetTokens(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -278,6 +286,9 @@ func TestGetTokens(t *testing.T) {
 	}
 }
 
+// TestParseAddressBalance tests the parseAddressBalance function, which converts
+// a list of token addresses, address and a list of balances into a list of
+// Eth1AddressBalance type
 func TestParseAddressBalance(t *testing.T) {
 	tests := []struct {
 		name   string
