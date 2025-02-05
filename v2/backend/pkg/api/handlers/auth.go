@@ -197,8 +197,8 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 }
 
 // if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
-func GetUserIdByContext(r *http.Request) (uint64, error) {
-	userId, ok := r.Context().Value(types.CtxUserIdKey).(uint64)
+func GetUserIdByContext(ctx context.Context) (uint64, error) {
+	userId, ok := ctx.Value(types.CtxUserIdKey).(uint64)
 	if !ok {
 		return 0, newUnauthorizedErr("user not authenticated")
 	}

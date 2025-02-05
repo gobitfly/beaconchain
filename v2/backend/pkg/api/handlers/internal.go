@@ -511,12 +511,13 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 // even though this endpoint is internal only, it should still not be broken since it is used by the mobile app
 func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	ctx := r.Context()
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	userId, err := GetUserIdByContext(r)
+	userId, err := GetUserIdByContext(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -530,7 +531,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		returnForbidden(w, r, errors.New("user does not have access to mobile app widget"))
 		return
 	}
-	data, err := h.daService.GetValidatorDashboardMobileWidget(r.Context(), dashboardId)
+	data, err := h.daService.GetValidatorDashboardMobileWidget(ctx, dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
