@@ -49,8 +49,8 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 // getDataAccessor returns the correct data accessor based on the request context.
 // if the request is mocked, the data access dummy is returned; otherwise the data access service.
 // should only be used if getting mocked data for the endpoint is appropriate
-func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccessor {
-	if isMocked(r) {
+func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAccessor {
+	if isMocked, ok := ctx.Value(types.CtxIsMockedKey).(bool); ok && isMocked {
 		return h.daDummy
 	}
 	return h.daService
@@ -617,9 +617,4 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
-}
-
-func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
-	return ok && isMocked
 }
