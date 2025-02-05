@@ -23,6 +23,7 @@ type endpoint struct {
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(contentTypeMiddleware)
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
 	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()

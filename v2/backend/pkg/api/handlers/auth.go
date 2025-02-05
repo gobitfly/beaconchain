@@ -226,7 +226,7 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -321,7 +321,7 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 	req := struct {
 		Email string `json:"email"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -360,7 +360,7 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 	req := struct {
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -428,7 +428,7 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -563,7 +563,7 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 		RefreshToken string `json:"refresh_token"`
 		DeviceID     string `json:"client_id"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -629,7 +629,7 @@ func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesTok
 	req := struct {
 		Token string `json:"token"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -658,7 +658,7 @@ const USER_SUBSCRIPTION_LIMIT = 8
 func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := types.MobileSubscription{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -794,7 +794,7 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 		Email    string `json:"new_email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -869,7 +869,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		OldPassword string `json:"old_password"`
 		NewPassword string `json:"new_password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
