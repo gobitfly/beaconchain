@@ -578,7 +578,6 @@ func TestGetBlockUncles(t *testing.T) {
 				t.Fatalf("got %v uncles, want %v uncles", len(result), len(tt.expected))
 			}
 			for i, uncle := range result {
-
 				if !bytes.Equal(uncle.ParentHash, tt.expected[i].ParentHash) {
 					t.Errorf("got ParentHash %v, want %v", uncle.ParentHash, tt.expected[i].ParentHash)
 				}
@@ -701,7 +700,6 @@ func TestGetERC20ContractSymbol(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 // TestGetERC20ContractTotalSupply tests the getERC20ContractTotalSupply function which
@@ -774,7 +772,6 @@ func TestGetERC20ContractDecimals(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			err := getERC20ContractDecimals(contractMetadata, ret)
 			if err != nil && tt.expectedErr == nil {
 				t.Fatalf("unexpected error: %v", err)
