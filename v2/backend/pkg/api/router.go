@@ -285,6 +285,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
 	}
 
+	const allowMocking = true
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", hs.PublicPutValidatorDashboardName, hs.InternalPutValidatorDashboardName},

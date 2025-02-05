@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -50,7 +51,9 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 // if the request is mocked, the data access dummy is returned; otherwise the data access service.
 // should only be used if getting mocked data for the endpoint is appropriate
 func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAccessor {
-	if isMocked, ok := ctx.Value(types.CtxIsMockedKey).(bool); ok && isMocked {
+	isMocked, isMockedOk := ctx.Value(types.CtxIsMockedKey).(bool)                         // set in StoreIsMockedFlagMiddleware
+	isMockingAllowed, isMockingAllowedOk := ctx.Value(types.CtxIsMockingAllowedKey).(bool) // set in Handle function
+	if isMockedOk && isMocked && isMockingAllowedOk && isMockingAllowed {
 		return h.daDummy
 	}
 	return h.daService
@@ -58,6 +61,45 @@ func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAcc
 
 // all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
+
+type InputValidator[T any] interface {
+	Validate(params map[string]string, payload io.ReadCloser) (T, error)
+}
+
+type BusinessLogicFunc[Input any, Response any] func(ctx context.Context, input Input) (Response, error)
+
+func Handle[Input InputValidator[Input], Response any](defaultCode int, logicFunc BusinessLogicFunc[Input, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// prepare input
+		vars := mux.Vars(r)
+		q := r.URL.Query()
+		for k, v := range q {
+			if _, ok := vars[k]; ok || len(v) == 0 {
+				continue
+			}
+			vars[k] = v[0]
+		}
+		// input validation
+		var i Input
+		input, err := i.Validate(vars, r.Body)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		if isMockingAllowed {
+			ctx = context.WithValue(ctx, types.CtxIsMockingAllowedKey, true)
+		}
+		// business logic
+		response, err := logicFunc(ctx, input)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+
+		writeResponse(w, r, defaultCode, response)
+	}
+}
 
 // --------------------------------------
 // errors
