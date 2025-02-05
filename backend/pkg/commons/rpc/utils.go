@@ -126,14 +126,46 @@ func getRateFromOracle(oracle *oneinchoracle.OneinchOracle, token []byte, ret *t
 	return nil
 }
 
-func parseAddressBalance(tokens []common.Address, address string, balances []*big.Int) []*types.Eth1AddressBalance {
+func parseAddressBalance(tokens []common.Address, address string, balances []*big.Int) ([]*types.Eth1AddressBalance, error) {
+	if len(tokens) == 0 || len(balances) == 0 {
+		return nil, fmt.Errorf("tokens or balances slice is empty")
+	}
+	if len(tokens) != len(balances) {
+		return nil, fmt.Errorf("tokens and balances slices have mismatched lengths")
+	}
+
+	if address == "" {
+		return nil, fmt.Errorf("address is empty")
+	}
+	addrBytes := common.FromHex(address)
+	if len(addrBytes) == 0 {
+		return nil, fmt.Errorf("invalid address format")
+	}
+
 	res := make([]*types.Eth1AddressBalance, len(tokens))
-	for tokenIdx := range tokens {
+	for tokenIdx, token := range tokens {
+		if token == (common.Address{}) {
+			return nil, fmt.Errorf("token at index %d is empty", tokenIdx)
+		}
+		tokenBytes := token.Bytes()
+		if len(tokenBytes) == 0 {
+			return nil, fmt.Errorf("invalid token format at index %d", tokenIdx)
+		}
+
+		if balances[tokenIdx] == nil {
+			return nil, fmt.Errorf("balance at index %d is nil", tokenIdx)
+		}
+		balanceBytes := balances[tokenIdx].Bytes()
+		if len(balanceBytes) == 0 {
+			return nil, fmt.Errorf("invalid balance format at index %d", tokenIdx)
+		}
+
 		res[tokenIdx] = &types.Eth1AddressBalance{
-			Address: common.FromHex(address),
-			Token:   common.FromHex(string(tokens[tokenIdx].Bytes())),
-			Balance: balances[tokenIdx].Bytes(),
+			Address: addrBytes,
+			Token:   tokenBytes,
+			Balance: balanceBytes,
 		}
 	}
-	return res
+
+	return res, nil
 }

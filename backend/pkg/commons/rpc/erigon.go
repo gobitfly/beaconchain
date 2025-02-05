@@ -421,7 +421,10 @@ func (client *ErigonClient) GetBalancesForAddress(address string, tokenStr []str
 		return nil, err
 	}
 
-	res := parseAddressBalance(tokens, address, balancesInt)
+	res, err := parseAddressBalance(tokens, address, balancesInt)
+	if err != nil {
+		return nil, err
+	}
 
 	return res, nil
 }
