@@ -656,7 +656,7 @@ func getLogTopics(log *types.Eth1Log) []common.Hash {
 func getTxRecipient(tx *types.Eth1Transaction) ([]byte, bool) {
 	to := tx.GetTo()
 	isContract := false
-	if !bytes.Equal(tx.GetContractAddress(), common.Address{}.Bytes()) {
+	if tx.GetContractAddress() != nil && !bytes.Equal(tx.GetContractAddress(), common.Address{}.Bytes()) {
 		to = tx.GetContractAddress()
 		isContract = true
 	}
