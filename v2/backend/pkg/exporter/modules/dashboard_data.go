@@ -528,7 +528,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockRewards", "duration_type": "single"}).Observe(time.Since(start).Seconds())
 					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_rewards_single").Observe(time.Since(start).Seconds())
 				}()
-				data, err := d.CL.GetPropoalRewards(slot)
+				data, err := d.CL.GetProposalRewards(slot)
 				if err != nil {
 					httpErr := network.SpecificError(err)
 					if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
@@ -627,7 +627,7 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 					//metrics.TaskDuration.With(prometheus.Labels{"pkg": "exporter", "module": "dashboard_data", "function": "getDataForEpochRange", "task": "blockAssignments", "duration_type": "single"}).Observe(time.Since(start).Seconds())
 					metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_slot_based_data_block_assignments_single").Observe(time.Since(start).Seconds())
 				}()
-				data, err := d.CL.GetPropoalAssignments(epoch)
+				data, err := d.CL.GetProposalAssignments(epoch)
 				if err != nil {
 					d.log.Error(err, "can not get block assignments", 0, map[string]interface{}{"epoch": epoch})
 					return err
