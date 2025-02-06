@@ -399,7 +399,8 @@ const inputValidator = ref('')
         <ClientOnly fallback-tag="span">
           <BcTable
             v-model:selection="selected"
-            :data
+            :data="data?.data"
+            :paging="data?.paging"
             data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"

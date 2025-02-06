@@ -264,7 +264,8 @@ const isMobile = computed(() => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data
+            :data="data.data"
+            :paging="data.paging"
             class="management-table"
             :cursor
             :page-size

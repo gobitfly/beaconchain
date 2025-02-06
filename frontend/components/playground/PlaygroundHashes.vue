@@ -46,7 +46,8 @@ const data = {
 <template>
   <BcTable
     class="hash-table"
-    :data
+    :data="data.data"
+    :paging="data.paging"
     data-key="index"
     :page-size="50"
   >

@@ -74,13 +74,11 @@ const tableData = computed(() => {
   if (!data || data.length === 0) {
     return
   }
-  return {
-    data: [
-      { amount: totalAmount },
-      ...data,
-    ],
-    paging: paging,
-  }
+
+  return [
+    { amount: totalAmount },
+    ...data,
+  ]
 })
 </script>
 
@@ -91,6 +89,7 @@ const tableData = computed(() => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="tableData"
+            :paging
             data-key="index"
             :expandable="!colsVisible.group"
             class="cl_deposits_table"

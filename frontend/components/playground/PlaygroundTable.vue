@@ -48,7 +48,8 @@ watch(
       v-model:selection="selected"
       data-key="id"
       selection-mode="multiple"
-      :data
+      :data="data.data"
+      :paging="data.paging"
       :cursor="0"
       :page-size="10"
       :expandable="true"

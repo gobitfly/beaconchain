@@ -236,7 +236,8 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
 
     <ClientOnly fallback-tag="span">
       <BcTable
-        :data="wrappedDashboards"
+        :data="wrappedDashboards?.data"
+        :paging="wrappedDashboards?.paging"
         data-key="identifier"
         :expandable="!colsVisible.networks"
         class="notifications-management-dashboard-table"

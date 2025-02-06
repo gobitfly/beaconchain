@@ -111,19 +111,15 @@ const tableData = computed(() => {
     return
   }
 
-  return {
-    data: [
-      {
-        amount: totalAmount,
-        identifier: totalIdentifier,
-      },
-      ...data.map(w => ({
-        ...w,
-        identifier: `${w.slot}-${w.index}`,
-      })),
-    ],
-    paging: paging,
-  }
+  const dataWithIdentfier = addIdentifier(data, 'slot', 'index')
+
+  return [
+    {
+      amount: totalAmount,
+      identifier: totalIdentifier,
+    },
+    ...dataWithIdentfier!,
+  ]
 })
 </script>
 
@@ -140,6 +136,7 @@ const tableData = computed(() => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="tableData"
+            :paging
             data-key="identifier"
             :expandable="!colsVisible.group"
             class="withdrawal-table"

@@ -95,7 +95,8 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="{ data, paging }"
+            :data
+            :paging
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"

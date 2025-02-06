@@ -175,7 +175,8 @@ watch(
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data
+          :data="data?.data"
+          :paging="data?.paging"
           data-key="validator"
           :expandable="size.expandable"
           class="duties-table"

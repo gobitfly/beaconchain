@@ -98,7 +98,8 @@ const isRowExpandable = (row: VDBRewardsTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="addIdentifier({ data, paging }, 'epoch', 'group_id')"
+            :data="addIdentifier(data, 'epoch', 'group_id') "
+            :paging
             data-key="identifier"
             :expandable="true"
             class="rewards-table"

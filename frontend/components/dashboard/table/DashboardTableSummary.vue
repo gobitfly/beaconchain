@@ -172,7 +172,8 @@ watch(() => dashboardKey.value, (_, prevDashboardKey) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="{ data, paging }"
+            :data
+            :paging
             data-key="group_id"
             :expandable="true"
             class="summary_table"

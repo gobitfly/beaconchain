@@ -112,7 +112,8 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="addIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
+            v-if="notificationsDashboards"
+            :data="addIdentifier(notificationsDashboards.data, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
             data-key="identifier"
             :expandable="!colsVisible.notifications"
             :cursor
