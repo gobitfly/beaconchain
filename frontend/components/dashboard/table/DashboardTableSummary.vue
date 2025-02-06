@@ -30,6 +30,7 @@ const props = defineProps<{
 
 const {
   dashboardKey,
+  hasGuestDashboardKeyChanged,
   isGuestDashboard,
   isSharedDashboard,
 } = useDashboardKey()
@@ -56,7 +57,7 @@ const {
 } = storeToRefs(validatorDashboardStore)
 const { width } = useWindowSize()
 const storageDashboardKey = computed(() => {
-  return dashboardKey.value || 'guest-dashboard'
+  return dashboardKey.value || 'empty-guest-dashboard'
 })
 
 const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
@@ -128,6 +129,18 @@ watch(
     }
   },
 )
+watch(() => dashboardKey.value, (_, prevDashboardKey) => {
+  // Whenever a guest dashboard key changes, we remove the old value from the storage in
+  // order to avoid edge cases where a dashboard changes back to a previou key,
+  // and to avoid accumulating unused dashboard keys in the storage.
+  if (hasGuestDashboardKeyChanged) {
+    const {
+      [prevDashboardKey]: _, ...otherSavedDashboardKeys
+    } = showAbsoluteValuesPersisted.value
+
+    showAbsoluteValuesPersisted.value = otherSavedDashboardKeys
+  }
+})
 </script>
 
 <template>

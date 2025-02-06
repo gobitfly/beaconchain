@@ -23,7 +23,7 @@ const {
 
 const { t: $t } = useTranslation()
 const {
-  dashboardKey, isSharedDashboard,
+  dashboardKey, hasGuestDashboardKeyChanged, isSharedDashboard,
 } = useDashboardKey()
 const validatorDashboardStore = useValidatorDashboardStore()
 const {
@@ -35,7 +35,7 @@ const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-das
 const emit = defineEmits<{ (e: 'updateCategories', value: SlotVizCategories[]): void }>()
 
 const storageDashboardKey = computed(() => {
-  return dashboardKey.value || 'guest-dashboard'
+  return dashboardKey.value || 'empty-guest-dashboard'
 })
 const selectedCategories = computed(() => {
   const categories: SlotVizCategories[] = [
@@ -97,21 +97,42 @@ watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
   },
   { immediate: true },
 )
+watch(() => dashboardKey.value, (_, prevDashboardKey) => {
+  // Whenever a guest dashboard key changes, we remove the old value from the storage in
+  // order to avoid edge cases where a dashboard changes back to a previou key,
+  // and to avoid accumulating unused dashboard keys in the storage.
+  if (hasGuestDashboardKeyChanged) {
+    const {
+      [prevDashboardKey]: _, ...otherSavedDashboardKeys
+    } = persistedSelectedCategories.value
+
+    persistedSelectedCategories.value = otherSavedDashboardKeys
+  }
+})
 </script>
 
 <template>
   <div>
-    <div
-      v-if="!persistedSelectedCategories[storageDashboardKey]"
-      class="dashboard-slot-viz-duty-toggle-loading-skeleton"
-    >
-      <div class="dashboard-slot-viz-duty-toggle-loading-skeleton-content" />
-    </div>
-    <ClientOnly v-else>
+    <ClientOnly>
       <BcToggleMultiBar
+        v-if="persistedSelectedCategories[storageDashboardKey]"
         v-model="persistedSelectedCategories[storageDashboardKey]"
         :buttons="icons"
       />
+      <div
+        v-else
+        class="dashboard-slot-viz-duty-toggle-placeholder"
+      >
+        <div class="dashboard-slot-viz-duty-toggle-placeholder-content" />
+      </div>
+
+      <template #fallback>
+        <div
+          class="dashboard-slot-viz-duty-toggle-placeholder"
+        >
+          <div class="dashboard-slot-viz-duty-toggle-placeholder-content" />
+        </div>
+      </template>
     </ClientOnly>
   </div>
 </template>
@@ -134,7 +155,7 @@ watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
   left: -5px;
 }
 
-.dashboard-slot-viz-duty-toggle-loading-skeleton {
+.dashboard-slot-viz-duty-toggle-placeholder {
    @include main.container;
   height: 46px;
   width: 196px;
