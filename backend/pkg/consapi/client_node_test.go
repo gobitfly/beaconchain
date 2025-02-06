@@ -89,16 +89,16 @@ func TestGetValidatorsFilterBoth(t *testing.T) {
 	}
 }
 
-func TestGetPropoalAssignments(t *testing.T) {
-	res, err := cl.GetPropoalAssignments(0)
+func TestGetProposalAssignments(t *testing.T) {
+	res, err := cl.GetProposalAssignments(0)
 	if err != nil {
 		t.Errorf("Error getting proposal assignments: %v", err)
 	}
 	log.Printf("Proposal assignments: %v\n", res)
 }
 
-func TestGetPropoalRewards(t *testing.T) {
-	res, err := cl.GetPropoalRewards("head")
+func TestGetProposalRewards(t *testing.T) {
+	res, err := cl.GetProposalRewards("head")
 	if err != nil {
 		t.Errorf("Error getting proposal rewards: %v", err)
 	}

@@ -164,7 +164,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 	}
 	lc.assignmentsCacheMux.Unlock()
 
-	parsedProposerResponse, err := lc.cl.GetPropoalAssignments(epoch)
+	parsedProposerResponse, err := lc.cl.GetProposalAssignments(epoch)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving proposer duties for epoch %v: %w", epoch, err)
 	}
@@ -226,9 +226,9 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 }
 
 // GetEpochProposerAssignments will get the epoch proposer assignments from Lighthouse RPC api
-// Deprecated: use cl retriever GetPropoalAssignments
+// Deprecated: use cl retriever GetProposalAssignments
 func (lc *LighthouseClient) GetEpochProposerAssignments(epoch uint64) (*constypes.StandardProposerAssignmentsResponse, error) {
-	return lc.cl.GetPropoalAssignments(epoch)
+	return lc.cl.GetProposalAssignments(epoch)
 }
 
 func (lc *LighthouseClient) GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error) {
