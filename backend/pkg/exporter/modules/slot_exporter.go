@@ -353,21 +353,17 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		epoch := utils.EpochOfSlot(block.Slot)
-
-		log.Infof("checking that events have been loaded for epoch %v", epoch)
-		for ; ; time.Sleep(time.Second) {
+		if epoch > utils.Config.ClConfig.ElectraForkEpoch {
+			log.Infof("checking that events have been loaded for epoch %v", epoch)
 			exported, err := db.HasEventsForEpoch(epoch)
 			if err != nil {
 				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
 			}
-			if exported {
-				break
+			if !exported {
+				return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
 			}
-			log.Infof("events for epoch %v have not been loaded yet, waiting", epoch)
-		}
-		log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
+			log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
 
-		if epoch > 0 {
 			firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 			lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
 
