@@ -1,0 +1,3 @@
+/backend/pkg/executionlayer/ @gobitfly/indexing
+/backend/pkg/commons/db2/ @gobitfly/indexing
+/backend/cmd/eth1indexer/ @gobitfly/indexing
