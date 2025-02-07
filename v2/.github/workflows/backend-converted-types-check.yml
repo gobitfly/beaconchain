@@ -13,6 +13,12 @@ on:
       - 'frontend/types/api/**'
     branches:
       - '*'
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to run the workflow on'
+        required: true
+        default: 'staging'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,13 +32,14 @@ permissions:
 jobs:
   build:
     name: converted-types-check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: 'backend/go.sum'
+          cache: true
       - name: Check if all backend-types have been converted to frontend-types
         working-directory: backend
         run: |
