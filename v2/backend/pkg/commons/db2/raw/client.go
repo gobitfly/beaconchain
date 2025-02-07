@@ -103,8 +103,7 @@ func (r *StoreRoundTripper) RoundTrip(request *http.Request) (*http.Response, er
 
 func (r *StoreRoundTripper) handle(ctx context.Context, message *jsonrpc.Message) (*jsonrpc.Message, error) {
 	var args []interface{}
-	err := json.Unmarshal(message.Params, &args)
-	if err != nil {
+	if err := json.Unmarshal(message.Params, &args); err != nil {
 		return nil, err
 	}
 

@@ -2,8 +2,11 @@ package raw
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/big"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -14,6 +17,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/types/geth"
 )
 
 const (
@@ -72,9 +76,8 @@ func TestBigTableClientRealCondition(t *testing.T) {
 			if len(block.Transactions()) != 0 && len(receipts) == 0 {
 				t.Errorf("receipts should not be empty")
 			}
-
-			var traces []GethTraceCallResultWrapper
-			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+			var traces []geth.Trace
+			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), geth.Tracer); err != nil {
 				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
 			}
 			if len(block.Transactions()) != 0 && len(traces) == 0 {
@@ -82,72 +85,6 @@ func TestBigTableClientRealCondition(t *testing.T) {
 			}
 		})
 	}
-}
-
-func benchmarkBlockRetrieval(b *testing.B, ethClient *ethclient.Client, rpcClient *rpc.Client) {
-	b.ResetTimer()
-	for j := 0; j < b.N; j++ {
-		blockTestNumber := int64(20978000 + b.N)
-		_, err := ethClient.BlockByNumber(context.Background(), big.NewInt(blockTestNumber))
-		if err != nil {
-			b.Fatalf("BlockByNumber() error = %v", err)
-		}
-
-		if _, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockTestNumber))); err != nil {
-			b.Fatalf("BlockReceipts() error = %v", err)
-		}
-
-		var traces []GethTraceCallResultWrapper
-		if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(big.NewInt(blockTestNumber)), gethTracerArg); err != nil {
-			b.Fatalf("debug_traceBlockByNumber() error = %v", err)
-		}
-	}
-}
-
-func BenchmarkErigonNode(b *testing.B) {
-	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
-	if node == "" {
-		b.Skip("skipping test, please set ETH1_ERIGON_ENDPOINT")
-	}
-
-	rpcClient, err := rpc.DialOptions(context.Background(), node)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
-}
-
-func BenchmarkRawBigTable(b *testing.B) {
-	project := os.Getenv("BIGTABLE_PROJECT")
-	instance := os.Getenv("BIGTABLE_INSTANCE")
-	if project == "" || instance == "" {
-		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
-	}
-
-	bt, err := database.NewBigTable(project, instance, nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	rawStore := WithCache(NewStore(database.Wrap(bt, Table)))
-	rpcClient, err := rpc.DialOptions(context.Background(), "https://foo.bar", rpc.WithHTTPClient(&http.Client{
-		Transport: NewBigTableEthRaw(rawStore, chainID),
-	}))
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
-}
-
-func BenchmarkAll(b *testing.B) {
-	b.Run("BenchmarkErigonNode", func(b *testing.B) {
-		BenchmarkErigonNode(b)
-	})
-	b.Run("BenchmarkRawBigTable", func(b *testing.B) {
-		BenchmarkRawBigTable(b)
-	})
 }
 
 func TestBigTableClient(t *testing.T) {
@@ -202,8 +139,8 @@ func TestBigTableClient(t *testing.T) {
 				t.Errorf("receipts should not be empty")
 			}
 
-			var traces []GethTraceCallResultWrapper
-			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+			var traces []geth.Trace
+			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), geth.Tracer); err != nil {
 				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
 			}
 			if len(block.Transactions()) != 0 && len(traces) == 0 {
@@ -213,7 +150,71 @@ func TestBigTableClient(t *testing.T) {
 	}
 }
 
-func TestBigTableClientWithFallback(t *testing.T) {
+func TestWithFallback(t *testing.T) {
+	tests := []struct {
+		name        string
+		err         error
+		expectedErr bool
+	}{
+		{
+			name: "fallback with json.SyntaxError",
+			err:  &json.SyntaxError{},
+		},
+		{
+			name: "fallback with ErrNotFoundInCache",
+			err:  ErrNotFoundInCache,
+		},
+		{
+			name: "fallback with ErrMethodNotSupported",
+			err:  ErrMethodNotSupported,
+		},
+		{
+			name: "fallback with database.ErrNotFound",
+			err:  database.ErrNotFound,
+		},
+		{
+			name:        "return err for other",
+			err:         fmt.Errorf("some error"),
+			expectedErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roundTripper := NewWithFallback(
+				stubRoundTripper{err: tt.err},
+				stubRoundTripper{resp: &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}},
+			)
+			resp, err := roundTripper.RoundTrip(httptest.NewRequest(http.MethodGet, "/", nil))
+			if tt.expectedErr {
+				if err == nil {
+					t.Fatal("expecting error, got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("got %v, want %v", resp.StatusCode, http.StatusOK)
+			}
+		})
+	}
+}
+
+type stubRoundTripper struct {
+	err  error
+	resp *http.Response
+}
+
+func (stub stubRoundTripper) RoundTrip(*http.Request) (*http.Response, error) {
+	if stub.err != nil {
+		return nil, stub.err
+	}
+	return stub.resp, nil
+}
+
+func TestBigTableClientWithFallbackRealCondition(t *testing.T) {
 	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
 	if node == "" {
 		t.Skip("skipping test, set ETH1_ERIGON_ENDPOINT")
@@ -271,8 +272,8 @@ func TestBigTableClientWithFallback(t *testing.T) {
 				t.Errorf("receipts should not be empty")
 			}
 
-			var traces []GethTraceCallResultWrapper
-			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), gethTracerArg); err != nil {
+			var traces []geth.Trace
+			if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(block.Number()), geth.Tracer); err != nil {
 				t.Fatalf("debug_traceBlockByNumber() error = %v", err)
 			}
 			if len(block.Transactions()) != 0 && len(traces) == 0 {
@@ -282,26 +283,68 @@ func TestBigTableClientWithFallback(t *testing.T) {
 	}
 }
 
-// TODO import those 3 from somewhere
-var gethTracerArg = map[string]string{
-	"tracer": "callTracer",
+func benchmarkBlockRetrieval(b *testing.B, ethClient *ethclient.Client, rpcClient *rpc.Client) {
+	b.ResetTimer()
+	for j := 0; j < b.N; j++ {
+		blockTestNumber := int64(20978000 + b.N)
+		_, err := ethClient.BlockByNumber(context.Background(), big.NewInt(blockTestNumber))
+		if err != nil {
+			b.Fatalf("BlockByNumber() error = %v", err)
+		}
+
+		if _, err := ethClient.BlockReceipts(context.Background(), rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(blockTestNumber))); err != nil {
+			b.Fatalf("BlockReceipts() error = %v", err)
+		}
+
+		var traces []geth.Trace
+		if err := rpcClient.Call(&traces, "debug_traceBlockByNumber", hexutil.EncodeBig(big.NewInt(blockTestNumber)), geth.Tracer); err != nil {
+			b.Fatalf("debug_traceBlockByNumber() error = %v", err)
+		}
+	}
 }
 
-type GethTraceCallResultWrapper struct {
-	Result *GethTraceCallResult `json:"result,omitempty"`
+func BenchmarkErigonNode(b *testing.B) {
+	node := os.Getenv("ETH1_ERIGON_ENDPOINT")
+	if node == "" {
+		b.Skip("skipping test, please set ETH1_ERIGON_ENDPOINT")
+	}
+
+	rpcClient, err := rpc.DialOptions(context.Background(), node)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
 }
 
-type GethTraceCallResult struct {
-	TransactionPosition int                    `json:"transaction_position,omitempty"`
-	Time                string                 `json:"time,omitempty"`
-	GasUsed             string                 `json:"gas_used,omitempty"`
-	From                common.Address         `json:"from,omitempty"`
-	To                  common.Address         `json:"to,omitempty"`
-	Value               string                 `json:"value,omitempty"`
-	Gas                 string                 `json:"gas,omitempty"`
-	Input               string                 `json:"input,omitempty"`
-	Output              string                 `json:"output,omitempty"`
-	Error               string                 `json:"error,omitempty"`
-	Type                string                 `json:"type,omitempty"`
-	Calls               []*GethTraceCallResult `json:"calls,omitempty"`
+func BenchmarkRawBigTable(b *testing.B) {
+	project := os.Getenv("BIGTABLE_PROJECT")
+	instance := os.Getenv("BIGTABLE_INSTANCE")
+	if project == "" || instance == "" {
+		b.Skip("skipping test, set BIGTABLE_PROJECT and BIGTABLE_INSTANCE")
+	}
+
+	bt, err := database.NewBigTable(project, instance, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	rawStore := WithCache(NewStore(database.Wrap(bt, Table)))
+	rpcClient, err := rpc.DialOptions(context.Background(), "https://foo.bar", rpc.WithHTTPClient(&http.Client{
+		Transport: NewBigTableEthRaw(rawStore, chainID),
+	}))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	benchmarkBlockRetrieval(b, ethclient.NewClient(rpcClient), rpcClient)
+}
+
+func BenchmarkAll(b *testing.B) {
+	b.Run("BenchmarkErigonNode", func(b *testing.B) {
+		BenchmarkErigonNode(b)
+	})
+	b.Run("BenchmarkRawBigTable", func(b *testing.B) {
+		BenchmarkRawBigTable(b)
+	})
 }

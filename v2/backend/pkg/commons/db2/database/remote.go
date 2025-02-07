@@ -162,11 +162,6 @@ func NewRemoteClient(url string) *RemoteClient {
 	return &RemoteClient{url: url}
 }
 
-func (r RemoteClient) Add(key string, item Item, allowDuplicate bool) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (r RemoteClient) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
 	b, err := json.Marshal(ParamsBulkAdd{Items: itemsByKey})
 	if err != nil {
@@ -242,16 +237,6 @@ func (r RemoteClient) GetRow(key string) (*Row, error) {
 		return nil, err
 	}
 	return &row, nil
-}
-
-func (r RemoteClient) GetRowKeys(prefix string, opts ...Option) ([]string, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (r RemoteClient) GetLatestValue(key string) (*Row, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (r RemoteClient) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {

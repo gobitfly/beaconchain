@@ -20,9 +20,10 @@ const (
 )
 
 type Item struct {
-	Family string
-	Column string
-	Data   []byte
+	Family    string
+	Column    string
+	Data      []byte
+	Timestamp *int64
 }
 
 type Row struct {
@@ -42,13 +43,6 @@ func Wrap(db *BigTable, table string) TableWrapper {
 	}
 }
 
-func (w TableWrapper) Add(key string, item Item, allowDuplicate bool) error {
-	if err := w.BigTable.Add(w.table, key, item, allowDuplicate); err != nil {
-		return fmt.Errorf("table %s: %w", w.table, err)
-	}
-	return nil
-}
-
 func (w TableWrapper) Read(prefix string) ([]Row, error) {
 	res, err := w.BigTable.Read(w.table, prefix)
 	if err != nil {
@@ -57,24 +51,8 @@ func (w TableWrapper) Read(prefix string) ([]Row, error) {
 	return res, nil
 }
 
-func (w TableWrapper) GetLatestValue(key string) (*Row, error) {
-	res, err := w.BigTable.GetLatestValue(w.table, key)
-	if err != nil {
-		return nil, fmt.Errorf("table %s: %w", w.table, err)
-	}
-	return res, nil
-}
-
 func (w TableWrapper) GetRow(key string) (*Row, error) {
 	res, err := w.BigTable.GetRow(w.table, key)
-	if err != nil {
-		return nil, fmt.Errorf("table %s: %w", w.table, err)
-	}
-	return res, nil
-}
-
-func (w TableWrapper) GetRowKeys(prefix string, opts ...Option) ([]string, error) {
-	res, err := w.BigTable.GetRowKeys(w.table, prefix, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("table %s: %w", w.table, err)
 	}
@@ -194,7 +172,11 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Op
 	for key, items := range itemsByKey {
 		mut := bigtable.NewMutation()
 		for _, item := range items {
-			mut.Set(item.Family, item.Column, bigtable.Timestamp(0), item.Data)
+			timestamp := bigtable.Timestamp(0)
+			if item.Timestamp != nil {
+				timestamp = bigtable.Timestamp(*item.Timestamp)
+			}
+			mut.Set(item.Family, item.Column, timestamp, item.Data)
 		}
 		keys = append(keys, key)
 		muts = append(muts, mut)
@@ -220,29 +202,6 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Op
 		if len(bulkErrs) > 0 {
 			return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
 		}
-	}
-	return nil
-}
-
-// Add inserts a new row with the given key, column, and data into the Bigtable
-// It applies a mutation that stores data in the receiver column family
-// It returns error if the operation fails
-func (b BigTable) Add(table, key string, item Item, allowDuplicate bool) error {
-	// Open the transfer table for data operations
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	// Create a new mutation to store data in the given column
-	mut := bigtable.NewMutation()
-	mut.Set(item.Family, item.Column, bigtable.Now(), item.Data)
-
-	if !allowDuplicate {
-		mut = bigtable.NewCondMutation(bigtable.RowKeyFilter(key), nil, mut)
-	}
-	// Apply the mutation to the table using the given key
-	if err := tbl.Apply(ctx, key, mut); err != nil {
-		return fmt.Errorf("could not apply row mutation: %w", err)
 	}
 	return nil
 }
@@ -275,34 +234,6 @@ func (b BigTable) Read(table, prefix string) ([]Row, error) {
 	}
 
 	return rows, nil
-}
-
-func (b BigTable) GetLatestValue(table, key string) (*Row, error) {
-	// Open the transfer table for reading
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	var data Row
-	err := tbl.ReadRows(ctx, bigtable.PrefixRange(key), func(row bigtable.Row) bool {
-		values := make(map[string][]byte)
-		for _, family := range row {
-			for _, item := range family {
-				values[item.Column] = item.Value
-			}
-		}
-		data = Row{
-			Key:    row.Key(),
-			Values: values,
-		}
-		return true
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %w", err)
-	}
-
-	return &data, nil
 }
 
 func (b BigTable) GetRow(table, key string) (*Row, error) {
@@ -373,27 +304,6 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 	}
 	if len(data) == 0 {
 		return nil, ErrNotFound
-	}
-
-	return data, nil
-}
-
-func (b BigTable) GetRowKeys(table, prefix string, opts ...Option) ([]string, error) {
-	options := apply(opts)
-
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	rowRange := bigtable.PrefixRange(prefix)
-	readOptions := bigtableReadOptions(options, bigtable.PrefixRange(prefix))
-	var data []string
-	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
-		data = append(data, row.Key())
-		return true
-	}, readOptions...)
-	if err != nil {
-		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
 
 	return data, nil
