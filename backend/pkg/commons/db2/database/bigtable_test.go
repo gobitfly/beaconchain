@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 
 	"cloud.google.com/go/bigtable/bttest"
@@ -122,47 +121,6 @@ func TestBigTable(t *testing.T) {
 				}
 			})
 
-			t.Run("GetLatestValue", func(t *testing.T) {
-				for key, items := range tt.items {
-					v, err := db.GetLatestValue(key)
-					if err != nil {
-						t.Error(err)
-					}
-					for _, it := range items {
-						if got, want := string(v.Values[fmt.Sprintf("%s:%s", it.Family, it.Column)]), string(it.Data); got != want {
-							t.Errorf("got %v want %v", got, want)
-						}
-					}
-				}
-			})
-
-			t.Run("GetRowKeys", func(t *testing.T) {
-				for key := range tt.items {
-					keys, err := db.GetRowKeys(key)
-					if err != nil {
-						t.Error(err)
-					}
-					count, found := 0, false
-					for expectedKey := range tt.items {
-						if !strings.HasPrefix(expectedKey, key) {
-							continue
-						}
-						// don't count duplicate inputs since the add prevent duplicate keys
-						if expectedKey == key && found {
-							continue
-						}
-						found = expectedKey == key
-						count++
-						if !slices.Contains(keys, expectedKey) {
-							t.Errorf("missing %v in %v", expectedKey, keys)
-						}
-					}
-					if got, want := len(keys), count; got != want {
-						t.Errorf("got %v want %v", got, want)
-					}
-				}
-			})
-
 			t.Run("GetRow", func(t *testing.T) {
 				for key, items := range tt.items {
 					row, err := db.GetRow(key)
@@ -264,7 +222,11 @@ func TestGetRowsRange(t *testing.T) {
 				if i == tt.txs-1 {
 					low = key
 				}
-				_ = db.Add(key, Item{}, false)
+				if err := db.BulkAdd(map[string][]Item{
+					key: {{}},
+				}); err != nil {
+					t.Error(err)
+				}
 			}
 			rows, err := db.GetRowsRange(high, low, tt.options...)
 			if err != nil {
