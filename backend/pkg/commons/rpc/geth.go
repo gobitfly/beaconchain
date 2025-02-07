@@ -3,25 +3,25 @@ package rpc
 import (
 	"context"
 	"encoding/hex"
-
-	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-
-	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
-
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/pkg/commons/contracts/oneinchoracle"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types/geth"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -246,10 +246,10 @@ func (client *GethClient) GetLatestEth1BlockNumber() (uint64, error) {
 	return latestBlock.NumberU64(), nil
 }
 
-func (client *GethClient) TraceGeth(blockHash common.Hash) ([]*GethTraceCallResult, error) {
-	var res []*GethTraceCallResult
+func (client *GethClient) TraceGeth(blockHash common.Hash) ([]*geth.Trace, error) {
+	var res []*geth.Trace
 
-	err := client.rpcClient.Call(&res, "debug_traceBlockByHash", blockHash, gethTracerArg)
+	err := client.rpcClient.Call(&res, "debug_traceBlockByHash", blockHash, geth.Tracer)
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +380,7 @@ func (client *GethClient) GetERC20TokenBalance(address string, token string) ([]
 func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
 	log.Infof("retrieving metadata for token %x", token)
 
-	contract, err := erc20.NewErc20(common.BytesToAddress(token), client.ethClient)
+	contract, err := contracts.NewIERC20Metadata(common.BytesToAddress(token), client.ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("error getting token-contract: erc20.NewErc20: %w", err)
 	}

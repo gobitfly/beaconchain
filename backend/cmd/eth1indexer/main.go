@@ -17,6 +17,9 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -25,6 +28,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/executionlayer"
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
@@ -180,28 +184,27 @@ func Run() {
 		return
 	}
 
-	transforms := make([]func(blk *types.Eth1Block, cache *freecache.Cache) (*types.BulkMutations, *types.BulkMutations, error), 0)
-	transforms = append(transforms,
-		bt.TransformBlock,
-		bt.TransformTx,
-		bt.TransformItx,
-		bt.TransformBlobTx,
-		bt.TransformERC20,
-		bt.TransformERC721,
-		bt.TransformERC1155,
-		bt.TransformUncle,
-		bt.TransformWithdrawals,
-		bt.TransformEnsNameRegistered,
-		bt.TransformContract)
-
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+
+	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
+	if err != nil {
+		log.Fatal(err, "error connecting to bigtable", 0)
+	}
+
+	indexer := executionlayer.NewIndexer(
+		executionlayer.NewAdaptorV1(
+			data.NewStore(database.Wrap(bigtable, data.Table)),
+			metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache),
+		),
+		executionlayer.AllTransformers...,
+	)
 
 	if *block != 0 {
 		err = IndexFromNode(bt, client, *block, *block, *concurrencyBlocks, *traceMode)
 		if err != nil {
 			log.Fatal(err, "error indexing from node", 0, map[string]interface{}{"block": *block, "concurrency": *concurrencyBlocks})
 		}
-		err = bt.IndexEventsWithTransformers(*block, *block, transforms, *concurrencyData, cache)
+		err = bt.IndexEventsWithIndexer(*block, *block, indexer, *concurrencyData)
 		if err != nil {
 			log.Fatal(err, "error indexing from bigtable", 0)
 		}
@@ -237,7 +240,7 @@ func Run() {
 	}
 
 	if *endData != 0 && *startData < *endData {
-		err = bt.IndexEventsWithTransformers(*startData, *endData, transforms, *concurrencyData, cache)
+		err = bt.IndexEventsWithIndexer(*startData, *endData, indexer, *concurrencyData)
 		if err != nil {
 			log.Fatal(err, "error indexing from bigtable", 0)
 		}
@@ -340,7 +343,7 @@ func Run() {
 						endBlock = int64(lastBlockFromNode)
 					}
 
-					err = bt.IndexEventsWithTransformers(startBlock, endBlock, transforms, *concurrencyData, cache)
+					err = bt.IndexEventsWithIndexer(startBlock, endBlock, indexer, *concurrencyData)
 					if err != nil {
 						log.Error(err, "error indexing from bigtable", 0, map[string]interface{}{"start": startBlock, "end": endBlock, "concurrency": *concurrencyData})
 						cache.Clear()
