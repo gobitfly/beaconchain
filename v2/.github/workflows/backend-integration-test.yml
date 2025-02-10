@@ -35,7 +35,7 @@ jobs:
         working-directory: backend
         run:
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
-          go test -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
+          go test -failfast -tags integration -config "${{ secrets.CI_CONFIG_PATH }}"
 
 
 
