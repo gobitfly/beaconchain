@@ -431,7 +431,6 @@ func TestParseAddressBalance(t *testing.T) {
 					t.Errorf("got Balance %v, want %v", res.Balance, tt.expected[i].Balance)
 				}
 			}
-
 		})
 	}
 }
