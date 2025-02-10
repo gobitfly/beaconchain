@@ -36,5 +36,10 @@ func (d *DataAccessService) GetAllNetworks() ([]types.NetworkInfo, error) {
 			Name:              "pectra-devnet-5",
 			NotificationsName: "pectra-devnet-5",
 		},
+		{
+			ChainId:           7072151312,
+			Name:              "pectra-devnet-6",
+			NotificationsName: "pectra-devnet-6",
+		},
 	}, nil
 }
