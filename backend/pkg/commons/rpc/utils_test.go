@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -412,25 +413,25 @@ func TestParseAddressBalance(t *testing.T) {
 				if result != nil {
 					t.Errorf("expected result to be nil on error, got %v", result)
 				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if len(result) != len(tt.expected) {
+				t.Fatalf("got %v balances, want %v balances", len(result), len(tt.expected))
+			}
+			for i, res := range result {
+				if !bytes.Equal(res.Address, tt.expected[i].Address) {
+					t.Errorf("got Address %v, want %v", res.Address, tt.expected[i].Address)
 				}
-				if len(result) != len(tt.expected) {
-					t.Fatalf("got %v balances, want %v balances", len(result), len(tt.expected))
+				if !bytes.Equal(res.Token, tt.expected[i].Token) {
+					t.Errorf("got Token %v, want %v", res.Token, tt.expected[i].Token)
 				}
-				for i, res := range result {
-					if !bytes.Equal(res.Address, tt.expected[i].Address) {
-						t.Errorf("got Address %v, want %v", res.Address, tt.expected[i].Address)
-					}
-					if !bytes.Equal(res.Token, tt.expected[i].Token) {
-						t.Errorf("got Token %v, want %v", res.Token, tt.expected[i].Token)
-					}
-					if !bytes.Equal(res.Balance, tt.expected[i].Balance) {
-						t.Errorf("got Balance %v, want %v", res.Balance, tt.expected[i].Balance)
-					}
+				if !bytes.Equal(res.Balance, tt.expected[i].Balance) {
+					t.Errorf("got Balance %v, want %v", res.Balance, tt.expected[i].Balance)
 				}
 			}
+
 		})
 	}
 }
@@ -632,7 +633,7 @@ func TestGetERC20ContractSymbol(t *testing.T) {
 	ret := &types.ERC20Metadata{}
 
 	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
-	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	contractMetadata, err := contracts.NewIERC20Metadata(contractAddress, backend.Client())
 	if err != nil {
 		t.Fatalf("could not create contract: %v", err)
 	}
@@ -654,11 +655,15 @@ func TestGetERC20ContractSymbol(t *testing.T) {
 	for _, tt := range test {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getERC20ContractSymbol(contractMetadata, ret)
-			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err != nil {
+				if tt.expectedErr == nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
-			if err == nil && tt.expectedErr != nil {
-				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			if err == nil {
+				if tt.expectedErr != nil {
+					t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+				}
 			}
 			if ret.Symbol != tt.expected {
 				t.Errorf("got Symbol %v, want %v", ret.Symbol, tt.expected)
@@ -667,7 +672,7 @@ func TestGetERC20ContractSymbol(t *testing.T) {
 	}
 
 	contractAddress2, _ := backend.DeployERC20(t, "usdt", "", backend.BankAccount.From)
-	contractMetadata2, err := backend.NewERC20Metadata(t, contractAddress2)
+	contractMetadata2, err := contracts.NewIERC20Metadata(contractAddress2, backend.Client())
 	if err != nil {
 		t.Fatalf("could not create contract: %v", err)
 	}
@@ -689,11 +694,15 @@ func TestGetERC20ContractSymbol(t *testing.T) {
 	for _, tt := range test2 {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getERC20ContractSymbol(contractMetadata2, ret)
-			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err != nil {
+				if tt.expectedErr == nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
-			if err == nil && tt.expectedErr != nil {
-				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			if err != nil {
+				if tt.expectedErr != nil {
+					t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+				}
 			}
 			if ret.Symbol != tt.expected {
 				t.Errorf("got Symbol %v, want %v", ret.Symbol, tt.expected)
@@ -709,7 +718,7 @@ func TestGetERC20ContractTotalSupply(t *testing.T) {
 	ret := &types.ERC20Metadata{}
 
 	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
-	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	contractMetadata, err := contracts.NewIERC20Metadata(contractAddress, backend.Client())
 	if err != nil {
 		t.Fatalf("could not create contract: %v", err)
 	}
@@ -731,8 +740,10 @@ func TestGetERC20ContractTotalSupply(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getERC20ContractTotalSupply(contractMetadata, ret)
-			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err != nil {
+				if tt.expectedErr == nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
 			if err == nil && tt.expectedErr != nil {
 				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
@@ -751,7 +762,7 @@ func TestGetERC20ContractDecimals(t *testing.T) {
 	ret := &types.ERC20Metadata{}
 
 	contractAddress, _ := backend.DeployERC20(t, "usdt", "USDT", backend.BankAccount.From)
-	contractMetadata, err := backend.NewERC20Metadata(t, contractAddress)
+	contractMetadata, err := contracts.NewIERC20Metadata(contractAddress, backend.Client())
 	if err != nil {
 		t.Fatalf("could not create contract: %v", err)
 	}
@@ -773,11 +784,15 @@ func TestGetERC20ContractDecimals(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := getERC20ContractDecimals(contractMetadata, ret)
-			if err != nil && tt.expectedErr == nil {
-				t.Fatalf("unexpected error: %v", err)
+			if err != nil {
+				if tt.expectedErr == nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
 			}
-			if err == nil && tt.expectedErr != nil {
-				t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+			if err != nil {
+				if tt.expectedErr != nil {
+					t.Fatalf("expected error: %v, got nil", tt.expectedErr)
+				}
 			}
 			if !bytes.Equal(ret.Decimals, tt.expected) {
 				t.Errorf("got Decimals %v, want %v", ret.Decimals, tt.expected)
