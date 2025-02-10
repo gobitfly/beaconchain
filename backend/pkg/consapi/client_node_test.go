@@ -1,3 +1,5 @@
+//go:build integration
+
 package consapi_test
 
 import (

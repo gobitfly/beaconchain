@@ -78,6 +78,22 @@ var (
 		Name: "counter",
 		Help: "Generic counter of events with name in labels",
 	}, []string{"name"})
+	NotificationsQueue_Event_Size = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "notifications_queue_event_pending_size",
+		Help: "Number of pending notifications in the queue by event type",
+	}, []string{"event_type", "status"})
+	NotificationsQueue_Channel_Size = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "notifications_queue_channel_pending_size",
+		Help: "Number of pending notifications in the queue by channel",
+	}, []string{"channel", "status"})
+	NotificationsQueue_Pending_Time = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_pending_duration_milliseconds",
+		Help: "Duration of still pending notifications in the queue",
+	}, []string{"channel", "event_type"})
+	NotificationsQueue_Sent_Time = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_sent_duration_milliseconds",
+		Help: "Amount of time notification took to be successfully sent",
+	}, []string{"channel", "event_type"})
 )
 
 func init() {
