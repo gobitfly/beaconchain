@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -61,6 +62,9 @@ func notificationSender() {
 		if err != nil {
 			log.Error(err, "error dispatching notifications", 0)
 		}
+
+		// Record metrics related to Notification Queue like size of queue and duration of pending notifications
+		collectNotificationQueueMetrics()
 
 		err = garbageCollectNotificationQueue()
 		if err != nil {
@@ -527,4 +531,189 @@ func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webho
 		defer resp.Body.Close()
 	}
 	return nil
+}
+
+type Notification struct {
+	Id      *uint64    `db:"id"`
+	Created *time.Time `db:"created"`
+	Sent    *time.Time `db:"sent"`
+	Channel string     `db:"channel"`
+	Content string     `db:"content"`
+}
+
+type NotificationStatus string
+
+const (
+	Sent    NotificationStatus = "sent"
+	Pending NotificationStatus = "pending"
+
+	// Metrics label for EventType where the event could not be mapped
+	UnknownEvent string = "unknown_event"
+)
+
+/**
+ * Get all notifications which were marked as sent.
+ */
+func GetSentNotifications() ([]Notification, error) {
+	notificationRecords := []Notification{}
+
+	err := db.ReaderDb.Select(&notificationRecords,
+		`SELECT id, created, sent, channel, content 
+		   FROM notification_queue
+		  WHERE sent IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("error querying sent notifications: %w", err)
+	}
+
+	return notificationRecords, nil
+}
+
+/**
+ * Get all notifications which have not yet been sent.
+ */
+func GetPendingNotifications() ([]Notification, error) {
+	notificationRecords := []Notification{}
+
+	err := db.ReaderDb.Select(&notificationRecords,
+		`SELECT id, created, sent, channel, content 
+		   FROM notification_queue
+		  WHERE sent IS NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("error querying pending notifications: %w", err)
+	}
+
+	return notificationRecords, nil
+}
+
+/**
+ * Collects metrics for the Notification system, specifically about its queue.
+ * Provides metrics related to how many notifications are pending and sent, and of what event type they are.
+ * Also provides metrics related to how long the notifications have been in the queue
+ */
+func collectNotificationQueueMetrics() {
+	sentNotifications, err := GetSentNotifications()
+	if err != nil {
+		log.Error(err, "Error retrieving sent notifications. Will skip sending metrics", 0)
+		return // Don't return an error, we don't want to disrupt actual notification sending simply because we couldn't record metrics
+	}
+	pendingNotifications, err := GetPendingNotifications()
+	if err != nil {
+		log.Error(err, "Error retrieving pending notifications. Will skip sending metrics", 0)
+		return // Don't return an error, we don't want to disrupt actual notification sending simply because we couldn't record metrics
+	}
+
+	now := time.Now() // Checking the time once so that it is consistent across all metrics for this collection attempt
+
+	// Record for each sent notification how long it took to send. Honestly, can probably remove this later since this metric can be sent once when the notification itself is delivered.
+	for _, notification := range sentNotifications {
+		eventType := GetEventLabelForNotification(notification)
+
+		// Record the amount of time records that were sent (and that still exist in the queue) took to sent
+		metrics.NotificationsQueue_Sent_Time.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Sent, *notification.Created))
+	}
+
+	// Record for each pending notification how long it has been in the queue
+	for _, notification := range pendingNotifications {
+		eventType := GetEventLabelForNotification(notification)
+
+		// Record the amount of time these records have been waiting to been sent
+		metrics.NotificationsQueue_Pending_Time.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Created, now))
+	}
+
+	// Count number of pending notifications in the queue by event type
+	eventTypeCount := CountByEventType(pendingNotifications)
+	for eventType, numNotifications := range eventTypeCount {
+		metrics.NotificationsQueue_Event_Size.WithLabelValues(eventType, string(Pending)).Set(float64(numNotifications))
+	}
+
+	// Count number of sent notifications in the queue by event type
+	eventTypeCount = CountByEventType(sentNotifications)
+	for eventType, numNotifications := range eventTypeCount {
+		metrics.NotificationsQueue_Event_Size.WithLabelValues(eventType, string(Sent)).Set(float64(numNotifications))
+	}
+
+	// Count number of pending notifications in the queue by channel
+	channelCount := CountByChannel(pendingNotifications)
+	for channelType, numNotifications := range channelCount {
+		metrics.NotificationsQueue_Channel_Size.WithLabelValues(channelType, string(Pending)).Set(float64(numNotifications))
+	}
+
+	// Count number of sent notifications in the queue by channel
+	channelCount = CountByChannel(sentNotifications)
+	for channelType, numNotifications := range channelCount {
+		metrics.NotificationsQueue_Channel_Size.WithLabelValues(channelType, string(Sent)).Set(float64(numNotifications))
+	}
+}
+
+/**
+ * Simple wrapper that enables submitting metrics for notifications with unknown event names.
+ */
+func GetEventLabelForNotification(notification Notification) string {
+	eventName, err := ExtractEventNameFromNotification(notification)
+	if err != nil {
+		return UnknownEvent
+	}
+
+	return string(*eventName)
+}
+
+/**
+ * Because we don't record the event type when recording notifications, we have to do some work to extract them from the
+ * notification message that is eventually sent to the user.
+ */
+func ExtractEventNameFromNotification(notification Notification) (*types.EventName, error) {
+	for eventName, eventDescription := range types.EventLabel {
+		if strings.Contains(notification.Content, eventDescription) {
+			return &eventName, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no EventName found for notification %d matching any event descriptions", notification.Id)
+}
+
+/**
+ * Given a collection of notifications, count the number of notifications with each distinct event type.
+ */
+func CountByEventType(notifications []Notification) map[string]int {
+	eventTypeCountMap := make(map[string]int, len(types.EventLabel)+1) // +1 to account for the "unknown" event type
+	// Initialize the map with all EventLabel types, with the Count set to 0
+	// Must be pre-initialized, because we still want to submit metrics for 0-count EventTypes, so they must exist in this map.
+	for eventType := range types.EventLabel {
+		eventTypeCountMap[string(eventType)] = 0
+	}
+	eventTypeCountMap[UnknownEvent] = 0 // include unknown, which indicates an EventType which we couldn't parse from the Notification's content field
+
+	// Now iterate over the list of events, and increment the value in the map
+	for _, notification := range notifications {
+		eventType := GetEventLabelForNotification(notification)
+		eventTypeCountMap[eventType] = eventTypeCountMap[eventType] + 1
+	}
+	return eventTypeCountMap
+}
+
+/**
+ * Given a collection of notifications, count the number of notifications with each distinct channel type.
+ */
+func CountByChannel(notifications []Notification) map[string]int {
+	channelCountMap := make(map[string]int, len(types.NotificationChannels))
+	// Initialize the map with the Channel types, with the Count set to 0.
+	// Must be pre-initialized, because we still want to submit metrics for 0-count Channels, so they must exist in this map.
+	for _, channelType := range types.NotificationChannels {
+		channelCountMap[string(channelType)] = 0
+	}
+
+	// Now iterate over the list of notifications, and increment the value for each channel
+	for _, notification := range notifications {
+		channelCountMap[notification.Channel] = channelCountMap[notification.Channel] + 1
+	}
+	return channelCountMap
+}
+
+/**
+ * Returns the amount of milliseconds between two timestamps. Always returns a positive
+ * duration, so you don't have to worry about date ordering
+ */
+func GetTimeDiffMilliseconds(time1 time.Time, time2 time.Time) float64 {
+	duration := time1.Sub(time2)
+	return math.Abs(float64(duration.Milliseconds()))
 }
