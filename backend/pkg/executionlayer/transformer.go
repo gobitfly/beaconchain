@@ -70,7 +70,7 @@ func TransformTx(chainID string, block *types.Eth1Block, res *IndexedBlock) erro
 			Status:             types.StatusType(tx.Status),
 		}
 
-		updateITxStatus(tx.Itx, indexedTx)
+		updateITxStatus(indexedTx, tx.Itx)
 		transactions = append(transactions, indexedTx)
 	}
 	res.Transactions = transactions
@@ -179,7 +179,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 		txReward.Add(txReward, txFee)
 
 		for _, itx := range t.Itx {
-			if !isValidItx(itx) { // skip top level call & empty calls
+			if !isValidItx(itx) {
 				continue
 			}
 			idx.InternalTransactionCount++
@@ -267,7 +267,6 @@ func TransformITx(chainID string, block *types.Eth1Block, res *IndexedBlock) err
 	var transactions []data.InternalWithIndexes
 	for i, tx := range block.GetTransactions() {
 		for j, itx := range tx.GetItx() {
-			// skip top level and empty calls
 			if !isValidItx(itx) {
 				continue
 			}
@@ -639,6 +638,7 @@ func isBlobTx(txType uint32) bool {
 }
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
+	// skip top level and empty calls
 	if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) {
 		return false
 	}
@@ -712,8 +712,8 @@ func getERC1155TransferValues(values []*big.Int) [][]byte {
 	return v
 }
 
-func updateITxStatus(internalTx []*types.Eth1InternalTransaction, indexedTx *types.Eth1TransactionIndexed) {
-	for _, itx := range internalTx {
+func updateITxStatus(indexedTx *types.Eth1TransactionIndexed, internals []*types.Eth1InternalTransaction) {
+	for _, itx := range internals {
 		if itx.ErrorMsg != "" {
 			indexedTx.ErrorMsg = itx.ErrorMsg
 			if indexedTx.Status == types.StatusType_SUCCESS {
