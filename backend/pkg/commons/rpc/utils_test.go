@@ -295,9 +295,8 @@ func TestGetTokens(t *testing.T) {
 // Eth1AddressBalance type
 func TestParseAddressBalance(t *testing.T) {
 	tests := []struct {
-		name   string
-		tokens []common.
-			Address
+		name        string
+		tokens      []common.Address
 		address     string
 		balances    []*big.Int
 		expected    []*types.Eth1AddressBalance
@@ -413,13 +412,16 @@ func TestParseAddressBalance(t *testing.T) {
 				if result != nil {
 					t.Errorf("expected result to be nil on error, got %v", result)
 				}
+				return
 			}
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
+				return
 			}
 			if len(result) != len(tt.expected) {
 				t.Fatalf("got %v balances, want %v balances", len(result), len(tt.expected))
 			}
+
 			for i, res := range result {
 				if !bytes.Equal(res.Address, tt.expected[i].Address) {
 					t.Errorf("got Address %v, want %v", res.Address, tt.expected[i].Address)
