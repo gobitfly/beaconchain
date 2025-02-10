@@ -50,6 +50,8 @@ watchDebounced([
 },
 { deep: true },
 )
+
+const { hasRocketPool } = useNetworkStore()
 </script>
 
 <template>
@@ -73,13 +75,15 @@ watchDebounced([
 
       <div class="notifications-management-machines__content">
         <BcListSection class="grid-overwrite">
-          <span class="grid-span-2">
-            {{ $t('notifications.network.settings.new_reward_round') }}
-          </span>
-          <BcToggle
-            v-model="hasNewRewardRound"
-            class="toggle"
-          />
+          <template v-if="hasRocketPool">
+            <span class="grid-span-2">
+              {{ $t('notifications.network.settings.new_reward_round') }}
+            </span>
+            <BcToggle
+              v-model="hasNewRewardRound"
+              class="toggle"
+            />
+          </template>
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_below') }}
           </span>

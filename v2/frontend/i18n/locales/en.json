@@ -993,10 +993,6 @@
         "view_addons": "View Add-Ons",
         "yearly": "Yearly"
     },
-    "rocketpool": {
-        "mode": "RP Mode",
-        "tooltip": "Enables Rocket Pool stats for this dashboard"
-    },
     "search_bar": {
         "account_placeholder": "Address or ENS name",
         "all_networks": "All",
