@@ -148,28 +148,13 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		return nil, nil, err
 	}
 
-	withdrawals := getBlockWithdrawals(block.Withdrawals())
-	uncles := getBlockUncles(block.Uncles())
-	baseFee := getBaseFee(block)
-	blobGasUsed := getBlobGasUsed(block)
-	excessBlobGas := getExcessBlobGas(block)
-
 	transactions := make([]*types.Eth1Transaction, len(block.Transactions()))
 	traceIndex := 0
 	if len(receipts) != len(block.Transactions()) {
 		return nil, nil, fmt.Errorf("block %s receipts length [%d] mismatch with transactions length [%d]", block.Number(), len(receipts), len(block.Transactions()))
 	}
 	for txPosition, receipt := range receipts {
-		logs := getLogsFromReceipts(receipt.Logs)
-		internals := getInternalTxs(traceIndex, traces, txPosition)
 		tx := block.Transactions()[txPosition]
-
-		from := client.getSender(tx, blockHash, txPosition)
-		to := getReceiver(tx)
-		maxFeePerBlobGas := getMaxFeePerBlobGas(tx)
-		blobVersionedHashes := getBlobVersionedHashes(tx)
-		blobGasPrice := getBlobGasPrice(receipt)
-
 		transactions[txPosition] = &types.Eth1Transaction{
 			Type:                 uint32(tx.Type()),
 			Nonce:                tx.Nonce(),
@@ -179,8 +164,8 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 			Gas:                  tx.Gas(),
 			Value:                tx.Value().Bytes(),
 			Data:                 tx.Data(),
-			To:                   to,
-			From:                 from,
+			To:                   getReceiver(tx),
+			From:                 client.getSender(tx, blockHash, txPosition),
 			ChainId:              tx.ChainId().Bytes(),
 			AccessList:           []*types.AccessList{},
 			Hash:                 tx.Hash().Bytes(),
@@ -189,11 +174,11 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 			GasUsed:              receipt.GasUsed,
 			LogsBloom:            receipt.Bloom[:],
 			Status:               receipt.Status,
-			Logs:                 logs,
-			Itx:                  internals,
-			MaxFeePerBlobGas:     maxFeePerBlobGas,
-			BlobVersionedHashes:  blobVersionedHashes,
-			BlobGasPrice:         blobGasPrice,
+			Logs:                 getLogsFromReceipts(receipt.Logs),
+			Itx:                  getInternalTxs(traceIndex, traces, txPosition),
+			MaxFeePerBlobGas:     getMaxFeePerBlobGas(tx),
+			BlobVersionedHashes:  getBlobVersionedHashes(tx),
+			BlobGasPrice:         getBlobGasPrice(receipt),
 			BlobGasUsed:          receipt.BlobGasUsed,
 		}
 	}
@@ -214,12 +199,12 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		Extra:         block.Extra(),
 		MixDigest:     block.MixDigest().Bytes(),
 		Bloom:         block.Bloom().Bytes(),
-		BaseFee:       baseFee,
-		Uncles:        uncles,
+		BaseFee:       getBaseFee(block),
+		Uncles:        getBlockUncles(block.Uncles()),
 		Transactions:  transactions,
-		Withdrawals:   withdrawals,
-		BlobGasUsed:   blobGasUsed,
-		ExcessBlobGas: excessBlobGas,
+		Withdrawals:   getBlockWithdrawals(block.Withdrawals()),
+		BlobGasUsed:   getBlobGasUsed(block),
+		ExcessBlobGas: getExcessBlobGas(block),
 	}, timings, nil
 }
 
