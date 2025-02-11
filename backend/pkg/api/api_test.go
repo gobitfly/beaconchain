@@ -720,7 +720,7 @@ func TestApiDoc(t *testing.T) {
 			Status(http.StatusOK).JSON().Decode(&resp)
 
 		assert.Equal(t, "/api/v2", resp.BasePath, "swagger base path should be '/api/v2'")
-		require.NotNil(t, 0, resp.Paths, "swagger paths should not nil")
+		require.NotNil(t, resp.Paths, "swagger paths should not nil")
 		assert.NotEqual(t, 0, len(resp.Paths.Paths), "swagger paths should not be empty")
 		assert.NotEqual(t, 0, len(resp.Definitions), "swagger definitions should not be empty")
 		assert.NotEqual(t, 0, len(resp.Host), "swagger host should not be empty")
