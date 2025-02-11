@@ -47,10 +47,10 @@ var AllTransformers = maps.Values(Transformers)
 
 func TransformTx(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
 	var transactions []*types.Eth1TransactionIndexed
-	for _, tx := range blk.Transactions {
-
+	for _, tx := range block.Transactions {
 		to, isContract := getTxRecipient(tx)
 		method := getMethodSignature(tx)
+
 		fee := new(big.Int).Mul(new(big.Int).SetBytes(tx.GetGasPrice()), big.NewInt(int64(tx.GetGasUsed()))).Bytes()
 		blobFee := new(big.Int).Mul(new(big.Int).SetBytes(tx.GetBlobGasPrice()), big.NewInt(int64(tx.GetBlobGasUsed()))).Bytes()
 		indexedTx := &types.Eth1TransactionIndexed{
@@ -88,6 +88,7 @@ func TransformERC20(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 			if !isValidERC20Log(log) {
 				continue
 			}
+
 			topics := getLogTopics(log)
 
 			ethLog := gethtypes.Log{
@@ -151,6 +152,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 	}
 
 	blockUncleReward := calculateBlockUncleReward(block, chainID)
+
 	idx.UncleReward = blockUncleReward.Bytes()
 
 	var maxGasPrice *big.Int
@@ -176,6 +178,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 		}
 
 		txFee := calculateTxFee(t, block.BaseFee)
+
 		txReward.Add(txReward, txFee)
 
 		for _, itx := range t.Itx {
@@ -211,6 +214,7 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *IndexedBlock) er
 			// skip non blob-txs
 			continue
 		}
+
 		fee := new(big.Int).Mul(new(big.Int).SetBytes(tx.GetGasPrice()), big.NewInt(int64(tx.GetGasUsed()))).Bytes()
 		blobFee := new(big.Int).Mul(new(big.Int).SetBytes(tx.GetBlobGasPrice()), big.NewInt(int64(tx.GetBlobGasUsed()))).Bytes()
 		indexedTx := &types.Eth1BlobTransactionIndexed{
@@ -247,14 +251,12 @@ func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock
 					Success: itx.GetErrorMsg() == "" && tx.GetErrorMsg() == "",
 				}
 				address := getContractAddress(itx)
-				ts, err := encodeIsContractUpdateTs(block.GetNumber(), uint64(i), uint64(j))
-				if err != nil {
-					return nil, nil, fmt.Errorf("error generating bigtable isContract timestamp: %w", err)
-				}
-				updates = append(updates, metadataupdates.ContractUpdateWithAddress{
-					Indexed:   contractUpdate,
-					Address:   address,
-					Timestamp: ts,
+
+				contracts = append(contracts, metadataupdates.ContractUpdateWithAddress{
+					Indexed:       contractUpdate,
+					Address:       address,
+					TxIndex:       i,
+					InternalIndex: j,
 				})
 			}
 		}
@@ -466,7 +468,6 @@ func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *Ind
 	for i, tx := range block.GetTransactions() {
 		for j, txLog := range tx.GetLogs() {
 			ensContract := ensContractAddresses[common.BytesToAddress(txLog.Address).String()]
-
 			topics := getLogTopics(txLog)
 
 			ethLog := gethtypes.Log{
@@ -481,7 +482,6 @@ func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *Ind
 				Removed:     txLog.GetRemoved(),
 			}
 			var ensLog data.ENSLog
-			// TODO there is probably a better way to do this
 			for _, lTopic := range txLog.GetTopics() {
 				switch ensContract {
 				case "Registry":
@@ -610,6 +610,19 @@ func verifyName(name string) error {
 		return fmt.Errorf("name too long: %v", name)
 	}
 	return nil
+}
+
+func calculateMevFromBlock(block *types.Eth1Block) *big.Int {
+	mevReward := big.NewInt(0)
+
+	for _, tx := range block.GetTransactions() {
+		for _, itx := range tx.GetItx() {
+			if common.BytesToAddress(itx.To) == common.BytesToAddress(block.GetCoinbase()) {
+				mevReward = new(big.Int).Add(mevReward, new(big.Int).SetBytes(itx.GetValue()))
+			}
+		}
+	}
+	return mevReward
 }
 
 func isValidERC20Log(log *types.Eth1Log) bool {

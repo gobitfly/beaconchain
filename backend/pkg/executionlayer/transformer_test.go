@@ -4,10 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	gethtypes "github.com/ethereum/go-ethereum/core/types"
+
 	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/pkg/commons/chain"
+	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
@@ -15,12 +22,13 @@ import (
 )
 
 var (
-	alice    = []byte("alice")
-	bob      = []byte("bob")
-	john     = []byte("john")
-	contract = []byte("contract")
-	usdc     = []byte("usdc")
-	tokenID  = []byte("tokenID")
+	alice        = []byte("alice")
+	aliceAddress = common.BytesToAddress(leftPad(alice, 20))
+	bob          = []byte("bob")
+	bobAddress   = common.BytesToAddress(leftPad(bob, 20))
+	john         = []byte("john")
+	contract     = []byte("contract")
+	usdc         = []byte("usdc")
 )
 
 func TestTransformTX(t *testing.T) {
@@ -1286,7 +1294,7 @@ func TestIsValidERC721Log(t *testing.T) {
 					erc721.TransferTopic.Bytes(),
 					alice,
 					bob,
-					tokenID,
+					[]byte("tokenID"),
 				},
 			},
 			expected: true,
@@ -1298,7 +1306,7 @@ func TestIsValidERC721Log(t *testing.T) {
 					common.HexToHash("0x1234").Bytes(),
 					alice,
 					bob,
-					tokenID,
+					[]byte("tokenID"),
 				},
 			},
 			expected: false,
@@ -1321,7 +1329,7 @@ func TestIsValidERC721Log(t *testing.T) {
 					erc721.TransferTopic.Bytes(),
 					alice,
 					bob,
-					tokenID,
+					[]byte("tokenID"),
 					john,
 				},
 			},
