@@ -260,7 +260,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
+  <span
     ref="bcTooltipOwner"
     class="slot_container"
     @mouseover="onHover()"
@@ -303,7 +303,7 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
-  </div>
+  </span>
 </template>
 
 <style lang="scss" scoped>

@@ -8,21 +8,10 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const { displayCurrencyDefault } = useNetworkStore()
   const selectedCurrencyMain = ref<CurrencyCode>(displayCurrencyDefault.main)
-  const selectedCurrencyExecutionLayer = ref<CurrencyCode>(displayCurrencyDefault.executionLayer)
-  const selectedCurrencyConsensusLayer = ref<CurrencyCode>(displayCurrencyDefault.consensusLayer)
-  const setCurrencyMain = (currencyCode: CurrencyCode, availableCurrencies: CurrencyCode[]) => {
-    if (!availableCurrencies.includes(currencyCode)) {
-      logError(`CurrencyCode not found: availableCurrencies does not include ${currencyCode}`)
-    }
-    selectedCurrencyMain.value = currencyCode
-  }
 
   return {
     ageFormat,
-    selectedCurrencyConsensusLayer,
-    selectedCurrencyExecutionLayer,
     selectedCurrencyMain,
-    setCurrencyMain,
     toggleAgeFormat,
   }
 }, {

@@ -242,17 +242,46 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatAmount
+                <BcTooltip
                   v-else
-                  :currency-items="[{
-                    executionLayerValue: slotProps.data.reward.el,
-                    consensusLayerValue: slotProps.data.reward.cl,
-                  }]"
-                  has-color
-                  has-tooltip
-                  has-sign-display
-                  target-unit-crypto="auto"
-                />
+                  fit-content
+                  tooltip-text-align="left"
+                >
+                  <BcFormatAmount
+                    :currency-items="[{
+                      executionLayerValue: slotProps.data.reward.el,
+                      consensusLayerValue: slotProps.data.reward.cl,
+                    }]"
+                    has-color
+                    has-sign-display
+                    target-unit-crypto="auto"
+                  />
+                  <template #tooltip>
+                    <div>
+                      <div>
+                        EL:
+                        <BcFormatAmount
+                          :value="slotProps.data.reward.el"
+                          has-sign-display
+                          has-additional-selected-currency-main
+                          source-currency="elCurrency"
+                          target-currency="elDisplayCurrency"
+                          target-unit-crypto="auto"
+                        />
+                      </div>
+                      <div>
+                        CL:
+                        <BcFormatAmount
+                          :value="slotProps.data.reward.cl"
+                          has-sign-display
+                          has-additional-selected-currency-main
+                          target-currency="clDisplayCurrency"
+                          target-unit-crypto="auto"
+                        />
+                      </div>
+                    </div>
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <Column
@@ -268,16 +297,31 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatAmount
+                <BcTooltip
                   v-else
-                  :currency-items="[{
-                    executionLayerValue: slotProps.data.reward.el,
-                  }]"
-                  has-color
-                  has-tooltip
-                  has-sign-display
-                  target-unit-crypto="auto"
-                />
+                  fit-content
+                >
+                  <BcFormatAmount
+                    :value="slotProps.data.reward.el"
+                    has-color
+                    has-sign-display
+                    source-currency="elCurrency"
+                    target-currency="elDisplayCurrency"
+                    target-unit-crypto="auto"
+                  />
+                  <template
+                    v-if="slotProps.data.reward.el !== '0'"
+                    #tooltip
+                  >
+                    <BcFormatAmount
+                      :value="slotProps.data.reward.el"
+                      has-higher-precision
+                      has-sign-display
+                      source-currency="elCurrency"
+                      target-unit-crypto="auto"
+                    />
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <Column
@@ -293,16 +337,29 @@ const findNextEpochDuties = (epoch: number) => {
                 >
                   -
                 </div>
-                <BcFormatAmount
+                <BcTooltip
                   v-else
-                  :currency-items="[{
-                    consensusLayerValue: slotProps.data.reward?.cl,
-                  }]"
-                  has-sign-display
-                  has-color
-                  has-tooltip
-                  target-unit-crypto="auto"
-                />
+                  fit-content
+                >
+                  <BcFormatAmount
+                    :value="slotProps.data.reward?.cl"
+                    has-sign-display
+                    has-color
+                    target-currency="clDisplayCurrency"
+                    target-unit-crypto="auto"
+                  />
+                  <template
+                    v-if="slotProps.data.reward?.cl !== '0'"
+                    #tooltip
+                  >
+                    <BcFormatAmount
+                      :value="slotProps.data.reward?.cl"
+                      has-higher-precision
+                      has-sign-display
+                      target-unit-crypto="auto"
+                    />
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <template #expansion="slotProps">

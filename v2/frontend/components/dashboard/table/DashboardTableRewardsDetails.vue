@@ -33,6 +33,30 @@ const { details } = useValidatorDashboardRewardsDetailsStore(
 
 const dialog = useDialog()
 
+const {
+  addCurrencies,
+  elCurrency,
+} = useCurrency()
+const proposerTotal = computed(() => {
+  return addCurrencies({
+    currencyItems: [
+      {
+        value: details.value?.proposal_cl_att_inc_reward ?? 0,
+      },
+      {
+        value: details.value?.proposal_cl_sync_inc_reward ?? 0,
+      },
+      {
+        value: details.value?.proposal_cl_slashing_inc_reward ?? 0,
+      },
+      {
+        sourceCurrency: elCurrency,
+        value: details.value?.proposal_el_reward ?? 0,
+      },
+    ],
+  })
+})
+
 const data = computed(() => {
   if (!details.value) {
     return
@@ -55,10 +79,6 @@ const data = computed(() => {
       executionLayerValue: details.value.proposal_el_reward,
       label: $t('dashboard.validator.rewards.proposer_rewards_el'),
     },
-    // {
-    //   consensusLayerValue: details.value.proposal.income,
-    //   label: $t('dashboard.validator.rewards.proposer_rewards_total'),
-    // },
   ]
 
   const rewards = [
@@ -80,7 +100,10 @@ const data = computed(() => {
     {
       label: $t('dashboard.validator.rewards.block'),
       svg: IconSlotBlockProposal,
-      value: details.value.proposal,
+      value: {
+        income: proposerTotal.value,
+        status_count: details.value.proposal_status_count,
+      },
     },
     {
       label: $t('dashboard.validator.rewards.sync'),
@@ -123,30 +146,6 @@ const data = computed(() => {
     proposer,
     rewards,
   }
-})
-
-const {
-  addCurrencies,
-  elCurrency,
-} = useCurrency()
-const proposerTotal = computed(() => {
-  return addCurrencies({
-    currencyItems: [
-      {
-        value: details.value?.proposal_cl_att_inc_reward ?? 0,
-      },
-      {
-        value: details.value?.proposal_cl_sync_inc_reward ?? 0,
-      },
-      {
-        value: details.value?.proposal_cl_slashing_inc_reward ?? 0,
-      },
-      {
-        sourceCurrency: elCurrency,
-        value: details.value?.proposal_el_reward ?? 0,
-      },
-    ],
-  })
 })
 
 const openDuties = () => {
@@ -261,14 +260,11 @@ const openDuties = () => {
             <BcFormatAmount
               v-for="item in data?.rewards"
               :key="item.label"
-              :currency-items="[{
-                consensusLayerValue: item.value.income,
-              }]"
+              :value="item.value.income"
               :class="item.className"
               has-color
               has-sign-display
               has-tooltip
-              target-unit-crypto="auto"
             />
             <div>
               <BcFormatAmount
@@ -279,7 +275,6 @@ const openDuties = () => {
                 has-color
                 has-sign-display
                 has-tooltip
-                target-unit-crypto="auto"
               />
             </div>
           </div>
@@ -304,7 +299,6 @@ const openDuties = () => {
               has-color
               has-tooltip
               has-sign-display
-              target-unit-crypto="auto"
             />
           </div>
           <div
@@ -317,13 +311,10 @@ const openDuties = () => {
               {{ $t('dashboard.validator.rewards.proposer_rewards_total') }}
             </div>
             <BcFormatAmount
-              :currency-items="[{
-                consensusLayerValue: proposerTotal,
-              }]"
+              :value="proposerTotal"
               has-color
               has-tooltip
               has-sign-display
-              target-unit-crypto="auto"
             />
           </div>
         </div>

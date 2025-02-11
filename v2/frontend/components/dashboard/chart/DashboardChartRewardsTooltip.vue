@@ -1,120 +1,52 @@
 <script lang="ts" setup>
-import type { ComposerTranslation } from 'vue-i18n'
-import { BigNumber } from '@ethersproject/bignumber'
-import type {
-  RewardChartGroupData,
-  RewardChartSeries,
-} from '~/types/dashboard/rewards'
-import type { WeiToValue } from '~/types/value'
-
-interface Props {
-  dataIndex: number,
-  getEpochFromTimestamp: (timestamp: number) => number,
-  getTimestampFromEpoch: (epoch: number) => number,
-  series: RewardChartSeries[],
-  startEpoch: number,
-  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
-  weiToValue: WeiToValue,
-}
-
-const props = defineProps<Props>()
-
-interface GroupValue {
-  id: number,
-  name: string,
-  value: string,
-}
-
-interface Series {
-  className?: string,
-  groups: GroupValue[],
-  name: string,
-  value: string,
-}
-
-const mapData = (groups: RewardChartGroupData[]): GroupValue[] => {
-  const sort = [ ...groups ].sort((g1, g2) => {
-    const v1 = g1.bigData[props.dataIndex] || BigNumber.from('0')
-    const v2 = g2.bigData[props.dataIndex] || BigNumber.from('0')
-    return v1.gt(v2) ? -1 : 1
-  })
-  return sort.map(g => ({
-    id: g.id,
-    name: g.name,
-    value: `${props.weiToValue(g.bigData[props.dataIndex]).label}`,
-  }))
-}
-
-const data = computed<Series[]>(() => {
-  const el: Series = {
-    className: 'cl',
-    groups: mapData(props.series[1].groups),
-    name: props.series[1].name,
-    value: props.series[1].formatedData[props.dataIndex].label as string,
-  }
-  const cl: Series = {
-    className: 'el',
-    groups: mapData(props.series[0].groups),
-    name: props.series[0].name,
-    value: props.series[0].formatedData[props.dataIndex].label as string,
-  }
-
-  const totalGroups = props.series[0].groups.map((g) => {
-    const elValue
-      = props.series[1].groups.find(elG => elG.id === g.id)?.bigData?.[
-        props.dataIndex
-      ] ?? BigNumber.from(0)
-    const bigData = [ ...g.bigData ]
-    bigData[props.dataIndex] = bigData[props.dataIndex].add(elValue)
-    return {
-      ...g,
-      bigData,
-    }
-  })
-  props.series[1].groups.forEach((g) => {
-    if (!totalGroups.find(tG => tG.id === g.id)) {
-      totalGroups.push(g)
-    }
-  })
-
-  const total: Series = {
-    groups: mapData(totalGroups),
-    name: props.t('dashboard.validator.rewards.chart.total'),
-    value: `${
-      props
-        .weiToValue(props.series[1].bigData[props.dataIndex]
-          .add(props.series[0].bigData[props.dataIndex])).label
-    }`,
-  }
-  return [
-    el,
-    cl,
-    total,
-  ]
-})
+defineProps<{
+  consensusLayerRewardSum: string,
+  consesnsusLayerRewardSumLabel: string,
+  currentEpoch: {
+    index: string,
+    timestamp: number,
+  },
+  executionLayerRewardSum: string,
+  executionLayerRewardSumLabel: string,
+  groupInfo: {
+    cl: { id: number, name: string, value: string }[],
+    el: { id: number, name: string, value: string }[],
+  },
+}>()
 </script>
 
 <template>
   <div class="tooltip-container">
-    <DashboardChartTooltipHeader
-      :get-epoch-from-timestamp
-      :get-timestamp-from-epoch
-      :t
-      :start-epoch
-    />
-    <div
-      v-for="(entry, index) in data"
-      :key="index"
-    >
+    <div>
+      {{ getDateTime(currentEpoch.timestamp) }}
+    </div>
+    <div>
+      Epoch: {{ currentEpoch.index }}
+    </div>
+    <div>
       <div class="header">
         <span
-          class="circle"
-          :class="entry.className"
-        /><b>{{ entry.name }}: {{ entry.value }}</b>
+          class="circle cl"
+        /><b>{{ consesnsusLayerRewardSumLabel }}: {{ consensusLayerRewardSum }}</b>
       </div>
       <ol>
         <li
-          v-for="group in entry.groups"
+          v-for="group in groupInfo.cl"
+          :key="group.id"
+        >
+          {{ group.name }}: {{ group.value }}
+        </li>
+      </ol>
+    </div>
+    <div>
+      <div class="header">
+        <span
+          class="circle el"
+        /><b>{{ executionLayerRewardSumLabel }}: {{ executionLayerRewardSum }}</b>
+      </div>
+      <ol>
+        <li
+          v-for="group in groupInfo.el"
           :key="group.id"
         >
           {{ group.name }}: {{ group.value }}

@@ -7,8 +7,6 @@ type CookieName =
   | 'bc-account-dashboard-key'
   | 'bc-age-format'
   | 'bc-cookies-preference'
-  | 'bc-display-currency'
-  | 'bc-rpl'
   | 'bc-user-dashboards'
   | 'bc-validator-dashboard-key'
 

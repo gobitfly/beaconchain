@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="UNUSED_WORKAROUND_FOR_CONDITIONAL_PROPS">
+<script setup lang="ts" generic="WORKAROUND_FOR_CONDITIONAL_PROPS">
 // https://github.com/vuejs/core/issues/8952
 
 type CurrencyItem = {
@@ -22,17 +22,25 @@ type FormatAmountOptions = (
   |
     {
       currencyItems?: never,
-      sourceCurrency?: CurrencyCode,
+      sourceCurrency?: 'clCurrency' | 'elCurrency' | CurrencyCode,
       value: `${number}` | string,
     }
 ) & {
   fractionDigits?: number,
+  hasAdditionalSelectedCurrencyMain?: boolean,
   hasColor?: boolean,
   hasDashForZero?: boolean,
   hasHigherPrecision?: boolean,
   hasSignDisplay?: boolean,
   hasTooltip?: boolean,
-  targetCurrency?: CurrencyCode,
+  /**
+   * @description
+   * Display currencies take into account, that the currency in the binary data
+   * can be different to what should be displayed to the user.
+   *
+   * E.g.: we get mGno values but want to display them in GNO
+   */
+  targetCurrency?: 'clDisplayCurrency' | 'elDisplayCurrency' | CurrencyCode,
   targetUnitCrypto?: 'auto',
   zeroDisplay?: 'auto' | 'dash',
 }
@@ -45,11 +53,18 @@ const {
 const {
   addCurrencies,
   clCurrency,
+  displayCurrencyDefault,
   elCurrency,
   formatAmount,
   fractionDigitsDefault,
   selectedCurrencyMain,
 } = useCurrency()
+
+const sourceCurrency = computed(() => {
+  if (props.sourceCurrency === 'elCurrency') return elCurrency
+  if (props.sourceCurrency === 'clCurrency') return clCurrency
+  return props.sourceCurrency
+})
 
 const currencyItems = computed(() => {
   const result: { sourceCurrency: CurrencyCode, value: number | string }[] = []
@@ -89,65 +104,44 @@ const signDisplay = computed(() => {
   return undefined
 })
 
+const targetCurrency = computed(() => {
+  if (props.targetCurrency === 'elDisplayCurrency') return displayCurrencyDefault.executionLayer
+  if (props.targetCurrency === 'clDisplayCurrency') return displayCurrencyDefault.consensusLayer
+  if (!props.targetCurrency) return selectedCurrencyMain.value
+  return props.targetCurrency
+})
+
 const formattedAmount = computed(() => {
   return formatAmount(amount.value, {
-    hasHigherPrecision: props.hasHigherPrecision,
-    hasUnitDisplay: !!props.targetUnitCrypto,
-    signDisplay: signDisplay.value,
-    sourceCurrency: props.sourceCurrency,
-    targetCurrency: props.targetCurrency,
+    hasCurrencyDisplay: false,
+    hasUnitDisplay: false,
+    sourceCurrency: sourceCurrency.value,
+    targetCurrency: targetCurrency.value,
   })
 })
 
-// we want to show values in Gwei to avoid `0.000000 GNO`
-const isCryptoAmountTooSmall = computed(() => {
-  const [
-    value,
-    _unit,
-  ] = formattedAmount.value.split(' ')
-  const fractionDigits = fractionDigitsDefault.crypto.base
-  if (isFiat(selectedCurrencyMain.value)) return false
-  if (amount.value === '0') return false
-  if (Number(value) > (10 ** -fractionDigits)) return false
-  return true
-})
-
-const formattedAmountWithUnit = computed(() => {
-  const shouldShowInGwei = !!(props.targetUnitCrypto === 'auto' && isCryptoAmountTooSmall.value)
-  // console.log('👉', props.value, amount.value, formatAmount(amount.value, {
-  //   hasHigherPrecision: props.hasHigherPrecision,
-  //   hasUnitDisplay: shouldShowInGwei,
-  //   maximumFractionDigits: props.fractionDigits,
-  //   minimumFractionDigits: props.fractionDigits,
-  //   signDisplay: signDisplay.value,
-  //   sourceCurrency: props.sourceCurrency,
-  //   targetCurrency: props.targetCurrency,
-  //   targetUnit: shouldShowInGwei ? 'gwei' : undefined,
-  // }))
-  return formatAmount(amount.value, {
+const format = (value: string, optionsOverride?: Parameters<typeof formatAmount>[1]) => {
+  // avoid values like `0.000000 ETH` by showing values in Gwei
+  const getTargetUnit = () => {
+    const fractionDigits = fractionDigitsDefault.crypto.base
+    if (isFiat(optionsOverride?.targetCurrency ?? targetCurrency.value)) return 'base'
+    if (props.targetUnitCrypto !== 'auto') return 'base'
+    if (amount.value === '0') return 'base'
+    if (Number(formattedAmount.value) > (10 ** -fractionDigits)) return 'base'
+    return 'gwei'
+  }
+  return formatAmount(value, {
     hasHigherPrecision: props.hasHigherPrecision,
-    hasUnitDisplay: shouldShowInGwei,
+    hasUnitDisplay: getTargetUnit() !== 'base',
     maximumFractionDigits: props.fractionDigits,
     minimumFractionDigits: props.fractionDigits,
     signDisplay: signDisplay.value,
-    sourceCurrency: props.sourceCurrency,
-    targetCurrency: props.targetCurrency,
-    targetUnit: shouldShowInGwei ? 'gwei' : undefined,
+    sourceCurrency: sourceCurrency.value,
+    targetCurrency: targetCurrency.value,
+    targetUnit: getTargetUnit(),
+    ...optionsOverride,
   })
-})
-const formattedAmountWithUnitHigherPrecision = computed(() => {
-  const shouldShowInGwei = !!(props.targetUnitCrypto === 'auto' && isCryptoAmountTooSmall.value)
-  return formatAmount(amount.value, {
-    hasHigherPrecision: true,
-    hasUnitDisplay: shouldShowInGwei,
-    maximumFractionDigits: props.fractionDigits,
-    minimumFractionDigits: props.fractionDigits,
-    signDisplay: signDisplay.value,
-    sourceCurrency: props.sourceCurrency,
-    targetCurrency: props.targetCurrency,
-    targetUnit: shouldShowInGwei ? 'gwei' : undefined,
-  })
-})
+}
 </script>
 
 <template>
@@ -162,13 +156,24 @@ const formattedAmountWithUnitHigherPrecision = computed(() => {
       v-if="hasTooltip"
       #tooltip
     >
-      {{ formattedAmountWithUnitHigherPrecision }}
+      {{ format(amount, {
+        hasHigherPrecision: true,
+      }) }}
     </template>
     <span
       :class="color"
     >
-      <slot :value="formattedAmountWithUnit">
-        {{ formattedAmountWithUnit }}
+      <slot :value="format(amount)">
+        <span>
+          {{ format(amount) }}
+        </span>
+        <span
+          v-if="hasAdditionalSelectedCurrencyMain && targetCurrency !== selectedCurrencyMain"
+        >
+          ({{ format(amount, {
+            targetCurrency: selectedCurrencyMain,
+          }) }})
+        </span>
       </slot>
     </span>
   </BcTooltip>

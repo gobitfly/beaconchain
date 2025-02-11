@@ -82,30 +82,32 @@ export function formatGoTimestamp(
     withTime,
   )
 }
-export function formatNumber(value: string, {
+export function formatNumber(value: number | string, {
   locale = 'en-US',
   maximumFractionDigits,
   minimumFractionDigits,
   scaleBy = 0,
   signDisplay,
+  useGrouping,
 }: {
   locale?: string,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
   scaleBy?: number,
   signDisplay?: Intl.NumberFormatOptions['signDisplay'],
+  useGrouping?: Intl.NumberFormatOptions['useGrouping'],
 } = {}) {
   const [
     number,
     exponent = 0,
-  ] = value.toLowerCase().split('e')
-  const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}` as `${number}`
-  console.log('👉', Number(exponent) + scaleBy)
+  ] = `${value}`.toLowerCase().split('e')
+  const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}`
   return new Intl.NumberFormat(locale, {
     maximumFractionDigits,
     minimumFractionDigits,
     signDisplay,
-  }).format(numberInScientificNotation)
+    useGrouping,
+  }).format(numberInScientificNotation as `${number}`)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {
