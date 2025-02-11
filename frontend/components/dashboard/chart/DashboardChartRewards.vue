@@ -2,7 +2,9 @@
 import {
   h, render,
 } from 'vue'
-import { use } from 'echarts/core'
+import {
+  type ElementEvent, use,
+} from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
 import {
@@ -14,8 +16,12 @@ import {
   TransformComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-import type { ECBasicOption } from 'echarts/types/dist/shared'
-import { BigNumber } from '@ethersproject/bignumber'
+
+import type {
+  BarSeriesOption,
+  EChartsOption,
+  EChartsType,
+} from 'echarts'
 import {
   getChartTextColor,
   getChartTooltipBackgroundColor,
@@ -23,30 +29,16 @@ import {
   getRewardsChartLineColor,
 } from '~/utils/colors'
 import type { GetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
-import type { ChartData } from '~/types/api/common'
 import type {
-  RewardChartGroupData,
-  RewardChartSeries,
-} from '~/types/dashboard/rewards'
-import { getGroupLabel } from '~/utils/dashboard/group'
+  ChartData, ChartSeries,
+} from '~/types/api/common'
 import { DashboardChartRewardsTooltip } from '#components'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 import { useFormat } from '~/composables/useFormat'
-import type { CryptoUnits } from '~/types/currencies'
 
 const { formatEpochToDate } = useFormat()
 const {
-  getEpochFromTimestamp,
   getTimestampFromEpoch,
-  networkInfo,
 } = useNetworkStore()
-const networkNativeELcurrency = computed(() => networkInfo.value.elCurrency)
-const { currency } = useCurrencyOld()
-const currencyLabel = computed(() =>
-  !currency.value || currency.value === 'NAT'
-    ? networkNativeELcurrency.value
-    : currency.value,
-)
 
 use([
   GridComponent,
@@ -62,27 +54,23 @@ use([
 const { fetch } = useCustomFetch()
 
 const {
-  dashboardKey, isPrivateDashboard: groupsEnabled,
+  dashboardKey,
 } = useDashboardKey()
 
 const data = ref<ChartData<number, string> | undefined>()
-const isLoading = ref(false)
 
-useAsyncData(
+const { status } = useAsyncData(
   'validator_dashboard_rewards_chart',
   async () => {
     if (dashboardKey.value === undefined) {
       data.value = undefined
       return
     }
-    isLoading.value = true
     const res = await fetch<GetValidatorDashboardRewardsChartResponse>(
       'DASHBOARD_VALIDATOR_REWARDS_CHART',
       undefined,
       { dashboardKey: dashboardKey.value },
     )
-
-    isLoading.value = false
     data.value = res.data
   },
   {
@@ -96,8 +84,6 @@ const { groups } = useValidatorDashboardGroups()
 
 const { t: $t } = useTranslation()
 const colorMode = useColorMode()
-
-const { converter } = useValue()
 
 const colors = computed(() => {
   return {
@@ -114,143 +100,217 @@ const textSize = parseInt(styles.getPropertyValue('--standard_text_font_size'))
 const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 
-const valueFormatter = computed(() => {
-  const fiat = isFiat(currency.value)
-  const label = fiat || series.value?.minUnit === 'MAIN' ? currencyLabel.value : series.value?.minUnit
-  const decimals = isFiat(currency.value) ? 2 : 5
-  return (value: number) =>
-    `${trim(value, decimals, decimals)} ${label}`
-})
+const {
+  addCurrencies,
+  clCurrency,
+  elCurrency,
+  formatAmount,
+  selectedCurrencyMain,
+} = useCurrency()
 
-const getMinUnit = (data: RewardChartSeries[]): CryptoUnits => {
-  let unit: CryptoUnits = 'MAIN'
-  for (const seriesI in data) {
-    const series = data[seriesI]
-    for (const bigValueI in series.bigData) {
-      const bigValue = series.bigData[bigValueI]
-      if (bigValue.isZero()) {
-        continue
-      }
-      if (lessThanGwei(bigValue, 5)) {
-        return 'WEI'
-      }
-      if (lessThanEth(bigValue, 5)) {
-        unit = 'GWEI'
-        break
-      }
-    }
-    if (unit === 'GWEI') {
+const categoryCount = computed(() => data.value?.categories?.length ?? 0)
+
+const isGwei = ref(false)
+
+/**
+ *
+ * @returns string[] of formatted values
+ * if one value is smaller than `0.000000` all values will be formatted in `GWei`
+ */
+const autoFormatAmount = (values: string[], {
+  sourceCurrency,
+  targetUnit = 'base',
+}: {
+  sourceCurrency?: CurrencyCode,
+  targetUnit?: 'base' | 'gwei',
+} = {},
+) => {
+  let result: string[] = []
+  for (const value of values) {
+    const formattedValue = formatAmount(value, {
+      hasCurrencyDisplay: false,
+      maximumFractionDigits: 6,
+      minimumFractionDigits: 6,
+      sourceCurrency,
+      targetUnit,
+      useGrouping: false,
+    })
+    if (
+      targetUnit === 'base'
+      && isCrypto(selectedCurrencyMain.value)
+      && value !== '0'
+      && Number(formattedValue) === 0
+    ) {
+      isGwei.value = true
       break
     }
+    result.push(formattedValue)
   }
-  return unit
+  if (result.length < values.length) {
+    result = autoFormatAmount(values, {
+      sourceCurrency,
+      targetUnit: 'gwei',
+    })
+  }
+  return result
 }
 
-const mapSeriesData = (data: RewardChartSeries, minUnit: CryptoUnits) => {
-  data.bigData.forEach((bigValue, index) => {
-    if (!bigValue.isZero()) {
-      const formatted = converter.value.weiToValue(bigValue, {
-        fixedDecimalCount: 5,
-        minUnit,
+const clSeries = computed(() => data.value?.series?.filter(series => series.property === 'cl') ?? [])
+const clSeriesGroupTotal = computed(() => {
+  let total = Array(categoryCount.value).fill('0')
+  clSeries.value.forEach((group) => {
+    total = total.map((value, index) => {
+      return addCurrencies({
+        currencyItems: [
+          { value },
+          { value: group.data[index] },
+        ],
       })
-      data.formatedData[index] = formatted
-      const parsedValue = parseFloat(`${formatted.label}`.split(' ')[0])
-      if (!isNaN(parsedValue)) {
-        data.data[index] = parsedValue
-      }
-    }
+    })
   })
+  return total
+})
+const clSeriesGroupTotalFormatted = computed(() => autoFormatAmount(clSeriesGroupTotal.value))
+
+const elSeries = computed(() => data.value?.series?.filter(series => series.property === 'el') ?? [])
+const elSeriesGroupTotal = computed(() => {
+  let total = Array(categoryCount.value).fill('0')
+  elSeries.value.forEach((group) => {
+    total = total.map((value, index) => {
+      return addCurrencies({
+        currencyItems: [
+          { value },
+          {
+            sourceCurrency: elCurrency,
+            value: group.data[index],
+          },
+        ],
+      })
+    })
+  })
+  return total
+})
+const elSeriesGroupTotalFormatted = computed(
+  () => autoFormatAmount(elSeriesGroupTotal.value, { sourceCurrency: elCurrency }),
+)
+
+const formatYAxisLabel = (value: string) => {
+  const unit = isGwei.value ? ` (${$t('common.units.gwei')})` : ''
+  return `${value}${unit} ${selectedCurrencyMain.value}`
 }
 
-const series = computed<{ list: RewardChartSeries[], minUnit: CryptoUnits } >(() => {
-  const list: RewardChartSeries[] = []
-  if (!data.value?.series) {
-    return {
-      list, minUnit: 'MAIN',
-    }
-  }
-
-  const categoryCount = data.value?.categories.length ?? 0
-  const clSeries: RewardChartSeries = {
-    barMaxWidth: 33,
-    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    color: colors.value.data.cl,
-    data: Array.from(Array(categoryCount)).map(() => 0),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
-    groups: [],
-    id: 1,
-    name: $t('dashboard.validator.rewards.chart.cl'),
-    property: 'cl',
-    stack: 'x',
-    type: 'bar',
-  }
-  const elSeries: RewardChartSeries = {
-    barMaxWidth: 33,
-    bigData: Array.from(Array(categoryCount)).map(() => BigNumber.from('0')),
-    color: colors.value.data.el,
-    data: Array.from(Array(categoryCount)).map(() => 0),
-    formatedData: Array.from(Array(categoryCount)).map(() => ({ label: `0 ${currencyLabel.value}` })),
-    groups: [],
-    id: 2,
-    name: $t('dashboard.validator.rewards.chart.el'),
-    property: 'el',
-    stack: 'x',
-    type: 'bar',
-  }
-  list.push(elSeries)
-  list.push(clSeries)
-  data.value.series.forEach((group) => {
-    let name
-    if (!groupsEnabled) {
-      name = $t('dashboard.validator.rewards.chart.rewards')
-    }
-    else {
-      name = getGroupLabel($t, group.id, groups.value)
-    }
-    const newData: RewardChartGroupData = {
-      bigData: [],
-      id: group.id,
-      name,
-    }
-    for (let i = 0; i < categoryCount; i++) {
-      const bigValue = group.data[i]
-        ? BigNumber.from(group.data[i])
-        : BigNumber.from('0')
-
-      if (!bigValue.isZero()) {
-        if (group.property === 'el') {
-          elSeries.bigData[i] = elSeries.bigData[i].add(bigValue)
-        }
-        else {
-          clSeries.bigData[i] = clSeries.bigData[i].add(bigValue)
-        }
-      }
-      newData.bigData.push(bigValue)
-    }
-
-    if (group.property === 'el') {
-      elSeries.groups.push(newData)
-    }
-    else {
-      clSeries.groups.push(newData)
-    }
-  })
-  const min = getMinUnit([
-    elSeries,
-    clSeries,
-  ])
-  mapSeriesData(elSeries, min)
-  mapSeriesData(clSeries, min)
-  return {
-    list, minUnit: min,
-  }
+const seriesId = {
+  cl: 'cl',
+  el: 'el',
+} as const
+const series = computed<BarSeriesOption[]>(() => {
+  const stackId = 'stack1'
+  return [
+    {
+      barMaxWidth: 33,
+      color: colors.value.data.cl,
+      data: clSeriesGroupTotalFormatted.value,
+      id: seriesId.cl,
+      name: $t('dashboard.validator.rewards.chart.cl'),
+      stack: stackId,
+      type: 'bar',
+    },
+    {
+      barMaxWidth: 33,
+      color: colors.value.data.el,
+      data: elSeriesGroupTotalFormatted.value,
+      id: seriesId.el,
+      name: $t('dashboard.validator.rewards.chart.el'),
+      stack: stackId,
+      type: 'bar',
+    },
+  ]
 })
 
-const option = computed<ECBasicOption | undefined>(() => {
-  if (series.value === undefined) {
-    return undefined
-  }
+type DataZoomEvent = {
+  end: number,
+  start: number,
+  type: 'datazoom',
+}
+const dataZoomStart = ref(60)
+const dataZoomEnd = ref(100)
+// position of tooltip get's lost due to rerendering of `options` (> computed > currency recalculations > latest-state)
+const onDatazoom = ({
+  end,
+  start,
+}: DataZoomEvent) => {
+  hideTooltip()
+  dataZoomStart.value = start
+  dataZoomEnd.value = end
+}
+const chart = useTemplateRef<EChartsType>('chart')
+const tooltipPosition = ref({
+  x: 0,
+  y: 0,
+})
+const setTooltipPosition = (event: ElementEvent) => {
+  tooltipPosition.value.x = event.offsetX
+  tooltipPosition.value.y = event.offsetY
+}
+const restoreTooltip = () => {
+  nextTick(() => {
+    if (!chart.value) return
+    chart.value.dispatchAction({
+      type: 'showTip',
+      x: tooltipPosition.value.x,
+      y: tooltipPosition.value.y,
+    })
+  })
+}
+const hideTooltip = () => {
+  tooltipPosition.value.x = 0
+  tooltipPosition.value.y = 0
+  if (!chart.value) return
+  chart.value.dispatchAction({
+    type: 'hideTip',
+  })
+}
 
+const getGroupInfo = (series: ChartSeries<number, string>[], currentIndex: number) =>
+  series.map(({
+    data,
+    id,
+    property,
+  }) => {
+    if (property === 'cl') {
+      return {
+        id,
+        name: groups.value.find(group => group.id === id)?.name ?? '',
+        value: data[currentIndex] === '0'
+          ? '-'
+          : formatAmount(data[currentIndex], {
+              hasCurrencyDisplay: true,
+              hasHigherPrecision: true,
+              hasUnitDisplay: true,
+              targetUnit: isGwei.value ? 'gwei' : 'base',
+            }),
+      }
+    }
+    return {
+      id,
+      name: groups.value.find(group => group.id === id)?.name ?? '',
+      value: data[currentIndex] === '0'
+        ? '-'
+        : formatAmount(data[currentIndex], {
+            hasCurrencyDisplay: true,
+            hasHigherPrecision: true,
+            hasUnitDisplay: true,
+            sourceCurrency: elCurrency,
+            targetUnit: isGwei.value ? 'gwei' : 'base',
+          }),
+    }
+  })
+
+const option = computed<EChartsOption>(() => {
+// position of tooltip get's lost due to rerendering of `options` (> computed > currency recalculations > latest-state)
+  if (tooltipPosition.value.x !== 0 && tooltipPosition.value.y !== 0) {
+    restoreTooltip()
+  }
   return {
     dataZoom: {
       borderColor: colors.value.label,
@@ -258,11 +318,11 @@ const option = computed<ECBasicOption | undefined>(() => {
         areaStyle: { color: colors.value.label },
         lineStyle: { color: colors.value.label },
       },
-      end: 100,
+      end: dataZoomEnd.value,
       labelFormatter: (_value: number, valueStr: string) => {
         return formatEpochToDate(parseInt(valueStr), $t('locales.date'))
       },
-      start: 60,
+      start: dataZoomStart.value,
       type: 'slider',
     },
     grid: {
@@ -282,7 +342,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       },
       type: 'scroll',
     },
-    series: series.value.list,
+    series: series.value,
     textStyle: {
       color: colors.value.label,
       fontFamily,
@@ -290,21 +350,61 @@ const option = computed<ECBasicOption | undefined>(() => {
       fontWeight: fontWeightLight,
     },
     tooltip: {
+      alwaysShowContent: true,
       borderColor: colors.value.background,
-      formatter(params: any): HTMLElement {
-        const startEpoch = parseInt(params[0].axisValue)
-        const dataIndex = params[0].dataIndex
+      confine: true,
+      enterable: true,
+      formatter(params) {
+        if (!Array.isArray(params)) return ''
+        if (params.length === 0) return ''
+
+        const paramsConsensusLayer = params.find(param => param.seriesId === seriesId.cl)
+        const paramsExecutionLayer = params.find(param => param.seriesId === seriesId.el)
+        const currentIndex = params[0].dataIndex
+        const currentTimestamp = getTimestampFromEpoch(Number(params[0].name))
+        const currentEpoch = {
+          index: params[0].name,
+          timestamp: currentTimestamp,
+        }
+        const currentGroupTotalCl = clSeriesGroupTotal.value[currentIndex]
+        const currentGroupTotalEl = elSeriesGroupTotal.value[currentIndex]
+
+        const consensusLayerRewardSum = currentGroupTotalCl === '0'
+          ? '-'
+          : formatAmount(currentGroupTotalCl, {
+              hasHigherPrecision: true,
+              hasUnitDisplay: true,
+              sourceCurrency: clCurrency,
+              targetUnit: isGwei.value ? 'gwei' : 'base',
+            })
+
+        const executionLayerRewardSum = currentGroupTotalEl === '0'
+          ? '-'
+          : formatAmount(currentGroupTotalEl, {
+              hasHigherPrecision: true,
+              hasUnitDisplay: true,
+              sourceCurrency: elCurrency,
+              targetUnit: isGwei.value ? 'gwei' : 'base',
+            })
+
+        if (typeof executionLayerRewardSum !== 'string') return ''
+        const consesnsusLayerRewardSumLabel = paramsConsensusLayer?.seriesName ?? ''
+        const executionLayerRewardSumLabel = paramsExecutionLayer?.seriesName ?? ''
+
+        const groupInfo = {
+          cl: getGroupInfo(clSeries.value, currentIndex),
+          el: getGroupInfo(elSeries.value, currentIndex),
+        }
 
         const d = document.createElement('div')
         render(
           h(DashboardChartRewardsTooltip, {
-            dataIndex,
-            getEpochFromTimestamp,
-            getTimestampFromEpoch,
-            series: series.value.list,
-            startEpoch,
-            t: $t,
-            weiToValue: converter.value.weiToValue,
+            consensusLayerRewardSum,
+            consesnsusLayerRewardSumLabel,
+            currentEpoch,
+            executionLayerRewardSum,
+            executionLayerRewardSumLabel,
+            groupInfo,
           }),
           d,
         )
@@ -336,7 +436,7 @@ const option = computed<ECBasicOption | undefined>(() => {
       axisLabel: {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
-        formatter: valueFormatter.value,
+        formatter: formatYAxisLabel,
         padding: [
           0,
           10,
@@ -354,22 +454,33 @@ const option = computed<ECBasicOption | undefined>(() => {
 
 <template>
   <div class="rewards-chart-container">
-    <ClientOnly>
+    <ClientOnly
+      v-if="data"
+    >
       <VChart
         ref="chart"
         class="chart"
         :option
         autoresize
+        @datazoom="onDatazoom"
+        @zr:click="setTooltipPosition"
       />
     </ClientOnly>
     <BcLoadingSpinner
-      v-if="isLoading"
+      v-if="status === 'pending'"
       class="loading-spinner"
       :loading="true"
       alignment="center"
     />
     <div
-      v-if="!isLoading && !series?.list?.length"
+      v-if="status === 'error'"
+      class="no-data"
+      alignment="center"
+    >
+      {{ $t("dashboard.validator.summary.chart.error") }}
+    </div>
+    <div
+      v-if="status === 'success' && !clSeries.length"
       class="no-data"
       alignment="center"
     >

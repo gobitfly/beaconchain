@@ -1,8 +1,4 @@
-export const useCurrency = (
-  defaults?: {
-    maximumFractionDigits?: number,
-    minimumFractionDigits?: number,
-  }) => {
+export const useCurrency = () => {
   const {
     clCurrency,
     displayCurrencyDefault,
@@ -13,15 +9,9 @@ export const useCurrency = (
   const {
     selectedCurrencyMain,
   } = storeToRefs(settingsStore)
-  // const { setCurrencyMain: setCurrencyMainFromSettings } = settingsStore
 
   const { latestState } = storeToRefs(useLatestStateStore())
   const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])
-
-  const availableCurrencies = computed(() => exchangeRates.value.map(exchangeRate => exchangeRate.code as CurrencyCode))
-  // const setCurrencyMain = (currencyCode: CurrencyCode) => {
-  //   setCurrencyMainFromSettings(currencyCode, availableCurrencies.value)
-  // }
 
   const convertCurrency = ({
     sourceCurrency,
@@ -46,13 +36,13 @@ export const useCurrency = (
       return conversionInfo.rate
     }
 
-    const exchangeRateoMainCurrencyToSourceCurrency = `${getExchangeRate(sourceCurrency)}`
-    const valueInMainCurrency = divideBigNumbers(value, exchangeRateoMainCurrencyToSourceCurrency)
+    const exchangeRateSourceCurrency = `${getExchangeRate(sourceCurrency)}`
+    const valueInMainCurrency = divideBigNumbers(value, exchangeRateSourceCurrency)
 
-    const exchangeRateMainCurrencyToTargetCurrency = `${getExchangeRate(targetCurrency)}`
+    const exchangeRateTargetCurrency = `${getExchangeRate(targetCurrency)}`
     const valueInTargetCurrency = multiplyBigNumbers(
       valueInMainCurrency,
-      exchangeRateMainCurrencyToTargetCurrency,
+      exchangeRateTargetCurrency,
     )
     return `${valueInTargetCurrency}`
   }
@@ -60,11 +50,11 @@ export const useCurrency = (
   const fractionDigitsDefault = {
     crypto: {
       base: 6,
-      heighPrecision: 8,
+      highPrecision: 8,
     },
     fiat: {
       base: 2,
-      heighPrecision: 4,
+      highPrecision: 4,
     },
   } as const
 
@@ -77,11 +67,11 @@ export const useCurrency = (
   }) => {
     if (isFiat(targetCurrency)) {
       return hasHigherPrecision
-        ? fractionDigitsDefault.fiat.heighPrecision
+        ? fractionDigitsDefault.fiat.highPrecision
         : fractionDigitsDefault.fiat.base
     }
     return hasHigherPrecision
-      ? fractionDigitsDefault.crypto.heighPrecision
+      ? fractionDigitsDefault.crypto.highPrecision
       : fractionDigitsDefault.crypto.base
   }
 
@@ -103,18 +93,20 @@ export const useCurrency = (
   }
   /**
    *
-   * @param {CurrencyCode} [options.sourceCurrency] - (Default: clCurrency)
-   * @param {CurrencyCode} [options.targetCurrency] - (Default: selectedCurrencyMain)
-   * @param {CurrencyCode} [options.sourceUnit] - (Default: wei)
-   * @param {CurrencyCode} [options.targetUnit] - (Default: base)
-   * @param {boolean} [options.hasHigherPrecision] - (Default: false)
+   * @param {CurrencyCode} [options.sourceCurrency] - Default: clCurrency
+   * @param {CurrencyCode} [options.targetCurrency] - Default: selectedCurrencyMain
+   * @param {CurrencyCode} [options.sourceUnit] - Default: wei
+   * @param {CurrencyCode} [options.targetUnit] - Default: base
+   * @param {boolean} [options.hasHigherPrecision] - Default: false
    * Whether to use more fractions as defaults for precision for
    * maximumFractionDigits and minimumFractionDigits depending on targetCurrency
-   * @param {number} [options.maximumFractionDigits] - (Default: 6/8 and 2/4) The maximum number of fraction digits.
-   * Defaults to 2 (4 if hasHigherPrecision=true) fiat and 6 (8 if hasHigherPrecision=true) for crypto.
-   * @param {number} [options.minimumFractionDigits] - (Default: 6/8 and 2/4) The minimum number of fraction digits.
-   * Defaults to 2  (4 if hasHigherPrecision=true) fiat and 6 (8 if hasHigherPrecision=true) for crypto.
-   * @returns {string} The formatted amount with currency code.
+   * @param {number} [options.maximumFractionDigits] - Defaults:
+   *   - fiat: 2 (4 if hasHigherPrecision=true)
+   *   - crypto: 6 (8 if hasHigherPrecision=true)
+   * @param {number} [options.minimumFractionDigits] - Default:
+   *   - fiat: 2 (4 if hasHigherPrecision=true)
+   *   - crypto: 6 (8 if hasHigherPrecision=true)
+   * @returns {string} The formatted amount with currency code
    */
   const formatAmount = (
     value: string,
@@ -129,24 +121,15 @@ export const useCurrency = (
       sourceUnit?: CryptoUnit,
       targetCurrency?: CurrencyCode,
       targetUnit?: CryptoUnit,
+      useGrouping?: Intl.NumberFormatOptions['useGrouping'],
     } = {},
   ): string => {
     assertIsNumber(value)
-    const optionsWithDefaults = {
-      ...defaults,
-      ...options,
-    }
     const {
       hasCurrencyDisplay = true,
       hasHigherPrecision = false,
       hasUnitDisplay = false,
-      signDisplay,
-      sourceCurrency = clCurrency,
-      sourceUnit = 'wei',
       targetCurrency = selectedCurrencyMain.value,
-      targetUnit = 'base',
-    } = optionsWithDefaults
-    const {
       maximumFractionDigits = getFractionDigitDefault({
         hasHigherPrecision,
         targetCurrency,
@@ -155,7 +138,12 @@ export const useCurrency = (
         hasHigherPrecision,
         targetCurrency,
       }),
-    } = optionsWithDefaults
+      signDisplay,
+      sourceCurrency = clCurrency,
+      sourceUnit = 'wei',
+      targetUnit = 'base',
+      useGrouping,
+    } = options
 
     const valueConverted = convertCurrency({
       sourceCurrency,
@@ -166,7 +154,6 @@ export const useCurrency = (
     const unitFactor = unitFactorCrypto[sourceUnit] - unitFactorCrypto[targetUnit]
 
     const unitTranslation = {
-      base: '',
       gwei: $t('common.units.gwei'),
       wei: $t('common.units.wei'),
     }
@@ -177,17 +164,18 @@ export const useCurrency = (
       minimumFractionDigits,
       scaleBy: unitFactor,
       signDisplay,
+      useGrouping,
     })}`
     return `${formattedValue}${unit}${currency}`
   }
 
   /**
-   * Sums up an array of objects that contain amounts of different currencies.
+   * Sums up an array of objects that contains amounts of different currencies.
    *
    * @param {Array} options.currencyItems - The array of currency items to sum up.
-   * @param {CurrencyCode} [options.currencyItems[].sourceCurrency=clCurrency] (Default: clCurrency)
+   * @param {CurrencyCode} [options.currencyItems[].sourceCurrency=clCurrency] - Default: clCurrency
    * @param {number | string} options.currencyItems[].value - The value of the currency item.
-   * @param {CurrencyCode} [options.targetCurrency=clCurrency] (Default: clCurrency)
+   * @param {CurrencyCode} [options.targetCurrency=clCurrency] - Default: clCurrency
    * @returns {string} The sum of the currency values converted to the target currency.
    */
   const addCurrencies = (
@@ -219,7 +207,6 @@ export const useCurrency = (
 
   return {
     addCurrencies,
-    availableCurrencies,
     clCurrency,
     displayCurrencyDefault,
     elCurrency,

@@ -123,8 +123,6 @@ const {
   displayCurrencyDefault,
   selectedCurrencyMain,
 } = useCurrency()
-
-const hackTooltipNotReflectingCurrencyChange = computed(() => selectedCurrencyMain.value)
 </script>
 
 <template>
@@ -252,7 +250,6 @@ const hackTooltipNotReflectingCurrencyChange = computed(() => selectedCurrencyMa
               </template>
             </Column>
             <Column
-              :key="hackTooltipNotReflectingCurrencyChange"
               field="amount"
               :header="$t('table.amount')"
             >
@@ -270,7 +267,7 @@ const hackTooltipNotReflectingCurrencyChange = computed(() => selectedCurrencyMa
                 >
                   <BcFormatAmount
                     :value="slotProps.data.amount"
-                    :target-currency="displayCurrencyDefault.consensusLayer"
+                    target-currency="clDisplayCurrency"
                     :fraction-digits="0"
                   />
                   <template

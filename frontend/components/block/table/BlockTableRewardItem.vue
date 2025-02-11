@@ -1,18 +1,10 @@
 <script setup lang="ts">
 import type { ClElValue } from '~/types/api/common'
 
-interface Props {
+defineProps<{
   reward?: ClElValue<string>,
   status?: 'missed' | 'orphaned' | 'scheduled' | 'success',
-}
-defineProps<Props>()
-
-const {
-  clCurrency,
-  displayCurrencyDefault,
-  elCurrency,
-  selectedCurrencyMain,
-} = useCurrency()
+}>()
 </script>
 
 <template>
@@ -23,14 +15,14 @@ const {
   >
     <BcFormatAmount
       :value="reward?.el"
-      :source-currency="elCurrency"
-      :target-currency="elCurrency"
+      source-currency="elCurrency"
+      target-currency="elDisplayCurrency"
     />
     <BcFormatAmount
       v-if="reward?.cl && reward.cl != '0'"
       :value="reward?.cl"
-      :source-currency="clCurrency"
-      :target-currency="displayCurrencyDefault.consensusLayer"
+      source-currency="clCurrency"
+      target-currency="clDisplayCurrency"
     />
     <span v-else>{{ $t("dashboard.validator.blocks.cl_pending") }}</span>
     <template #tooltip>
@@ -39,19 +31,11 @@ const {
           <span>{{ $t("dashboard.validator.blocks.el_rewards") }}: </span>
           <BcFormatAmount
             :value="reward?.el"
-            :source-currency="elCurrency"
-            :target-currency="displayCurrencyDefault.executionLayer"
+            source-currency="elCurrency"
+            target-currency="elDisplayCurrency"
+            has-additional-selected-currency-main
             has-higher-precision
           />
-          <BcFormatAmount
-            v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
-            v-slot="{ value }"
-            :value="reward?.el"
-            :source-currency="elCurrency"
-            has-higher-precision
-          >
-            ({{ value }})
-          </BcFormatAmount>
         </div>
         <div class="tt-row">
           <span>{{ $t("dashboard.validator.blocks.cl_rewards") }}: </span>
@@ -60,17 +44,10 @@ const {
           >
             <BcFormatAmount
               :value="reward?.cl"
-              :target-currency="displayCurrencyDefault.consensusLayer"
+              target-currency="clDisplayCurrency"
+              has-additional-selected-currency-main
               has-higher-precision
             />
-            <BcFormatAmount
-              v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
-              v-slot="{ value }"
-              :value="reward?.cl"
-              has-higher-precision
-            >
-              ({{ value }})
-            </BcFormatAmount>
           </template>
           <span v-else>{{ $t("dashboard.validator.blocks.pending") }}</span>
         </div>

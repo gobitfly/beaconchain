@@ -120,7 +120,6 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
 }
 const {
   displayCurrencyDefault,
-  elCurrency,
   selectedCurrencyMain,
 } = useCurrency()
 </script>
@@ -294,8 +293,8 @@ const {
                 >
                   <BcFormatAmount
                     :value="slotProps.data.amount"
-                    :source-currency="elCurrency"
-                    :target-currency="elCurrency"
+                    source-currency="elCurrency"
+                    target-currency="elDisplayCurrency"
                     :fraction-digits="0"
                   />
                   <template
@@ -304,7 +303,7 @@ const {
                   >
                     <BcFormatAmount
                       :value="slotProps.data.amount"
-                      :source-currency="elCurrency"
+                      source-currency="elCurrency"
                       has-higher-precision
                     />
                   </template>

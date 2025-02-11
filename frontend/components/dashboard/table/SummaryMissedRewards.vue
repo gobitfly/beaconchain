@@ -3,28 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBGroupSummaryMissedRewards } from '~/types/api/validator_dashboard'
 
-interface Props {
+const { missedRewards } = defineProps<{
   missedRewards: VDBGroupSummaryMissedRewards,
-}
-const props = defineProps<Props>()
-const {
-  formatAmount,
-} = useCurrency()
-const currencyItems = computed(() =>
-  [
-    {
-      consensusLayerValue: props.missedRewards.proposer_rewards.cl,
-    },
-    {
-      executionLayerValue: props.missedRewards.proposer_rewards.el,
-    },
-    {
-      consensusLayerValue: props.missedRewards.attestations,
-    },
-    {
-      executionLayerValue: props.missedRewards.sync,
-    },
-  ])
+}>()
 </script>
 
 <template>
@@ -32,7 +13,21 @@ const currencyItems = computed(() =>
     class="summary-reward"
   >
     <BcFormatAmount
-      :currency-items
+      :currency-items=" [
+        {
+          consensusLayerValue: missedRewards.proposer_rewards.cl,
+        },
+        {
+          executionLayerValue: missedRewards.proposer_rewards.el,
+        },
+        {
+          consensusLayerValue: missedRewards.attestations,
+        },
+        {
+          consensusLayerValue: missedRewards.sync,
+        },
+      ]"
+      target-unit-crypto="auto"
     />
     <BcTooltip :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" />
@@ -46,11 +41,8 @@ const currencyItems = computed(() =>
             <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:
             </span>
             <BcFormatAmount
-              :currency-items="[
-                {
-                  executionLayerValue: missedRewards.proposer_rewards.el,
-                },
-              ]"
+              :value="missedRewards.proposer_rewards.el"
+              source-currency="elCurrency"
               has-higher-precision
             />
           </div>
@@ -58,30 +50,26 @@ const currencyItems = computed(() =>
             <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:
             </span>
             <BcFormatAmount
-              :currency-items="[
-                {
-                  consensusLayerValue: missedRewards.proposer_rewards.cl,
-                },
-              ]"
+              :value="missedRewards.proposer_rewards.cl"
+              has-additional-selected-currency-main
               has-higher-precision
             />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.summary.row.attestations") }}:
             </span>
-            {{ formatAmount(missedRewards.attestations, {
-              hasHigherPrecision: true,
-            }) }}
+            <BcFormatAmount
+              :value="missedRewards.attestations"
+              has-additional-selected-currency-main
+              has-higher-precision
+            />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.summary.row.sync_committee") }}:
             </span>
             <BcFormatAmount
-              :currency-items="[
-                {
-                  consensusLayerValue: missedRewards.sync,
-                },
-              ]"
+              :value="missedRewards.sync"
+              has-additional-selected-currency-main
               has-higher-precision
             />
           </div>

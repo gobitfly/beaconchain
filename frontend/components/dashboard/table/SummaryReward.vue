@@ -19,6 +19,7 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
         consensusLayerValue: reward.cl,
       }]"
       has-color
+      target-unit-crypto="auto"
     />
     <BcTooltip
       v-if="hasReward"
@@ -30,19 +31,20 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:</span>
             <BcFormatAmount
-              :currency-items="[{
-                executionLayerValue: reward.el,
-              }]"
+              :value="reward.el"
+              source-currency="elCurrency"
               has-higher-precision
+              has-additional-selected-currency-main
+              target-currency="elDisplayCurrency"
             />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:</span>
             <BcFormatAmount
-              :currency-items="[{
-                consensusLayerValue: reward.cl,
-              }]"
+              :value="reward.cl"
               has-higher-precision
+              has-additional-selected-currency-main
+              target-currency="clDisplayCurrency"
             />
           </div>
         </div>
