@@ -36,6 +36,10 @@ export function useNetworkStore() {
     return epoch
   }
 
+  /**
+   *
+   * @returns timestamp in seconds (backend also uses seconds instead of milliseconds like in js)
+   */
   const getTimestampFromEpoch = (epoch: number) => {
     return timeStampSlot0 + epoch * slotsPerEpoch * secondsPerSlot
   }

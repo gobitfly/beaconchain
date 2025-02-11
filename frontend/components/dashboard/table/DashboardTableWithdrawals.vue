@@ -361,6 +361,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                       'all-time-total':
                         slotProps.data.identifier === totalIdentifier,
                     }"
+                    has-tooltip
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
                     <FontAwesomeIcon :icon="faInfoCircle" />

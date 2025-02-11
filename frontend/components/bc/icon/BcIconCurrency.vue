@@ -5,14 +5,14 @@ defineProps<{
 </script>
 
 <template>
-  <BcIconFlagAu v-if="currencyCode === 'AUD'" />
-  <BcIconFlagCa v-if="currencyCode === 'CAD'" />
-  <BcIconFlagCn v-if="currencyCode === 'CNY'" />
-  <BcIconFlagEu v-if="currencyCode === 'EUR'" />
-  <BcIconFlagGb v-if="currencyCode === 'GBP'" />
-  <BcIconFlagJp v-if="currencyCode === 'JPY'" />
-  <BcIconFlagUs v-if="currencyCode === 'USD'" />
-  <BcIconCrypto
+  <LazyBcIconFlagAu v-if="currencyCode === 'AUD'" />
+  <LazyBcIconFlagCa v-if="currencyCode === 'CAD'" />
+  <LazyBcIconFlagCn v-if="currencyCode === 'CNY'" />
+  <LazyBcIconFlagEu v-if="currencyCode === 'EUR'" />
+  <LazyBcIconFlagGb v-if="currencyCode === 'GBP'" />
+  <LazyBcIconFlagJp v-if="currencyCode === 'JPY'" />
+  <LazyBcIconFlagUs v-if="currencyCode === 'USD'" />
+  <LazyBcIconCrypto
     v-if="isCrypto(currencyCode)"
     :currency-code
     color-mode="currentColor"

@@ -38,11 +38,6 @@ const {
     watch: [ search ],
   })
 defineEmits<{ (e: 'filter-changed', value: string): void }>()
-const { converter } = useValue()
-const formatValueWei = (value: string) => {
-  return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 5 })
-    .label
-}
 </script>
 
 <template>
@@ -261,7 +256,12 @@ const formatValueWei = (value: string) => {
           >
             {{ withdrawalItem.index }}
           </BcLink>
-          ({{ formatValueWei(withdrawalItem.amount) }})
+          <BcFormatAmount
+            v-slot="{ value }"
+            :value="withdrawalItem.amount"
+          >
+            ({{ value }})
+          </BcFormatAmount>
         </template>
       </BcAccordion>
       <BcAccordion

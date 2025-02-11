@@ -70,3 +70,15 @@ export const getRelativeTime = (timestampInSeconds: number, {
   }
   return new Intl.RelativeTimeFormat(locale).format(Math.round(seconds), 'seconds')
 }
+
+export const getDateTime = (timeStampInSeconds: number, {
+  locale = 'en-US',
+}: {
+  locale?: string,
+} = {}) => {
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(timeStampInSeconds * 1000)
+}

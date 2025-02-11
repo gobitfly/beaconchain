@@ -14,8 +14,8 @@ defineProps<{
   isHomePage: boolean,
   minimalist: boolean,
 }>()
-const store = useLatestStateStore()
-const { latestState } = storeToRefs(store)
+const latestStateStore = useLatestStateStore()
+const { latestState } = storeToRefs(latestStateStore)
 const {
   getEpochFromSlot,
   networkInfo,
@@ -23,13 +23,12 @@ const {
 const {
   doLogout, isLoggedIn,
 } = useUserStore()
-
 const {
   displayCurrencyDefault,
+  exchangeRates,
   formatAmount,
   selectedCurrencyMain,
 } = useCurrency()
-
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
 const { promoCode } = usePromoCode()
@@ -44,19 +43,17 @@ const hideInDevelopmentClass = showInDevelopment
 
 const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
+const hasExchangeRates = computed(() => exchangeRates.value.length > 1)
+
 const currentRate = computed(() => {
   if (selectedCurrencyMain.value === displayCurrencyDefault.main) {
-    return formatAmount(1, {
-      maximumFractionDigits: 2,
-      minimumFractionDigits: 2,
+    return formatAmount('1', {
       sourceCurrency: displayCurrencyDefault.main,
       sourceUnit: 'base',
       targetCurrency: displayCurrencyDefault.fiat,
     })
   }
-  return formatAmount(1, {
-    maximumFractionDigits: isFiat(selectedCurrencyMain.value) ? 2 : 5,
-    minimumFractionDigits: isFiat(selectedCurrencyMain.value) ? 2 : 5,
+  return formatAmount('1', {
     sourceCurrency: displayCurrencyDefault.main,
     sourceUnit: 'base',
   })
@@ -132,13 +129,14 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
           </BcLink>
         </span>
         <span
-          v-if="currentRate"
+          v-if="hasExchangeRates"
           class="currency-info"
         >
           <BcIconCrypto
             width="20"
             :currency-code="displayCurrencyDefault.main"
             class="network-icon"
+            color-mode="currentColor"
           />
           {{ displayCurrencyDefault.main }}:
           <span
@@ -151,6 +149,7 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
 
       <div class="grid-cell controls">
         <BcCurrencySelection
+          v-if="hasExchangeRates"
           class="currency"
           :show-currency-icon="!isMobileScreen"
         />

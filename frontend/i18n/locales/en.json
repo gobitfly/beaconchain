@@ -104,7 +104,6 @@
             "GBP": "Pound Sterling",
             "GNO": "Gnosis",
             "JPY": "Japanese Yen",
-            "NAT": "Native",
             "USD": "United States Dollar",
             "mGNO": "mGnosis",
             "xDAI": "xDAI Stablecoin"
@@ -362,6 +361,7 @@
                         "proposal": "Proposal Eff.",
                         "sync": "Sync Eff."
                     },
+                    "error": "An error occurred. Please try again later.",
                     "groups": "Groups ({count})",
                     "no_data": "No chart data",
                     "total": "Total"

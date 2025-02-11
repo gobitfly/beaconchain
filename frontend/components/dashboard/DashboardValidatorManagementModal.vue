@@ -338,9 +338,6 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
   resetInput()
 }
 const inputValidator = ref('')
-const {
-  formatAmount,
-} = useCurrency()
 </script>
 
 <template>
@@ -455,7 +452,9 @@ const {
             >
               <template #body="slotProps">
                 <div class="balance-col">
-                  {{ formatAmount(slotProps.data.balance) }}
+                  <BcFormatAmount
+                    :value="slotProps.data.balance"
+                  />
                 </div>
               </template>
             </Column>

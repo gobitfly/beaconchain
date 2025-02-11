@@ -1,25 +1,9 @@
-import type { BigNumber } from '@ethersproject/bignumber'
-import type { CryptoUnits } from './currencies'
-
 export type ExtendedLabel = {
   fullLabel?: string,
   label: NumberOrString,
 }
 
 export type NumberOrString = number | string
-
-export type ValueConvertOptions = {
-  addPlus?: boolean, // add + sign if value is positive
-  fixedDecimalCount?: number, // can override the usual settings, but can't go over 2 for fiat
-  fixedUnit?: CryptoUnits, // fixed output unit - overrides min unit
-  maxDecimalCount?: number, // max decimal count
-  minDecimalCount?: number, // min decimal count
-  minUnit?: CryptoUnits, // if output should only be in higher units (e.g. GWEI -> then it will never go down to WEI)
-  minUnitDecimalCount?: number, // decimal count to check for value while unit conversion - default: max decimal count
-  sourceCurrency?: CurrencyCodeCrypto, // source crypto currency - default: ETH
-  sourceUnit?: CryptoUnits, // source unit - default main unit (like eth)
-  targetCurrency?: CurrencyCode, // target currency - overrides the selected currency
-}
 
 export const TimeFrames = [
   'last_24h',
@@ -30,8 +14,3 @@ export const TimeFrames = [
 export type CompareResult = 'equal' | 'higher' | 'lower'
 
 export type TimeFrame = (typeof TimeFrames)[number]
-
-export type WeiToValue = (
-  wei?: BigNumber | string,
-  options?: ValueConvertOptions,
-) => ExtendedLabel

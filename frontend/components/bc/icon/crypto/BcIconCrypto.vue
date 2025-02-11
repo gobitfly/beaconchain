@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import {
-  BcIconCryptoEth,
-  BcIconCryptoGno,
-  BcIconCryptoXdai,
+  LazyBcIconCryptoEth,
+  LazyBcIconCryptoGno,
+  LazyBcIconCryptoXdai,
 } from '#components'
 
 const { currencyCode } = defineProps<{
@@ -11,9 +11,9 @@ const { currencyCode } = defineProps<{
 }>()
 
 const is = computed(() => {
-  if (currencyCode === 'xDAI' || currencyCode === 'DAI') return BcIconCryptoXdai
-  if (currencyCode === 'GNO' || currencyCode === 'mGNO') return BcIconCryptoGno
-  if (currencyCode === 'ETH') return BcIconCryptoEth
+  if (currencyCode === 'xDAI' || currencyCode === 'DAI') return LazyBcIconCryptoXdai
+  if (currencyCode === 'GNO' || currencyCode === 'mGNO') return LazyBcIconCryptoGno
+  if (currencyCode === 'ETH') return LazyBcIconCryptoEth
   return 'span'
 })
 </script>
