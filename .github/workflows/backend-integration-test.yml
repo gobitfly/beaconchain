@@ -35,8 +35,6 @@ jobs:
           cache: true
       - name: Test with the Go CLI
         working-directory: backend
-        env:
-          BEACONCHAIN_CONFIG: ${{ secrets.CI_CONFIG_PATH }}
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
           go test -tags=integration -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
