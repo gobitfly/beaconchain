@@ -72,7 +72,6 @@ func teardown() {
 
 func setup() error {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-
 	flag.Parse()
 
 	// terminate any currently running postgres instances
