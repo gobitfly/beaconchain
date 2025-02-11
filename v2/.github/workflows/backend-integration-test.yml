@@ -36,6 +36,8 @@ jobs:
       - name: Test with the Go CLI
         working-directory: backend
         env:
+          CLICKHOUSE_WRITER_DB_NAME: holesky_re_export_2024_11_09
+          CLICKHOUSE_READER_DB_NAME: holesky_re_export_2024_11_09
           CLICKHOUSE_READER_DB_SSL: true
           CLICKHOUSE_WRITER_DB_SSL: true
         run: |
