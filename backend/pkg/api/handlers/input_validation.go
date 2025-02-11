@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
@@ -254,6 +253,7 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	}
 	var keys []string
 	for _, key := range splitParameters(keysString, ',') {
+		key = strings.TrimSpace(key)
 		keys = append(keys, v.checkRegex(reName, key, "keys"))
 	}
 	return keys
@@ -261,33 +261,6 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
-}
-
-// helper function to unify handling of block detail request validation
-func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
-	var v validationError
-	var err error
-	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
-	var value uint64
-	switch paramValue := mux.Vars(r)[paramName]; paramValue {
-	// possibly add other values like "genesis", "finalized", hardforks etc. later
-	case "latest":
-		ctx := r.Context()
-		if paramName == "block" {
-			value, err = h.daService.GetLatestBlock(ctx)
-		} else if paramName == "slot" {
-			value, err = h.daService.GetLatestSlot(ctx)
-		}
-		if err != nil {
-			return 0, 0, err
-		}
-	default:
-		value = v.checkUint(paramValue, paramName)
-	}
-	if v.hasErrors() {
-		return 0, 0, v
-	}
-	return chainId, value, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
@@ -315,6 +288,7 @@ func splitParameters(params string, delim rune) []string {
 func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
 	for _, id := range splitParameters(groupIds, ',') {
+		id = strings.TrimSpace(id)
 		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
@@ -426,6 +400,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 	}
 	protocolsSlice := splitParameters(protocolModes, ',')
 	for _, protocolMode := range protocolsSlice {
+		protocolMode = strings.TrimSpace(protocolMode)
 		switch protocolMode {
 		case "rocket_pool":
 			modes.RocketPool = true
