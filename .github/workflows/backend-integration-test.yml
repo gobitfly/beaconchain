@@ -11,6 +11,7 @@ on:
       - 'backend/**'
     branches:
       - '*'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,16 +27,16 @@ jobs:
     name: integration-test
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: 'backend/go.sum'
+          cache: true
       - name: Test with the Go CLI
         working-directory: backend
-        run:
+        env:
+          BEACONCHAIN_CONFIG: ${{ secrets.CI_CONFIG_PATH }}
+        run: |
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
-          go test -failfast -tags integration -config "${{ secrets.CI_CONFIG_PATH }}"
-
-
-
+          go test -tags=integration -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
