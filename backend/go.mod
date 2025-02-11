@@ -45,6 +45,7 @@ require (
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
+	github.com/holiman/uint256 v1.3.1
 	github.com/invopop/jsonschema v0.12.0
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgtype v1.14.2
@@ -189,7 +190,6 @@ require (
 	github.com/herumi/bls-eth-go-binary v1.31.0 // indirect
 	github.com/holiman/billy v0.0.0-20240216141850-2abb0c79d3c4 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/huandu/go-clone v1.6.0 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/imkira/go-interpol v1.1.0 // indirect

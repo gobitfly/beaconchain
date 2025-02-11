@@ -23,7 +23,7 @@ jobs:
         working-directory: ./backend
         run: |
           export TERM=xterm
-          go test `go list ./... | grep -v "pkg/consapi\|pkg/api\|internal/th\|internal/contracts\|pkg/commons/types\|pkg/commons/contracts\|cmd"` -coverprofile coverage.out -covermode atomic -race
+          go test `go list ./... | grep -v "pkg/consapi\|internal/th\|internal/contracts\|pkg/commons/types\|pkg/commons/contracts\|cmd"` -coverprofile coverage.out -covermode atomic -race
 
       - name: coverage
         working-directory: ./backend
