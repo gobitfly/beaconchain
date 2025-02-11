@@ -21,10 +21,10 @@ type AdInsertMode int
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)
 
 const (
-	AdInsertBefore  AdInsertMode = iota
-	AdInsertAfter   AdInsertMode = iota
-	AdInsertReplace AdInsertMode = iota
-	AdInsertInsert  AdInsertMode = iota
+	AdInsertBefore AdInsertMode = iota
+	AdInsertAfter
+	AdInsertReplace
+	AdInsertInsert
 )
 
 func (c AdInsertMode) Int() int {

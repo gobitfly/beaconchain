@@ -253,6 +253,7 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	}
 	var keys []string
 	for _, key := range splitParameters(keysString, ',') {
+		key = strings.TrimSpace(key)
 		keys = append(keys, v.checkRegex(reName, key, "keys"))
 	}
 	return keys
@@ -314,6 +315,7 @@ func splitParameters(params string, delim rune) []string {
 func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
 	for _, id := range splitParameters(groupIds, ',') {
+		id = strings.TrimSpace(id)
 		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
@@ -425,6 +427,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 	}
 	protocolsSlice := splitParameters(protocolModes, ',')
 	for _, protocolMode := range protocolsSlice {
+		protocolMode = strings.TrimSpace(protocolMode)
 		switch protocolMode {
 		case "rocket_pool":
 			modes.RocketPool = true
