@@ -42,4 +42,4 @@ jobs:
           CLICKHOUSE_WRITER_DB_SSL: true
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
-          go test -tags=integration -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
+          go test -v -tags=integration -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"

@@ -723,7 +723,6 @@ func TestApiDoc(t *testing.T) {
 		require.NotNil(t, resp.Paths, "swagger paths should not nil")
 		assert.NotEqual(t, 0, len(resp.Paths.Paths), "swagger paths should not be empty")
 		assert.NotEqual(t, 0, len(resp.Definitions), "swagger definitions should not be empty")
-		//assert.NotEqual(t, 0, len(resp.Host), "swagger host should not be empty")
 	})
 
 	t.Run("test api ratelimit weights endpoint", func(t *testing.T) {
