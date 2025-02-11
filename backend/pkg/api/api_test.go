@@ -4,6 +4,7 @@ package api_test
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -307,8 +308,11 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorByIndex, ok := resp.Data[0].Value.(api_types.SearchValidator)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err := json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorByIndex api_types.SearchValidator
+	err = json.Unmarshal(jsonbody, &validatorByIndex)
+	assert.Nil(t, err, "response data should be of type SearchValidator")
 	assert.Equal(t, uint64(5), validatorByIndex.Index, "validator index should be 5")
 
 	// search for validator by pubkey
@@ -335,8 +339,11 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorByPublicKey, ok := resp.Data[0].Value.(api_types.SearchValidator)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err = json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorByPublicKey api_types.SearchValidator
+	err = json.Unmarshal(jsonbody, &validatorByPublicKey)
+	assert.Nil(t, err, "response data should be of type SearchValidator")
 	assert.Equal(t, uint64(5), validatorByPublicKey.Index, "validator index should be 5")
 
 	// search for validator by withdawal address
@@ -362,8 +369,11 @@ func TestInternalSearchHandler(t *testing.T) {
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorsByWithdrawalAddress, ok := resp.Data[0].Value.(api_types.SearchValidatorsByWithdrawalCredential)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err = json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorsByWithdrawalAddress api_types.SearchValidatorsByWithdrawalCredential
+	err = json.Unmarshal(jsonbody, &validatorsByWithdrawalAddress)
+	assert.Nil(t, err, "response data should be of type SearchValidatorsByWithdrwalCredential")
 	assert.Greater(t, validatorsByWithdrawalAddress.Count, uint64(0), "returned number of validators should be greater than 0")
 }
 
