@@ -5,13 +5,13 @@ SELECT
 
 CREATE TABLE
     IF NOT EXISTS blocks_consolidation_requests (
-        block_slot INT NOT NULL,
-        block_root BYTEA NOT NULL,
-        request_index INT NOT NULL,
-        source_address BYTEA NOT NULL,
-        source_index INT NOT NULL,
-        target_index INT NOT NULL,
-        PRIMARY KEY (block_slot, block_root, request_index)
+	block_slot int4 NOT NULL,
+	block_root bytea NOT NULL,
+	request_index int4 NOT NULL,
+	amount_consolidated int8 NULL,
+	source_index int4 NOT NULL,
+	target_index int4 NOT NULL,
+	CONSTRAINT blocks_consolidation_requests_pkey PRIMARY KEY (block_slot, block_root, request_index)
     );
 
 SELECT
@@ -33,14 +33,16 @@ SELECT
 
 CREATE TABLE
     IF NOT EXISTS blocks_deposit_requests (
-        block_slot INT NOT NULL,
-        block_root BYTEA NOT NULL,
-        request_index INT NOT NULL,
-        pubkey BYTEA NOT NULL,
-        withdrawal_credentials BYTEA NOT NULL,
-        amount BIGINT NOT NULL,
-        signature BYTEA NOT NULL,
-        PRIMARY KEY (block_slot, block_root, request_index)
+	block_slot int4 NOT NULL,
+	block_root bytea NOT NULL,
+	request_index int4 NOT NULL,
+	pubkey bytea NOT NULL,
+	withdrawal_credentials bytea NOT NULL,
+	amount int8 NOT NULL,
+	signature bytea NOT NULL,
+	queued_at_epoch int4 NULL,
+	processed_at_epoch int4 NULL,
+	CONSTRAINT blocks_deposit_requests_pkey PRIMARY KEY (block_slot, block_root, request_index)
     );
 
 SELECT
@@ -91,6 +93,21 @@ CREATE TABLE
         amount bigint NOT NULL,
         PRIMARY KEY (tx_hash, tx_index)
     );
+    
+SELECT
+    'creating consensus_layer_events table';
+
+CREATE TABLE consensus_layer_events (
+	id text NOT NULL,
+	slot int4 NOT NULL,
+	block_root bytea NOT NULL,
+	event_name text NOT NULL,
+	event_index int4 NOT NULL,
+	"data" jsonb NULL,
+	CONSTRAINT consensus_layer_events_pkey PRIMARY KEY (id)
+);
+
+CREATE INDEX consensus_layer_events_slot_event_name_idx ON public.consensus_layer_events USING btree (slot DESC, event_name);
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
@@ -123,4 +140,9 @@ SELECT
     'dropping eth1_withdrawal_requests table';
 
 DROP TABLE IF EXISTS eth1_withdrawal_requests;
+
+SELECT
+    'dropping consensus_layer_events table';
+    
+DROP TABLE IF EXISTS consensus_layer_events;
 -- +goose StatementEnd
