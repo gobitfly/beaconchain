@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -71,6 +72,9 @@ func Handle[Input InputValidator[Input], Response any](defaultCode int, logicFun
 	return func(w http.ResponseWriter, r *http.Request) {
 		// prepare input
 		vars := mux.Vars(r)
+		if vars == nil {
+			vars = make(map[string]string)
+		}
 		q := r.URL.Query()
 		for k, v := range q {
 			if _, ok := vars[k]; ok || len(v) == 0 {
@@ -593,6 +597,9 @@ type intOrString struct {
 }
 
 func (v *intOrString) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte("null")) {
+		return fmt.Errorf("null value not allowed")
+	}
 	// Attempt to unmarshal as uint64 first
 	var intValue uint64
 	if err := json.Unmarshal(data, &intValue); err == nil {
