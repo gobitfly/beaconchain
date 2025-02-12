@@ -30,8 +30,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Cleanup
         run: |
-          ls -al ~/.cache/go-mod ~/.cache/go-build
-          rm -rf ~/.cache/go-mod ~/.cache/go-build
+          rm -rf ~/go/pkg/mod
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
