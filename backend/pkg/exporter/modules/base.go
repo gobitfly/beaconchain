@@ -32,6 +32,11 @@ type ModuleInterface interface {
 	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
 }
 
+type ModuleContext struct {
+	CL         consapi.Client
+	ConsClient *rpc.LighthouseClient
+}
+
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
@@ -71,16 +76,8 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 }
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
-	goPool := &errgroup.Group{}
-	log.Infof("initialising exporter modules")
-
 	// Initialize modules
-	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
-		return module.Init()
-	})
-
-	err := goPool.Wait()
-	if err != nil {
+	if err := initializeModules(modules); err != nil {
 		log.Fatal(err, "error initializing modules", 0)
 		return
 	}
@@ -91,57 +88,87 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
+	events := getEvents(context)
+
+	for event := range events {
+		handleEvent(event, eventPool, modules)
+	}
+}
+
+func initializeModules(modules []ModuleInterface) error {
+	goPool := &errgroup.Group{}
+
+	log.Infof("initialising exporter modules")
+
+	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
+		return module.Init()
+	})
+
+	return goPool.Wait()
+}
+
+func getEvents(context *ModuleContext) chan *types.EventResponse {
 	events := context.CL.GetEvents([]types.EventTopic{
 		types.EventHead,
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
 	})
-	log.Infof("subscribed to node events")
+	return events
+}
 
-	for event := range events {
-		if event.Error != nil {
-			log.Error(event.Error, "error getting event", 0)
-			continue
-		}
-
-		switch event.Event {
-		case types.EventHead:
-			res, err := event.Head()
-			if err != nil {
-				log.Error(err, "error getting head event", 0)
-				continue
-			}
-			log.InfoWithFields(
-				log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
-				"notifying exporter modules about new head",
-			)
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnHead(res)
-			})
-
-		case types.EventFinalizedCheckpoint:
-			res, err := event.FinalizedCheckpoint()
-			if err != nil {
-				log.Error(err, "error getting finalized checkpoint event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnFinalizedCheckpoint(res)
-			})
-
-		case types.EventChainReorg:
-			res, err := event.ChainReorg()
-			if err != nil {
-				log.Error(err, "error getting chain reorg event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnChainReorg(res)
-			})
-		}
+func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+	if event.Error != nil {
+		log.Error(event.Error, "error getting event", 0)
+		return
 	}
+
+	switch event.Event {
+	case types.EventHead:
+		handleHeadEvent(event, eventPool, modules)
+	case types.EventFinalizedCheckpoint:
+		handleFinalizedCheckpointEvent(event, eventPool, modules)
+	case types.EventChainReorg:
+		handleChainReorgEvent(event, eventPool, modules)
+	}
+}
+
+func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+	res, err := event.Head()
+	if err != nil {
+		log.Error(err, "error getting head event", 0)
+		return
+	}
+	log.InfoWithFields(
+		log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
+		"notifying exporter modules about new head",
+	)
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnHead(res)
+	})
+}
+
+func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+	res, err := event.FinalizedCheckpoint()
+	if err != nil {
+		log.Error(err, "error getting finalized checkpoint event", 0)
+		return
+	}
+	log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnFinalizedCheckpoint(res)
+	})
+}
+
+func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+	res, err := event.ChainReorg()
+	if err != nil {
+		log.Error(err, "error getting chain reorg event", 0)
+		return
+	}
+	log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnChainReorg(res)
+	})
 }
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
@@ -162,26 +189,14 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		})
 	}
 }
+
 func GetModuleContext() (ModuleContext, error) {
-	var moduleContext ModuleContext
-
-	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
-
-	spec, err := cl.GetSpec()
+	cl, err := createClient()
 	if err != nil {
 		log.Fatal(err, "error getting spec", 0)
 	}
 
-	config.ClConfig = &spec.Data
-
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
-	}
-
-	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-
-	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
+	clClient, err := createLighthouseClient(cl)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
@@ -191,9 +206,26 @@ func GetModuleContext() (ModuleContext, error) {
 	return moduleContext, nil
 }
 
-type ModuleContext struct {
-	CL         consapi.Client
-	ConsClient *rpc.LighthouseClient
+func createClient() (consapi.Client, error) {
+	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
+	spec, err := cl.GetSpec()
+	if err != nil {
+		return consapi.Client{}, err
+	}
+
+	config.ClConfig = &spec.Data
+
+	return cl, nil
+}
+
+func createLighthouseClient(cl consapi.Client) (*rpc.LighthouseClient, error) {
+	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
+	if !ok {
+		return nil, errors.New("lighthouse client can only be used with real node impl")
+	}
+	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+
+	return rpc.NewLighthouseClient(nodeImpl, chainID)
 }
 
 type ModuleLog struct {
