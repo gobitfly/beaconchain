@@ -28,6 +28,8 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+      - name: Cleanup
+        run: go clean -modcache
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
