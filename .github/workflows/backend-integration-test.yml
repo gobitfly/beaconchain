@@ -36,7 +36,7 @@ jobs:
       - name: Swagger
         working-directory: backend
         run: |
-          go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
+          go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go --overridesFile ./pkg/api/docs/.swaggo
       - name: Tests
         working-directory: backend
         run: |
