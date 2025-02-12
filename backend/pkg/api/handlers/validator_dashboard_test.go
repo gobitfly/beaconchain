@@ -3,8 +3,6 @@ package handlers
 import (
 	"context"
 	"errors"
-	"io"
-	"strings"
 	"testing"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
@@ -32,18 +30,6 @@ func (da *dataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, d
 		count = 1
 	}
 	return count, nil
-}
-
-// ------------------------------------------------------------
-
-func handlerTestSetup() (context.Context, *HandlerService) {
-	ctx := context.WithValue(context.Background(), types.CtxUserIdKey, uint64(1))
-	da := &dataAccessStub{}
-	return ctx, NewHandlerService(da, da, nil, false)
-}
-
-func stringAsBody(s string) io.ReadCloser {
-	return io.NopCloser(strings.NewReader(s))
 }
 
 // ------------------------------------------------------------
