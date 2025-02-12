@@ -28,12 +28,10 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - name: Cache
+      - name: Cleanup
         run: |
-          GOMODCACHE_PATH="$HOME/.cache/go-mod-${{ github.run_id }}"
-          echo "GOMODCACHE=$GOMODCACHE_PATH" >> $GITHUB_ENV
-          GOCACHE_PATH="$HOME/.cache/go-build-${{ github.run_id }}"
-          echo "GOCACHE=$GOCACHE_PATH" >> $GITHUB_ENV
+          ls -al ~/.cache/go-mod ~/.cache/go-build
+          rm -rf ~/.cache/go-mod ~/.cache/go-build
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
