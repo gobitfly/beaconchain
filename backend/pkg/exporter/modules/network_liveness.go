@@ -7,14 +7,15 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
+	"github.com/jmoiron/sqlx"
 )
 
 func networkLivenessUpdater(client rpc.Client) {
-	var prevHeadEpoch uint64
-	err := db.WriterDb.Get(&prevHeadEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+	prevHeadEpoch, err := getPreviousHeadEpoch(db.WriterDb)
 	if err != nil {
 		log.Fatal(err, "getting previous head epoch from db error", 0)
 	}
@@ -40,18 +41,13 @@ func networkLivenessUpdater(client rpc.Client) {
 			continue
 		}
 
-		// wait for node to be synced
-		if time.Now().Add(-epochDuration).After(utils.EpochToTime(head.HeadEpoch)) {
+		if !isNodeSynced(head.HeadEpoch, epochDuration) {
 			r(constants.Failure, map[string]string{"error": "node not synced"})
 			time.Sleep(slotDuration)
 			continue
 		}
 
-		_, err = db.WriterDb.Exec(`
-			INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
-			VALUES (NOW(), $1, $2, $3, $4)`,
-			head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
-		if err != nil {
+		if err := saveNetworkLiveness(db.WriterDb, head); err != nil {
 			log.Error(err, "error saving networkliveness", 0)
 			r(constants.Failure, map[string]string{"error": err.Error()})
 		} else {
@@ -59,19 +55,43 @@ func networkLivenessUpdater(client rpc.Client) {
 			prevHeadEpoch = head.HeadEpoch
 		}
 
-		err = cache.LatestNodeEpoch.Set(head.HeadEpoch)
-		if err != nil {
-			log.Error(err, "error setting latestNodeEpoch in cache", 0)
+		if err := updateCache(head); err != nil {
+			log.Error(err, "error updating cache", 0)
 			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
 
-		err = cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch)
-		if err != nil {
-			log.Error(err, "error setting latestNodeFinalizedEpoch in cache", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
-		}
 		r(constants.Success, nil)
-
 		time.Sleep(slotDuration)
 	}
+}
+
+func getPreviousHeadEpoch(db *sqlx.DB) (uint64, error) {
+	var prevHeadEpoch uint64
+	err := db.Get(&prevHeadEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+	if err != nil {
+		return 0, err
+	}
+	return prevHeadEpoch, nil
+}
+
+func isNodeSynced(headEpoch uint64, epochDuration time.Duration) bool {
+	return !time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
+}
+
+func saveNetworkLiveness(db *sqlx.DB, head *types.ChainHead) error {
+	_, err := db.Exec(`
+        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
+        VALUES (NOW(), $1, $2, $3, $4)`,
+		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
+	return err
+}
+
+func updateCache(head *types.ChainHead) error {
+	if err := cache.LatestNodeEpoch.Set(head.HeadEpoch); err != nil {
+		return err
+	}
+	if err := cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch); err != nil {
+		return err
+	}
+	return nil
 }
