@@ -34,7 +34,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
-	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, !cfg.Frontend.DisableStatsInserts)
+	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, cfg)
 
 	// store user id in context, if available
 	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
@@ -304,7 +304,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
 		{http.MethodGet, "/{dashboard_id}/summary/validators", hs.PublicGetValidatorDashboardSummaryValidators, hs.InternalGetValidatorDashboardSummaryValidators},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking)},
-		{http.MethodGet, "/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
+		{http.MethodGet, "/{dashboard_id}/summary-chart", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/rewards/{epoch}", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},

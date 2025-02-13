@@ -20,7 +20,7 @@ import (
 
 func handlerTestSetup(da dataaccess.DataAccessor) (context.Context, *HandlerService) {
 	ctx := context.WithValue(context.Background(), types.CtxUserIdKey, uint64(1))
-	return ctx, NewHandlerService(da, da, nil, false)
+	return ctx, NewHandlerService(da, da, nil, nil)
 }
 
 func stringAsBody(s string) io.ReadCloser {

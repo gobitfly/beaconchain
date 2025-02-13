@@ -427,10 +427,6 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummary(w, r)
 }
-func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardSummaryChart(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummaryValidators(w, r)
 }
@@ -453,14 +449,6 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 
 func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardBlocks(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardHeatmap(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardGroupHeatmap(w, r)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {

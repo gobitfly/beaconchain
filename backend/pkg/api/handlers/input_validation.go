@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"net/http"
 	"net/url"
 	"regexp"
 	"slices"
@@ -500,43 +499,6 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 		}
 	}
 	return 0, false
-}
-
-func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTimeDashboardLimits) (after uint64, before uint64) {
-	afterParam := r.URL.Query().Get("after_ts")
-	beforeParam := r.URL.Query().Get("before_ts")
-	switch {
-	// If both parameters are empty, return the latest data
-	case afterParam == "" && beforeParam == "":
-		return max(chartLimits.LatestExportedTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs), chartLimits.LatestExportedTs
-
-	// If only the afterParam is provided
-	case afterParam != "" && beforeParam == "":
-		afterTs := v.checkUint(afterParam, "after_ts")
-		beforeTs := afterTs + chartLimits.MaxAllowedInterval
-		return afterTs, beforeTs
-
-	// If only the beforeParam is provided
-	case beforeParam != "" && afterParam == "":
-		beforeTs := v.checkUint(beforeParam, "before_ts")
-		afterTs := max(beforeTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs)
-		return afterTs, beforeTs
-
-	// If both parameters are provided, validate them
-	default:
-		afterTs := v.checkUint(afterParam, "after_ts")
-		beforeTs := v.checkUint(beforeParam, "before_ts")
-
-		if afterTs > beforeTs {
-			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
-		}
-
-		if beforeTs-afterTs > chartLimits.MaxAllowedInterval {
-			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", chartLimits.MaxAllowedInterval))
-		}
-
-		return afterTs, beforeTs
-	}
 }
 
 func (v *validationError) checkDashboardId(id string) interface{} {

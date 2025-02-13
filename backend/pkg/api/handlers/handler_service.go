@@ -17,20 +17,19 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
-	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type HandlerService struct {
-	daService                   dataaccess.DataAccessor
-	daDummy                     dataaccess.DataAccessor
-	scs                         *scs.SessionManager
-	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
+	daService dataaccess.DataAccessor
+	daDummy   dataaccess.DataAccessor
+	scs       *scs.SessionManager
+	cfg       *commontypes.Config
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, cfg *commontypes.Config) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -40,10 +39,10 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 
 	return &HandlerService{
-		daService:                   dataAccessor,
-		daDummy:                     dummy,
-		scs:                         sessionManager,
-		isPostMachineMetricsEnabled: enablePostMachineMetrics,
+		daService: dataAccessor,
+		daDummy:   dummy,
+		scs:       sessionManager,
+		cfg:       cfg,
 	}
 }
 
@@ -183,38 +182,6 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
-const chartDatapointLimit uint64 = 200
-
-type ChartTimeDashboardLimits struct {
-	MinAllowedTs       uint64
-	LatestExportedTs   uint64
-	MaxAllowedInterval uint64
-}
-
-// helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
-func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
-	limits := ChartTimeDashboardLimits{}
-	var err error
-	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
-	if err != nil {
-		return limits, err
-	}
-
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
-	if maxAge == 0 {
-		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
-	}
-	limits.LatestExportedTs, err = h.daService.GetLatestExportedChartTs(ctx, aggregation)
-	if err != nil {
-		return limits, err
-	}
-	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
-	secondsPerEpoch := uint64(12 * 32)                                                                          // TODO: fetch dashboards chain id and use correct value for network once available
-	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
-
-	return limits, nil
-}
-
 // getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
 func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks
@@ -244,23 +211,6 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	}
 
 	return &userInfo.PremiumPerks, nil
-}
-
-// getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
-func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartHistorySeconds) uint64 {
-	aggregations := enums.ChartAggregations
-	switch aggregation {
-	case aggregations.Epoch:
-		return perkSeconds.Epoch
-	case aggregations.Hourly:
-		return perkSeconds.Hourly
-	case aggregations.Daily:
-		return perkSeconds.Daily
-	case aggregations.Weekly:
-		return perkSeconds.Weekly
-	default:
-		return 0
-	}
 }
 
 func isUserAdmin(user *types.UserInfo) bool {
@@ -426,7 +376,6 @@ func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
-//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }

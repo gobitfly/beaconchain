@@ -1086,59 +1086,6 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	returnOk(w, r, response)
 }
 
-// PublicGetValidatorDashboardSummaryChart godoc
-//
-//	@Description	Get summary chart data for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
-//	@Param			efficiency_type	query		string	false	"Efficiency type to get data for."	Enums(all, attestation, sync, proposal)
-//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
-//	@Param			after_ts		query		string	false	"Return data after this timestamp."
-//	@Param			before_ts		query		string	false	"Return data before this timestamp."
-//	@Success		200				{object}	types.GetValidatorDashboardSummaryChartResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/summary-chart [get]
-func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	ctx := r.Context()
-	dashboardId, err := h.handleDashboardId(ctx, mux.Vars(r)["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	q := r.URL.Query()
-	groupIds := v.checkGroupIdList(q.Get("group_ids"))
-	efficiencyType := checkEnum[enums.VDBSummaryChartEfficiencyType](&v, q.Get("efficiency_type"), "efficiency_type")
-
-	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(ctx, dashboardId, aggregation)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
-	if err := v.AsError(); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
-		returnConflict(w, r, fmt.Errorf("requested time range is too old, minimum timestamp for dashboard owner's premium subscription for this aggregation is %v", chartLimits.MinAllowedTs))
-		return
-	}
-
-	data, err := h.getDataAccessor(ctx).GetValidatorDashboardSummaryChart(ctx, *dashboardId, groupIds, efficiencyType, aggregation, afterTs, beforeTs)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardSummaryChartResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetValidatorDashboardSummaryValidators godoc
 //
 //	@Description	Get summary information for validators in a specified dashboard
