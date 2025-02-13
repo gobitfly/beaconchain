@@ -22,8 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DummyService struct {
-}
+type DummyService struct{}
 
 // ensure DummyService pointer implements DataAccessor
 var _ DataAccessor = (*DummyService)(nil)

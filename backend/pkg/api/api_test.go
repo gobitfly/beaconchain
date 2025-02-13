@@ -151,7 +151,7 @@ func setup() error {
 
 	utils.Config = cfg
 
-	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+	log.InfoWithFields(log.Fields{"version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	log.Info("initializing data access service")
 	dataAccessService := dataaccess.NewDataAccessService(cfg)
