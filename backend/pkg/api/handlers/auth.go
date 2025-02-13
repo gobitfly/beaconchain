@@ -233,8 +233,8 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 
 	// validate email
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -250,8 +250,8 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 
 	// validate password
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
@@ -281,8 +281,8 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	confirmationHash := v.checkUserEmailToken(mux.Vars(r)["token"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -328,8 +328,8 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 
 	// validate email
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -365,8 +365,8 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 		return
 	}
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -434,8 +434,8 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 	}
 
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -567,8 +567,8 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -633,8 +633,8 @@ func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesTok
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -662,8 +662,8 @@ func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -801,8 +801,8 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 
 	// validate new email
 	newEmail := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	if newEmail == userInfo.Email {
@@ -822,8 +822,8 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 
 	// validate password
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
@@ -877,8 +877,8 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 	// validate passwords
 	oldPassword := v.checkPassword(req.OldPassword)
 	newPassword := v.checkPassword(req.NewPassword)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(oldPassword))

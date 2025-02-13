@@ -45,8 +45,8 @@ import (
 func (h *HandlerService) PublicGetHealthz(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	showAll := v.checkBool(r.URL.Query().Get("show_all"), "show_all")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
@@ -178,8 +178,8 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 	}
 	name := v.checkNameNotEmpty(req.Name)
 	chainId := v.checkNetwork(req.Network)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -230,8 +230,8 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 
 	q := r.URL.Query()
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -284,8 +284,8 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 func (h *HandlerService) PublicDeleteValidatorDashboard(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -321,8 +321,8 @@ func (h *HandlerService) PublicPutValidatorDashboardName(w http.ResponseWriter, 
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -364,8 +364,8 @@ func (h *HandlerService) PublicPutValidatorDashboardGroups(w http.ResponseWriter
 		return
 	}
 	name := v.checkNameNotEmpty(req.Name)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -407,8 +407,8 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	if groupId == types.DefaultGroupId {
@@ -450,8 +450,8 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.Re
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -501,8 +501,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	groupId := req.GroupId
@@ -522,8 +522,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	if count != 1 {
 		v.add("request body", "exactly one of `validators`, `deposit_address`, `withdrawal_credential`, `graffiti` must be set. please check the API documentation for more information")
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -592,8 +592,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request, dashboardId types.VDBIdPrimary, groupId uint64, limit uint64, validatorsParam []intOrString) ([]types.VDBPostValidatorsData, error) {
 	var v validationError
 	indices, pubkeys := v.checkValidators(validatorsParam, forbidEmpty)
-	if v.hasErrors() {
-		return nil, v
+	if err := v.AsError(); err != nil {
+		return nil, err
 	}
 	ctx := r.Context()
 	validators, err := h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, indices, pubkeys)
@@ -632,8 +632,8 @@ func (h *HandlerService) addValidatorDashboardValidators(
 ) ([]types.VDBPostValidatorsData, error) {
 	var v validationError
 	validatedParam := v.checkRegex(validationRegex, param, paramName)
-	if v.hasErrors() {
-		return nil, v
+	if err := v.AsError(); err != nil {
+		return nil, err
 	}
 	return addFunc(r.Context(), dashboardId, groupId, validatedParam, limit)
 }
@@ -662,8 +662,8 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -692,8 +692,8 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 func (h *HandlerService) PublicDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -730,8 +730,8 @@ func (h *HandlerService) PublicPostValidatorDashboardValidatorBulkDeletions(w ht
 		return
 	}
 	indices, publicKeys := v.checkValidators(req.Validators, forbidEmpty)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -777,8 +777,8 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 		return
 	}
 	name := v.checkName(req.Name, 0)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -834,8 +834,8 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 	}
 	name := v.checkName(req.Name, 0)
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -877,8 +877,8 @@ func (h *HandlerService) PublicDeleteValidatorDashboardPublicId(w http.ResponseW
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	publicDashboardId := v.checkValidatorDashboardPublicId(vars["public_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -925,8 +925,8 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -1016,8 +1016,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSlotViz(w http.ResponseWrite
 	}
 
 	groupIds := v.checkExistingGroupIdList(r.URL.Query().Get("group_ids"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.getDataAccessor(ctx).GetValidatorDashboardSlotViz(ctx, *dashboardId, groupIds)
@@ -1061,8 +1061,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
 
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1111,8 +1111,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryChart(w http.Response
 		return
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
@@ -1154,8 +1154,8 @@ func (h *HandlerService) PublicGetValidatorDashboardSummaryValidators(w http.Res
 	q := r.URL.Query()
 	duty := checkEnum[enums.ValidatorDuty](&v, q.Get("duty"), "duty")
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1216,8 +1216,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRewardsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -1257,8 +1257,8 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 	groupId := v.checkGroupId(vars["group_id"], forbidEmpty)
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1294,8 +1294,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.Response
 		return
 	}
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1341,8 +1341,8 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBDutiesColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1384,8 +1384,8 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBBlocksColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1431,8 +1431,8 @@ func (h *HandlerService) PublicGetValidatorDashboardHeatmap(w http.ResponseWrite
 		return
 	}
 	afterTs, beforeTs := v.checkTimestamps(r, chartLimits)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	if afterTs < chartLimits.MinAllowedTs || beforeTs < chartLimits.MinAllowedTs {
@@ -1477,8 +1477,8 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupHeatmap(w http.Response
 	requestedTimestamp := v.checkUint(vars["timestamp"], "timestamp")
 	protocolModes := v.checkProtocolModes(r.URL.Query().Get("modes"))
 	aggregation := checkEnum[enums.ChartAggregation](&v, r.URL.Query().Get("aggregation"), "aggregation")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	chartLimits, err := h.getCurrentChartTimeLimitsForDashboard(r.Context(), dashboardId, aggregation)
@@ -1522,8 +1522,8 @@ func (h *HandlerService) PublicGetValidatorDashboardExecutionLayerDeposits(w htt
 		return
 	}
 	pagingParams := v.checkPagingParams(r.URL.Query())
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1559,8 +1559,8 @@ func (h *HandlerService) PublicGetValidatorDashboardConsensusLayerDeposits(w htt
 		return
 	}
 	pagingParams := v.checkPagingParams(r.URL.Query())
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1661,8 +1661,8 @@ func (h *HandlerService) PublicGetValidatorDashboardWithdrawals(w http.ResponseW
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBWithdrawalsColumn](&v, q.Get("sort"))
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1699,8 +1699,8 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 	}
 	pagingParams := v.checkPagingParams(q)
 	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1740,8 +1740,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 	}
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRocketPoolColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1776,8 +1776,8 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalRocketPool(w http.Respo
 		return
 	}
 	pagingParams := v.checkPagingParams(q)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1820,8 +1820,8 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 	nodeAddress := v.checkAddress(vars["node_address"])
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.VDBRocketPoolMinipoolsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1894,8 +1894,8 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationDashboardsColumn](&v, q.Get("sort"))
 	chainIds := v.checkNetworksParameter(q.Get("networks"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -1932,8 +1932,8 @@ func (h *HandlerService) PublicGetUserNotificationsValidatorDashboard(w http.Res
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	search := r.URL.Query().Get("search")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -1968,8 +1968,8 @@ func (h *HandlerService) PublicGetUserNotificationsAccountDashboard(w http.Respo
 	groupId := v.checkExistingGroupId(vars["group_id"])
 	epoch := v.checkUint(vars["epoch"], "epoch")
 	search := r.URL.Query().Get("search")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	ctx := r.Context()
@@ -2008,8 +2008,8 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationMachinesColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.getDataAccessor(ctx).GetMachineNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -2049,8 +2049,8 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationClientsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.getDataAccessor(ctx).GetClientNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -2088,8 +2088,8 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationNetworksColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.getDataAccessor(ctx).GetNetworkNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.limit)
@@ -2192,8 +2192,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsGeneral(w http.Respons
 	checkMinMax(&v, req.MachineStorageUsageThreshold, 0, 1, "machine_storage_usage_threshold")
 	checkMinMax(&v, req.MachineCpuUsageThreshold, 0, 1, "machine_cpu_usage_threshold")
 	checkMinMax(&v, req.MachineMemoryUsageThreshold, 0, 1, "machine_memory_usage_threshold")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	req.DoNotDisturbTimestamp = min(req.DoNotDisturbTimestamp, math.MaxInt32)
@@ -2272,8 +2272,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsNetworks(w http.Respon
 	maxWei := decimal.New(1000000000000, 1) // 1000 Gwei
 	gasAboveThreshold := v.checkWeiMinMax(req.GasAboveThreshold, "gas_above_threshold", minWei, maxWei)
 	gasBelowThreshold := v.checkWeiMinMax(req.GasBelowThreshold, "gas_below_threshold", minWei, maxWei)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	settings := types.NotificationSettingsNetwork{
@@ -2332,8 +2332,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
 	name := v.checkNameNotEmpty(req.Name)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	pairedDeviceUserId, err := h.getDataAccessor(ctx).GetPairedDeviceUserId(ctx, pairedDeviceId)
@@ -2381,8 +2381,8 @@ func (h *HandlerService) PublicDeleteUserNotificationSettingsPairedDevices(w htt
 		return
 	}
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	pairedDeviceUserId, err := h.getDataAccessor(ctx).GetPairedDeviceUserId(ctx, pairedDeviceId)
@@ -2431,8 +2431,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsClient(w http.Response
 		return
 	}
 	clientId := v.checkUint(mux.Vars(r)["client_id"], "client_id")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, err := h.getDataAccessor(ctx).UpdateNotificationSettingsClients(ctx, userId, clientId, req.IsSubscribed)
@@ -2470,8 +2470,8 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 	q := r.URL.Query()
 	pagingParams := v.checkPagingParams(q)
 	sort := checkSort[enums.NotificationSettingsDashboardColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.getDataAccessor(ctx).GetNotificationSettingsDashboards(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -2547,8 +2547,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsValidatorDashboard(w h
 
 	checkMinMax(&v, req.MaxCollateralThreshold, 0, 1, "max_collateral_threshold")
 	checkMinMax(&v, req.MinCollateralThreshold, 0, 1, "min_collateral_threshold")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	userInfo, err := h.getDataAccessor(ctx).GetUserInfo(ctx, userId)
@@ -2618,8 +2618,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(vars["dashboard_id"])
 	groupId := v.checkExistingGroupId(vars["group_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	settings := types.NotificationSettingsAccountDashboard{
@@ -2720,8 +2720,8 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err = h.getDataAccessor(ctx).QueueTestWebhookNotification(ctx, userId, req.WebhookUrl, req.IsWebhookDiscordEnabled)

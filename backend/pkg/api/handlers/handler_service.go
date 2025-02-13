@@ -364,9 +364,8 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 }
 
 func handleErr(w http.ResponseWriter, r *http.Request, err error) {
-	_, isValidationError := err.(validationError)
 	switch {
-	case isValidationError, errors.Is(err, errBadRequest):
+	case errors.Is(err, errBadRequest):
 		returnBadRequest(w, r, err)
 	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, r, err)
