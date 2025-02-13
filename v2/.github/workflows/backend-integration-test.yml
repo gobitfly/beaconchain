@@ -1,4 +1,4 @@
-name: Backend-Integration-Test
+name: Backend-Integration-Tests
 on:
   push:
     paths:
@@ -32,12 +32,14 @@ jobs:
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: 'backend/go.sum'
-          cache: true
+          cache: false
       - name: Swagger
         working-directory: backend
         run: |
           go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go --overridesFile ./pkg/api/docs/.swaggo
       - name: Tests
         working-directory: backend
+        env:
+          BEACONCHAIN_CONFIG : ${{ secrets.CI_CONFIG_PATH }}
         run: |
-          go test -tags=integration -failfast ./pkg/api/... -config "${{ secrets.CI_CONFIG_PATH }}"
+          go test -tags=integration -failfast ./pkg/api/...
