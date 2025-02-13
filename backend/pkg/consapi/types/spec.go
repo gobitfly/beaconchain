@@ -119,4 +119,19 @@ type StandardSpec struct {
 	MaxRequestBlobSidecars           *uint64 `json:"MAX_REQUEST_BLOB_SIDECARS,string"`
 	MinEpochsForBlobSidecarsRequests *uint64 `json:"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,string"`
 	BlobSidecarSubnetCount           *uint64 `json:"BLOB_SIDECAR_SUBNET_COUNT,string"`
+	// ELECTRA
+	MinActivationBalance                  int64 `json:"MIN_ACTIVATION_BALANCE,string"`
+	MaxEffectiveBalanceElectra            int64 `json:"MAX_EFFECTIVE_BALANCE_ELECTRA,string"`
+	PendingDepositsLimit                  int64 `json:"PENDING_DEPOSITS_LIMIT,string"`
+	PendingPartialWithdrawalsLimit        int64 `json:"PENDING_PARTIAL_WITHDRAWALS_LIMIT,string"`
+	PendingConsolidationsLimit            int64 `json:"PENDING_CONSOLIDATIONS_LIMIT,string"`
+	MinSlashingPenaltyQuotientElectra     int64 `json:"MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA,string"`
+	WhistleblowerRewardQuotientElectra    int64 `json:"WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,string"`
+	MaxAttesterSlashingsElectra           int64 `json:"MAX_ATTESTER_SLASHINGS_ELECTRA,string"`
+	MaxAttestationsElectra                int64 `json:"MAX_ATTESTATIONS_ELECTRA,string"`
+	MaxConsolidationRequestsPerPayload    int64 `json:"MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,string"`
+	MaxDepositRequestsPerPayload          int64 `json:"MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,string"`
+	MaxWithdrawalRequestsPerPayload       int64 `json:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,string"`
+	MaxPendingPartialsPerWithdrawalsSweep int64 `json:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,string"`
+	MaxPendingDepositsPerEpoch            int64 `json:"MAX_PENDING_DEPOSITS_PER_EPOCH,string"`
 }
