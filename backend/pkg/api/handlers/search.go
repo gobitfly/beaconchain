@@ -99,8 +99,8 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	// if the input slices are empty, the sets will contain all possible values
 	chainIdSet := v.checkNetworkSlice(req.Networks)
 	searchTypeSet := v.checkSearchTypes(req.Types)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 

@@ -16,10 +16,10 @@ func TestValidationError_Error(t *testing.T) {
 		"field2": "cannot be empty",
 	}
 
-	errString := v.Error()
+	err := v.AsError()
 
-	assert.Contains(t, errString, "field1: must be a valid email")
-	assert.Contains(t, errString, "field2: cannot be empty")
+	assert.ErrorContains(t, err, "field1: must be a valid email")
+	assert.ErrorContains(t, err, "field2: cannot be empty")
 }
 
 func TestValidationError_Add_NewError(t *testing.T) {
