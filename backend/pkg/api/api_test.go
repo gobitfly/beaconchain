@@ -242,7 +242,7 @@ func TestInternalLoginHandler(t *testing.T) {
 			Status(http.StatusBadRequest).
 			JSON().
 			Object().
-			HasValue("error", "email: given value 'admin' has incorrect format")
+			HasValue("error", "bad request: email: given value 'admin' has incorrect format")
 	})
 	t.Run("login with correct user and wrong password", func(t *testing.T) {
 		e.POST("/api/i/login").
