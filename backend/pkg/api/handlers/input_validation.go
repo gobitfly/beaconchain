@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
@@ -261,33 +260,6 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
-}
-
-// helper function to unify handling of block detail request validation
-func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
-	var v validationError
-	var err error
-	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
-	var value uint64
-	switch paramValue := mux.Vars(r)[paramName]; paramValue {
-	// possibly add other values like "genesis", "finalized", hardforks etc. later
-	case "latest":
-		ctx := r.Context()
-		if paramName == "block" {
-			value, err = h.daService.GetLatestBlock(ctx)
-		} else if paramName == "slot" {
-			value, err = h.daService.GetLatestSlot(ctx)
-		}
-		if err != nil {
-			return 0, 0, err
-		}
-	default:
-		value = v.checkUint(paramValue, paramName)
-	}
-	if v.hasErrors() {
-		return 0, 0, v
-	}
-	return chainId, value, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
