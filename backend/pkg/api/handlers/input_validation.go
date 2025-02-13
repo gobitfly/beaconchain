@@ -313,6 +313,7 @@ func splitParameters(params string, delim rune) []string {
 
 func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
+	// test
 	for _, id := range splitParameters(groupIds, ',') {
 		ids = append(ids, convert(id, "group_ids"))
 	}
