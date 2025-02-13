@@ -71,6 +71,7 @@ func Run() {
 	router.Use(api.GetCorsMiddleware(cfg.CorsAllowedHosts))
 
 	if utils.Config.Metrics.Enabled {
+		router.Use(metrics.HttpMetricsMiddleware()) // New metrics handler that should provide us much improved service metrics
 		router.Use(metrics.HttpMiddleware)
 		go func() {
 			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)

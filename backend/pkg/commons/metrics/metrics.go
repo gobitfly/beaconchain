@@ -14,6 +14,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	metrics "github.com/slok/go-http-metrics/metrics/prometheus"
+	"github.com/slok/go-http-metrics/middleware"
+	"github.com/slok/go-http-metrics/middleware/std"
 )
 
 var (
@@ -120,6 +123,13 @@ func HttpMiddleware(next http.Handler) http.Handler {
 		HttpRequestsTotal.WithLabelValues(path, method, status).Inc()
 		HttpRequestsDuration.WithLabelValues(path, method).Observe(time.Since(start).Seconds())
 	})
+}
+
+func HttpMetricsMiddleware() func(http.Handler) http.Handler {
+	mdlw := middleware.New(middleware.Config{
+		Recorder: metrics.NewRecorder(metrics.Config{}),
+	})
+	return std.HandlerProvider("", mdlw)
 }
 
 type responseWriterDelegator struct {
