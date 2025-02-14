@@ -47,8 +47,8 @@ func networkLivenessUpdater(client rpc.Client) {
 			continue
 		}
 
-		if err := saveNetworkLiveness(db.WriterDb, head); err != nil {
-			log.Error(err, "error saving networkliveness", 0)
+		if err := db.SaveNetworkLivenessData(head); err != nil {
+			log.Error(err, "error saving networkliveness in db", 0)
 			r(constants.Failure, map[string]string{"error": err.Error()})
 		} else {
 			log.Infof("updated networkliveness for epoch %v", head.HeadEpoch)
@@ -76,14 +76,6 @@ func getPreviousHeadEpoch(db *sqlx.DB) (uint64, error) {
 
 func isNodeSynced(headEpoch uint64, epochDuration time.Duration) bool {
 	return !time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
-}
-
-func saveNetworkLiveness(db *sqlx.DB, head *types.ChainHead) error {
-	_, err := db.Exec(`
-        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
-        VALUES (NOW(), $1, $2, $3, $4)`,
-		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
-	return err
 }
 
 func updateCache(head *types.ChainHead) error {

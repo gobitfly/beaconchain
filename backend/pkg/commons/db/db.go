@@ -2393,6 +2393,15 @@ func GetCountSoFarSyncCommitteesCountPerValidator(period uint64) (float64, error
 	return countSoFar, err
 }
 
+func SaveNetworkLivenessData(head *types.ChainHead) error {
+	_, err := WriterDb.Exec(`
+        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
+        VALUES (NOW(), $1, $2, $3, $4)`,
+		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
+
+	return err
+}
+
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
 //
 // If a slot is missed, the map will not contain an entry for it
