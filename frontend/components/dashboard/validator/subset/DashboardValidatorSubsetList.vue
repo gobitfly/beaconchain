@@ -18,7 +18,6 @@ const { t: $t } = useTranslation()
 const paging = ref<null | Paging>(null)
 const cursor = ref<Cursor>(undefined)
 const VALIDATORS_PER_PAGE = 100
-
 watch(
   props,
   (p) => {
@@ -57,15 +56,12 @@ function copyValidatorsToClipboard(): void {
     })
 }
 
-function mapDutyLabel(dutyObjects?: number[]) {
+function createDutyLabels(dutyObjects?: number[]) {
   if (!dutyObjects) {
     return
   }
   switch (props.category) {
-    case 'got_slashed':
-      return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
-    case 'has_slashed':
-      return $t('dashboard.validator.subset_dialog.slashed') + ':'
+    case 'exiting':
     case 'pending':
       return formatGoTimestamp(
         dutyObjects[0],
@@ -75,13 +71,17 @@ function mapDutyLabel(dutyObjects?: number[]) {
         $t('locales.date'),
         true,
       )
+    case 'got_slashed':
+      return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
+    case 'has_slashed':
+      return $t('dashboard.validator.subset_dialog.slashed') + ':'
     case 'proposal_missed':
       return $t('common.slot', dutyObjects.length) + ':'
     case 'proposal_proposed':
       return $t('common.slot', dutyObjects.length) + ':'
   }
 }
-function mapDutyLinks(
+function createDutyLinksData(
   dutyObjects?: number[],
 ): {
     label: string,
@@ -105,11 +105,15 @@ function mapDutyLinks(
       path = '/slot/'
       break
   }
+
   if (path) {
     return dutyObjects.map(o => ({
       label: `${formatValue ? formatNumber(o) : o}`,
       to: `${path}${o}`,
     }))
+  }
+  else if (props.category === 'pending' || props.category === 'exiting') {
+    return []
   }
   else {
     return dutyObjects.map(o => ({ label: `${formatValue ? formatNumber(o) : o}` }))
@@ -139,9 +143,9 @@ function mapDutyLinks(
         </BcLink>
         <template v-if="v.duty_objects?.length">
           <span class="round-brackets">
-            <span class="label">{{ mapDutyLabel(v.duty_objects) }}</span>
+            <span class="label">{{ createDutyLabels(v.duty_objects) }}</span>
             <template
-              v-for="link in mapDutyLinks(v.duty_objects)"
+              v-for="link in createDutyLinksData(v.duty_objects)"
               :key="link.label"
             >
               <BcLink
