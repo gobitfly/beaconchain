@@ -1,5 +1,4 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import commonjs from '@rollup/plugin-commonjs'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
 
@@ -106,10 +105,7 @@ export default defineNuxtConfig({
             }
           },
         },
-        plugins: [
-          nodeResolve(),
-          commonjs(),
-        ],
+        plugins: [ nodeResolve() ],
       },
     },
     css: {
@@ -122,5 +118,6 @@ export default defineNuxtConfig({
   },
   postcss: { plugins: { autoprefixer: {} } },
   eslint: { config: { stylistic: true } },
+
   /* eslint-enable perfectionist/sort-objects */
 })
