@@ -13,6 +13,7 @@ import {
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
   GetValidatorDashboardValidatorsResponse,
+  PostValidatorDashboardValidatorsRequest,
   VDBManageValidatorsTableRow,
   VDBPostValidatorsData,
 } from '~/types/api/validator_dashboard'
@@ -67,14 +68,6 @@ const data = ref<GetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
 const hasNoOpenDialogs = ref(true)
 
-type ValidatorUpdateBody = {
-  deposit_address?: string,
-  graffiti?: string,
-  group_id?: number,
-  validators?: number[],
-  withdrawal_credential?: string,
-}
-
 const size = computed(() => {
   return {
     expandable: width.value < 1060,
@@ -105,7 +98,7 @@ const mapIndexOrPubKey = (
     validator => validator.index ?? validator.public_key)) ]
 }
 
-const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
+const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupId?: number) => {
   if (
     !body.validators?.length
     && !body.deposit_address
