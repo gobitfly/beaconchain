@@ -15,7 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
@@ -241,7 +241,7 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *IndexedBlock) er
 }
 
 func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
-	var contracts []metadataupdates.ContractUpdateWithAddress
+	var contracts []metadata.ContractUpdateWithAddress
 	for i, tx := range block.GetTransactions() {
 		for j, itx := range tx.GetItx() {
 			if itx.GetType() == "create" || itx.GetType() == "suicide" {
@@ -252,7 +252,7 @@ func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock
 				}
 				address := getContractAddress(itx)
 
-				contracts = append(contracts, metadataupdates.ContractUpdateWithAddress{
+				contracts = append(contracts, metadata.ContractUpdateWithAddress{
 					Indexed:       contractUpdate,
 					Address:       address,
 					TxIndex:       i,

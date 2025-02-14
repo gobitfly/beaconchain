@@ -1,4 +1,4 @@
-package metadataupdates
+package metadata
 
 import (
 	"fmt"
