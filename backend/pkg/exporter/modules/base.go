@@ -82,17 +82,12 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 		return
 	}
 
-	eventPool := &errgroup.Group{}
-	eventPool.SetLimit(16)
-
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
 	events := getEvents(context)
 
-	for event := range events {
-		handleEvent(event, eventPool, modules)
-	}
+	handleEvents(events, modules)
 }
 
 func initializeModules(modules []ModuleInterface) error {
@@ -114,6 +109,15 @@ func getEvents(context *ModuleContext) chan *types.EventResponse {
 		types.EventChainReorg,
 	})
 	return events
+}
+
+func handleEvents(events chan *types.EventResponse, modules []ModuleInterface) {
+	eventPool := &errgroup.Group{}
+	eventPool.SetLimit(16)
+
+	for event := range events {
+		handleEvent(event, eventPool, modules)
+	}
 }
 
 func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
