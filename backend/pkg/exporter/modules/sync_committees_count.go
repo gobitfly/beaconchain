@@ -45,7 +45,7 @@ func handleCommitteesCountSuccess(startTime time.Time, statusReport func(status 
 }
 
 func processSyncCommitteesCount() error {
-	rowCount, err := getRowCount()
+	rowCount, err := db.GetSyncCommitteesCountPerValidator()
 	if err != nil {
 		return err
 	}
@@ -66,20 +66,10 @@ func processSyncCommitteesCount() error {
 	return exportSyncCommitteesCount(firstPeriod, currentPeriod, countSoFar)
 }
 
-func getRowCount() (uint64, error) {
-	var rowCount uint64
-	err := db.WriterDb.Get(&rowCount, `SELECT COUNT(*) FROM sync_committees_count_per_validator`)
-	if err != nil {
-		return 0, err
-	}
-	return rowCount, nil
-}
-
 func getEpochPeriodAndCountFromDB(rowCount uint64, firstPeriod uint64) (uint64, float64, error) {
-	dbPeriod := uint64(0)
 	countSoFar := float64(0)
 	if rowCount > 0 {
-		err := db.WriterDb.Get(&dbPeriod, `SELECT MAX(period) FROM sync_committees_count_per_validator`)
+		dbPeriod, err := db.GetTotalPeriodSyncCommitteesCountPerValidator()
 		if err != nil {
 			return 0, 0, err
 		}
@@ -89,11 +79,12 @@ func getEpochPeriodAndCountFromDB(rowCount uint64, firstPeriod uint64) (uint64, 
 			firstPeriod = dbPeriod + 1
 		}
 
-		err = db.WriterDb.Get(&countSoFar, `SELECT count_so_far FROM sync_committees_count_per_validator WHERE period = $1`, dbPeriod)
+		countSoFar, err = db.GetCountSoFarSyncCommitteesCountPerValidator(dbPeriod)
 		if err != nil {
 			return 0, 0, err
 		}
 	}
+
 	return firstPeriod, countSoFar, nil
 }
 
@@ -101,7 +92,14 @@ func exportSyncCommitteesCount(firstPeriod, currentPeriod uint64, countSoFar flo
 	for period := firstPeriod; period <= currentPeriod; period++ {
 		timeStart := time.Now()
 
-		err := insertSyncCommitteesCountInDB(period, countSoFar)
+		count, err := calculateCountForPeriod(period, countSoFar)
+		if err != nil {
+			return err
+		}
+
+		log.Infof("exporting sync committee count for period %v", period)
+
+		err = db.SaveSyncCommitteesCount(period, count)
 		if err != nil {
 			return fmt.Errorf("error exporting sync-committee count at period %v: %w", period, err)
 		}
@@ -115,45 +113,15 @@ func exportSyncCommitteesCount(firstPeriod, currentPeriod uint64, countSoFar flo
 	return nil
 }
 
-func insertSyncCommitteesCountInDB(period uint64, countSoFar float64) error {
-	log.Infof("exporting sync committee count for period %v", period)
-
-	count, err := calculateCountForPeriod(period, countSoFar)
-	if err != nil {
-		return err
-	}
-
-	tx, err := db.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	_, err = tx.Exec(
-		fmt.Sprintf(`
-			INSERT INTO sync_committees_count_per_validator (period, count_so_far)
-			VALUES (%d, %f)
-			ON CONFLICT (period) DO UPDATE SET
-				period = excluded.period,
-				count_so_far = excluded.count_so_far`,
-			period, count))
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 func calculateCountForPeriod(period uint64, countSoFar float64) (float64, error) {
 	if period == 0 {
 		return 0.0, nil
 	}
 
-	e := utils.FirstEpochOfSyncPeriod(period - 1)
-	totalValidatorsCount := uint64(0)
-	err := db.WriterDb.Get(&totalValidatorsCount, "SELECT validatorscount FROM epochs WHERE epoch = $1", e)
+	epoch := utils.FirstEpochOfSyncPeriod(period - 1)
+	totalValidatorsCount, err := db.GetEpochValidatorsCount(epoch)
 	if err != nil {
-		return 0, fmt.Errorf("error retrieving validators count for epoch %v: %v", e, err)
+		return 0, fmt.Errorf("error retrieving validators count for epoch %v: %v", epoch, err)
 	}
 
 	return countSoFar + (float64(utils.Config.Chain.ClConfig.SyncCommitteeSize) / float64(totalValidatorsCount)), nil

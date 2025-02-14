@@ -610,6 +610,12 @@ func GetLatestEpoch() (uint64, error) {
 	return epoch, nil
 }
 
+func GetEpochValidatorsCount(epoch uint64) (uint64, error) {
+	var totalCount uint64
+	err := WriterDb.Get(&totalCount, "SELECT validatorscount FROM epochs WHERE epoch = $1", epoch)
+	return totalCount, err
+}
+
 func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	var slots []uint64
 	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
@@ -2317,6 +2323,46 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	}
 
 	return validatoridxs, nil
+}
+
+func SaveSyncCommitteesCount(period uint64, count float64) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO sync_committees_count_per_validator (period, count_so_far)
+			VALUES (%d, %f)
+			ON CONFLICT (period) DO UPDATE SET
+				period = excluded.period,
+				count_so_far = excluded.count_so_far`,
+			period, count))
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func GetSyncCommitteesCountPerValidator() (uint64, error) {
+	var rowCount uint64
+	err := WriterDb.Get(&rowCount, `SELECT COUNT(*) FROM sync_committees_count_per_validator`)
+	return rowCount, err
+}
+
+func GetTotalPeriodSyncCommitteesCountPerValidator() (uint64, error) {
+	var dbPeriod uint64
+	err := WriterDb.Get(&dbPeriod, `SELECT MAX(period) FROM sync_committees_count_per_validator`)
+	return dbPeriod, err
+}
+
+func GetCountSoFarSyncCommitteesCountPerValidator(period uint64) (float64, error) {
+	var countSoFar float64
+	err := WriterDb.Get(&countSoFar, `SELECT count_so_far FROM sync_committees_count_per_validator WHERE period = $1`, period)
+	return countSoFar, err
 }
 
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
