@@ -14,7 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
@@ -500,7 +500,7 @@ func TestTransformContracts(t *testing.T) {
 	tests := []struct {
 		name  string
 		block *types.Eth1Block
-		want  []metadataupdates.ContractUpdateWithAddress
+		want  []metadata.ContractUpdateWithAddress
 	}{
 		{
 			name: "create",
@@ -516,7 +516,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadataupdates.ContractUpdateWithAddress{
+			want: []metadata.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
@@ -541,7 +541,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadataupdates.ContractUpdateWithAddress{
+			want: []metadata.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
@@ -565,7 +565,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadataupdates.ContractUpdateWithAddress{
+			want: []metadata.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
