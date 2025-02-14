@@ -10,8 +10,9 @@ var Schema = map[string][]string{
 }
 
 const (
-	accountFamily          = "a"
-	erc20MetadataFamily    = "erc20"
-	erc20ColumnPrice       = "PRICE"
-	erc20ColumnTotalSupply = "TOTALSUPPLY"
+	accountFamily           = "a"
+	erc20MetadataFamily     = "erc20"
+	erc20ColumnPrice        = "PRICE"
+	erc20ColumnTotalSupply  = "TOTALSUPPLY"
+	accountIsContractColumn = "ISCONTRACT"
 )

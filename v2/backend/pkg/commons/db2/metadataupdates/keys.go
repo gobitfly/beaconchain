@@ -6,8 +6,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -39,31 +37,6 @@ type ContractUpdateWithAddress struct {
 	Address       []byte
 	TxIndex       int
 	InternalIndex int
-}
-
-func ContractUpdate(blockNumber uint64, chainID string, updates []ContractUpdateWithAddress) (map[string][]database.Item, error) {
-	items := make(map[string][]database.Item)
-	for _, update := range updates {
-		b, err := proto.Marshal(update.Indexed)
-		if err != nil {
-			return nil, err
-		}
-
-		key := fmt.Sprintf("%s:S:%x", chainID, update.Address)
-		ts, err := encodeIsContractUpdateTs(blockNumber, uint64(update.TxIndex), uint64(update.InternalIndex))
-		if err != nil {
-			return nil, fmt.Errorf("error generating bigtable isContract timestamp: %w", err)
-		}
-		items[key] = []database.Item{
-			{
-				Family:    accountFamily,
-				Column:    accountIsContractColumn,
-				Data:      b,
-				Timestamp: &ts,
-			},
-		}
-	}
-	return items, nil
 }
 
 func MarkBalanceUpdate(chainID string, address []byte, token []byte, cache Cache) map[string][]database.Item {

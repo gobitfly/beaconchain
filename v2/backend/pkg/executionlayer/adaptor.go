@@ -2,6 +2,7 @@ package executionlayer
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
@@ -18,7 +19,7 @@ type IndexedBlock struct {
 	Uncles          []data.UncleWithIndexes
 	Withdrawals     []*types.Eth1WithdrawalIndexed
 	ENS             []data.ENSLog
-	Contracts       []metadataupdates.ContractUpdateWithAddress
+	Contracts       []metadata.ContractUpdateWithAddress
 }
 
 // AdaptorV1 represents the current storage organisation
@@ -27,12 +28,14 @@ type IndexedBlock struct {
 type AdaptorV1 struct {
 	data            data.Store
 	metadataUpdates metadataupdates.Store
+	metadata        metadata.Store
 }
 
-func NewAdaptorV1(data data.Store, metadataUpdates metadataupdates.Store) AdaptorV1 {
+func NewAdaptorV1(data data.Store, metadataUpdates metadataupdates.Store, metadata metadata.Store) AdaptorV1 {
 	return AdaptorV1{
 		data:            data,
 		metadataUpdates: metadataUpdates,
+		metadata:        metadata,
 	}
 }
 
@@ -60,11 +63,14 @@ func (adaptor AdaptorV1) Save(blockNumber uint64, hash []byte, block IndexedBloc
 		Internals:     block.Internals,
 		ERC20Transfer: block.ERC20Transfer,
 		Blobs:         block.Blobs,
-		Contracts:     block.Contracts,
 		Uncles:        block.Uncles,
 		Withdrawals:   block.Withdrawals,
 	}
 	if err := adaptor.metadataUpdates.AddIndexedBlock(blockNumber, hash, metadataBlock, keys); err != nil {
+		return err
+	}
+
+	if err := adaptor.metadata.UpdateContract(block.ChainID, blockNumber, block.Contracts); err != nil {
 		return err
 	}
 	return nil

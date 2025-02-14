@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -23,7 +24,11 @@ func TestIndexerWithBigTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	metadataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadataupdates.Schema)
+	metadataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadata.Schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	updatesBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadataupdates.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,6 +44,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		transformers []TransformFunc
 		action       func(*testing.T) error
 		dataKeys     []string
+		updatesKeys  []string
 		metadataKeys []string
 	}{
 		{
@@ -53,7 +59,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 			dataKeys: []string{
 				":I:TX:",
 			},
-			metadataKeys: []string{
+			updatesKeys: []string{
 				":B:",
 			},
 		},
@@ -68,7 +74,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 			dataKeys: []string{
 				":I:B:",
 			},
-			metadataKeys: []string{
+			updatesKeys: []string{
 				":BLOCK:",
 			},
 		},
@@ -86,7 +92,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 			dataKeys: []string{
 				":I:ERC20:",
 			},
-			metadataKeys: []string{
+			updatesKeys: []string{
 				":B:",
 			},
 		},
@@ -141,7 +147,8 @@ func TestIndexerWithBigTable(t *testing.T) {
 			indexer := NewIndexer(
 				NewAdaptorV1(
 					data.NewStore(database.Wrap(dataBigtable, data.Table)),
-					metadataupdates.NewStore(database.Wrap(metadataBigtable, metadataupdates.Table), metadataupdates.NoopCache{}),
+					metadataupdates.NewStore(database.Wrap(updatesBigtable, metadataupdates.Table), metadataupdates.NoopCache{}),
+					metadata.NewStore(database.Wrap(metadataBigtable, metadata.Table)),
 				),
 				tt.transformers...,
 			)
@@ -169,7 +176,15 @@ func TestIndexerWithBigTable(t *testing.T) {
 				t.Error(err)
 			}
 
-			metadataRows, err := metadataBigtable.Read(metadataupdates.Table, "")
+			updatesRows, err := metadataBigtable.Read(metadataupdates.Table, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := rowsContains(updatesRows, tt.updatesKeys); err != nil {
+				t.Error(err)
+			}
+
+			metadataRows, err := metadataBigtable.Read(metadata.Table, "")
 			if err != nil {
 				t.Fatal(err)
 			}

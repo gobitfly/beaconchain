@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
@@ -23,6 +24,41 @@ func NewStore(db database.Database) Store {
 	return Store{
 		db: db,
 	}
+}
+
+type ContractUpdateWithAddress struct {
+	Indexed       *types.IsContractUpdate
+	Address       []byte
+	TxIndex       int
+	InternalIndex int
+}
+
+func (store Store) UpdateContract(chainID string, blockNumber uint64, updates []ContractUpdateWithAddress) error {
+	items := make(map[string][]database.Item)
+	for _, update := range updates {
+		b, err := proto.Marshal(update.Indexed)
+		if err != nil {
+			return err
+		}
+
+		key := fmt.Sprintf("%s:S:%x", chainID, update.Address)
+		ts, err := encodeIsContractUpdateTs(blockNumber, uint64(update.TxIndex), uint64(update.InternalIndex))
+		if err != nil {
+			return fmt.Errorf("error generating bigtable isContract timestamp: %w", err)
+		}
+		items[key] = []database.Item{
+			{
+				Family:    accountFamily,
+				Column:    accountIsContractColumn,
+				Data:      b,
+				Timestamp: &ts,
+			},
+		}
+	}
+	if err := store.db.BulkAdd(items); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (store Store) UpdateBalance(chainID string, balances []Balance) error {
