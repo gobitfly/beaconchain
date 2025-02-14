@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -1418,6 +1419,74 @@ func GetTotalAmountDeposited() (uint64, error) {
 	FROM blocks_deposits d
 	INNER JOIN blocks b ON b.blockroot = d.block_root AND b.status = '1'`)
 	return total, err
+}
+
+func GetDepositsCountForBlockSlot() (uint64, error) {
+	var count uint64
+	err := WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func SaveBlockDeposits(validator constypes.StandardValidator) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`INSERT INTO blocks_deposits (block_slot, block_root, block_index, publickey, withdrawalcredentials, amount, signature)
+	VALUES (0, '\x01', $1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+		validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance, []byte{0x0},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func UpdateBlockDepositsSignature() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+		UPDATE blocks_deposits
+		SET signature = a.signature
+		FROM (
+			SELECT DISTINCT ON(publickey) publickey, signature
+			FROM eth1_deposits
+			WHERE valid_signature = true) AS a
+		WHERE block_slot = 0 AND blocks_deposits.publickey = a.publickey AND blocks_deposits.signature = '\x'`)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func UpdateBlockDepositCount(count int) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec("UPDATE blocks SET depositscount = $1 WHERE slot = 0", count)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func GetBLSChangeCount() (uint64, error) {
