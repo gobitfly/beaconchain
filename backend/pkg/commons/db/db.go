@@ -2325,6 +2325,33 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	return validatoridxs, nil
 }
 
+func GetSyncCommitteesPeriods() ([]uint64, error) {
+	var periods []uint64
+	err := WriterDb.Select(&periods, `SELECT period FROM sync_committees GROUP BY period`)
+	return periods, err
+}
+
+func SaveSyncCommitteeData(args []interface{}, ids []string) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO sync_committees (period, validatorindex, committeeindex)
+			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
+			strings.Join(ids, ",")),
+		args...)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func SaveSyncCommitteesCount(period uint64, count float64) error {
 	tx, err := WriterDb.Beginx()
 	if err != nil {
@@ -2340,6 +2367,7 @@ func SaveSyncCommitteesCount(period uint64, count float64) error {
 				period = excluded.period,
 				count_so_far = excluded.count_so_far`,
 			period, count))
+
 	if err != nil {
 		return err
 	}
