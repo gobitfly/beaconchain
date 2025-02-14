@@ -1,10 +1,7 @@
 package modules
 
 import (
-	"database/sql"
-	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
@@ -15,8 +12,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-
-	"github.com/jmoiron/sqlx"
 )
 
 func syncCommitteesExporter(rpcClient rpc.Client) {
@@ -53,7 +48,7 @@ func handleExportSuccess(startTime time.Time, statusReport func(status constants
 }
 
 func exportSyncCommittees(rpcClient rpc.Client) error {
-	dbPeriods, err := getDBPeriods()
+	dbPeriods, err := db.GetSyncCommitteesPeriods()
 	if err != nil {
 		return err
 	}
@@ -64,22 +59,13 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 	for period := firstPeriod; period <= lastPeriod; period++ {
 		_, exists := dbPeriodsMap[period]
 		if !exists {
-			if err := exportSyncCommitteeAtPeriod(rpcClient, period); err != nil {
+			if err := exportSyncCommitteeData(rpcClient, period); err != nil {
 				return fmt.Errorf("error exporting sync-committee at period %v: %w", period, err)
 			}
 		}
 	}
 
 	return nil
-}
-
-func getDBPeriods() ([]uint64, error) {
-	var dbPeriods []uint64
-	err := db.WriterDb.Select(&dbPeriods, `SELECT period FROM sync_committees GROUP BY period`)
-	if err != nil {
-		return nil, err
-	}
-	return dbPeriods, nil
 }
 
 func createDBPeriodsMap(dbPeriods []uint64) map[uint64]bool {
@@ -100,14 +86,17 @@ func calculateSyncPeriodRange() (uint64, uint64) {
 	return firstPeriod, lastPeriod
 }
 
-func exportSyncCommitteeAtPeriod(rpcClient rpc.Client, period uint64) error {
+func exportSyncCommitteeData(rpcClient rpc.Client, period uint64) error {
 	startTime := time.Now()
 	data, err := GetSyncCommitteAtPeriod(rpcClient, period)
 	if err != nil {
 		return err
 	}
 
-	if err := insertSyncCommitteeData(data, nil); err != nil {
+	args, ids := parseSyncArgsAndIDs(data)
+
+	err = db.SaveSyncCommitteeData(args, ids)
+	if err != nil {
 		return err
 	}
 
@@ -117,39 +106,6 @@ func exportSyncCommitteeAtPeriod(rpcClient rpc.Client, period uint64) error {
 		"duration": time.Since(startTime),
 	}, "exported sync_committee")
 
-	return nil
-}
-
-func insertSyncCommitteeData(data []SyncCommittee, providedTx *sqlx.Tx) error {
-	tx := providedTx
-	if tx == nil {
-		tx, err := db.WriterDb.Beginx()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err := tx.Rollback()
-			if err != nil && !errors.Is(err, sql.ErrTxDone) {
-				log.Error(err, "error rolling back transaction", 0)
-			}
-		}()
-	}
-
-	args, ids := parseSyncArgsAndIDs(data)
-
-	_, err := tx.Exec(
-		fmt.Sprintf(`
-			INSERT INTO sync_committees (period, validatorindex, committeeindex)
-			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
-			strings.Join(ids, ",")),
-		args...)
-	if err != nil {
-		return err
-	}
-
-	if providedTx == nil {
-		return tx.Commit()
-	}
 	return nil
 }
 
