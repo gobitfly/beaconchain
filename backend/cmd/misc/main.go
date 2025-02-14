@@ -37,6 +37,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -1635,6 +1636,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		executionlayer.NewAdaptorV1(
 			data.NewStore(database.Wrap(bigtable, data.Table)),
 			metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache),
+			metadata.NewStore(database.Wrap(bigtable, metadata.Table)),
 		),
 		transforms...,
 	)

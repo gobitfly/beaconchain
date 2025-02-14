@@ -2,7 +2,6 @@ package metadataupdates
 
 import (
 	"fmt"
-	"maps"
 	"slices"
 	"strings"
 
@@ -39,7 +38,6 @@ type IndexedBlock struct {
 	Internals     []data.InternalWithIndexes
 	ERC20Transfer []data.TransferWithIndexes
 	Blobs         []data.BlobWithIndex
-	Contracts     []ContractUpdateWithAddress
 	Uncles        []data.UncleWithIndexes
 	Withdrawals   []*types.Eth1WithdrawalIndexed
 }
@@ -80,15 +78,19 @@ func (store Store) AddIndexedBlock(number uint64, hash []byte, block IndexedBloc
 		mergeItems(updates, MarkBalanceUpdate(block.ChainID, uncle.Coinbase, []byte{0x0}, store.cache))
 	}
 
-	update, err := ContractUpdate(number, block.ChainID, block.Contracts)
-	if err != nil {
-		return err
-	}
-	maps.Copy(updates, update)
 	if err := store.db.BulkAdd(updates); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (store Store) GetBlockKeys(chainID string, blockNumber uint64, blockHash []byte) ([]string, error) {
+	key := fmt.Sprintf("%s:BLOCK:%s:%x", chainID, reversedPaddedBlockNumber(blockNumber), blockHash)
+	row, err := store.db.GetRow(key)
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(string(row.Values[fmt.Sprintf("%s:%s", updatesBlockFamily, blockKeysColumn)]), ","), nil
 }
 
 func mergeItems(dest map[string][]database.Item, source map[string][]database.Item) {

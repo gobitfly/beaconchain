@@ -210,6 +210,7 @@ func Run() {
 		executionlayer.NewAdaptorV1(
 			dataStore,
 			metadataUpdatesStore,
+			metadataStore,
 		),
 		executionlayer.AllTransformers...,
 	)
