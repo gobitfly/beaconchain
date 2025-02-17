@@ -12,7 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 )
 
 func TestNewBatcher(t *testing.T) {
@@ -100,7 +100,7 @@ func TestBatcher(t *testing.T) {
 						t.Fatal("expected balance cannot be zero")
 					}
 
-					res, err := BalanceForPairs(tt.batcher, []metadataupdates.Pair{
+					res, err := BalanceForPairs(tt.batcher, []db2.Pair{
 						{Address: b.BankAccount.From, Token: tokenAddress},
 					})
 					if err != nil {
@@ -119,7 +119,7 @@ func TestBatcher(t *testing.T) {
 						t.Fatal("expected balance cannot be zero")
 					}
 
-					res, err := BalanceForPairs(tt.batcher, []metadataupdates.Pair{
+					res, err := BalanceForPairs(tt.batcher, []db2.Pair{
 						{Address: b.BankAccount.From},
 					})
 					if err != nil {

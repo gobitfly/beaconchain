@@ -15,9 +15,9 @@ import (
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
@@ -86,11 +86,11 @@ func (s stubExternalPricer) GetPrices(tokens []common.Address) ([]*types.ERC20To
 
 func TestTokenPricer(t *testing.T) {
 	btClient, btAdmin := databasetest.NewBigTable(t)
-	metadataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadata.Schema)
-	store := metadata.NewStore(database.Wrap(metadataBigtable, metadata.Table))
+	metadataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, db2.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
+	store := db2.NewStoreV1(nil, database.Wrap(metadataBigtable, db2.MetadataTable), nil, db2.NoopCache{})
 	backend := th.NewBackend(t)
 
 	tokenAddress, token := backend.DeployERC20(t, "usdt", "usdt", backend.BankAccount.From)
