@@ -3,38 +3,32 @@ package executionlayer
 import (
 	"fmt"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
 )
 
-type UpdatesStore interface {
-	GetPairsToUpdate(chainID string, batchSize int64) ([]metadataupdates.Pair, error)
-	DeletePairs(chainID string, pairs []metadataupdates.Pair) error
-}
-
-type MetadataStore interface {
-	UpdateBalance(chainID string, balances []metadata.Balance) error
+type BalanceStore interface {
+	GetPairsToUpdate(chainID string, batchSize int64) ([]db2.Pair, error)
+	DeletePairs(chainID string, pairs []db2.Pair) error
+	UpdateBalance(chainID string, balances []db2.Balance) error
 }
 
 type BalanceUpdater struct {
-	chainID  string
-	updates  UpdatesStore
-	metadata MetadataStore
-	batcher  evm.Batcher
+	chainID string
+	store   BalanceStore
+	batcher evm.Batcher
 }
 
-func NewBalanceUpdater(chainID string, updates UpdatesStore, store MetadataStore, batcher evm.Batcher) BalanceUpdater {
+func NewBalanceUpdater(chainID string, store BalanceStore, batcher evm.Batcher) BalanceUpdater {
 	return BalanceUpdater{
-		chainID:  chainID,
-		updates:  updates,
-		metadata: store,
-		batcher:  batcher,
+		chainID: chainID,
+		store:   store,
+		batcher: batcher,
 	}
 }
 
-func (u BalanceUpdater) UpdateBalances(batchSize int64) ([]metadata.Balance, error) {
-	pairs, err := u.updates.GetPairsToUpdate(u.chainID, batchSize)
+func (u BalanceUpdater) UpdateBalances(batchSize int64) ([]db2.Balance, error) {
+	pairs, err := u.store.GetPairsToUpdate(u.chainID, batchSize)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve metadata updates from bigtable: %w", err)
 	}
@@ -42,17 +36,17 @@ func (u BalanceUpdater) UpdateBalances(batchSize int64) ([]metadata.Balance, err
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve balances from node: %w", err)
 	}
-	var balances []metadata.Balance
+	var balances []db2.Balance
 	for i, value := range values {
-		balances = append(balances, metadata.Balance{
+		balances = append(balances, db2.Balance{
 			Pair:  pairs[i],
 			Value: value,
 		})
 	}
-	if err := u.metadata.UpdateBalance(u.chainID, balances); err != nil {
+	if err := u.store.UpdateBalance(u.chainID, balances); err != nil {
 		return nil, fmt.Errorf("cannot save balances to bigtable: %w", err)
 	}
-	if err := u.updates.DeletePairs(u.chainID, pairs); err != nil {
+	if err := u.store.DeletePairs(u.chainID, pairs); err != nil {
 		return nil, fmt.Errorf("cannot delete metadata updates from bigtable: %w", err)
 	}
 	return balances, nil

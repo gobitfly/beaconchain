@@ -14,8 +14,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
@@ -27,7 +26,7 @@ import (
 // example: transaction, ERC20 transfer, block, ...
 // It will put the indexed result into the res *IndexedBlock param
 // This way all transform functions have the same signature
-type TransformFunc func(chainID string, block *types.Eth1Block, res *IndexedBlock) error
+type TransformFunc func(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error
 
 var Transformers = map[string]TransformFunc{
 	"TransformTx":                TransformTx,
@@ -45,7 +44,7 @@ var Transformers = map[string]TransformFunc{
 
 var AllTransformers = maps.Values(Transformers)
 
-func TransformTx(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformTx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var transactions []*types.Eth1TransactionIndexed
 	for _, tx := range block.Transactions {
 		to, isContract := getTxRecipient(tx)
@@ -77,12 +76,12 @@ func TransformTx(chainID string, block *types.Eth1Block, res *IndexedBlock) erro
 	return nil
 }
 
-func TransformERC20(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformERC20(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC20Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ERC20 create filterer")
 	}
-	var transfers []data.TransferWithIndexes
+	var transfers []db2.TransferWithIndexes
 	for txIndex, tx := range block.GetTransactions() {
 		for logIndex, log := range tx.GetLogs() {
 			if !isValidERC20Log(log) {
@@ -119,7 +118,7 @@ func TransformERC20(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 				To:           transfer.To.Bytes(),
 				Value:        value,
 			}
-			transfers = append(transfers, data.TransferWithIndexes{
+			transfers = append(transfers, db2.TransferWithIndexes{
 				Indexed:  indexedLog,
 				TxIndex:  txIndex,
 				LogIndex: logIndex,
@@ -130,7 +129,7 @@ func TransformERC20(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 	return nil
 }
 
-func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformBlock(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	idx := types.Eth1BlockIndexed{
 		Hash:       block.GetHash(),
 		ParentHash: block.GetParentHash(),
@@ -207,8 +206,8 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 	return nil
 }
 
-func TransformBlob(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
-	var blobs []data.BlobWithIndex
+func TransformBlob(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var blobs []db2.BlobWithIndex
 	for i, tx := range block.Transactions {
 		if !isBlobTx(tx.Type) {
 			// skip non blob-txs
@@ -231,7 +230,7 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *IndexedBlock) er
 			ErrorMsg:            tx.GetErrorMsg(),
 			BlobVersionedHashes: tx.GetBlobVersionedHashes(),
 		}
-		blobs = append(blobs, data.BlobWithIndex{
+		blobs = append(blobs, db2.BlobWithIndex{
 			Indexed: indexedTx,
 			TxIndex: i,
 		})
@@ -240,8 +239,8 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *IndexedBlock) er
 	return nil
 }
 
-func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
-	var contracts []metadata.ContractUpdateWithAddress
+func TransformContract(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var contracts []db2.ContractUpdateWithAddress
 	for i, tx := range block.GetTransactions() {
 		for j, itx := range tx.GetItx() {
 			if itx.GetType() == "create" || itx.GetType() == "suicide" {
@@ -252,7 +251,7 @@ func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock
 				}
 				address := getContractAddress(itx)
 
-				contracts = append(contracts, metadata.ContractUpdateWithAddress{
+				contracts = append(contracts, db2.ContractUpdateWithAddress{
 					Indexed:       contractUpdate,
 					Address:       address,
 					TxIndex:       i,
@@ -265,8 +264,8 @@ func TransformContract(chainID string, block *types.Eth1Block, res *IndexedBlock
 	return nil
 }
 
-func TransformITx(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
-	var transactions []data.InternalWithIndexes
+func TransformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var transactions []db2.InternalWithIndexes
 	for i, tx := range block.GetTransactions() {
 		for j, itx := range tx.GetItx() {
 			if !isValidItx(itx) {
@@ -285,7 +284,7 @@ func TransformITx(chainID string, block *types.Eth1Block, res *IndexedBlock) err
 			if itx.GetType() == "delegatecall" {
 				continue
 			}
-			transactions = append(transactions, data.InternalWithIndexes{
+			transactions = append(transactions, db2.InternalWithIndexes{
 				Indexed:       indexed,
 				TxIndex:       i,
 				InternalIndex: j,
@@ -297,12 +296,12 @@ func TransformITx(chainID string, block *types.Eth1Block, res *IndexedBlock) err
 	return nil
 }
 
-func TransformERC1155(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformERC1155(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC1155Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ERC1155 create filterer")
 	}
-	var transfers []data.ERC1155TransferWithIndexes
+	var transfers []db2.ERC1155TransferWithIndexes
 	for txIndex, tx := range block.GetTransactions() {
 		for logIndex, log := range tx.GetLogs() {
 			if !isValidERC1155Log(log) {
@@ -356,7 +355,7 @@ func TransformERC1155(chainID string, block *types.Eth1Block, res *IndexedBlock)
 				indexedLog.Value = transferSingle.Value.Bytes()
 				indexedLog.TokenAddress = log.GetAddress()
 			}
-			transfers = append(transfers, data.ERC1155TransferWithIndexes{
+			transfers = append(transfers, db2.ERC1155TransferWithIndexes{
 				Indexed:  indexedLog,
 				TxIndex:  txIndex,
 				LogIndex: logIndex,
@@ -367,12 +366,12 @@ func TransformERC1155(chainID string, block *types.Eth1Block, res *IndexedBlock)
 	return nil
 }
 
-func TransformERC721(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformERC721(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC721Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ER721 create filterer")
 	}
-	var transfers []data.ERC721TransferWithIndexes
+	var transfers []db2.ERC721TransferWithIndexes
 	for txIndex, tx := range block.GetTransactions() {
 		for logIndex, log := range tx.GetLogs() {
 			if !isValidERC721Log(log) {
@@ -409,7 +408,7 @@ func TransformERC721(chainID string, block *types.Eth1Block, res *IndexedBlock) 
 				To:           transfer.To.Bytes(),
 				TokenId:      tokenId.Bytes(),
 			}
-			transfers = append(transfers, data.ERC721TransferWithIndexes{
+			transfers = append(transfers, db2.ERC721TransferWithIndexes{
 				Indexed:  indexedLog,
 				TxIndex:  txIndex,
 				LogIndex: logIndex,
@@ -420,8 +419,8 @@ func TransformERC721(chainID string, block *types.Eth1Block, res *IndexedBlock) 
 	return nil
 }
 
-func TransformUncle(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
-	var uncles []data.UncleWithIndexes
+func TransformUncle(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var uncles []db2.UncleWithIndexes
 	for i, uncle := range block.Uncles {
 		reward := calculateUncleReward(block, uncle, chainID)
 
@@ -435,7 +434,7 @@ func TransformUncle(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 			Time:        uncle.GetTime(),
 			Reward:      reward.Bytes(),
 		}
-		uncles = append(uncles, data.UncleWithIndexes{
+		uncles = append(uncles, db2.UncleWithIndexes{
 			Indexed:   &uncleIndexed,
 			Index:     i,
 			Coinbase:  uncle.GetCoinbase(),
@@ -446,7 +445,7 @@ func TransformUncle(chainID string, block *types.Eth1Block, res *IndexedBlock) e
 	return nil
 }
 
-func TransformWithdrawal(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformWithdrawal(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var withdrawals []*types.Eth1WithdrawalIndexed
 	for _, withdrawal := range block.Withdrawals {
 		withdrawals = append(withdrawals, &types.Eth1WithdrawalIndexed{
@@ -462,9 +461,9 @@ func TransformWithdrawal(chainID string, block *types.Eth1Block, res *IndexedBlo
 	return nil
 }
 
-func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *IndexedBlock) error {
+func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	ensContractAddresses := ens.ENSContractFor(chainID)
-	var ensLogs []data.ENSLog
+	var ensLogs []db2.ENSLog
 	for i, tx := range block.GetTransactions() {
 		for j, txLog := range tx.GetLogs() {
 			ensContract := ensContractAddresses[common.BytesToAddress(txLog.Address).String()]
@@ -481,7 +480,7 @@ func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *Ind
 				Index:       uint(j),
 				Removed:     txLog.GetRemoved(),
 			}
-			var ensLog data.ENSLog
+			var ensLog db2.ENSLog
 			for _, lTopic := range txLog.GetTopics() {
 				switch ensContract {
 				case "Registry":

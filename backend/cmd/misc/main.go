@@ -35,10 +35,8 @@ import (
 	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -1627,19 +1625,13 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	store := db2.NewStoreV1FromBigtable(bigtable, cache)
 	transforms, err := executionlayer.TransformerFromList(transformerList)
 	if err != nil {
 		log.Error(nil, err.Error(), 0)
 		return
 	}
-	indexer := executionlayer.NewIndexer(
-		executionlayer.NewAdaptorV1(
-			data.NewStore(database.Wrap(bigtable, data.Table)),
-			metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache),
-			metadata.NewStore(database.Wrap(bigtable, metadata.Table)),
-		),
-		transforms...,
-	)
+	indexer := executionlayer.NewIndexer(store, transforms...)
 
 	importENSChanges := false
 	if slices.Contains(transformerList, "TransformEnsNameRegistered") {

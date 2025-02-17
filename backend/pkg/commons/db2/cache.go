@@ -1,4 +1,4 @@
-package metadataupdates
+package db2
 
 import (
 	"fmt"

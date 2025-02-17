@@ -1,10 +1,9 @@
-package data
+package db2
 
 import (
 	"fmt"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -13,18 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
-const (
-	maxInt                       = 9223372036854775807
-	maxExecutionLayerBlockNumber = 1000000000
-
-	txPerBlockLimit = 10_000
-	withdrawalLimit = 9999999999999
-	logPerTxLimit   = 100_000
-	itxPerTxLimit   = 100_000
-	maxUncle        = 10
-)
-
-func ERC20TransfersToItems(chainID string, transfers []TransferWithIndexes) (map[string][]database.Item, error) {
+func erc20TransfersToItems(chainID string, transfers []TransferWithIndexes) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, transfer := range transfers {
 		if transfer.TxIndex > txPerBlockLimit {
@@ -50,7 +38,7 @@ func ERC20TransfersToItems(chainID string, transfers []TransferWithIndexes) (map
 	return items, nil
 }
 
-func TransactionsToItems(chainID string, transactions []*types.Eth1TransactionIndexed) (map[string][]database.Item, error) {
+func transactionsToItems(chainID string, transactions []*types.Eth1TransactionIndexed) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for i, transaction := range transactions {
 		if i > txPerBlockLimit {
@@ -73,7 +61,7 @@ func TransactionsToItems(chainID string, transactions []*types.Eth1TransactionIn
 	return items, nil
 }
 
-func BlockToItems(chainID string, block *types.Eth1BlockIndexed) (map[string][]database.Item, error) {
+func blockToItems(chainID string, block *types.Eth1BlockIndexed) (map[string][]database.Item, error) {
 	if block == nil {
 		return nil, nil
 	}
@@ -95,12 +83,7 @@ func BlockToItems(chainID string, block *types.Eth1BlockIndexed) (map[string][]d
 	return items, nil
 }
 
-type BlobWithIndex struct {
-	Indexed *types.Eth1BlobTransactionIndexed
-	TxIndex int
-}
-
-func BlobToItems(chainID string, blobs []BlobWithIndex) (map[string][]database.Item, error) {
+func blobToItems(chainID string, blobs []BlobWithIndex) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, blob := range blobs {
 		if blob.TxIndex > txPerBlockLimit {
@@ -123,14 +106,7 @@ func BlobToItems(chainID string, blobs []BlobWithIndex) (map[string][]database.I
 	return items, nil
 }
 
-type InternalWithIndexes struct {
-	Indexed       *types.Eth1InternalTransactionIndexed
-	TxIndex       int
-	InternalIndex int
-	Path          string
-}
-
-func InternalsToItems(chainID string, internals []InternalWithIndexes) (map[string][]database.Item, error) {
+func internalsToItems(chainID string, internals []InternalWithIndexes) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, internal := range internals {
 		if internal.TxIndex > txPerBlockLimit {
@@ -157,13 +133,7 @@ func InternalsToItems(chainID string, internals []InternalWithIndexes) (map[stri
 	return items, nil
 }
 
-type ERC1155TransferWithIndexes struct {
-	Indexed  *types.ETh1ERC1155Indexed
-	TxIndex  int
-	LogIndex int
-}
-
-func ERC1155TransfersToItems(chainID string, transfers []ERC1155TransferWithIndexes) (map[string][]database.Item, error) {
+func erc1155TransfersToItems(chainID string, transfers []ERC1155TransferWithIndexes) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, transfer := range transfers {
 		if transfer.TxIndex > txPerBlockLimit {
@@ -190,13 +160,7 @@ func ERC1155TransfersToItems(chainID string, transfers []ERC1155TransferWithInde
 	return items, nil
 }
 
-type ERC721TransferWithIndexes struct {
-	Indexed  *types.Eth1ERC721Indexed
-	TxIndex  int
-	LogIndex int
-}
-
-func ERC721TransfersToItems(chainID string, transfers []ERC721TransferWithIndexes) (map[string][]database.Item, error) {
+func erc721TransfersToItems(chainID string, transfers []ERC721TransferWithIndexes) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, transfer := range transfers {
 		if transfer.TxIndex > txPerBlockLimit {
@@ -223,14 +187,7 @@ func ERC721TransfersToItems(chainID string, transfers []ERC721TransferWithIndexe
 	return items, nil
 }
 
-type UncleWithIndexes struct {
-	Indexed   *types.Eth1UncleIndexed
-	Index     int
-	Coinbase  []byte
-	BlockTime *timestamppb.Timestamp
-}
-
-func UnclesToItems(chainID string, uncles []UncleWithIndexes) (map[string][]database.Item, error) {
+func unclesToItems(chainID string, uncles []UncleWithIndexes) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	if len(uncles) > maxUncle {
 		return nil, fmt.Errorf("unexpected number of uncles in block expected at most %d but got: %v", maxUncle, len(uncles))
@@ -253,7 +210,7 @@ func UnclesToItems(chainID string, uncles []UncleWithIndexes) (map[string][]data
 	return items, nil
 }
 
-func WithdrawalToItems(chainID string, withdrawals []*types.Eth1WithdrawalIndexed) (map[string][]database.Item, error) {
+func withdrawalToItems(chainID string, withdrawals []*types.Eth1WithdrawalIndexed) (map[string][]database.Item, error) {
 	items := make(map[string][]database.Item)
 	for _, withdrawal := range withdrawals {
 		b, err := proto.Marshal(withdrawal)
@@ -273,13 +230,7 @@ func WithdrawalToItems(chainID string, withdrawals []*types.Eth1WithdrawalIndexe
 	return items, nil
 }
 
-type ENSLog struct {
-	Node  *[32]byte
-	Name  *string
-	Owner *common.Address
-}
-
-func ENSToItems(chainID string, logs []ENSLog) (map[string][]database.Item, error) {
+func ensToItems(chainID string, logs []ENSLog) map[string][]database.Item {
 	items := make(map[string][]database.Item)
 	for _, withdrawal := range logs {
 		keys := keysENS(chainID, withdrawal)
@@ -287,7 +238,7 @@ func ENSToItems(chainID string, logs []ENSLog) (map[string][]database.Item, erro
 			items[keys[i]] = []database.Item{{Family: defaultFamily, Column: keys[i]}}
 		}
 	}
-	return items, nil
+	return items
 }
 
 func reversePaddedIndex(i int, maxValue int) string {
