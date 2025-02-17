@@ -9,26 +9,16 @@ import (
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database/databasetest"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 func TestIndexerWithBigTable(t *testing.T) {
 	btClient, btAdmin := databasetest.NewBigTable(t)
-	dataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, data.Schema)
-	if err != nil {
-		t.Fatal(err)
-	}
-	metadataBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadata.Schema)
-	if err != nil {
-		t.Fatal(err)
-	}
-	updatesBigtable, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, metadataupdates.Schema)
+	bt, err := database.NewBigTableWithClient(context.Background(), btClient, btAdmin, db2.Schema)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,14 +131,14 @@ func TestIndexerWithBigTable(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			defer func() { _ = dataBigtable.Clear() }()
-			defer func() { _ = metadataBigtable.Clear() }()
+			defer func() { _ = bt.Clear() }()
 
 			indexer := NewIndexer(
-				NewAdaptorV1(
-					data.NewStore(database.Wrap(dataBigtable, data.Table)),
-					metadataupdates.NewStore(database.Wrap(updatesBigtable, metadataupdates.Table), metadataupdates.NoopCache{}),
-					metadata.NewStore(database.Wrap(metadataBigtable, metadata.Table)),
+				db2.NewStoreV1(
+					database.Wrap(bt, db2.DataTable),
+					database.Wrap(bt, db2.MetadataTable),
+					database.Wrap(bt, db2.UpdatesTable),
+					db2.NoopCache{},
 				),
 				tt.transformers...,
 			)
@@ -168,7 +158,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			dataRows, err := dataBigtable.Read(data.Table, "")
+			dataRows, err := bt.Read(db2.DataTable, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -176,7 +166,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 				t.Error(err)
 			}
 
-			updatesRows, err := metadataBigtable.Read(metadataupdates.Table, "")
+			updatesRows, err := bt.Read(db2.UpdatesTable, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -184,7 +174,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 				t.Error(err)
 			}
 
-			metadataRows, err := metadataBigtable.Read(metadata.Table, "")
+			metadataRows, err := bt.Read(db2.MetadataTable, "")
 			if err != nil {
 				t.Fatal(err)
 			}

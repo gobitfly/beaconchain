@@ -14,10 +14,8 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -163,6 +161,9 @@ func Run() {
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 
+	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	store := db2.NewStoreV1FromBigtable(bigtable, cache)
+
 	batcherConfig := evm.BatcherConfig{
 		Limit: utils.Config.Indexer.BatchLimit,
 	}
@@ -172,11 +173,6 @@ func Run() {
 	}
 	batcher := evm.NewBatcher(nodeChainId, client.GetNativeClient(), batcherConfig)
 
-	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	metadataUpdatesStore := metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache)
-	dataStore := data.NewStore(database.Wrap(bigtable, data.Table))
-	metadataStore := metadata.NewStore(database.Wrap(bigtable, metadata.Table))
-
 	if *tokenPriceExport {
 		go func() {
 			for {
@@ -185,7 +181,7 @@ func Run() {
 					log.Error(err, "error reading token list file", 0)
 				}
 				pricer := executionlayer.NewTokenPricer(
-					metadataStore,
+					store,
 					chainId,
 					executionlayer.NewLlamaClient(),
 					tokenList,
@@ -203,21 +199,8 @@ func Run() {
 		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
 	}
 
-	indexer := executionlayer.NewIndexer(
-		executionlayer.NewAdaptorV1(
-			dataStore,
-			metadataUpdatesStore,
-			metadataStore,
-		),
-		executionlayer.AllTransformers...,
-	)
-
-	balanceUpdater := executionlayer.NewBalanceUpdater(
-		chainId,
-		metadataUpdatesStore,
-		metadataStore,
-		batcher,
-	)
+	indexer := executionlayer.NewIndexer(store, executionlayer.AllTransformers...)
+	balanceUpdater := executionlayer.NewBalanceUpdater(chainId, store, store, batcher)
 
 	if *enableFullBalanceUpdater {
 		ProcessBalanceUpdates(balanceUpdater, *balanceUpdaterBatchSize, -1)

@@ -13,8 +13,7 @@ import (
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
@@ -124,7 +123,7 @@ func TestTransformTX(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformTx("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -190,7 +189,7 @@ func TestTransformERC20(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformERC20("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -253,7 +252,7 @@ func TestTransformERC721(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformERC721("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -323,7 +322,7 @@ func TestTransformERC1155(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformERC1155("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -379,7 +378,7 @@ func TestBlob(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformBlob("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -477,7 +476,7 @@ func TestTransformITx(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformITx("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -500,7 +499,7 @@ func TestTransformContracts(t *testing.T) {
 	tests := []struct {
 		name  string
 		block *types.Eth1Block
-		want  []metadata.ContractUpdateWithAddress
+		want  []db2.ContractUpdateWithAddress
 	}{
 		{
 			name: "create",
@@ -516,7 +515,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadata.ContractUpdateWithAddress{
+			want: []db2.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
@@ -541,7 +540,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadata.ContractUpdateWithAddress{
+			want: []db2.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
@@ -565,7 +564,7 @@ func TestTransformContracts(t *testing.T) {
 					},
 				},
 			},
-			want: []metadata.ContractUpdateWithAddress{
+			want: []db2.ContractUpdateWithAddress{
 				{
 					Address: contract,
 					Indexed: &types.IsContractUpdate{
@@ -579,7 +578,7 @@ func TestTransformContracts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformContract("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -690,7 +689,7 @@ func TestTransformBlock(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformBlock("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -717,7 +716,7 @@ func TestTransformUncle(t *testing.T) {
 	tests := []struct {
 		name  string
 		block *types.Eth1Block
-		want  []*data.UncleWithIndexes
+		want  []*db2.UncleWithIndexes
 	}{
 		{
 			name: "normal uncle",
@@ -730,7 +729,7 @@ func TestTransformUncle(t *testing.T) {
 					},
 				},
 			},
-			want: []*data.UncleWithIndexes{
+			want: []*db2.UncleWithIndexes{
 				{
 					Indexed: &types.Eth1UncleIndexed{
 						BlockNumber: 1,
@@ -744,7 +743,7 @@ func TestTransformUncle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformUncle("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -799,7 +798,7 @@ func TestTransformWithdrawal(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformWithdrawal("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
@@ -833,7 +832,7 @@ func TestTransformENS(t *testing.T) {
 	tests := []struct {
 		name  string
 		block *types.Eth1Block
-		want  []data.ENSLog
+		want  []db2.ENSLog
 	}{
 		{
 			name: "ens registry - new resolver",
@@ -853,7 +852,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Node: (*[32]byte)(leftPad([]byte("node"), 32)),
 				},
@@ -878,7 +877,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Owner: &aliceAddress,
 				},
@@ -902,7 +901,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Node: (*[32]byte)(leftPad([]byte("node"), 32)),
 				},
@@ -936,7 +935,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Name:  &name,
 					Owner: &aliceAddress,
@@ -969,7 +968,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Name: &name,
 				},
@@ -1002,7 +1001,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Name:  &name,
 					Owner: &aliceAddress,
@@ -1035,7 +1034,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Name: &name,
 				},
@@ -1064,7 +1063,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Name: &name,
 				},
@@ -1093,7 +1092,7 @@ func TestTransformENS(t *testing.T) {
 					},
 				},
 			},
-			want: []data.ENSLog{
+			want: []db2.ENSLog{
 				{
 					Node: (*[32]byte)(leftPad([]byte("node"), 32)),
 				},
@@ -1102,7 +1101,7 @@ func TestTransformENS(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var res IndexedBlock
+			var res db2.IndexedBlock
 			if err := TransformEnsNameRegistered(chainID.String(), tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
