@@ -658,16 +658,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei))
-		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
-		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
+		ret.ProposalStatusCount.Success += uint64(entry.BlocksProposed)
+		ret.ProposalStatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
 		ret.Sync.Income = ret.Sync.Income.Add(entry.SyncReward.Mul(gWei))
 		ret.Sync.StatusCount.Success += uint64(entry.SyncExecuted)
 		ret.Sync.StatusCount.Failed += uint64(entry.SyncScheduled) - uint64(entry.SyncExecuted)
 
-		ret.Slashing.Income = ret.Slashing.Income.Add(entry.SlasherRewards.Mul(gWei))
-		ret.Slashing.StatusCount.Success += uint64(entry.SlashedAmount)
+		// TODO: add slashing penalties to ret.Slashing.Income
 		if entry.SlashedInEpoch {
 			ret.Slashing.StatusCount.Failed++
 		}
@@ -677,7 +675,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(entry.SlasherRewards.Mul(gWei))
 	}
 
-	ret.Proposal.Income = ret.Proposal.Income.Add(d.convertElToMain(elRewards).Mul(decimal.NewFromInt(d.config.Frontend.ElCurrencyDivisor)))
 	ret.ProposalElReward = elRewards
 
 	return ret, nil
