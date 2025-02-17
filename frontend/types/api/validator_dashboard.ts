@@ -132,7 +132,7 @@ export interface VDBGroupRewardsData {
   sync: VDBGroupRewardsDetails;
   slashing: VDBGroupRewardsDetails;
   inactivity: VDBGroupRewardsDetails;
-  proposal: VDBGroupRewardsDetails;
+  proposal_status_count: StatusCount;
   proposal_el_reward: string /* decimal.Decimal */;
   proposal_cl_att_inc_reward: string /* decimal.Decimal */;
   proposal_cl_sync_inc_reward: string /* decimal.Decimal */;
