@@ -15,7 +15,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
@@ -221,7 +221,7 @@ func ERC20Supply(batcher Batcher, addresses []common.Address) ([]*big.Int, error
 	return supplies, nil
 }
 
-func BalanceForPairs(batcher Batcher, pairs []metadataupdates.Pair) ([]*big.Int, error) {
+func BalanceForPairs(batcher Batcher, pairs []db2.Pair) ([]*big.Int, error) {
 	var elements []BatchElement
 	for _, pair := range pairs {
 		elem := BatchElement{
