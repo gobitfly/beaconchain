@@ -11,11 +11,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-	"github.com/jmoiron/sqlx"
 )
 
 func networkLivenessUpdater(client rpc.Client) {
-	prevHeadEpoch, err := getPreviousHeadEpoch(db.WriterDb)
+	prevHeadEpoch, err := getPreviousHeadEpoch()
 	if err != nil {
 		log.Fatal(err, "getting previous head epoch from db error", 0)
 	}
@@ -24,50 +23,57 @@ func networkLivenessUpdater(client rpc.Client) {
 	slotDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
 
 	for {
-		r := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
-		r(constants.Running, nil)
+		statusReport := createNetworkStatusReport(slotDuration)
+		statusReport(constants.Running, nil)
 
 		head, err := client.GetChainHead()
 		if err != nil {
-			log.Error(err, "error getting chainhead when exporting networkliveness", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			log.Error(err, "error getting chainhead when exporting network liveness", 0)
+			statusReport(constants.Failure, map[string]string{"error": err.Error()})
 			time.Sleep(slotDuration)
 			continue
 		}
 
 		if prevHeadEpoch == head.HeadEpoch {
-			r(constants.Success, nil)
+			statusReport(constants.Success, nil)
 			time.Sleep(slotDuration)
 			continue
 		}
 
 		if !isNodeSynced(head.HeadEpoch, epochDuration) {
-			r(constants.Failure, map[string]string{"error": "node not synced"})
+			statusReport(constants.Failure, map[string]string{"error": "node not synced"})
 			time.Sleep(slotDuration)
 			continue
 		}
 
 		if err := db.SaveNetworkLivenessData(head); err != nil {
-			log.Error(err, "error saving networkliveness in db", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			log.Error(err, "error saving network liveness in db", 0)
+			statusReport(constants.Failure, map[string]string{"error": err.Error()})
 		} else {
-			log.Infof("updated networkliveness for epoch %v", head.HeadEpoch)
+			log.Infof("updated network liveness for epoch %v", head.HeadEpoch)
 			prevHeadEpoch = head.HeadEpoch
 		}
 
 		if err := updateCache(head); err != nil {
 			log.Error(err, "error updating cache", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			statusReport(constants.Failure, map[string]string{"error": err.Error()})
 		}
 
-		r(constants.Success, nil)
-		time.Sleep(slotDuration)
+		handleNetworkSuccess(slotDuration, statusReport)
 	}
 }
 
-func getPreviousHeadEpoch(db *sqlx.DB) (uint64, error) {
-	var prevHeadEpoch uint64
-	err := db.Get(&prevHeadEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+func createNetworkStatusReport(slotDuration time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+}
+
+func handleNetworkSuccess(slotDuration time.Duration, statusReport func(status constants.StatusType, metadata map[string]string)) {
+	statusReport(constants.Success, nil)
+	time.Sleep(slotDuration)
+}
+
+func getPreviousHeadEpoch() (uint64, error) {
+	prevHeadEpoch, err := db.GetNetworkLivenessPreviousHeadEpoch()
 	if err != nil {
 		return 0, err
 	}

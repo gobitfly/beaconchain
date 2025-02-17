@@ -2471,6 +2471,12 @@ func SaveNetworkLivenessData(head *types.ChainHead) error {
 	return err
 }
 
+func GetNetworkLivenessPreviousHeadEpoch() (uint64, error) {
+	var headEpoch uint64
+	err := WriterDb.Get(&headEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+	return headEpoch, err
+}
+
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
 //
 // If a slot is missed, the map will not contain an entry for it
