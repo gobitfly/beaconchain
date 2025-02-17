@@ -81,7 +81,7 @@ func getPreviousHeadEpoch() (uint64, error) {
 }
 
 func isNodeSynced(headEpoch uint64, epochDuration time.Duration) bool {
-	return !time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
+	return time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
 }
 
 func updateCache(head *types.ChainHead) error {
