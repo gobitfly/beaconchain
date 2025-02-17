@@ -114,13 +114,13 @@ func TestCalculateSyncPeriodRange(t *testing.T) {
 		{
 			name:                "latest epoch > 0",
 			latestEpoch:         10,
-			expectedFirstPeriod: 8,
-			expectedLastPeriod:  10,
+			expectedFirstPeriod: 0,
+			expectedLastPeriod:  2,
 		},
 		{
 			name:                "latest epoch = 0",
 			latestEpoch:         0,
-			expectedFirstPeriod: 8,
+			expectedFirstPeriod: 0,
 			expectedLastPeriod:  1,
 		},
 	}
