@@ -1,7 +1,10 @@
-package metadata
+package db2
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const (
@@ -38,4 +41,12 @@ func encodeIsContractUpdateTs(block_number, tx_idx, trace_idx uint64) (int64, er
 	res += trace_idx
 
 	return int64(res * timestampGBTScale), nil
+}
+
+func addressFromKey(key string) common.Address {
+	return common.HexToAddress(strings.Split(key, ":")[2])
+}
+
+func tokenFromColumn(column string) common.Address {
+	return common.HexToAddress(strings.Split(column, ":")[1])
 }

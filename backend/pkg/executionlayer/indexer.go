@@ -3,11 +3,12 @@ package executionlayer
 import (
 	"fmt"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type Store interface {
-	Save(blockNumber uint64, hash []byte, block IndexedBlock) (err error)
+	AddIndexedBlock(block db2.IndexedBlock) error
 }
 
 type Indexer struct {
@@ -33,8 +34,10 @@ func (indexer *Indexer) IndexBlocks(chainID string, blocks []*types.Eth1Block) e
 }
 
 func (indexer *Indexer) IndexBlock(chainID string, block *types.Eth1Block) error {
-	res := IndexedBlock{
+	res := db2.IndexedBlock{
 		ChainID: chainID,
+		Number:  block.Number,
+		Hash:    block.Hash,
 	}
 	for _, transform := range indexer.transformers {
 		err := transform(chainID, block, &res)
@@ -42,7 +45,7 @@ func (indexer *Indexer) IndexBlock(chainID string, block *types.Eth1Block) error
 			return fmt.Errorf("error transforming block [%v]", block.Number)
 		}
 	}
-	if err := indexer.store.Save(block.Number, block.Hash, res); err != nil {
+	if err := indexer.store.AddIndexedBlock(res); err != nil {
 		return fmt.Errorf("error saving block [%v]: %w", block.Number, err)
 	}
 	return nil
