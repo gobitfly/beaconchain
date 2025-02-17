@@ -154,8 +154,8 @@ type VDBGroupRewardsData struct {
 	Sync               VDBGroupRewardsDetails `json:"sync"`
 	Slashing           VDBGroupRewardsDetails `json:"slashing"`
 	Inactivity         VDBGroupRewardsDetails `json:"inactivity"`
-	Proposal           VDBGroupRewardsDetails `json:"proposal"`
 
+	ProposalStatusCount         StatusCount     `json:"proposal_status_count"`
 	ProposalElReward            decimal.Decimal `json:"proposal_el_reward"`
 	ProposalClAttIncReward      decimal.Decimal `json:"proposal_cl_att_inc_reward"`
 	ProposalClSyncIncReward     decimal.Decimal `json:"proposal_cl_sync_inc_reward"`
