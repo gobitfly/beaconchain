@@ -160,7 +160,7 @@ func calculateStateID(period uint64) uint64 {
 }
 
 func parseSyncCommitteeResult(c *types.StandardSyncCommittee, period uint64) []SyncCommittee {
-	result := make([]SyncCommittee, len(c.Validators))
+	result := []SyncCommittee{}
 	for i, idxStr := range c.Validators {
 		result = append(result, SyncCommittee{
 			Period:         period,
