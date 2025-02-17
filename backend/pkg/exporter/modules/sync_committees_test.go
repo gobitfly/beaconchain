@@ -74,7 +74,7 @@ func TestCalculateStateID(t *testing.T) {
 	}{
 		{
 			name:       "period > 0",
-			period:     2,
+			period:     1,
 			expectedID: 384,
 		},
 		{
