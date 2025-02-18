@@ -14,7 +14,7 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 )
 
-func NewClient(endpoint string) Client {
+func (d *DefaultClientCreator) NewClient(endpoint string) Client {
 	return NewClientWithConfig(endpoint, nil)
 }
 
