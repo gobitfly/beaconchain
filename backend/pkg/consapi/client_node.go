@@ -32,13 +32,10 @@ func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
 		}
 	}
 
-	retriever := Client{
-		ClientInt: &NodeClient{
-			Endpoint:   endpoint,
-			httpClient: httpClient,
-		},
+	return &NodeClient{
+		Endpoint:   endpoint,
+		httpClient: httpClient,
 	}
-	return retriever
 }
 
 func (r *NodeClient) GetValidatorBalances(stateID any) (*types.StandardValidatorBalancesResponse, error) {

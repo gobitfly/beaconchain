@@ -240,7 +240,7 @@ func createClient() (consapi.Client, error) {
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 	spec, err := cl.GetSpec()
 	if err != nil {
-		return consapi.Client{}, err
+		return nil, err
 	}
 
 	config.ClConfig = &spec.Data
@@ -249,7 +249,7 @@ func createClient() (consapi.Client, error) {
 }
 
 func createLighthouseClient(cl consapi.Client) (*rpc.LighthouseClient, error) {
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
+	nodeImpl, ok := cl.(*consapi.NodeClient)
 	if !ok {
 		return nil, errors.New("lighthouse client can only be used with real node impl")
 	}
