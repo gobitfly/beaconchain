@@ -31,7 +31,7 @@ func NewBigTable(t testing.TB) (*bigtable.Client, *bigtable.AdminClient) {
 		t.Fatal(err)
 	}
 
-	client, err := bigtable.NewClientWithConfig(ctx, project, instance, bigtable.ClientConfig{}, option.WithGRPCConn(conn))
+	client, err := bigtable.NewClientWithConfig(ctx, project, instance, bigtable.ClientConfig{MetricsProvider: bigtable.NoopMetricsProvider{}}, option.WithGRPCConn(conn))
 	if err != nil {
 		t.Fatal(err)
 	}
