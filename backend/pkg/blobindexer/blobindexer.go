@@ -77,11 +77,13 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 	}
 
 	id := utils.GetUUID()
+	clientCreator := &consapi.DefaultClientCreator{}
+
 	bi := &BlobIndexer{
 		BlobStore:         blobStore,
 		runningMu:         &sync.Mutex{},
 		clEndpoint:        "http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port,
-		cl:                consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
+		cl:                clientCreator.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
 		id:                id,
 		writtenBlobsCache: writtenBlobsCache,
 	}
