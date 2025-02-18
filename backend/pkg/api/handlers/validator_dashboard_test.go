@@ -12,11 +12,11 @@ import (
 
 // ------------------------------------------------------------
 
-type dataAccessStub struct {
+type validatorDashboardDataAccessStub struct {
 	dataaccess.DummyService
 }
 
-func (da *dataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
+func (da *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
 	return &types.UserInfo{
 		PremiumPerks: types.PremiumPerks{
 			ValidatorGroupsPerDashboard: 1,
@@ -24,12 +24,16 @@ func (da *dataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.Us
 	}, nil
 }
 
-func (da *dataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
+func (da *validatorDashboardDataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
 	var count uint64
 	if dashboardId == 1 {
 		count = 1
 	}
 	return count, nil
+}
+
+func validatorDashboardTestSetup() (context.Context, *HandlerService) {
+	return handlerTestSetup(&validatorDashboardDataAccessStub{})
 }
 
 // ------------------------------------------------------------
@@ -53,8 +57,7 @@ func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
 	})
 }
 func TestPostValidatorDashboardGroups(t *testing.T) {
-	ctx, h := handlerTestSetup()
-
+	ctx, h := validatorDashboardTestSetup()
 	t.Run("success", func(t *testing.T) {
 		input := inputPostValidatorDashboardGroups{
 			dashboardId: 0,
