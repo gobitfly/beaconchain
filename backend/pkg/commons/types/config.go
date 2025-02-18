@@ -262,6 +262,26 @@ type DatabaseConfig struct {
 	} `yaml:"failovers"`
 }
 
+type IndexerConfig struct {
+	Enabled                     bool       `yaml:"enabled" env:"INDEXER_ENABLED"`
+	Node                        NodeConfig `yaml:"node" env:", prefix=INDEXER_NODE_"`
+	ELDepositContractFirstBlock uint64     `yaml:"eth1DepositContractFirstBlock" env:"INDEXER_ETH1_DEPOSIT_CONTRACT_FIRST_BLOCK"`
+	DoNotTraceDeposits          bool       `yaml:"doNotTraceDeposits" env:"INDEXER_DO_NOT_TRACE_DEPOSITS"`
+	PubKeyTagsExporter          struct {
+		Enabled bool `yaml:"enabled" env:"ENABLED"`
+	} `yaml:"pubkeyTagsExporter" env:", prefix=PUBKEY_TAGS_EXPORTER_"`
+	EnsTransformer struct {
+		ValidRegistrarContracts []string `yaml:"validRegistrarContracts" env:"VALID_REGISTRAR_CONTRACTS"`
+	} `yaml:"ensTransformer" env:", prefix=ENS"`
+}
+
+type NodeConfig struct {
+	Port     string `yaml:"port" env:"PORT"`
+	Host     string `yaml:"host" env:"HOST"`
+	Type     string `yaml:"type" env:"TYPE"`
+	PageSize int32  `yaml:"pageSize" env:"PAGE_SIZE"`
+}
+
 type ServiceMonitoringConfiguration struct {
 	Name     string        `yaml:"name" env:"NAME"`
 	Duration time.Duration `yaml:"duration" env:"DURATION"`
