@@ -6,6 +6,12 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
+type ClientCreator interface {
+	NewClient(endpoint string) Client
+}
+
+type DefaultClientCreator struct{}
+
 type Client interface {
 	// /eth/v2/beacon/blocks/{block_id}
 	GetSlot(blockID any) (*types.StandardBeaconSlotResponse, error)
