@@ -39,6 +39,8 @@ type ModuleContext struct {
 
 var Client *rpc.Client
 
+var EventPoolLimit = 16
+
 // Start will start the export of data from rpc into the database
 func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
@@ -72,14 +74,16 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		time.Sleep(time.Second * 10)
 	}
 	// start subscription modules
-	startSubscriptionModules(&context, modules)
+	err := startSubscriptionModules(&context, modules)
+	if err != nil {
+		log.Fatal(err, "error initializing modules", 0)
+	}
 }
 
-func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
+func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) error {
 	// Initialize modules
 	if err := initializeModules(modules); err != nil {
-		log.Fatal(err, "error initializing modules", 0)
-		return
+		return err
 	}
 
 	log.Infof("subscribing to node events")
@@ -88,9 +92,15 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	events := getEvents(context)
 
 	handleEvents(events, modules)
+
+	return nil
 }
 
 func initializeModules(modules []ModuleInterface) error {
+	if len(modules) == 0 {
+		return errors.New("no modules to initialize")
+	}
+
 	goPool := &errgroup.Group{}
 
 	log.Infof("initialising exporter modules")
@@ -113,34 +123,46 @@ func getEvents(context *ModuleContext) chan *types.EventResponse {
 
 func handleEvents(events chan *types.EventResponse, modules []ModuleInterface) {
 	eventPool := &errgroup.Group{}
-	eventPool.SetLimit(16)
+	eventPool.SetLimit(EventPoolLimit)
 
 	for event := range events {
-		handleEvent(event, eventPool, modules)
+		err := handleEvent(event, eventPool, modules)
+		if err != nil {
+			log.Error(err, "error getting event", 0)
+		}
 	}
 }
 
-func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	if event.Error != nil {
-		log.Error(event.Error, "error getting event", 0)
-		return
+		return fmt.Errorf("error getting event: %v", event.Error)
 	}
 
 	switch event.Event {
 	case types.EventHead:
-		handleHeadEvent(event, eventPool, modules)
+		err := handleHeadEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting head event: %v", err)
+		}
 	case types.EventFinalizedCheckpoint:
-		handleFinalizedCheckpointEvent(event, eventPool, modules)
+		err := handleFinalizedCheckpointEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting finalized checkpoint event: %v", err)
+		}
 	case types.EventChainReorg:
-		handleChainReorgEvent(event, eventPool, modules)
+		err := handleChainReorgEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting chain reorg event: %v", err)
+		}
 	}
+
+	return nil
 }
 
-func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.Head()
 	if err != nil {
-		log.Error(err, "error getting head event", 0)
-		return
+		return err
 	}
 	log.InfoWithFields(
 		log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
@@ -149,30 +171,34 @@ func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modu
 	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
 		return module.OnHead(res)
 	})
+
+	return nil
 }
 
-func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.FinalizedCheckpoint()
 	if err != nil {
-		log.Error(err, "error getting finalized checkpoint event", 0)
-		return
+		return err
 	}
 	log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
 	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
 		return module.OnFinalizedCheckpoint(res)
 	})
+
+	return nil
 }
 
-func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) {
+func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.ChainReorg()
 	if err != nil {
-		log.Error(err, "error getting chain reorg event", 0)
-		return
+		return err
 	}
 	log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
 	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
 		return module.OnChainReorg(res)
 	})
+
+	return nil
 }
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
@@ -180,15 +206,15 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
-			r(constants.Running, nil)
+			statusReport := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			statusReport(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
 				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
-			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
+			statusReport(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}
