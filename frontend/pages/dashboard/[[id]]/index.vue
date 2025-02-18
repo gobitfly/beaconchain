@@ -31,16 +31,24 @@ import type { TableQueryParams } from '~/types/datatable'
 import type { SummaryTimeFrame } from '~/types/dashboard/summary'
 import type { AsyncDataRequestStatus } from '#app'
 
-const { isLoggedIn } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-const { t: $t } = useTranslation()
-const { networkInfo } = useNetworkStore()
-const validatorDashboard = useValidatorDashboard()
 
 const {
   dashboardKey, setDashboardKey,
 } = useDashboardKeyProvider('validator')
 
+const { t: $t } = useTranslation()
+const validatorDashboard = useValidatorDashboard()
+const { isLoggedIn } = useUserStore()
+
+// tick
+const { networkInfo } = useNetworkStore()
+const { secondsPerSlot = 12 } = networkInfo.value
+const {
+  resetTick, tick,
+} = useInterval(secondsPerSlot)
+
+// user dashboards
 const userDashboardStore = useUserDashboardStore()
 const {
   getDashboardLabel,
@@ -51,6 +59,8 @@ const {
   cookieDashboards,
   dashboards,
 } = storeToRefs(userDashboardStore)
+
+// dashboard page
 const validatorDashboardStore = useValidatorDashboardStore()
 const {
   initializeOverviewData, resetOverviewData,
@@ -59,316 +69,530 @@ const {
   populatedGroups,
 } = storeToRefs(validatorDashboardStore)
 
+// dashboard page title
 const seoTitle = computed(() => getDashboardLabel(dashboardKey.value, 'validator'),
 )
 useBcSeo(seoTitle, true)
 
-const dashboardCreationControllerModal
-  = ref<typeof DashboardCreationController>()
-function showDashboardCreationDialog() {
-  dashboardCreationControllerModal.value?.show()
-}
-
-const useIsLoading = (status: Ref<AsyncDataRequestStatus>) => {
-  return computed(() => status.value === 'pending')
-}
-
+// initialize page with fresh data
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
-// LOGIN AND DASHBOARD KEY CHANGE
-const errorDashboardKeys: string[] = []
+const { handleLoginOrKeyChange } = useLoginAndKeyChange()
 
-const setDashboardKeyIfNoError = (key: string) => {
-  if (!errorDashboardKeys.includes(key)) {
-    setDashboardKey(key)
+const {
+  isLoadingOverview, overview, refreshOverview,
+} = useOverview()
+const {
+  isLoadingSlotViz,
+  refetchingSlotVizData,
+  refreshSlotViz,
+  slotVizData,
+  slotVizSelectedGroups,
+} = useSlotViz()
+const {
+  activeTab,
+  refreshActiveTab,
+  tabs,
+} = useDashboardTabs()
+const {
+  isLoadingSummary,
+  resetSummaryQueryParams,
+  resetSummaryTimeframe,
+  summary,
+  summaryQueryParams,
+  summaryTimeframe,
+} = useTableDataSummary()
+const {
+  isLoadingRewards, resetRewardsQueryParams, rewards, rewardsQueryParams,
+} = useTableDataRewards()
+const {
+  blocks, blocksQueryParams, isLoadingBlocks, resetBlocksQueryParams,
+} = useTableDataBlocks()
+const {
+  clDeposits,
+  clDepositsQueryParams,
+  isLoadingClDeposits,
+  isLoadingTotalClDeposits,
+  refreshTotalClDeposits,
+  resetClDepositsQueryParams,
+  totalClDeposits,
+} = useTableDataClDeposits()
+const {
+  elDeposits,
+  elDepositsQueryParams,
+  isLoadingElDeposits,
+  isLoadingTotalElDeposits,
+  refreshTotalElDeposits,
+  resetElDepositsQueryParams,
+  totalElDeposits,
+} = useTableDataElDeposits()
+const {
+  isLoadingTotalWithdrawals,
+  isLoadingWithdrawals,
+  refreshTotalWithdrawals,
+  resetWidthdrawalsQueryParams,
+  totalWithdrawals,
+  withdrawals,
+  withdrawalsQueryParams,
+} = useTableDataWithdrawals()
+const { showDashboardCreationModal } = useDashboardCreationModal()
+
+// initial run
+handleLoginOrKeyChange(dashboardKey.value, dashboardKey.value, isLoggedIn.value)
+
+// logic specific to this component
+function useDashboardCreationModal() {
+  const dashboardCreationControllerModal
+    = ref<typeof DashboardCreationController>()
+  const showDashboardCreationModal = () => {
+    dashboardCreationControllerModal.value?.show()
   }
+
+  return { showDashboardCreationModal }
 }
-const handleKeyOrLoginChange = (
-  oldKey: DashboardKey,
-  newKey: DashboardKey,
-  newLoggedIn: boolean,
-) => {
-  if (newLoggedIn && newKey) {
-    return
-  }
-  // Some checks if we need to update the dashboard key or the guest dashboard
-  let gd = dashboards.value?.validator_dashboards?.[0] as GuestDashboard
-  const isGuest = isGuestDashboardKey(newKey)
-  const isShared = isSharedDashboardKey(newKey)
-  if (isShared) {
-    return
-  }
-  if (newLoggedIn) {
-    // if we are logged in and have no dashboard key we only want to switch
-    //  to the first dashboard if it is a private one
-    if (gd && gd.key === undefined) {
-      setDashboardKeyIfNoError(gd.id.toString())
+function useDashboardTabs() {
+  const activeTab = ref()
+
+  const tabs: HashTabs = [
+    {
+      icon: faChartLineUp,
+      key: 'summary',
+      title: $t('dashboard.validator.tabs.summary'),
+    },
+    {
+      icon: faCubes,
+      key: 'rewards',
+      title: $t('dashboard.validator.tabs.rewards'),
+    },
+    {
+      icon: faCube,
+      key: 'blocks',
+      title: $t('dashboard.validator.tabs.blocks'),
+    },
+    {
+      component: DashboardTableEmpty,
+      disabled: !showInDevelopment,
+      icon: faFire,
+      key: 'heatmap',
+      title: $t('dashboard.validator.tabs.heatmap'),
+    },
+    {
+      icon: faWallet,
+      key: 'deposits',
+      title: $t('dashboard.validator.tabs.deposits'),
+    },
+    {
+      icon: faMoneyBill,
+      key: 'withdrawals',
+      title: $t('dashboard.validator.tabs.withdrawals'),
+    },
+  ]
+  const refreshActiveTab = () => {
+    switch (activeTab.value) {
+      case 'blocks':
+        resetBlocksQueryParams()
+        return
+      case 'deposits':
+        resetClDepositsQueryParams()
+        resetElDepositsQueryParams()
+        refreshTotalClDeposits()
+        refreshTotalElDeposits()
+        return
+      case 'rewards':
+        resetRewardsQueryParams()
+        return
+      case 'summary':
+        resetSummaryQueryParams()
+        resetSummaryTimeframe()
+        return
+      case 'withdrawals':
+        resetWidthdrawalsQueryParams()
+        refreshTotalWithdrawals()
+        return
     }
   }
-  else if (
-    gd
-    && isGuest
-    && (!gd.key || (gd.key ?? '') === (oldKey ?? ''))
-  ) {
+
+  watch(
+    activeTab,
+    () => {
+      refreshActiveTab()
+    },
+  )
+
+  return {
+    activeTab,
+    refreshActiveTab,
+    tabs,
+  }
+}
+function useLoginAndKeyChange() {
+  const errorDashboardKeys: string[] = []
+
+  const setDashboardKeyIfNoError = (key: string) => {
+    if (!errorDashboardKeys.includes(key)) {
+      setDashboardKey(key)
+    }
+  }
+  const handleLoginOrKeyChange = (
+    oldKey: DashboardKey,
+    newKey: DashboardKey,
+    newLoggedIn: boolean,
+  ) => {
+    if (newLoggedIn && newKey) {
+      return
+    }
+    // Some checks if we need to update the dashboard key or the guest dashboard
+    let gd = dashboards.value?.validator_dashboards?.[0] as GuestDashboard
+    const isGuest = isGuestDashboardKey(newKey)
+    const isShared = isSharedDashboardKey(newKey)
+    if (isShared) {
+      return
+    }
+    if (newLoggedIn) {
+    // if we are logged in and have no dashboard key we only want to switch
+    // to the first dashboard if it is a private one
+      if (gd && gd.key === undefined) {
+        setDashboardKeyIfNoError(gd.id.toString())
+      }
+    }
+    else if (
+      gd
+      && isGuest
+      && (!gd.key || (gd.key ?? '') === (oldKey ?? ''))
+    ) {
     // we got a new guest dashboard key but the old key matches the
     // stored dashboard - so we update the stored dashboard
-    if (!errorDashboardKeys.includes(newKey)) {
-      updateGuestDashboardKey('validator', newKey)
+      if (!errorDashboardKeys.includes(newKey)) {
+        updateGuestDashboardKey('validator', newKey)
+      }
+      setDashboardKeyIfNoError(newKey ?? '')
     }
-    setDashboardKeyIfNoError(newKey ?? '')
-  }
-  else if (!newKey || !isGuest) {
+    else if (!newKey || !isGuest) {
     // trying to view a private dashboad but not logged in
-    gd = cookieDashboards.value
-      ?.validator_dashboards?.[0] as GuestDashboard
-    setDashboardKeyIfNoError(gd?.key ?? '')
+      gd = cookieDashboards.value
+        ?.validator_dashboards?.[0] as GuestDashboard
+      setDashboardKeyIfNoError(gd?.key ?? '')
+    }
+  }
+
+  watch(
+    [
+      dashboardKey,
+      isLoggedIn,
+    ],
+    ([
+      newKey,
+      newLoggedIn,
+    ], [ oldKey ]) => {
+      handleLoginOrKeyChange(oldKey, newKey, newLoggedIn)
+      if (newKey) {
+        refreshAll()
+      }
+    },
+  )
+
+  return { handleLoginOrKeyChange }
+}
+function useOverview() {
+  const {
+    data: overview,
+    refresh: refreshOverview,
+    status: overviewDataStatus,
+  } = useAsyncData('validator_dashboard_overview', () => validatorDashboard.fetchOverview(dashboardKey.value))
+  const isLoadingOverview = computed(() => isLoading(overviewDataStatus))
+
+  watch(
+    overview,
+    (newOverview) => {
+      if (newOverview?.data) {
+        initializeOverviewData(newOverview.data)
+      }
+    },
+    { immediate: true },
+  )
+
+  return {
+    isLoadingOverview, overview, refreshOverview,
+  }
+}
+function useSlotViz() {
+  const slotVizSelectedGroups = ref<number[]>([])
+  const refetchingSlotVizData = ref(false)
+
+  const {
+    data: slotVizData,
+    refresh: refreshSlotViz,
+    status: slotVizDataStatus,
+  } = useAsyncData('validator_dashboard_slot_viz',
+    () => validatorDashboard.fetchSlotViz(dashboardKey.value, slotVizSelectedGroups.value))
+  const isLoadingSlotViz = computed(() => isLoading(slotVizDataStatus))
+
+  const hasNoGroupsOrAllSelected = (groups: number[]) => {
+    return groups.length === 0 || groups.length === populatedGroups.value?.length
+  }
+
+  watch(
+    tick,
+    async () => {
+      refetchingSlotVizData.value = true
+      await refreshSlotViz()
+      refetchingSlotVizData.value = false
+    },
+  )
+  watch(
+    slotVizSelectedGroups,
+    (newSlotVizGroups, oldSlotVizGroups) => {
+      if (hasNoGroupsOrAllSelected(newSlotVizGroups) && hasNoGroupsOrAllSelected(oldSlotVizGroups)) {
+        // don't refresh redundantly if all groups are selected and were before
+        return
+      }
+      resetTick()
+      refreshSlotViz()
+    },
+  )
+
+  return {
+    isLoadingSlotViz,
+    refetchingSlotVizData,
+    refreshSlotViz,
+    slotVizData,
+    slotVizSelectedGroups,
+  }
+}
+const defaultPageSize = 10
+
+function isLoading(status: Ref<AsyncDataRequestStatus>) {
+  return status.value === 'pending'
+}
+function useTableDataBlocks() {
+  const defaultBlocksQueryParams: TableQueryParams = {
+    limit: defaultPageSize,
+    sort: 'slot:desc',
+  }
+  const blocksQueryParams = ref<TableQueryParams>(defaultBlocksQueryParams)
+
+  const {
+    data: blocks,
+    status: statusBlocks,
+  } = useAsyncData('validator_dashboard_blocks', () => validatorDashboard.fetchBlocks(dashboardKey.value, blocksQueryParams.value), {
+    immediate: false,
+    watch: [ blocksQueryParams ],
+  })
+  const isLoadingBlocks = isLoading(statusBlocks)
+
+  const resetBlocksQueryParams = () => blocksQueryParams.value = { ...defaultBlocksQueryParams }
+
+  return {
+    blocks, blocksQueryParams, isLoadingBlocks, resetBlocksQueryParams,
   }
 }
 
-handleKeyOrLoginChange(dashboardKey.value, dashboardKey.value, isLoggedIn.value) // initial run
+function useTableDataClDeposits() {
+  const defaultClDepositsQueryParams: TableQueryParams = {
+    limit: 5,
+  }
+  const clDepositsQueryParams = ref<TableQueryParams>(defaultClDepositsQueryParams)
 
-watch(
-  [
-    dashboardKey,
-    isLoggedIn,
-  ],
-  ([
-    newKey,
-    newLoggedIn,
-  ], [ oldKey ]) => {
-    handleKeyOrLoginChange(oldKey, newKey, newLoggedIn)
-    if (newKey) {
-      refreshAll()
+  const {
+    data: clDeposits,
+    status: statusClDeposits,
+  } = useAsyncData('validator_dashboard_cl_deposits', () => validatorDashboard.fetchClDeposits(dashboardKey.value, clDepositsQueryParams.value), {
+    immediate: false,
+    watch: [ clDepositsQueryParams ],
+  })
+  const {
+    data: totalClDeposits,
+    refresh: refreshTotalClDeposits,
+    status: statusTotalClDeposits,
+  } = useAsyncData('validator_dashboard_total_cl_deposits', () => validatorDashboard.fetchTotalClDeposits(dashboardKey.value), {
+    immediate: false,
+  })
+
+  const isLoadingClDeposits = isLoading(statusClDeposits)
+  const isLoadingTotalClDeposits = isLoading(statusTotalClDeposits)
+
+  const resetClDepositsQueryParams = () => clDepositsQueryParams.value = { ...defaultClDepositsQueryParams }
+
+  return {
+    clDeposits,
+    clDepositsQueryParams,
+    isLoadingClDeposits,
+    isLoadingTotalClDeposits,
+    refreshTotalClDeposits,
+    resetClDepositsQueryParams,
+    totalClDeposits,
+  }
+}
+function useTableDataElDeposits() {
+  const defaultElDepositsQueryParams: TableQueryParams = {
+    limit: 5,
+  }
+  const elDepositsQueryParams = ref<TableQueryParams>(defaultElDepositsQueryParams)
+
+  const {
+    data: elDeposits,
+    status: statusElDeposits,
+  } = useAsyncData('validator_dashboard_el_deposits', () => validatorDashboard.fetchElDeposits(dashboardKey.value, elDepositsQueryParams.value), {
+    immediate: false,
+    watch: [ elDepositsQueryParams ],
+  })
+  const {
+    data: totalElDeposits,
+    refresh: refreshTotalElDeposits,
+    status: statusTotalElDeposits,
+  } = useAsyncData('validator_dashboard_total_el_deposits', () => validatorDashboard.fetchTotalElDeposits(dashboardKey.value), {
+    immediate: false,
+  })
+
+  const isLoadingTotalElDeposits = isLoading(statusTotalElDeposits)
+  const isLoadingElDeposits = isLoading(statusElDeposits)
+
+  const resetElDepositsQueryParams = () => elDepositsQueryParams.value = { ...defaultElDepositsQueryParams }
+
+  return {
+    elDeposits,
+    elDepositsQueryParams,
+    isLoadingElDeposits,
+    isLoadingTotalElDeposits,
+    refreshTotalElDeposits,
+    resetElDepositsQueryParams,
+    totalElDeposits,
+  }
+}
+function useTableDataRewards() {
+  const defaultRewardsQueryParams: TableQueryParams = {
+    limit: defaultPageSize,
+    sort: 'epoch:desc',
+  }
+  const rewardsQueryParams = ref<TableQueryParams>(defaultRewardsQueryParams)
+
+  const {
+    data: rewards,
+    status: statusRewards,
+  } = useAsyncData('validator_dashboard_rewards', () => validatorDashboard.fetchRewards(dashboardKey.value, rewardsQueryParams.value), {
+    immediate: false,
+    watch: [ rewardsQueryParams ],
+  })
+
+  const isLoadingRewards = isLoading(statusRewards)
+
+  const resetRewardsQueryParams = () => rewardsQueryParams.value = { ...defaultRewardsQueryParams }
+
+  const createFutureRewardRow = (latestEpoch?: SlotVizEpoch): VDBRewardsTableRow => {
+    return {
+      duty: {
+        attestation: latestEpoch?.slots?.find(s => s.attestations) ? 0 : undefined,
+        proposal: latestEpoch?.slots?.find(s => s.proposal) ? 0 : undefined,
+        slashing: latestEpoch?.slots?.find(s => s.slashing) ? 0 : undefined,
+        sync: latestEpoch?.slots?.find(s => s.sync) ? 0 : undefined,
+      },
+      epoch: latestEpoch?.epoch || 0,
+      group_id: DAHSHBOARDS_NEXT_EPOCH_ID,
+      reward: {
+        cl: '0', el: '0',
+      },
     }
-  },
-)
+  }
 
-// OVERVIEW
-const {
-  data: overview,
-  refresh: refreshOverview,
-  status: overviewDataStatus,
-} = useAsyncData('validator_dashboard_overview', () => validatorDashboard.fetchOverview(dashboardKey.value))
-const isLoadingOverview = computed(() => useIsLoading(overviewDataStatus).value)
-watch(
-  overview,
-  (newOverview) => {
-    if (newOverview?.data) {
-      initializeOverviewData(newOverview.data)
+  const rewardsWithFutureRow = computed(() => {
+    if (!rewards.value?.data) return null
+
+    const isFirstPage = !rewards.value?.paging?.prev_cursor
+    const dataEpoch = rewards.value?.data[0].epoch
+    const latestEpoch = slotVizData.value?.[0].epoch ?? 0
+
+    if (!isFirstPage || !slotVizData || slotVizData.value?.length === 0 || latestEpoch <= dataEpoch) {
+      // Already up to date or not on the first page
+      return rewards.value
     }
-  },
-  { immediate: true },
-)
 
-// SLOTVIZ
-const { secondsPerSlot = 12 } = networkInfo.value
-const {
-  resetTick, tick,
-} = useInterval(secondsPerSlot)
+    // Otherwise, create and add future row from slot visualization data
+    const futureRewardRow = createFutureRewardRow(slotVizData.value?.[0])
 
-const slotVizSelectedGroups = ref<number[]>([])
-const refetchingSlotVizData = ref(false)
-
-const {
-  data: dataSlotViz,
-  refresh: refreshSlotViz,
-  status: slotVizDataStatus,
-} = useAsyncData('validator_dashboard_slot_viz', () => validatorDashboard.fetchSlotViz(dashboardKey.value, slotVizSelectedGroups.value))
-const isLoadingSlotViz = computed(() => useIsLoading(slotVizDataStatus).value)
-
-const hasNoGroupsOrAllSelected = (groups: number[]) => {
-  return groups.length === 0 || groups.length === populatedGroups.value?.length
-}
-
-watch(
-  tick,
-  async () => {
-    refetchingSlotVizData.value = true
-    await refreshSlotViz()
-    refetchingSlotVizData.value = false
-  },
-)
-watch(
-  slotVizSelectedGroups,
-  (newSlotVizGroups, oldSlotVizGroups) => {
-    if (hasNoGroupsOrAllSelected(newSlotVizGroups) && hasNoGroupsOrAllSelected(oldSlotVizGroups)) {
-      // don't refresh redundantly if all groups are selected and were before
-      return
+    return {
+      data: [
+        futureRewardRow,
+        ...rewards.value.data,
+      ],
+      paging: rewards.value.paging,
     }
-    resetTick()
-    refreshSlotViz()
-  },
-)
+  })
 
-// TABS SECTION
-const defaultPageSize = 10
-const defaultQueryRewards: TableQueryParams = {
-  limit: defaultPageSize,
-  sort: 'epoch:desc',
+  return {
+    isLoadingRewards,
+    resetRewardsQueryParams,
+    rewards: rewardsWithFutureRow,
+    rewardsQueryParams,
+  }
 }
-const defaultTimeframeSummary: SummaryTimeFrame = 'last_24h'
-const defaultQuerySummary: TableQueryParams = {
-  limit: defaultPageSize,
-  sort: 'efficiency:desc',
-}
-const defaultQueryBlocks: TableQueryParams = {
-  limit: defaultPageSize,
-  sort: 'slot:desc',
-}
-const defaultQueryClDeposits: TableQueryParams = {
-  limit: 5,
-}
-const defaultQueryElDeposits: TableQueryParams = {
-  limit: 5,
-}
-const defaultQueryWithdrawals: TableQueryParams = {
-  limit: defaultPageSize,
-  sort: 'slot:desc',
+function useTableDataSummary() {
+  const defaultSummaryQueryParams: TableQueryParams = {
+    limit: defaultPageSize,
+    sort: 'efficiency:desc',
+  }
+  const defaultSummaryTimeframe: SummaryTimeFrame = 'last_24h'
+  const summaryTimeframe = ref<SummaryTimeFrame>(defaultSummaryTimeframe)
+  const summaryQueryParams = ref<TableQueryParams>(defaultSummaryQueryParams)
+  const {
+    data: summary,
+    status: statusSummary,
+  } = useAsyncData('validator_dashboard_summary', () => validatorDashboard.fetchSummary(dashboardKey.value, summaryTimeframe.value, summaryQueryParams.value), {
+    immediate: false,
+    watch: [
+      summaryQueryParams,
+      summaryTimeframe,
+    ],
+  })
+  const isLoadingSummary = isLoading(statusSummary)
+
+  const resetSummaryQueryParams = () => summaryQueryParams.value = { ...defaultSummaryQueryParams }
+  const resetSummaryTimeframe = () => summaryQueryParams.value = { ...defaultSummaryQueryParams }
+
+  return {
+    isLoadingSummary,
+    resetSummaryQueryParams,
+    resetSummaryTimeframe,
+    summary,
+    summaryQueryParams,
+    summaryTimeframe,
+  }
 }
 
-const activeTab = ref<string>()
-const querySummary = ref<TableQueryParams>(defaultQuerySummary)
-const timeframeSummary = ref<SummaryTimeFrame>(defaultTimeframeSummary)
-const queryRewards = ref<TableQueryParams>(defaultQueryRewards)
-const queryBlocks = ref<TableQueryParams>(defaultQueryBlocks)
-const queryClDeposits = ref<TableQueryParams>(defaultQueryClDeposits)
-const queryElDeposits = ref<TableQueryParams>(defaultQueryElDeposits)
-const queryWithdrawals = ref<TableQueryParams>(defaultQueryWithdrawals)
+function useTableDataWithdrawals() {
+  const defaultwithdrawalsQueryParams: TableQueryParams = {
+    limit: defaultPageSize,
+    sort: 'slot:desc',
+  }
+  const withdrawalsQueryParams = ref<TableQueryParams>(defaultwithdrawalsQueryParams)
 
-const {
-  data: summary,
-  status: statusSummary,
-} = useAsyncData('validator_dashboard_summary', () => validatorDashboard.fetchSummary(dashboardKey.value, timeframeSummary.value, querySummary.value), {
-  immediate: false,
-  watch: [
-    querySummary,
-    timeframeSummary,
-  ],
-})
-const {
-  data: rewards,
-  status: statusRewards,
-} = useAsyncData('validator_dashboard_rewards', () => validatorDashboard.fetchRewards(dashboardKey.value, queryRewards.value), {
-  immediate: false,
-  watch: [ queryRewards ],
-})
-const {
-  data: blocks,
-  status: statusBlocks,
-} = useAsyncData('validator_dashboard_blocks', () => validatorDashboard.fetchBlocks(dashboardKey.value, queryBlocks.value), {
-  immediate: false,
-  watch: [ queryBlocks ],
-})
-const {
-  data: clDeposits,
-  status: statusClDeposits,
-} = useAsyncData('validator_dashboard_cl_deposits', () => validatorDashboard.fetchClDeposits(dashboardKey.value, queryClDeposits.value), {
-  immediate: false,
-  watch: [ queryClDeposits ],
-})
-const {
-  data: totalClDeposits,
-  refresh: refreshTotalClDeposits,
-  status: statusTotalClDeposits,
-} = useAsyncData('validator_dashboard_total_cl_deposits', () => validatorDashboard.fetchTotalClDeposits(dashboardKey.value), {
-  immediate: false,
-})
-const {
-  data: elDeposits,
-  status: statusElDeposits,
-} = useAsyncData('validator_dashboard_el_deposits', () => validatorDashboard.fetchElDeposits(dashboardKey.value, queryElDeposits.value), {
-  immediate: false,
-  watch: [ queryElDeposits ],
-})
-const {
-  data: totalElDeposits,
-  refresh: refreshTotalElDeposits,
-  status: statusTotalElDeposits,
-} = useAsyncData('validator_dashboard_total_el_deposits', () => validatorDashboard.fetchTotalElDeposits(dashboardKey.value), {
-  immediate: false,
-})
-const {
-  data: withdrawals,
-  status: statusWithdrawals,
-} = useAsyncData('validator_dashboard_withdrawals', () => validatorDashboard.fetchWithdrawals(dashboardKey.value, queryWithdrawals.value), {
-  immediate: false,
-  watch: [ queryWithdrawals ],
-})
-const {
-  data: totalWithdrawals,
-  refresh: refreshTotalWithdrawals,
-  status: statusTotalWithdrawals,
-} = useAsyncData('validator_dashboard_total_withdrawals', () => validatorDashboard.fetchTotalWithdrawals(dashboardKey.value), {
-  immediate: false,
-})
+  const {
+    data: withdrawals,
+    status: statusWithdrawals,
+  } = useAsyncData('validator_dashboard_withdrawals', () => validatorDashboard.fetchWithdrawals(dashboardKey.value, withdrawalsQueryParams.value), {
+    immediate: false,
+    watch: [ withdrawalsQueryParams ],
+  })
+  const {
+    data: totalWithdrawals,
+    refresh: refreshTotalWithdrawals,
+    status: statusTotalWithdrawals,
+  } = useAsyncData('validator_dashboard_total_withdrawals', () => validatorDashboard.fetchTotalWithdrawals(dashboardKey.value), {
+    immediate: false,
+  })
 
-const isLoadingClDeposits = useIsLoading(statusClDeposits)
-const isLoadingSummary = useIsLoading(statusSummary)
-const isLoadingTotalClDeposits = useIsLoading(statusTotalClDeposits)
-const isLoadingBlocks = useIsLoading(statusBlocks)
-const isLoadingTotalElDeposits = useIsLoading(statusTotalElDeposits)
-const isLoadingElDeposits = useIsLoading(statusElDeposits)
-const isLoadingWithdrawals = useIsLoading(statusWithdrawals)
-const isLoadingTotalWithdrawals = useIsLoading(statusTotalWithdrawals)
-const isLoadingRewards = useIsLoading(statusRewards)
+  const isLoadingWithdrawals = isLoading(statusWithdrawals)
+  const isLoadingTotalWithdrawals = isLoading(statusTotalWithdrawals)
 
-const tabs: HashTabs = [
-  {
-    icon: faChartLineUp,
-    key: 'summary',
-    title: $t('dashboard.validator.tabs.summary'),
-  },
-  {
-    icon: faCubes,
-    key: 'rewards',
-    title: $t('dashboard.validator.tabs.rewards'),
-  },
-  {
-    icon: faCube,
-    key: 'blocks',
-    title: $t('dashboard.validator.tabs.blocks'),
-  },
-  {
-    component: DashboardTableEmpty,
-    disabled: !showInDevelopment,
-    icon: faFire,
-    key: 'heatmap',
-    title: $t('dashboard.validator.tabs.heatmap'),
-  },
-  {
-    icon: faWallet,
-    key: 'deposits',
-    title: $t('dashboard.validator.tabs.deposits'),
-  },
-  {
-    icon: faMoneyBill,
-    key: 'withdrawals',
-    title: $t('dashboard.validator.tabs.withdrawals'),
-  },
-]
-const refreshActiveTab = () => {
-  // always assign query as shallow copy to trigger watch
-  switch (activeTab.value) {
-    case 'blocks':
-      queryBlocks.value = { ...defaultQueryBlocks }
-      return
-    case 'deposits':
-      refreshTotalClDeposits()
-      refreshTotalElDeposits()
-      queryClDeposits.value = { ...defaultQueryClDeposits }
-      queryElDeposits.value = { ...defaultQueryElDeposits }
-      return
-    case 'rewards':
-      queryRewards.value = { ...queryRewards.value }
-      return
-    case 'summary':
-      querySummary.value = { ...defaultQuerySummary }
-      timeframeSummary.value = defaultTimeframeSummary
-      return
-    case 'withdrawals':
-      refreshTotalWithdrawals()
-      queryWithdrawals.value = { ...defaultQueryWithdrawals }
-      return
+  const resetWidthdrawalsQueryParams = () => withdrawalsQueryParams.value = { ...defaultwithdrawalsQueryParams }
+
+  return {
+    isLoadingTotalWithdrawals,
+    isLoadingWithdrawals,
+    refreshTotalWithdrawals,
+    resetWidthdrawalsQueryParams,
+    totalWithdrawals,
+    withdrawals,
+    withdrawalsQueryParams,
   }
 }
 const refreshAll = () => {
@@ -381,57 +605,6 @@ const refreshAll = () => {
   refreshOverview()
   refreshActiveTab()
 }
-// Helper function to create a "future row" for rewards from slot viz data
-function createNextRewardRow(latestEpoch: SlotVizEpoch): VDBRewardsTableRow {
-  return {
-    duty: {
-      attestation: latestEpoch.slots?.find(s => s.attestations) ? 0 : undefined,
-      proposal: latestEpoch.slots?.find(s => s.proposal) ? 0 : undefined,
-      slashing: latestEpoch.slots?.find(s => s.slashing) ? 0 : undefined,
-      sync: latestEpoch.slots?.find(s => s.sync) ? 0 : undefined,
-    },
-    epoch: latestEpoch.epoch,
-    group_id: DAHSHBOARDS_NEXT_EPOCH_ID,
-    reward: {
-      cl: '0', el: '0',
-    },
-  }
-}
-// rewards data with added "future row"
-const getRewardsData = () => {
-  const data = rewards.value?.data
-  if (!data || data.length === 0) {
-    return undefined
-  }
-
-  const isFirstPage = !rewards.value?.paging?.prev_cursor
-  const slotVizData = dataSlotViz.value
-  const dataEpoch = data[0].epoch
-  const latestEpoch = slotVizData?.[0].epoch ?? 0
-
-  if (!isFirstPage || !slotVizData || slotVizData.length === 0 || latestEpoch <= dataEpoch) {
-    // Already up to date or not on the first page
-    return data
-  }
-
-  // Add future row from slot visualization data
-  const nextRewardRow = createNextRewardRow(slotVizData[0])
-
-  return [
-    nextRewardRow,
-    ...data,
-  ]
-}
-
-watch(
-  activeTab,
-  () => {
-    if (isServerSide) {
-      return // url hash (where tab is stored) can't be read on server
-    }
-    refreshActiveTab()
-  },
-)
 </script>
 
 <template>
@@ -452,7 +625,7 @@ watch(
     />
     <BcPageWrapper>
       <template #top>
-        <DashboardHeader @show-creation="showDashboardCreationDialog()" />
+        <DashboardHeader @show-creation="showDashboardCreationModal" />
         <DashboardControls
           :dashboard-title="overview?.data.name"
           @dashboard-modified="refreshAll()"
@@ -465,9 +638,9 @@ watch(
       <DashboardSharedDashboardModal />
 
       <DashboardSlotViz
-        v-if="overview && dataSlotViz"
+        v-if="overview && slotVizData"
         v-model:selected-groups="slotVizSelectedGroups"
-        :epochs-data="dataSlotViz"
+        :epochs-data="slotVizData"
         :overview-data="overview?.data"
         :is-loading="isLoadingSlotViz || isLoadingOverview"
         :refetching-slot-viz-data
@@ -484,8 +657,8 @@ watch(
       >
         <template #tab-panel-summary>
           <DashboardTableSummary
-            v-model:query="querySummary"
-            v-model:time-frame="timeframeSummary"
+            v-model:query="summaryQueryParams"
+            v-model:time-frame="summaryTimeframe"
             :data="summary?.data"
             :paging="summary?.paging"
             :is-loading="isLoadingSummary"
@@ -493,15 +666,15 @@ watch(
         </template>
         <template #tab-panel-rewards>
           <DashboardTableRewards
-            v-model:query="queryRewards"
-            :data="getRewardsData()"
+            v-model:query="rewardsQueryParams"
+            :data="rewards?.data"
             :paging="rewards?.paging"
             :is-loading="isLoadingRewards"
           />
         </template>
         <template #tab-panel-blocks>
           <DashboardTableBlocks
-            v-model:query="queryBlocks"
+            v-model:query="blocksQueryParams"
             :data="blocks?.data"
             :paging="blocks?.paging"
             :is-loading="isLoadingBlocks"
@@ -510,7 +683,7 @@ watch(
         <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits
-              v-model:query="queryElDeposits"
+              v-model:query="elDepositsQueryParams"
               :data="elDeposits?.data"
               :paging="elDeposits?.paging"
               :is-loading="isLoadingElDeposits"
@@ -522,7 +695,7 @@ watch(
               class="down_icon"
             />
             <DashboardTableClDeposits
-              v-model:query="queryClDeposits"
+              v-model:query="clDepositsQueryParams"
               :data="clDeposits?.data"
               :paging="clDeposits?.paging"
               :is-loading="isLoadingClDeposits"
@@ -533,7 +706,7 @@ watch(
         </template>
         <template #tab-panel-withdrawals>
           <DashboardTableWithdrawals
-            v-model:query="queryWithdrawals"
+            v-model:query="withdrawalsQueryParams"
             :data="withdrawals?.data"
             :paging="withdrawals?.paging"
             :is-loading="isLoadingWithdrawals"
