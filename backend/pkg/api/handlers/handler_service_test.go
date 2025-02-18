@@ -18,9 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func handlerTestSetup() (context.Context, *HandlerService) {
+func handlerTestSetup(da dataaccess.DataAccessor) (context.Context, *HandlerService) {
 	ctx := context.WithValue(context.Background(), types.CtxUserIdKey, uint64(1))
-	da := &dataAccessStub{}
 	return ctx, NewHandlerService(da, da, nil, false)
 }
 
