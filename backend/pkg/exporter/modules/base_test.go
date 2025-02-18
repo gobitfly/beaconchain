@@ -6,6 +6,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
 	consmocks "github.com/gobitfly/beaconchain/pkg/consapi/mocks"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/pkg/errors"
@@ -59,7 +60,7 @@ func TestInitializeModules(t *testing.T) {
 }
 
 func TestGetEvents(t *testing.T) {
-	mockClient := new(consmocks.ClientInt)
+	mockClient := new(consmocks.Client)
 	mockClient.On("GetEvents", []constypes.EventTopic{
 		constypes.EventHead,
 		constypes.EventFinalizedCheckpoint,
@@ -313,6 +314,109 @@ func TestNotifyAllModules(t *testing.T) {
 			if !tt.expectedError {
 				if err != nil {
 					t.Errorf("expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateLighthouseClient(t *testing.T) {
+	tests := []struct {
+		name          string
+		client        consapi.Client
+		expectedError bool
+	}{
+		{
+			name:          "successful lighthouse client creation",
+			client:        &consapi.NodeClient{},
+			expectedError: false,
+		},
+		{
+			name:          "error creating lighthouse client",
+			client:        nil,
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				Chain: types.Chain{
+					ClConfig: types.ClChainConfig{
+						DepositChainID: 1,
+					},
+				},
+			}
+
+			client, err := createLighthouseClient(tt.client)
+			if tt.expectedError {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+			}
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+
+				if client == nil {
+					t.Error("expected client to be non-nil")
+				}
+			}
+		})
+	}
+}
+
+func TestCreateClient(t *testing.T) {
+	tests := []struct {
+		name          string
+		mockSpecResp  *constypes.StandardSpecResponse
+		mockError     error
+		expectedError bool
+	}{
+		{
+			name:          "successful client creation",
+			mockSpecResp:  &constypes.StandardSpecResponse{},
+			expectedError: false,
+		},
+		{
+			name:          "error getting spec",
+			mockSpecResp:  &constypes.StandardSpecResponse{},
+			mockError:     errors.New("spec error"),
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				Indexer: types.IndexerConfig{
+					Node: types.NodeConfig{
+						Host: "localhost",
+						Port: "8080",
+					},
+				},
+			}
+
+			mockClient := new(consmocks.Client)
+			mockClient.On("GetSpec").Return(tt.mockSpecResp, tt.mockError)
+
+			mockClientCreator := new(consmocks.ClientCreator)
+			mockClientCreator.On("NewClient", "http://localhost:8080").Return(mockClient)
+
+			client, err := createClient(mockClientCreator)
+			if tt.expectedError {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+			}
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+
+				if client == nil {
+					t.Error("expected client to be non-nil")
 				}
 			}
 		})
