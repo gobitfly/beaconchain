@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -23,6 +24,11 @@ func TestNewBigTable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// we have to set env variable with bigtable v1.31.0
+	// remove when we upgrade sdk version
+	_ = os.Setenv("BIGTABLE_EMULATOR_HOST", srv.Addr)
+	t.Cleanup(func() { _ = os.Unsetenv("BIGTABLE_EMULATOR_HOST") })
 
 	conn, err := grpc.NewClient(srv.Addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
