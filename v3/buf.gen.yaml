@@ -1,0 +1,25 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/gobitfly/beaconchain-api/model
+  # Remove `disable` field if googleapis is not used
+  disable:
+    - module: buf.build/googleapis/googleapis
+      file_option: go_package_prefix
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: api/gen
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: api/gen
+    opt: paths=source_relative
+  - remote: buf.build/grpc-ecosystem/gateway
+    out: api/gen
+    opt: 
+      - paths=source_relative
+  - remote: buf.build/grpc-ecosystem/openapiv2:v2.20.0
+    out: api/gen
+inputs:
+  - directory: api/protos

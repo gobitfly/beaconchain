@@ -1,0 +1,12 @@
+version: v2
+modules:
+  - path: api/protos
+# Always run `buf dep update` after updating this
+deps:
+  - buf.build/googleapis/googleapis
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE

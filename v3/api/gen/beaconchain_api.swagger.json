@@ -1,0 +1,264 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "beaconchain_api.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "BeaconchainApiService"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/api/v1/execution/block/{blockNumber}": {
+      "get": {
+        "summary": "Get execution blocks by execution block number",
+        "operationId": "BeaconchainApiService_ExecutionBlock",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ExecutionBlockResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "blockNumber",
+            "description": "Provide one or more execution block numbers. Comma separated up to max 100.",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BeaconchainApiService"
+        ]
+      }
+    },
+    "/api/validatorDashboard": {
+      "get": {
+        "summary": "Retrieves multiple Validator Dashboards by ID or for the entire account",
+        "operationId": "BeaconchainApiService_ListValidatorDashboards",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/ListValidatorDashboardsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "BeaconchainApiService"
+        ]
+      },
+      "post": {
+        "summary": "Creates a new Validator Dashboard",
+        "operationId": "BeaconchainApiService_CreateValidatorDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/CreateValidatorDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BeaconchainApiService"
+        ]
+      }
+    },
+    "/api/validatorDashboard/{dashboardId}": {
+      "get": {
+        "summary": "Retrieves a Validator Dashboard by its Id",
+        "operationId": "BeaconchainApiService_GetValidatorDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/GetValidatorDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BeaconchainApiService"
+        ]
+      },
+      "delete": {
+        "summary": "Deletes a Validator Dashboard by its Id",
+        "operationId": "BeaconchainApiService_DeleteValidatorDashboard",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/DeleteValidatorDashboardResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "dashboardId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BeaconchainApiService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "BlockSummary": {
+      "type": "object",
+      "properties": {
+        "blockHash": {
+          "type": "string"
+        },
+        "blockNumber": {
+          "type": "string"
+        }
+      }
+    },
+    "CreateValidatorDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "dashboard": {
+          "$ref": "#/definitions/ValidatorDashboard"
+        }
+      }
+    },
+    "DeleteValidatorDashboardResponse": {
+      "type": "object",
+      "title": "nil; no response"
+    },
+    "ExecutionBlockResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "data": {
+          "$ref": "#/definitions/BlockSummary"
+        }
+      },
+      "title": "A Response containing a summary of the execution block"
+    },
+    "GetValidatorDashboardResponse": {
+      "type": "object",
+      "properties": {
+        "dashboard": {
+          "$ref": "#/definitions/ValidatorDashboard"
+        }
+      }
+    },
+    "ListValidatorDashboardsResponse": {
+      "type": "object",
+      "properties": {
+        "dashboards": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/ValidatorDashboard"
+          }
+        }
+      }
+    },
+    "ValidatorDashboard": {
+      "type": "object",
+      "properties": {
+        "dashboardId": {
+          "type": "string"
+        },
+        "isPublic": {
+          "type": "boolean"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}
