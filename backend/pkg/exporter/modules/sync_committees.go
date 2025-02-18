@@ -59,7 +59,7 @@ func exportSyncCommittees(rpcClient rpc.Client) error {
 	for period := firstPeriod; period <= lastPeriod; period++ {
 		_, exists := dbPeriodsMap[period]
 		if !exists {
-			if err := exportSyncCommitteeData(rpcClient, period); err != nil {
+			if err := ExportSyncCommitteeData(rpcClient, period); err != nil {
 				return fmt.Errorf("error exporting sync-committee at period %v: %w", period, err)
 			}
 		}
@@ -86,7 +86,7 @@ func calculateSyncPeriodRange() (uint64, uint64) {
 	return firstPeriod, lastPeriod
 }
 
-func exportSyncCommitteeData(rpcClient rpc.Client, period uint64) error {
+func ExportSyncCommitteeData(rpcClient rpc.Client, period uint64) error {
 	startTime := time.Now()
 	data, err := GetSyncCommitteAtPeriod(rpcClient, period)
 	if err != nil {
