@@ -221,7 +221,10 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 }
 
 func GetModuleContext() (ModuleContext, error) {
-	cl, err := createClient()
+	var moduleContext ModuleContext
+	clientCreator := &consapi.DefaultClientCreator{}
+
+	cl, err := createClient(clientCreator)
 	if err != nil {
 		log.Fatal(err, "error getting spec", 0)
 	}
@@ -236,8 +239,8 @@ func GetModuleContext() (ModuleContext, error) {
 	return moduleContext, nil
 }
 
-func createClient() (consapi.Client, error) {
-	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
+func createClient(clientCreator consapi.ClientCreator) (consapi.Client, error) {
+	cl := clientCreator.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 	spec, err := cl.GetSpec()
 	if err != nil {
 		return nil, err
