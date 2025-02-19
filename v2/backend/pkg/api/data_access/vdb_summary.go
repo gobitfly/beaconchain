@@ -37,7 +37,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, _, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -517,7 +517,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	clickhouseTable, hours, err := d.getTablesForPeriod(period)
+	clickhouseTable, hours, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -635,7 +635,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
 		// we need to go to the all time table for last scheduled block/sync committee epoch
-		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
+		clickhouseTotalTable, _, err := getTablesForPeriod(enums.AllTime)
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
@@ -1000,24 +1000,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return ret, nil
 	}
 
-	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
-	dataTable := ""
-	dateColumn := ""
-	switch aggregation {
-	case enums.IntervalEpoch:
-		dataTable = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
-	case enums.IntervalHourly:
-		dataTable = "validator_dashboard_data_hourly"
-		dateColumn = "t"
-	case enums.IntervalDaily:
-		dataTable = "validator_dashboard_data_daily"
-		dateColumn = "t"
-	case enums.IntervalWeekly:
-		dataTable = "validator_dashboard_data_weekly"
-		dateColumn = "t"
-	default:
-		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	dataTable, dateColumn, err := getTableAndDateColumn(aggregation)
+	if err != nil {
+		return ret, nil
 	}
 
 	var queryResults []*t.VDBValidatorSummaryChartRow
@@ -1197,36 +1182,6 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	return ret, nil
 }
 
-func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
-	var table string
-	var dateColumn string
-	switch aggregation {
-	case enums.IntervalEpoch:
-		table = "view_validator_dashboard_data_epoch_max_ts"
-		dateColumn = "t"
-	case enums.IntervalHourly:
-		table = "view_validator_dashboard_data_hourly_max_ts"
-		dateColumn = "t"
-	case enums.IntervalDaily:
-		table = "view_validator_dashboard_data_daily_max_ts"
-		dateColumn = "t"
-	case enums.IntervalWeekly:
-		table = "view_validator_dashboard_data_weekly_max_ts"
-		dateColumn = "t"
-	default:
-		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
-	}
-
-	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
-	var ts time.Time
-	err := d.clickhouseReader.GetContext(ctx, &ts, query)
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %w", err)
-	}
-
-	return uint64(ts.Unix()), nil
-}
-
 func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
 	result := &t.VDBGeneralSummaryValidators{}
 
@@ -1347,12 +1302,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	var resultMutex = &sync.RWMutex{}
 	wg := errgroup.Group{}
 
-	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the validator indices
 	var groupIds []uint64
 	if !dashboardId.AggregateGroups && groupId != t.AllGroups {
@@ -1388,48 +1337,14 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 	// Get the past sync committee validators
 	wg.Go(func() error {
-		// Get the cutoff period for past sync committees
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("epoch_start")).
-			From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
-			Order(goqu.L("epoch_start").Asc()).
-			Limit(1)
-
-		query, args, err := ds.Prepared(true).ToSQL()
+		epochStart, err := d.getEpochStart(ctx, period)
 		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
+			return err
 		}
 
-		var epochStart uint64
-		err = d.clickhouseReader.GetContext(ctx, &epochStart, query, args...)
+		validatorCountMap, err := d.getPastSyncCommittees(ctx, validatorIndices, epochStart, cache.LatestEpoch.Get())
 		if err != nil {
-			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
-		}
-		pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
-
-		// Get the past sync committee validators
-		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-		ds = goqu.Dialect("postgres").
-			Select(
-				goqu.L("sc.validatorindex")).
-			From(goqu.L("sync_committees sc")).
-			Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
-
-		query, args, err = ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		var validatorIndices []uint64
-		err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
-		}
-
-		validatorCountMap := make(map[uint64]uint64)
-		for _, validatorIndex := range validatorIndices {
-			validatorCountMap[validatorIndex]++
+			return err
 		}
 
 		resultMutex.Lock()
@@ -1457,7 +1372,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	result := &t.VDBSlashingsSummaryValidators{}
 
 	// Get the table names based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, _, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1692,7 +1607,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, _, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1789,69 +1704,4 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	return result, nil
-}
-
-func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Context, latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
-	currentSyncCommitteeValidators := make(map[uint64]bool)
-	upcomingSyncCommitteeValidators := make(map[uint64]bool)
-
-	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("validatorindex"),
-			goqu.L("period")).
-		From("sync_committees").
-		Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
-
-	var queryResult []struct {
-		ValidatorIndex uint64 `db:"validatorindex"`
-		Period         uint64 `db:"period"`
-	}
-
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving sync committee current and next period data: %w", err)
-	}
-
-	for _, queryEntry := range queryResult {
-		if queryEntry.Period == currentSyncPeriod {
-			currentSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-		} else {
-			upcomingSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-		}
-	}
-
-	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
-}
-
-func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
-	clickhouseTable := ""
-	hours := 0
-
-	switch period {
-	case enums.TimePeriods.Last1h:
-		clickhouseTable = "validator_dashboard_data_rolling_1h"
-		hours = 1
-	case enums.TimePeriods.Last24h:
-		clickhouseTable = "validator_dashboard_data_rolling_24h"
-		hours = 24
-	case enums.TimePeriods.Last7d:
-		clickhouseTable = "validator_dashboard_data_rolling_7d"
-		hours = 7 * 24
-	case enums.TimePeriods.Last30d:
-		clickhouseTable = "validator_dashboard_data_rolling_30d"
-		hours = 30 * 24
-	case enums.TimePeriods.AllTime:
-		clickhouseTable = "validator_dashboard_data_rolling_total"
-		hours = -1
-	default:
-		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
-	}
-
-	return clickhouseTable, hours, nil
 }
