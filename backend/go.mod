@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/secretmanager v1.14.1
 	firebase.google.com/go/v4 v4.14.1
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.3
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Gurpartap/storekit-go v0.0.0-20201205024111-36b6cd5c6a21
 	github.com/Tangui-Bitfly/ethsimtracer v0.0.0-20241031103622-e76546c3d9c1
 	github.com/alexedwards/scs/redisstore v0.0.0-20240316134038-7e11d57e8885
