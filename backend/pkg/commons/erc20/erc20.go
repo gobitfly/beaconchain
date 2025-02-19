@@ -13,9 +13,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
-var abi, _ = contracts.ERC20MetaData.GetAbi()
+var ABI, _ = contracts.ERC20MetaData.GetAbi()
 
-var TransferTopic = abi.Events["Transfer"].ID
+var TransferTopic = ABI.Events["Transfer"].ID
 
 var tokenMap = make(map[string]*ERC20TokenDetail)
 
