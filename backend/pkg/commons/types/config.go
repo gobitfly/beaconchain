@@ -224,6 +224,15 @@ type Config struct {
 	MevBoostRelayExporter struct {
 		Enabled bool `yaml:"enabled" env:"ENABLED"`
 	} `yaml:"mevBoostRelayExporter" env:", prefix=MEVBOOSTRELAY_EXPORTER_"`
+	DashboardExporter struct {
+		RollingsInParallel     int64 `yaml:"rollingsAtOnce" envconfig:"DASHBOARD_EXPORTER_ROLLINGS_AT_ONCE"`         // how many rollings to do at once
+		RollingPartsInParallel int64 `yaml:"rollingsInParallel" envconfig:"DASHBOARD_EXPORTER_ROLLINGS_IN_PARALLEL"` // how man parts of a single rolling to do at once
+		TransferInParallel     int64 `yaml:"transferInParallel" envconfig:"DASHBOARD_EXPORTER_TRANSFER_IN_PARALLEL"` // how many transfers to do at once
+		TransferAtOnce         int64 `yaml:"transferAtOnce" envconfig:"DASHBOARD_EXPORTER_TRANSFER_AT_ONCE"`         // how much data to transfer in a single transfer
+		FetchAtOnceLimit       int64 `yaml:"fetchAtOnceLimit" envconfig:"DASHBOARD_EXPORTER_FETCH_AT_ONCE_LIMIT"`    // how much data to fetch in a single fetch
+		InsertAtOnceLimit      int64 `yaml:"insertAtOnceLimit" envconfig:"DASHBOARD_EXPORTER_INSERT_AT_ONCE_LIMIT"`  // how much data to insert in a single insert
+		InsertInParallel       int64 `yaml:"insertInParallel" envconfig:"DASHBOARD_EXPORTER_INSERT_IN_PARALLEL"`     // how many inserts to do at once
+	} `yaml:"dashboardExporter" env:", prefix=DASHBOARD_EXPORTER_"`
 	Pprof struct {
 		Enabled bool   `yaml:"enabled" env:"ENABLED"`
 		Port    string `yaml:"port" env:"PORT"`

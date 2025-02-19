@@ -44,13 +44,13 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				metadata
 			FROM status_reports
 			LEFT JOIN clean_shutdown_events cse ON status_reports.emitter = clean_shutdown_events.emitter
-			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null)
+			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null) AND event_id != {running_event_id:String}
 			ORDER BY
 				event_id ASC,
 				emitter ASC,
 				run_id ASC,
 				insert_id DESC
-		), latest_report_per_run as (
+		), latest_report_per_emitter as (
 			SELECT
 				event_id,
 				emitter,
@@ -64,20 +64,8 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				active_reports
 			GROUP BY
 				event_id,
-				emitter,
-				run_id
+				emitter
 			order by insert_id desc
-		), latest_report_per_status as (
-			select 
-				event_id,
-				emitter,
-				status,
-				any(inserted_at) as inserted_at, 
-				any(expires_at) as expires_at,
-				any(timeouts_at) as timeouts_at,
-				any(metadata) AS metadata
-			from latest_report_per_run
-			group by event_id, emitter, status
 		)
 		SELECT
 			event_id,
@@ -97,7 +85,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 						)
 					) as result
 		FROM
-			latest_report_per_status
+			latest_report_per_emitter
 		GROUP BY
 			event_id, 
 			status
@@ -112,7 +100,7 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	response.Reports = make(map[string][]types.HealthzResult)
 	response.ReportingUUID = utils.GetUUID()
 	response.DeploymentType = utils.Config.DeploymentType
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)))
+	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)), ch.Named("running_event_id", string(constants.Running)))
 	if err != nil {
 		response.Reports["response_error"] = []types.HealthzResult{
 			{

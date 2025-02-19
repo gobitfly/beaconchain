@@ -22,8 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DummyService struct {
-}
+type DummyService struct{}
 
 // ensure DummyService pointer implements DataAccessor
 var _ DataAccessor = (*DummyService)(nil)
@@ -808,4 +807,8 @@ func (d *DummyService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId
 
 func (d *DummyService) GetHasUserActiveSubscription(ctx context.Context, userId uint64) (bool, error) {
 	return getDummyData[bool](ctx)
+}
+
+func (d *DummyService) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }

@@ -23,6 +23,7 @@ type endpoint struct {
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(contentTypeMiddleware)
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
 	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
@@ -284,10 +285,11 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
 	}
 
+	const allowMocking = true
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", hs.PublicPutValidatorDashboardName, hs.InternalPutValidatorDashboardName},
-		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
+		{http.MethodPost, "/{dashboard_id}/groups", handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardGroups, allowMocking), handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardGroups, allowMocking)},
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroup, hs.InternalDeleteValidatorDashboardGroup},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}/validators", hs.PublicDeleteValidatorDashboardGroupValidators, hs.InternalDeleteValidatorDashboardGroupValidators},
@@ -301,7 +303,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
 		{http.MethodGet, "/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
 		{http.MethodGet, "/{dashboard_id}/summary/validators", hs.PublicGetValidatorDashboardSummaryValidators, hs.InternalGetValidatorDashboardSummaryValidators},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
 		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/rewards/{epoch}", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},

@@ -9,19 +9,18 @@ To generate the ABI interface in go you will need to install `solc` and `abigen`
 go install github.com/ethereum/go-ethereum/cmd/abigen@latest
 ```
 
+Then you need to pull the dependencies contract from OpenZeppelin
+```
+git clone -b release-v5.2 https://github.com/OpenZeppelin/openzeppelin-contracts.git openzeppelin
+```
 You can then run `make generate-abi`.
 
 ## Sources and Modification
 
-### ERC20, IERC20, IERC20METADATA, draft-IERC6093, Context
-* https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/ERC20.sol
-* https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/IERC20.sol
-* https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol
-* https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/interfaces/draft-IERC6093.sol
-* https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Context.sol
-
-### Token
-* original contract, simple implementation of the abstract contract `ERC20` with a `mint` function
+### Tokens
+* Token.sol simple implementation of the abstract contract `ERC20` with a `mint` function
+* Token721.sol simple implementation of the abstract contract `ERC721` with a `mint` function
+* Token1155.sol simple implementation of the abstract contract `ERC1155` with a `mint` function
 
 ### Multicall3, IMulticall3
 * https://github.com/mds1/multicall/blob/main/src/Multicall3.sol

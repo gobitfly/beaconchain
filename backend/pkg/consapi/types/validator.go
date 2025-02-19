@@ -40,6 +40,20 @@ type StandardValidatorsResponse struct {
 	Data                []StandardValidator `json:"data"`
 }
 
+type LightStandardValidatorsResponse struct {
+	Epoch uint64
+	Data  []LightStandardValidator
+}
+
+type UltraLightStandardValidatorsResponse struct {
+	Data []UltraLightStandardValidator
+}
+type UltraLightStandardValidator struct {
+	Index            uint64
+	EffectiveBalance uint64
+	Status           ValidatorStatus
+}
+
 // eth/v1/beacon/states/{state_id}/validators/{validator_id}
 type StandardSingleValidatorsResponse struct {
 	ExecutionOptimistic bool              `json:"execution_optimistic"`
@@ -61,6 +75,15 @@ type StandardValidator struct {
 		ExitEpoch                  uint64        `json:"exit_epoch,string"`
 		WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`
 	} `json:"validator"`
+}
+
+type LightStandardValidator struct {
+	Index            uint64
+	Balance          uint64
+	Status           ValidatorStatus
+	Pubkey           hexutil.Bytes
+	EffectiveBalance uint64
+	Slashed          bool
 }
 
 // /eth/v1/validator/duties/proposer/{epoch}

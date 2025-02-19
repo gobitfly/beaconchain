@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"bytes"
 	"cmp"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -95,6 +95,13 @@ func (v *validationError) hasErrors() bool {
 	return v != nil && len(*v) > 0
 }
 
+func (v *validationError) AsError() error {
+	if v.hasErrors() {
+		return newBadRequestErr("%s", v.Error())
+	}
+	return nil
+}
+
 // --------------------------------------
 
 func (v *validationError) checkRegex(regex *regexp.Regexp, param, paramName string) string {
@@ -142,14 +149,8 @@ func (v *validationError) checkUserEmailToken(token string) string {
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
-func (v *validationError) checkBody(data interface{}, r *http.Request) error {
-	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
-		v.add("request body", "'Content-Type' header must be 'application/json'")
-	}
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(bodyBytes)) // unconsume body for error logging
+func (v *validationError) checkBody(data interface{}, requestBody io.ReadCloser) error {
+	bodyBytes, err := io.ReadAll(requestBody)
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
@@ -559,4 +560,29 @@ func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTime
 
 		return afterTs, beforeTs
 	}
+}
+
+func (v *validationError) checkDashboardId(id string) interface{} {
+	if reInteger.MatchString(id) {
+		// given id is a normal id
+		id := v.checkUint(id, "dashboard_id")
+		return types.VDBIdPrimary(id)
+	}
+	if reValidatorDashboardPublicId.MatchString(id) {
+		// given id is a public id
+		return types.VDBIdPublic(id)
+	}
+	// given id must be an encoded set of validators
+	decodedId, err := base64.RawURLEncoding.DecodeString(id)
+	if err != nil {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	var validatorListError validationError
+	indexes, publicKeys := validatorListError.checkValidatorList(string(decodedId), forbidEmpty)
+	if validatorListError.hasErrors() {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}
 }

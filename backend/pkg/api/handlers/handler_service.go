@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 
 	"github.com/alexedwards/scs/v2"
@@ -49,8 +49,10 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 // getDataAccessor returns the correct data accessor based on the request context.
 // if the request is mocked, the data access dummy is returned; otherwise the data access service.
 // should only be used if getting mocked data for the endpoint is appropriate
-func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccessor {
-	if isMocked(r) {
+func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAccessor {
+	isMocked, isMockedOk := ctx.Value(types.CtxIsMockedKey).(bool)                         // set in StoreIsMockedFlagMiddleware
+	isMockingAllowed, isMockingAllowedOk := ctx.Value(types.CtxIsMockingAllowedKey).(bool) // set in Handle function
+	if isMockedOk && isMocked && isMockingAllowedOk && isMockingAllowed {
 		return h.daDummy
 	}
 	return h.daService
@@ -58,6 +60,45 @@ func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccesso
 
 // all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
+
+type InputValidator[T any] interface {
+	Validate(params map[string]string, payload io.ReadCloser) (T, error)
+}
+
+type BusinessLogicFunc[Input any, Response any] func(ctx context.Context, input Input) (Response, error)
+
+func Handle[Input InputValidator[Input], Response any](defaultCode int, logicFunc BusinessLogicFunc[Input, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// prepare input
+		vars := mux.Vars(r)
+		q := r.URL.Query()
+		for k, v := range q {
+			if _, ok := vars[k]; ok || len(v) == 0 {
+				continue
+			}
+			vars[k] = v[0]
+		}
+		// input validation
+		var i Input
+		input, err := i.Validate(vars, r.Body)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		if isMockingAllowed {
+			ctx = context.WithValue(ctx, types.CtxIsMockingAllowedKey, true)
+		}
+		// business logic
+		response, err := logicFunc(ctx, input)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+
+		writeResponse(w, r, defaultCode, response)
+	}
+}
 
 // --------------------------------------
 // errors
@@ -79,33 +120,6 @@ var (
 type validatorSet struct {
 	Indexes    []types.VDBValidator
 	PublicKeys []string
-}
-
-// parseDashboardId is a helper function to validate the string dashboard id param.
-func parseDashboardId(id string) (interface{}, error) {
-	var v validationError
-	if reInteger.MatchString(id) {
-		// given id is a normal id
-		id := v.checkUint(id, "dashboard_id")
-		if v.hasErrors() {
-			return nil, v
-		}
-		return types.VDBIdPrimary(id), nil
-	}
-	if reValidatorDashboardPublicId.MatchString(id) {
-		// given id is a public id
-		return types.VDBIdPublic(id), nil
-	}
-	// given id must be an encoded set of validators
-	decodedId, err := base64.RawURLEncoding.DecodeString(id)
-	if err != nil {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	indexes, publicKeys := v.checkValidatorList(string(decodedId), forbidEmpty)
-	if v.hasErrors() {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, nil
 }
 
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
@@ -145,8 +159,9 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 		return dashboardId, nil
 	}
 	// validate dashboard id param
-	dashboardIdParam, err := parseDashboardId(param)
-	if err != nil {
+	var v validationError
+	dashboardIdParam := v.checkDashboardId(param)
+	if err := v.AsError(); err != nil {
 		return nil, err
 	}
 	// convert to VDBId
@@ -338,7 +353,7 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 	if body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize)); len(body) > 0 {
 		requestFields["request_body"] = string(body)
 	}
-	if userId, _ := GetUserIdByContext(r); userId != 0 {
+	if userId, _ := GetUserIdByContext(r.Context()); userId != 0 {
 		requestFields["request_user_id"] = userId
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
@@ -617,9 +632,4 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
-}
-
-func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
-	return ok && isMocked
 }

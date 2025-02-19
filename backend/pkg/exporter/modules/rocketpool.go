@@ -17,8 +17,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
-	monitoringServices "github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -191,20 +189,21 @@ func (rp *RocketpoolExporter) Run() error {
 
 	for {
 		t0 := time.Now()
-		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, time.Hour*4, rp.UpdateInterval) // currently takes 2h40m on mainnet...
-		r(constants.Running, nil)
+		// TODO: re-enable status reports after this thing is more stable
+		//r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, time.Hour*4, rp.UpdateInterval) // currently takes 2h40m on mainnet...
+		//r(constants.Running, nil)
 		var err error
 		err = rp.Update(count)
 		if err != nil {
 			log.Error(err, "error updating rocketpool-data", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			//r(constants.Failure, map[string]string{"error": err.Error()})
 			time.Sleep(errorInterval)
 			continue
 		}
 		err = rp.Save(count)
 		if err != nil {
 			log.Error(err, "error saving rocketpool-data", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			//r(constants.Failure, map[string]string{"error": err.Error()})
 			time.Sleep(errorInterval)
 			continue
 		}
@@ -212,7 +211,7 @@ func (rp *RocketpoolExporter) Run() error {
 		services.ReportStatus("rocketpoolExporter", "Running", nil)
 
 		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(t0).Seconds())
-		r(constants.Success, map[string]string{"took": time.Since(t0).String(), "took_raw": fmt.Sprintf("%v", time.Since(t0).Milliseconds())})
+		//r(constants.Success, map[string]string{"took": time.Since(t0).String(), "took_raw": fmt.Sprintf("%v", time.Since(t0).Milliseconds())})
 
 		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "exported rocketpool-data")
 		count++

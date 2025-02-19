@@ -240,6 +240,30 @@ func ReadConfig(cfg *types.Config, path string) error {
 		}
 	}
 
+	// dashboard exporter default limits
+
+	if cfg.DashboardExporter.RollingsInParallel == 0 {
+		cfg.DashboardExporter.RollingsInParallel = 3
+	}
+	if cfg.DashboardExporter.RollingPartsInParallel == 0 {
+		cfg.DashboardExporter.RollingPartsInParallel = 3
+	}
+	if cfg.DashboardExporter.TransferInParallel == 0 {
+		cfg.DashboardExporter.TransferInParallel = 3
+	}
+	if cfg.DashboardExporter.TransferAtOnce == 0 {
+		cfg.DashboardExporter.TransferAtOnce = 2
+	}
+	if cfg.DashboardExporter.FetchAtOnceLimit == 0 {
+		cfg.DashboardExporter.FetchAtOnceLimit = 2
+	}
+	if cfg.DashboardExporter.InsertAtOnceLimit == 0 {
+		cfg.DashboardExporter.InsertAtOnceLimit = 2
+	}
+	if cfg.DashboardExporter.InsertInParallel == 0 {
+		cfg.DashboardExporter.InsertInParallel = 2
+	}
+
 	// we check for machine chain id just for safety
 	if cfg.Chain.Id != 0 && cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID {
 		log.Fatal(fmt.Errorf("cfg.Chain.Id != cfg.Chain.ClConfig.DepositChainID: %v != %v", cfg.Chain.Id, cfg.Chain.ClConfig.DepositChainID), "", 0)
@@ -397,8 +421,8 @@ func setCLConfig(cfg *types.Config) error {
 			AltairForkEpoch:                         *jr.Data.AltairForkEpoch,
 			BellatrixForkVersion:                    jr.Data.BellatrixForkVersion,
 			BellatrixForkEpoch:                      *jr.Data.BellatrixForkEpoch,
-			CappellaForkVersion:                     jr.Data.CapellaForkVersion,
-			CappellaForkEpoch:                       *jr.Data.CapellaForkEpoch,
+			CapellaForkVersion:                      jr.Data.CapellaForkVersion,
+			CapellaForkEpoch:                        *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
 			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
 			ElectraForkVersion:                      jr.Data.ElectraForkVersion,

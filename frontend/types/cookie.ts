@@ -4,7 +4,6 @@ export enum COOKIE_KEY {
   COOKIES_PREFERENCE = 'cookies-preference',
   CURRENCY = 'currency',
   REFRESH_TOKEN = 'refresh-token',
-  SLOT_VIZ_SELECTED_CATEGORIES = 'slot-viz-selected-categories',
   USER_DASHBOARDS = 'user-dashboards',
   VALIDATOR_DASHOBARD_KEY = 'validator-dashboard-key',
 }

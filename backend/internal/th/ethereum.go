@@ -207,9 +207,9 @@ func (b *BlockchainBackend) DeployContract(t *testing.T, contractData []byte) co
 	return receipt.ContractAddress
 }
 
-func (b *BlockchainBackend) DeployToken(t *testing.T, name string, symbol string, accounts ...common.Address) (common.Address, *contracts.Token) {
+func (b *BlockchainBackend) DeployERC20(t *testing.T, name string, symbol string, accounts ...common.Address) (common.Address, *contracts.ERC20) {
 	t.Helper()
-	address, _, token, err := contracts.DeployToken(b.BankAccount.TransactOpts, b.Client(), name, symbol)
+	address, _, token, err := contracts.DeployERC20(b.BankAccount.TransactOpts, b.Client(), name, symbol)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,6 +222,28 @@ func (b *BlockchainBackend) DeployToken(t *testing.T, name string, symbol string
 		}
 		b.Commit()
 	}
+	return address, token
+}
+
+func (b *BlockchainBackend) DeployToken1155(t *testing.T) (common.Address, *contracts.ERC1155) {
+	t.Helper()
+	address, _, token, err := contracts.DeployERC1155(b.BankAccount.TransactOpts, b.Client(), "uri")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Commit()
+
+	return address, token
+}
+
+func (b *BlockchainBackend) DeployERC721(t *testing.T, name string, symbol string) (common.Address, *contracts.ERC721) {
+	t.Helper()
+	address, _, token, err := contracts.DeployERC721(b.BankAccount.TransactOpts, b.Client(), name, symbol)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b.Commit()
+
 	return address, token
 }
 

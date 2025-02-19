@@ -29,9 +29,10 @@ const {
   TableQueryParams | undefined
 >(undefined, 500)
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+} = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()

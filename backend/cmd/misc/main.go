@@ -3,15 +3,16 @@ package misc
 import (
 	"bytes"
 	"context"
-	"os"
-
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math"
 	"math/big"
 	"net/http"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,20 +24,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
-	"github.com/gobitfly/beaconchain/cmd/misc/commands"
-	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/gobitfly/beaconchain/pkg/consapi"
-	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
-	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
-	"github.com/gobitfly/beaconchain/pkg/exporter/services"
-	"github.com/gobitfly/beaconchain/pkg/notification"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -44,7 +31,24 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 
-	"flag"
+	"github.com/gobitfly/beaconchain/cmd/misc/commands"
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
+	"github.com/gobitfly/beaconchain/pkg/executionlayer"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
+	"github.com/gobitfly/beaconchain/pkg/exporter/services"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 
 	"github.com/Gurpartap/storekit-go"
 )
@@ -1610,8 +1614,6 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		return
 	}
 
-	transforms := make([]func(blk *types.Eth1Block, cache *freecache.Cache) (*types.BulkMutations, *types.BulkMutations, error), 0)
-
 	log.Infof("transformerFlag: %v", transformerFlag)
 	transformerList := strings.Split(transformerFlag, ",")
 	if transformerFlag == "all" {
@@ -1621,42 +1623,29 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		return
 	}
 	log.Infof("transformers: %v", transformerList)
-	importENSChanges := false
-	/**
-	* Add additional transformers you want to sync to this switch case
-	**/
-	for _, t := range transformerList {
-		switch t {
-		case "TransformBlock":
-			transforms = append(transforms, bt.TransformBlock)
-		case "TransformTx":
-			transforms = append(transforms, bt.TransformTx)
-		case "TransformBlobTx":
-			transforms = append(transforms, bt.TransformBlobTx)
-		case "TransformItx":
-			transforms = append(transforms, bt.TransformItx)
-		case "TransformERC20":
-			transforms = append(transforms, bt.TransformERC20)
-		case "TransformERC721":
-			transforms = append(transforms, bt.TransformERC721)
-		case "TransformERC1155":
-			transforms = append(transforms, bt.TransformERC1155)
-		case "TransformWithdrawals":
-			transforms = append(transforms, bt.TransformWithdrawals)
-		case "TransformUncle":
-			transforms = append(transforms, bt.TransformUncle)
-		case "TransformEnsNameRegistered":
-			transforms = append(transforms, bt.TransformEnsNameRegistered)
-			importENSChanges = true
-		case "TransformContract":
-			transforms = append(transforms, bt.TransformContract)
-		default:
-			log.Error(nil, "Invalid transformer flag %v", 0)
-			return
-		}
-	}
 
+	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
+	if err != nil {
+		log.Fatal(err, "error connecting to bigtable", 0)
+	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	transforms, err := executionlayer.TransformerFromList(transformerList)
+	if err != nil {
+		log.Error(nil, err.Error(), 0)
+		return
+	}
+	indexer := executionlayer.NewIndexer(
+		executionlayer.NewAdaptorV1(
+			data.NewStore(database.Wrap(bigtable, data.Table)),
+			metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache),
+		),
+		transforms...,
+	)
+
+	importENSChanges := false
+	if slices.Contains(transformerList, "TransformEnsNameRegistered") {
+		importENSChanges = true
+	}
 
 	to := endBlock
 	if endBlock == math.MaxInt64 {
@@ -1675,7 +1664,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		toBlock := utilMath.MinU64(to, from+blockCount-1)
 
 		log.Infof("indexing blocks %v to %v in data table ...", from, toBlock)
-		err := bt.IndexEventsWithTransformers(int64(from), int64(toBlock), transforms, int64(concurrency), cache)
+		err := bt.IndexEventsWithIndexer(int64(from), int64(toBlock), indexer, int64(concurrency))
 		if err != nil {
 			log.Error(err, "error indexing from bigtable", 0)
 		}

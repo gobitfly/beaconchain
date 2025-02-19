@@ -45,12 +45,15 @@ func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	}
 }
 
-var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64
+var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64 // holy shit these should really be in the slotExporterData struct or some other module might accidentally corrupt them
 
 var processSlotMutex = &sync.Mutex{}
 
-func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	processSlotMutex.Lock() // only process one slot at a time
+func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err error) {
+	if !processSlotMutex.TryLock() {
+		log.Infof("slotExporter is still running, skipping this run")
+		return nil
+	}
 	defer processSlotMutex.Unlock()
 
 	latestEpoch, latestSlot, finalizedEpoch, latestProposed = 0, 0, 0, 0

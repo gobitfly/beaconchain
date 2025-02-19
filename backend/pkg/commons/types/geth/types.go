@@ -24,3 +24,7 @@ type TraceCall struct {
 	Type                string
 	Calls               []*TraceCall
 }
+
+var Tracer = map[string]string{
+	"tracer": "callTracer",
+}

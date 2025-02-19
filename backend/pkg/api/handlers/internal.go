@@ -106,7 +106,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 	}
 
 	var req types.AdConfigurationData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -183,7 +183,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
 	var req types.AdConfigurationUpdateData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -348,10 +348,6 @@ func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter
 	h.PublicPutValidatorDashboardName(w, r)
 }
 
-func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	h.PublicPostValidatorDashboardGroups(w, r)
-}
-
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	h.PublicPutValidatorDashboardGroups(w, r)
 }
@@ -431,11 +427,6 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummary(w, r)
 }
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardGroupSummary(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummaryChart(w, r)
 }
@@ -511,12 +502,13 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 // even though this endpoint is internal only, it should still not be broken since it is used by the mobile app
 func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	ctx := r.Context()
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	if v.hasErrors() {
 		handleErr(w, r, v)
 		return
 	}
-	userId, err := GetUserIdByContext(r)
+	userId, err := GetUserIdByContext(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -530,7 +522,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		returnForbidden(w, r, errors.New("user does not have access to mobile app widget"))
 		return
 	}
-	data, err := h.daService.GetValidatorDashboardMobileWidget(r.Context(), dashboardId)
+	data, err := h.daService.GetValidatorDashboardMobileWidget(ctx, dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return

@@ -374,3 +374,7 @@ type PostValidatorDashboardValidatorsRequest struct {
 	WithdrawalCredential string        `json:"withdrawal_credential,omitempty"`
 	Graffiti             string        `json:"graffiti,omitempty"`
 }
+
+type PostValidatorDashboardGroupsRequest struct {
+	Name string `json:"name"`
+}

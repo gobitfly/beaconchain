@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -63,20 +64,28 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
-func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
+func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
 	dbConnectionTimeout := time.NewTimer(15 * time.Second)
 
 	go func() {
 		<-dbConnectionTimeout.C
-		log.Fatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
+		log.Fatal(fmt.Errorf("timeout while connecting to %s %s database %s", connectionType, databaseBrand, databaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		log.Fatal(fmt.Errorf("unable to ping %s. error: %w", dataBaseName, err), "", 0)
+		log.Fatal(fmt.Errorf("unable to ping %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
 	}
+
+	// get the migration version of the database using the goose
+	// ideally this runs regularly but idk would have to throw into the monitoring process prob? makes the most sense there, tho that isnt exactly connected to prometheus
+	ver, err := getGooseVersion(dbConn, databaseBrand)
+	if err != nil {
+		log.Fatal(fmt.Errorf("unable to get migration version of %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
+	}
+	metrics.DatabaseVersion.WithLabelValues(databaseBrand, databaseName, fmt.Sprint(ver)).Set(1)
 
 	dbConnectionTimeout.Stop()
 }
@@ -130,8 +139,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
-
-	dbTestConnection(dbConnWriter, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
+	dbTestConnection(dbConnWriter, databaseBrand, writer.Name, "writer")
 	dbConnWriter.SetConnMaxIdleTime(time.Second * 30)
 	dbConnWriter.SetConnMaxLifetime(time.Minute)
 	dbConnWriter.SetMaxOpenConns(writer.MaxOpenConns)
@@ -169,12 +177,34 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
-	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
+	dbTestConnection(dbConnReader, databaseBrand, reader.Name, "reader")
 	dbConnReader.SetConnMaxIdleTime(time.Second * 30)
 	dbConnReader.SetConnMaxLifetime(time.Minute)
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
 	dbConnReader.SetMaxIdleConns(reader.MaxIdleConns)
 	return dbConnWriter, dbConnReader
+}
+
+// concurrent safe get goose version of a db using a sqlx.DB and a database brand
+var GooseVersionMutex = sync.Mutex{}
+
+func getGooseVersion(db *sqlx.DB, databaseBrand string) (int64, error) {
+	GooseVersionMutex.Lock()
+	defer GooseVersionMutex.Unlock()
+	if databaseBrand == "clickhouse" {
+		if err := goose.SetDialect("clickhouse"); err != nil {
+			return 0, err
+		}
+	} else {
+		if err := goose.SetDialect("postgres"); err != nil {
+			return 0, err
+		}
+	}
+	ver, err := goose.GetDBVersion(db.DB)
+	if err != nil {
+		return 0, fmt.Errorf("unable to get migration version of %s database. error: %w", databaseBrand, err)
+	}
+	return ver, nil
 }
 
 func ApplyEmbeddedDbSchema(version int64, database string) error {

@@ -92,7 +92,7 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		Networks []intOrString   `json:"networks,omitempty"`
 		Types    []searchTypeKey `json:"types,omitempty"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
