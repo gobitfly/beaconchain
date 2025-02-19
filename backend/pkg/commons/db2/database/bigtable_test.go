@@ -158,6 +158,19 @@ func TestBigTable(t *testing.T) {
 					}
 				}
 			})
+
+			t.Run("DeleteRowsWithKeys", func(t *testing.T) {
+				if err := db.DeleteRowsWithKeys(maps.Keys(tt.items)); err != nil {
+					t.Error(err)
+				}
+				res, err := db.Read("")
+				if err != nil {
+					t.Error(err)
+				}
+				if len(res) != 0 {
+					t.Errorf("not empty after delete %v", res)
+				}
+			})
 		})
 	}
 

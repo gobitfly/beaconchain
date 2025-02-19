@@ -66,6 +66,8 @@ type Config struct {
 		EnsTransformer struct {
 			ValidRegistrarContracts []string `yaml:"validRegistrarContracts" env:"VALID_REGISTRAR_CONTRACTS"`
 		} `yaml:"ensTransformer" env:", prefix=ENS"`
+		MulticallAddresses string `yaml:"multicallAddresses" env:"MULTICALL_ADDRESSES"`
+		BatchLimit         int    `yaml:"multicallLimit" env:"MULTICALL_LIMIT"`
 	} `yaml:"indexer"`
 	Frontend struct {
 		Debug                          bool   `yaml:"debug" env:"DEBUG"`

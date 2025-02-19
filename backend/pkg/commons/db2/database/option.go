@@ -1,7 +1,7 @@
 package database
 
 const (
-	defaultBatchSize = 10000
+	defaultBatchSize = 10_000
 	defaultLimit     = 100
 )
 
@@ -15,7 +15,7 @@ type options struct {
 	RowKeyFilter    string
 }
 
-func apply(opts []Option) options {
+func newOptions(opts []Option) options {
 	options := options{
 		OpenRange:       false,
 		OpenCloseRange:  false,
@@ -26,83 +26,53 @@ func apply(opts []Option) options {
 		RowKeyFilter:    "",
 	}
 	for _, o := range opts {
-		o.apply(&options)
+		o(&options)
 	}
 	return options
 }
 
-type Option interface {
-	apply(*options)
-}
-
-type rowKeyFilterOption string
-
-func (r rowKeyFilterOption) apply(opts *options) {
-	opts.RowKeyFilter = string(r)
-}
+type Option func(opts *options)
 
 func WithRowKeyFilter(regex string) Option {
-	return rowKeyFilterOption(regex)
-}
-
-type openRangeOption bool
-
-func (r openRangeOption) apply(opts *options) {
-	opts.OpenRange = bool(r)
+	return func(opts *options) {
+		opts.RowKeyFilter = regex
+	}
 }
 
 func WithOpenRange(r bool) Option {
-	return openRangeOption(r)
-}
-
-type openCloseRangeOption bool
-
-func (r openCloseRangeOption) apply(opts *options) {
-	opts.OpenCloseRange = bool(r)
-}
-
-type closedOpenRangeOption bool
-
-func (r closedOpenRangeOption) apply(opts *options) {
-	opts.ClosedOpenRange = bool(r)
+	return func(opts *options) {
+		opts.OpenRange = r
+	}
 }
 
 func WithClosedOpenRangeOption(r bool) Option {
-	return closedOpenRangeOption(r)
+	return func(opts *options) {
+		opts.ClosedOpenRange = r
+	}
 }
 
 func WithOpenCloseRange(r bool) Option {
-	return openCloseRangeOption(r)
+	return func(opts *options) {
+		opts.OpenCloseRange = r
+	}
 }
 
-type limitOption int64
-
-func (l limitOption) apply(opts *options) {
-	opts.Limit = int64(l)
+func WithLimit(limit int64) Option {
+	return func(opts *options) {
+		opts.Limit = limit
+	}
 }
 
-func WithLimit(l int64) Option {
-	return limitOption(l)
-}
-
-type withBatchSize int64
-
-func (l withBatchSize) apply(opts *options) {
-	opts.BatchSize = int64(l)
-}
-
-func WithBatchSize(l int64) Option {
-	return withBatchSize(l)
-}
-
-type statsOption StatsReporter
-
-func (l statsOption) apply(opts *options) {
-	opts.StatsReporter = l
+func WithBatchSize(size int64) Option {
+	return func(opts *options) {
+		opts.BatchSize = size
+	}
 }
 
 func WithStats(reporter StatsReporter) Option {
-	return statsOption(reporter)
+	return func(opts *options) {
+		opts.StatsReporter = reporter
+	}
 }
 
 type StatsReporter func(msg string, args ...any)

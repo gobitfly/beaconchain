@@ -11,6 +11,8 @@ import (
 )
 
 const (
+	balanceKey = "B"
+
 	maxExecutionLayerBlockNumber = 1000000000
 )
 
@@ -67,8 +69,8 @@ func ContractUpdate(blockNumber uint64, chainID string, updates []ContractUpdate
 func MarkBalanceUpdate(chainID string, address []byte, token []byte, cache Cache) map[string][]database.Item {
 	items := make(map[string][]database.Item)
 
-	key := fmt.Sprintf("%s:B:%x", chainID, address) // format is B: for balance update as chainid:prefix:address (token id will be encoded as column name)
-	keyCache := []byte(fmt.Sprintf("%s:B:%x:%x", chainID, address, token))
+	key := fmt.Sprintf("%s:%s:%x", chainID, balanceKey, address) // format is B: for balance update as chainid:prefix:address (token id will be encoded as column name)
+	keyCache := []byte(fmt.Sprintf("%s:%x", key, token))
 	if _, err := cache.Get(keyCache); err != nil {
 		items[key] = []database.Item{
 			{

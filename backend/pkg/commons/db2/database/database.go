@@ -6,6 +6,7 @@ type Database interface {
 	GetRow(key string) (*Row, error)
 	GetRowsWithKeys(keys []string) ([]Row, error)
 	GetRowsRange(high, low string, opts ...Option) ([]Row, error)
+	DeleteRowsWithKeys(keys []string, opts ...Option) error
 
 	Close() error
 	Clear() error

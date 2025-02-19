@@ -1,8 +1,12 @@
 package metadataupdates
 
 import (
+	"fmt"
 	"maps"
+	"slices"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
@@ -95,4 +99,52 @@ func mergeItems(dest map[string][]database.Item, source map[string][]database.It
 		}
 		dest[key] = append(dest[key], items...)
 	}
+}
+
+type Pair struct {
+	Address common.Address
+	Token   common.Address
+}
+
+func (store Store) GetPairsToUpdate(chainID string, batchSize int64) ([]Pair, error) {
+	key := fmt.Sprintf("%s:%s", chainID, balanceKey)
+	rows, err := store.db.GetRowsRange(toSuccessor(key), fmt.Sprintf("%s:", key), database.WithLimit(batchSize))
+	if err != nil {
+		return nil, err
+	}
+	var pairs []Pair
+	for _, row := range rows {
+		for col := range row.Values {
+			pairs = append(pairs, Pair{
+				Address: addressFromKey(row.Key),
+				Token:   tokenFromColumn(col),
+			})
+		}
+	}
+	return pairs, nil
+}
+
+func addressFromKey(key string) common.Address {
+	return common.HexToAddress(strings.Split(key, ":")[2])
+}
+
+func tokenFromColumn(column string) common.Address {
+	return common.HexToAddress(strings.Split(column, ":")[1])
+}
+
+func (store Store) DeletePairs(chainID string, pairs []Pair) error {
+	var keys []string
+	for _, pair := range pairs {
+		keys = append(keys, fmt.Sprintf("%s:%s:%x", chainID, balanceKey, pair.Address.Bytes()))
+	}
+	slices.Sort(keys)
+	keys = slices.Compact(keys)
+	return store.db.DeleteRowsWithKeys(keys)
+}
+
+// toSuccessor add suffix ";" has it comes after ":" in the ascii order
+// this is a simple way to have an infinite bound limit
+// prefix must be a real prefix and not a key
+func toSuccessor(prefix string) string {
+	return prefix + ";"
 }

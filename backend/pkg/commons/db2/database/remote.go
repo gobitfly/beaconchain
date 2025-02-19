@@ -240,7 +240,7 @@ func (r RemoteClient) GetRow(key string) (*Row, error) {
 }
 
 func (r RemoteClient) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
-	options := apply(opts)
+	options := newOptions(opts)
 	b, err := json.Marshal(ParamsGetRowsRange{
 		High:      high,
 		Low:       low,
@@ -298,6 +298,10 @@ func (r RemoteClient) GetRowsWithKeys(keys []string) ([]Row, error) {
 		return nil, err
 	}
 	return rows, nil
+}
+
+func (r RemoteClient) DeleteRowsWithKeys(keys []string, opts ...Option) error {
+	panic("implement me")
 }
 
 func (r RemoteClient) Close() error {

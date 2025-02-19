@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -28,11 +26,10 @@ import (
 )
 
 type ErigonClient struct {
-	endpoint     string
-	rpcClient    *gethrpc.Client
-	ethClient    *ethclient.Client
-	chainID      *big.Int
-	multiChecker *Balance
+	endpoint  string
+	rpcClient *gethrpc.Client
+	ethClient *ethclient.Client
+	chainID   *big.Int
 }
 
 var CurrentErigonClient *ErigonClient
@@ -54,11 +51,6 @@ func NewErigonClient(endpoint string) (*ErigonClient, error) {
 		return nil, fmt.Errorf("error dialing rpc node: %w", err)
 	}
 	client.ethClient = ethClient
-
-	client.multiChecker, err = NewBalance(common.HexToAddress("0xb1F8e55c7f64D203C1400B9D8555d050F94aDF39"), client.ethClient)
-	if err != nil {
-		return nil, fmt.Errorf("error initiation balance checker contract: %w", err)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -342,106 +334,6 @@ func (client *ErigonClient) TraceParityTx(txHash string) ([]*ParityTraceResult, 
 	return res, nil
 }
 
-func (client *ErigonClient) GetBalances(pairs []*types.Eth1AddressBalance, addressIndex, tokenIndex int) ([]*types.Eth1AddressBalance, error) {
-	batchElements := make([]gethrpc.BatchElem, 0, len(pairs))
-
-	ret := make([]*types.Eth1AddressBalance, len(pairs))
-
-	for i, pair := range pairs {
-		result := ""
-
-		ret[i] = &types.Eth1AddressBalance{
-			Address: pair.Address,
-			Token:   pair.Token,
-		}
-
-		if len(pair.Token) < 20 {
-			batchElements = append(batchElements, gethrpc.BatchElem{
-				Method: "eth_getBalance",
-				Args:   []interface{}{common.BytesToAddress(pair.Address), "latest"},
-				Result: &result,
-			})
-		} else {
-			to := common.BytesToAddress(pair.Token)
-			msg := ethereum.CallMsg{
-				To:   &to,
-				Gas:  1000000,
-				Data: common.Hex2Bytes(fmt.Sprintf("70a08231000000000000000000000000%x", pair.Address)),
-			}
-
-			batchElements = append(batchElements, gethrpc.BatchElem{
-				Method: "eth_call",
-				Args:   []interface{}{toCallArg(msg), "latest"},
-				Result: &result,
-			})
-		}
-	}
-
-	err := client.rpcClient.BatchCall(batchElements)
-	if err != nil {
-		return nil, fmt.Errorf("error during batch request: %w", err)
-	}
-
-	for i, el := range batchElements {
-		if el.Error != nil {
-			log.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
-		}
-
-		res := strings.TrimPrefix(*el.Result.(*string), "0x")
-		ret[i].Balance = new(big.Int).SetBytes(common.FromHex(res)).Bytes()
-	}
-
-	return ret, nil
-}
-
-func (client *ErigonClient) GetBalancesForAddress(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
-	opts := &bind.CallOpts{
-		BlockNumber: nil,
-	}
-
-	tokens := getTokens(tokenStr)
-	balancesInt, err := client.multiChecker.Balances(opts, []common.Address{common.HexToAddress(address)}, tokens)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := parseAddressBalance(tokens, address, balancesInt)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (client *ErigonClient) GetNativeBalance(address string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	balance, err := client.ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
-
-	if err != nil {
-		return nil, err
-	}
-	return balance.Bytes(), nil
-}
-
-func (client *ErigonClient) GetERC20TokenBalance(address string, token string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	to := common.HexToAddress(token)
-	balance, err := client.ethClient.CallContract(ctx, ethereum.CallMsg{
-		To:   &to,
-		Gas:  1000000,
-		Data: common.Hex2Bytes("70a08231000000000000000000000000" + address),
-	}, nil)
-
-	if err != nil && !strings.HasPrefix(err.Error(), "execution reverted") {
-		return nil, err
-	}
-	return balance, nil
-}
-
 func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {
 	log.Infof("retrieving metadata for token %x", token)
 
@@ -490,26 +382,6 @@ func (client *ErigonClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Met
 	}
 
 	return ret, err
-}
-
-func toCallArg(msg ethereum.CallMsg) interface{} {
-	arg := map[string]interface{}{
-		"from": msg.From,
-		"to":   msg.To,
-	}
-	if len(msg.Data) > 0 {
-		arg["data"] = hexutil.Bytes(msg.Data)
-	}
-	if msg.Value != nil {
-		arg["value"] = (*hexutil.Big)(msg.Value)
-	}
-	if msg.Gas != 0 {
-		arg["gas"] = hexutil.Uint64(msg.Gas)
-	}
-	if msg.GasPrice != nil {
-		arg["gasPrice"] = (*hexutil.Big)(msg.GasPrice)
-	}
-	return arg
 }
 
 type Eth1InternalTransactionWithPosition struct {
