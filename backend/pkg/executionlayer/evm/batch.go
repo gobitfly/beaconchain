@@ -200,6 +200,27 @@ func (m RPCBatcher) doBatch(elements []BatchElement) ([]BatchResponse, error) {
 	return res, nil
 }
 
+func ERC20Supply(batcher Batcher, addresses []common.Address) ([]*big.Int, error) {
+	var elements []BatchElement
+	for _, address := range addresses {
+		input, _ := erc20.ABI.Pack("totalSupply")
+		elements = append(elements, BatchElement{
+			Method: "eth_call",
+			To:     &address,
+			Data:   input,
+		})
+	}
+	results, err := batcher.Batch(elements)
+	if err != nil {
+		return nil, err
+	}
+	var supplies []*big.Int
+	for _, result := range results {
+		supplies = append(supplies, new(big.Int).SetBytes(result.Data))
+	}
+	return supplies, nil
+}
+
 func BalanceForPairs(batcher Batcher, pairs []metadataupdates.Pair) ([]*big.Int, error) {
 	var elements []BatchElement
 	for _, pair := range pairs {

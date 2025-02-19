@@ -35,7 +35,6 @@ import (
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 
 	//nolint:gosec
@@ -162,13 +161,41 @@ func Run() {
 	}
 	defer bt.Close()
 
+	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
+	if err != nil {
+		log.Fatal(err, "error connecting to bigtable", 0)
+	}
+
+	batcherConfig := evm.BatcherConfig{
+		Limit: utils.Config.Indexer.BatchLimit,
+	}
+	if utils.Config.Indexer.MulticallAddresses != "" {
+		parsed := common.HexToAddress(utils.Config.Indexer.MulticallAddresses)
+		batcherConfig.MulticallAddress = &parsed
+	}
+	batcher := evm.NewBatcher(nodeChainId, client.GetNativeClient(), batcherConfig)
+
+	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	metadataUpdatesStore := metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache)
+	dataStore := data.NewStore(database.Wrap(bigtable, data.Table))
+	metadataStore := metadata.NewStore(database.Wrap(bigtable, metadata.Table))
+
 	if *tokenPriceExport {
 		go func() {
 			for {
-				err = UpdateTokenPrices(bt, client, *tokenPriceExportList)
+				tokenList, err := readTokenListFile(*tokenPriceExportList)
 				if err != nil {
-					log.Error(err, "error while updating token prices", 0)
-					time.Sleep(*tokenPriceExportFrequency)
+					log.Error(err, "error reading token list file", 0)
+				}
+				pricer := executionlayer.NewTokenPricer(
+					metadataStore,
+					chainId,
+					executionlayer.NewLlamaClient(),
+					tokenList,
+					batcher,
+				)
+				if err := pricer.UpdateTokens(); err != nil {
+					log.Error(err, "error updating tokens", 0)
 				}
 				time.Sleep(*tokenPriceExportFrequency)
 			}
@@ -179,16 +206,6 @@ func Run() {
 		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
 	}
 
-	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
-	if err != nil {
-		log.Fatal(err, "error connecting to bigtable", 0)
-	}
-
-	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	metadataUpdatesStore := metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache)
-	dataStore := data.NewStore(database.Wrap(bigtable, data.Table))
-	metadataStore := metadata.NewStore(database.Wrap(bigtable, metadata.Table))
-
 	indexer := executionlayer.NewIndexer(
 		executionlayer.NewAdaptorV1(
 			dataStore,
@@ -197,18 +214,11 @@ func Run() {
 		executionlayer.AllTransformers...,
 	)
 
-	batcherConfig := evm.BatcherConfig{
-		Limit: utils.Config.Indexer.BatchLimit,
-	}
-	if utils.Config.Indexer.MulticallAddresses != "" {
-		parsed := common.HexToAddress(utils.Config.Indexer.MulticallAddresses)
-		batcherConfig.MulticallAddress = &parsed
-	}
 	balanceUpdater := executionlayer.NewBalanceUpdater(
 		chainId,
 		metadataUpdatesStore,
 		metadataStore,
-		evm.NewBatcher(nodeChainId, client.GetNativeClient(), batcherConfig),
+		batcher,
 	)
 
 	if *enableFullBalanceUpdater {
@@ -401,98 +411,16 @@ func ImportEnsUpdatesLoop(bt *db.Bigtable, client *rpc.ErigonClient, batchSize i
 	}
 }
 
-func UpdateTokenPrices(bt *db.Bigtable, client *rpc.ErigonClient, tokenListPath string) error {
-	tokenListContent, err := os.ReadFile(tokenListPath)
+func readTokenListFile(path string) (erc20.ERC20TokenList, error) {
+	tokenListContent, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return erc20.ERC20TokenList{}, err
 	}
-
-	tokenList := &erc20.ERC20TokenList{}
-
-	err = json.Unmarshal(tokenListContent, tokenList)
-	if err != nil {
-		return err
+	var tokenList erc20.ERC20TokenList
+	if err := json.Unmarshal(tokenListContent, &tokenList); err != nil {
+		return erc20.ERC20TokenList{}, err
 	}
-
-	type defillamaPriceRequest struct {
-		Coins []string `json:"coins"`
-	}
-	coinsList := make([]string, 0, len(tokenList.Tokens))
-	for _, token := range tokenList.Tokens {
-		coinsList = append(coinsList, "ethereum:"+token.Address)
-	}
-
-	req := &defillamaPriceRequest{
-		Coins: coinsList,
-	}
-
-	reqEncoded, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	httpClient := &http.Client{Timeout: time.Second * 10}
-
-	resp, err := httpClient.Post("https://coins.llama.fi/prices", "application/json", bytes.NewReader(reqEncoded))
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error querying defillama api: %v", resp.Status)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	type defillamaCoin struct {
-		Decimals  int64            `json:"decimals"`
-		Price     *decimal.Decimal `json:"price"`
-		Symbol    string           `json:"symbol"`
-		Timestamp int64            `json:"timestamp"`
-	}
-
-	type defillamaResponse struct {
-		Coins map[string]defillamaCoin `json:"coins"`
-	}
-
-	respParsed := &defillamaResponse{}
-	err = json.Unmarshal(body, respParsed)
-	if err != nil {
-		return err
-	}
-
-	tokenPrices := make([]*types.ERC20TokenPrice, 0, len(respParsed.Coins))
-	for address, data := range respParsed.Coins {
-		tokenPrices = append(tokenPrices, &types.ERC20TokenPrice{
-			Token: common.FromHex(strings.TrimPrefix(address, "ethereum:0x")),
-			Price: []byte(data.Price.String()),
-		})
-	}
-
-	g := new(errgroup.Group)
-	g.SetLimit(20)
-	for i := range tokenPrices {
-		i := i
-		g.Go(func() error {
-			metadata, err := client.GetERC20TokenMetadata(tokenPrices[i].Token)
-			if err != nil {
-				return err
-			}
-			tokenPrices[i].TotalSupply = metadata.TotalSupply
-			// log.LogInfo("price for token %x is %s @ %v", tokenPrices[i].Token, tokenPrices[i].Price, new(big.Int).SetBytes(tokenPrices[i].TotalSupply))
-			return nil
-		})
-	}
-	err = g.Wait()
-	if err != nil {
-		return err
-	}
-
-	return bt.SaveERC20TokenPrices(tokenPrices)
+	return tokenList, nil
 }
 
 func HandleChainReorgs(bt *db.Bigtable, client *rpc.ErigonClient, depth int) error {
