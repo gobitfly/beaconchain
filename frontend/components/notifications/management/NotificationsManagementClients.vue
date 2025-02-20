@@ -16,25 +16,25 @@ const otherClients = computed(
 const screenreaderTextExcutionClients = computed(
   () => executionClients.value.length
     ? $t('notifications.clients.settings.screenreader.edit_notifications', [
-      executionClients.value.length,
-      $t('notifications.clients.settings.execution_clients'),
-    ])
+        executionClients.value.length,
+        $t('notifications.clients.settings.execution_clients'),
+      ])
     : $t('notifications.clients.settings.screenreader.empty_clients'),
 )
 const screenreaderTextConsensusClients = computed(
   () => consensusClients.value.length
     ? $t('notifications.clients.settings.screenreader.edit_notifications', [
-      consensusClients.value.length,
-      $t('notifications.clients.settings.execution_clients'),
-    ])
+        consensusClients.value.length,
+        $t('notifications.clients.settings.execution_clients'),
+      ])
     : $t('notifications.clients.settings.screenreader.empty_clients'),
 )
 const screenreaderTextOtherClients = computed(
   () => executionClients.value.length
     ? $t('notifications.clients.settings.screenreader.edit_notifications', [
-      executionClients.value.length,
-      $t('notifications.clients.settings.execution_clients'),
-    ])
+        executionClients.value.length,
+        $t('notifications.clients.settings.execution_clients'),
+      ])
     : $t('notifications.clients.settings.screenreader.empty_clients'),
 )
 

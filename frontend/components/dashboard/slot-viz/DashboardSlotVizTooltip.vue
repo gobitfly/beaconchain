@@ -43,9 +43,9 @@ const data = computed(() => {
 
   const hasDuties
     = !!slot?.proposal
-    || !!slot?.slashing
-    || !!slot?.attestations
-    || !!slot?.sync
+      || !!slot?.slashing
+      || !!slot?.attestations
+      || !!slot?.sync
   let hasSuccessDuties = false
   let hasFailedDuties = false
   let maxCount = 0
@@ -175,7 +175,7 @@ const data = computed(() => {
 
   const isScheduled
     = slot.status === 'scheduled'
-    || (slot.status === 'proposed' && hasScheduledDuty)
+      || (slot.status === 'proposed' && hasScheduledDuty)
   let stateLabel = ''
   if (isScheduled) {
     stateLabel = formatMultiPartSpan(

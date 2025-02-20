@@ -8,7 +8,7 @@ const savingPercentage = computed(() => {
   products.value?.premium_products.forEach((product) => {
     const savingPercentage
       = (1 - product.price_per_year_eur / (product.price_per_month_eur * 12))
-      * 100
+        * 100
     if (savingPercentage > highestSaving) {
       highestSaving = savingPercentage
     }
