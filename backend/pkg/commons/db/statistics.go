@@ -1611,7 +1611,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				failedTxCount += 1
 				totalFailedGasUsed = totalFailedGasUsed.Add(gasUsed)
 				totalFailedTxFee = totalFailedTxFee.Add(txFees)
-			case 1:
+			case 1, 2:
 				successTxCount += 1
 			default:
 				log.Fatal(fmt.Errorf("error unknown status code %v hash: %x", tx.Status, tx.Hash), "", 0)
