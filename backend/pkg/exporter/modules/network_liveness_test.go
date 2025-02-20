@@ -108,17 +108,14 @@ func TestGetPreviousHeadEpoch(t *testing.T) {
 				if prevHeadEpoch != tt.expectedHeadEpoch {
 					t.Errorf("expected head epoch: %v, got: %v", tt.expectedHeadEpoch, prevHeadEpoch)
 				}
-
 			}
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected error: %v, got nil", tt.expectedError)
 				}
 			}
-
 		})
 	}
-
 }
 
 func TestIsNodeSynced(t *testing.T) {
@@ -189,7 +186,6 @@ func TestUpdateCache(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			utils.Config = &types.Config{
 				Chain: types.Chain{
 					ClConfig: types.ClChainConfig{
@@ -206,16 +202,22 @@ func TestUpdateCache(t *testing.T) {
 				RemoteCache:  &MockRemoteCache{},
 			}
 
-			cache.LatestNodeEpoch.Set(tt.latestEpoch)
-			cache.LatestNodeFinalizedEpoch.Set(tt.latestFinalizedEpoch)
+			err := cache.LatestNodeEpoch.Set(tt.latestEpoch)
+			if err != nil {
+				t.Errorf("unexpected latest epoch error: %v", err)
+			}
 
-			err := updateCache(tt.head)
+			err = cache.LatestNodeFinalizedEpoch.Set(tt.latestFinalizedEpoch)
+			if err != nil {
+				t.Errorf("unexpected latest finalized epoch error: %v", err)
+			}
+
+			err = updateCache(tt.head)
 			if tt.expectedError {
 				if err != nil {
 					t.Errorf("expected no error, got: %v", err)
 				}
 			}
-
 		})
 	}
 }

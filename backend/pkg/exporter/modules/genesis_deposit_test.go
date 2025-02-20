@@ -61,7 +61,6 @@ func TestIsBeaconChainStarted(t *testing.T) {
 			if result != tt.expectedResult {
 				t.Errorf("expected result: %v, got: %v", tt.expectedResult, result)
 			}
-
 		})
 	}
 }
@@ -111,7 +110,6 @@ func TestAreGenesisDepositsExported(t *testing.T) {
 			if result != tt.expectedResult {
 				t.Errorf("expected result: %v, got: %v", tt.expectedResult, result)
 			}
-
 		})
 	}
 }
@@ -250,7 +248,6 @@ func TestExportGenesisDeposits(t *testing.T) {
 				mock.ExpectExec(updateDepositsQuery).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
-
 			}
 
 			// mock UpdateBlockDepositCount query
@@ -281,7 +278,6 @@ func TestExportGenesisDeposits(t *testing.T) {
 					t.Errorf("expected error: %v, got nil", tt.expectedError)
 				}
 			}
-
 		})
 	}
 }
