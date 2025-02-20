@@ -36,7 +36,9 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
   if (
     event_type === 'gas_above' || event_type === 'gas_below'
   ) {
-    return `${formatWeiTo(threshold ?? '0', { unit: 'gwei' })} ${$t('common.units.gwei')}`
+    return `${formatValue(threshold ?? '0', {
+      to: 'gwei',
+    })} ${$t('common.units.gwei')}`
   }
   if (event_type === 'participation_rate') {
     return `${formatToFraction(threshold ?? 0)} %`
