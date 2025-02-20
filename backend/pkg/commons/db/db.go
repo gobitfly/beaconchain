@@ -2650,6 +2650,92 @@ func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	return nil
 }
 
+func SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO validator_tags (publickey, tag)
+			VALUES %s
+			ON CONFLICT (publickey, tag) DO NOTHING`,
+			strings.Join(valueStrings, ",")), valueArgs...)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+
+}
+
+func DeleteValidatorTags() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	for {
+		res, err := tx.Exec(`DELETE FROM validator_tags WHERE publickey IN (SELECT publickey FROM validator_tags WHERE publickey NOT IN (SELECT pubkey FROM validators) LIMIT 1000)`)
+		if err != nil {
+			return err
+		}
+
+		rows, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if rows == 0 {
+			break
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func DeleteInvalidTags() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	for {
+		res, err := tx.Exec(`DELETE FROM validator_tags WHERE publickey IN (SELECT publickey FROM validator_tags WHERE tag = 'ssv' LIMIT 1000)`)
+		if err != nil {
+			return err
+		}
+
+		rows, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if rows == 0 {
+			break
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // copy from utils func
 func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 	conn, err := WriterDb.Conn(context.Background())
