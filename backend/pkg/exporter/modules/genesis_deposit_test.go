@@ -275,7 +275,7 @@ func TestExportGenesisDeposits(t *testing.T) {
 			}
 			if tt.expectedError {
 				if err == nil {
-					t.Errorf("expected error: %v, got nil", tt.expectedError)
+					t.Errorf("expected error got nil")
 				}
 			}
 		})
