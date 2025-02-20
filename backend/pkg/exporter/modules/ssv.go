@@ -100,14 +100,14 @@ func unmarshalSSVResponse(message []byte) (*types.SSVExporterResponse, error) {
 }
 
 func processSSVResponse(res *types.SSVExporterResponse) error {
-	t0 := time.Now()
+	timeStart := time.Now()
 	log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
 
 	if err := saveSSV(res); err != nil {
 		return err
 	}
 
-	log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(t0)}, "tagged ssv validators")
+	log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(timeStart)}, "tagged ssv validators")
 
 	return nil
 }
@@ -157,12 +157,12 @@ func prepareBatchInsert(data []types.SSVExporterData) ([]string, []interface{}) 
 	valueArgs := make([]interface{}, 0, len(data)*index)
 
 	for i, d := range data {
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*index+1))
 		pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))
 		if err != nil {
 			log.Error(err, "error decoding public key", 0)
 			continue
 		}
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*index+1))
 		valueArgs = append(valueArgs, pubkey)
 	}
 
