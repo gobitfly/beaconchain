@@ -97,7 +97,7 @@ CREATE TABLE
 SELECT
     'creating consensus_layer_events table';
 
-CREATE TABLE consensus_layer_events (
+CREATE TABLE IF NOT EXISTS  consensus_layer_events (
 	id text NOT NULL,
 	slot int4 NOT NULL,
 	block_root bytea NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE consensus_layer_events (
 	CONSTRAINT consensus_layer_events_pkey PRIMARY KEY (id)
 );
 
-CREATE INDEX consensus_layer_events_slot_event_name_idx ON public.consensus_layer_events USING btree (slot DESC, event_name);
+CREATE INDEX IF NOT EXISTS consensus_layer_events_slot_event_name_idx ON public.consensus_layer_events USING btree (slot DESC, event_name);
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
