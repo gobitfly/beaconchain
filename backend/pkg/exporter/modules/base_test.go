@@ -297,7 +297,7 @@ func TestNotifyAllModules(t *testing.T) {
 	}
 
 	utils.Config = &types.Config{
-		DeploymentType: "development",
+		DeploymentType: "test",
 	}
 
 	for _, tt := range tests {
