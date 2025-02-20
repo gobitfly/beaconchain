@@ -27,8 +27,8 @@ const mapped = computed(() => {
   let color: TagColor
   const status
     = props.status === 'scheduled'
-    && props.blockSlot
-    && props.blockSlot < currentSlot
+      && props.blockSlot
+      && props.blockSlot < currentSlot
       ? 'probably_missed'
       : props.status
   const tStatus = $t(`block.status.${status}`)

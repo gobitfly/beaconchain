@@ -30,7 +30,7 @@ watch(
       // We currently only want to use one public id
       shareGroups.value
         = isPremiumUser.value
-        && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
+          && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
       isNew.value = !p.dashboard.public_ids?.[0]
       if (isNew.value) {
         dashboardName.value = props.value?.dashboard?.name ?? ''
