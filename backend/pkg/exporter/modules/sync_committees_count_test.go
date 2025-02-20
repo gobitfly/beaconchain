@@ -152,7 +152,6 @@ func TestProcessSyncCommitteesCount(t *testing.T) {
 					t.Errorf("expected error: %v, got nil", tt.expectedError)
 				}
 			}
-
 		})
 	}
 }
@@ -257,7 +256,6 @@ func TestGetEpochPeriodAndCountFromDB(t *testing.T) {
 					t.Errorf("expected error: %v, got nil", tt.expectedError)
 				}
 			}
-
 		})
 	}
 }
@@ -358,7 +356,6 @@ func TestExportSyncCommitteesCount(t *testing.T) {
 					t.Errorf("expected error: %v, got nil", tt.expectedError)
 				}
 			}
-
 		})
 	}
 }
@@ -445,7 +442,6 @@ func TestCalculateCountForPeriod(t *testing.T) {
 			if count != tt.expectedCount {
 				t.Errorf("expected count: %v, got: %v", tt.expectedCount, count)
 			}
-
 		})
 	}
 }

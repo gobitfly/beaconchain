@@ -2,10 +2,8 @@ package modules
 
 import (
 	"testing"
-	"time"
 
 	"github.com/coocood/freecache"
-	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -140,15 +138,13 @@ func TestCalculateSyncPeriodRange(t *testing.T) {
 
 			cache.TieredCache = &cache.TieredCacheBase{
 				LocalGoCache: freecache.NewCache(100 * 1024 * 1024), // 100 MB
-				RemoteCache: &cache.RedisCache{
-					RedisRemoteCache: redis.NewClient(&redis.Options{
-						Addr:        "localhost:6379",
-						ReadTimeout: time.Second * 20,
-					}),
-				},
+				RemoteCache:  &MockRemoteCache{},
 			}
 
-			cache.LatestFinalizedEpoch.Set(tt.latestEpoch)
+			err := cache.LatestFinalizedEpoch.Set(tt.latestEpoch)
+			if err != nil {
+				t.Errorf("unexpected latest finalized epoch error: %v", err)
+			}
 
 			firstPeriod, lastPeriod := calculateSyncPeriodRange()
 			if firstPeriod != tt.expectedFirstPeriod {
