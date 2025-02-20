@@ -202,8 +202,8 @@ export function formatTsToTime(ts: number, locales: string): string {
 export function nZeros(count: number): string {
   return count > 0
     ? Array.from(Array(count))
-      .map(() => '0')
-      .join('')
+        .map(() => '0')
+        .join('')
     : ''
 }
 

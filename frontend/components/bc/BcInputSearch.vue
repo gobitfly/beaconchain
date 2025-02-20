@@ -19,7 +19,7 @@ const { t: $t } = useTranslation()
 
 const input = defineModel<string>()
 
-const elementInput = ref<HTMLElement >()
+const elementInput = ref<HTMLElement>()
 const hasInput = computed(() => input.value?.length)
 
 const idResults = useId()

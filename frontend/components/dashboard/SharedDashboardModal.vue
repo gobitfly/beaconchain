@@ -19,8 +19,8 @@ const visible = computed(
 const text = computed(() => {
   const userHasOwnDashboard
     = (dashboards.value?.validator_dashboards?.length || 0)
-    + (dashboards.value?.account_dashboards?.length || 0)
-    > 0
+      + (dashboards.value?.account_dashboards?.length || 0)
+      > 0
   const textRoot = userHasOwnDashboard
     ? 'dashboard.shared_modal_with_own'
     : 'dashboard.shared_modal_without_own'

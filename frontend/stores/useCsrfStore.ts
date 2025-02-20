@@ -6,7 +6,7 @@ import { defineStore } from 'pinia'
 **/
 
 const csrfStore = defineStore('csrf_store', () => {
-  const tokenCsrf = ref<string >('')
+  const tokenCsrf = ref<string>('')
   return { tokenCsrf }
 })
 

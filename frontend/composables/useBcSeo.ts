@@ -16,14 +16,14 @@ export function useBcSeo(
   const ogUrl = () => {
     const value
       = removeDynamicUrlValue
-      && Object.values(route.params).find(
-        v => !!v && typeof v === 'string' && route.fullPath.endsWith(v),
-      )
+        && Object.values(route.params).find(
+          v => !!v && typeof v === 'string' && route.fullPath.endsWith(v),
+        )
     const path = value
       ? route.fullPath.substring(
-        0,
-        route.fullPath.lastIndexOf(value as string) - 1,
-      )
+          0,
+          route.fullPath.lastIndexOf(value as string) - 1,
+        )
       : route.fullPath
     return `${url}${path}`
   }

@@ -59,14 +59,14 @@ const data = computed(() => {
   else {
     const hasFailed
       = !!slot.attestations?.failed
-      || !!slot.sync?.failed
-      || !!slot.slashing?.failed
-      || (!!slot.proposal && slot.status === 'missed')
+        || !!slot.sync?.failed
+        || !!slot.slashing?.failed
+        || (!!slot.proposal && slot.status === 'missed')
     const hasSuccess
       = !!slot.attestations?.success
-      || !!slot.sync?.success
-      || !!slot.slashing?.success
-      || (!!slot.proposal && slot.status === 'proposed')
+        || !!slot.sync?.success
+        || !!slot.slashing?.success
+        || (!!slot.proposal && slot.status === 'proposed')
     const hasPending = !!slot.attestations?.scheduled || !!slot.sync?.scheduled
     if (!hasFailed && !hasSuccess && !hasPending) {
       inner = 'proposed'

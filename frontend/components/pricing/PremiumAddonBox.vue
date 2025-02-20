@@ -36,7 +36,7 @@ const prices = computed(() => {
   const quantity = quantityForPurchase.value || 1
   const savingAmount
     = (props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur)
-    * quantity
+      * quantity
   const savingDigits = savingAmount % 100 === 0 ? 0 : 2
 
   return {
