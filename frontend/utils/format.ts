@@ -1,7 +1,4 @@
-import {
-  commify,
-  formatUnits,
-} from '@ethersproject/units'
+import { commify } from '@ethersproject/units'
 import {
   DateTime, type StringUnitLength,
 } from 'luxon'
@@ -332,31 +329,24 @@ export function formatToPercent(value: NumberOrString, option?: { locale?: strin
   }).format(Number(value))
 }
 
-export function formatToWei(value: string, {
-  from,
-}: {
-  from: 'gwei',
-},
-) {
-  const bigValue = BigInt(Math.round(Number(value)))
-  let result = ''
-  if (from === 'gwei') {
-    result = `${bigValue * 1_000_000_000n}`
-  }
-  return result
-}
-
-export function formatWeiTo(wei: string, {
+export const formatValue = (value: string, {
+  from = 'wei',
   maximumFractionDigits = 0,
   minimumFractionDigits = 0,
-  unit,
+  to,
+  useGrouping = false,
 }: {
+  from?: CryptoUnit,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
-  unit: 'gwei',
-}) {
-  return new Intl.NumberFormat('en-US', {
+  to: CryptoUnit,
+  useGrouping?: boolean,
+}) => {
+  const scaleBy = unitFactorCrypto[from] - unitFactorCrypto[to]
+  return formatNumber(value, {
     maximumFractionDigits,
     minimumFractionDigits,
-  }).format(Number(formatUnits(wei, unit)))
+    scaleBy,
+    useGrouping,
+  })
 }
