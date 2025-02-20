@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -227,9 +228,16 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *db2.IndexedBlock
 			GasPrice:            tx.GetGasPrice(),
 			BlobTxFee:           blobFee,
 			BlobGasPrice:        tx.GetBlobGasPrice(),
-			ErrorMsg:            tx.GetErrorMsg(),
+			ErrorMsg:            "",
 			BlobVersionedHashes: tx.GetBlobVersionedHashes(),
 		}
+		for _, itx := range tx.Itx {
+			if itx.ErrorMsg != "" {
+				indexedTx.ErrorMsg = itx.ErrorMsg
+				break
+			}
+		}
+
 		blobs = append(blobs, db2.BlobWithIndex{
 			Indexed: indexedTx,
 			TxIndex: i,
@@ -247,7 +255,7 @@ func TransformContract(chainID string, block *types.Eth1Block, res *db2.IndexedB
 				contractUpdate := &types.IsContractUpdate{
 					IsContract: itx.GetType() == "create",
 					// also use success status of enclosing transaction, as even successful sub-calls can still be reverted later in the tx
-					Success: itx.GetErrorMsg() == "" && tx.GetErrorMsg() == "",
+					Success: itx.GetErrorMsg() == "" && tx.GetStatus() == 1,
 				}
 				address := getContractAddress(itx)
 
@@ -264,10 +272,27 @@ func TransformContract(chainID string, block *types.Eth1Block, res *db2.IndexedB
 	return nil
 }
 
+func isReverted(internal *types.Eth1InternalTransaction, revertSource *string) bool {
+	var reverted bool
+	if internal.ErrorMsg != "" {
+		reverted = true
+		// only save the highest root revert
+		if *revertSource == "" || !strings.HasPrefix(internal.Path, *revertSource) {
+			// update source and remove last char to simplify prefix check
+			*revertSource = strings.TrimSuffix(internal.Path, "]")
+		}
+	}
+	return reverted
+}
+
 func TransformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var transactions []db2.InternalWithIndexes
 	for i, tx := range block.GetTransactions() {
+		// revertSource keeps track of the source of the revert, all children itx should be marked as reverted
+		var revertSource string
 		for j, itx := range tx.GetItx() {
+			// check for error before skipping, otherwise we loose track of cascading reverts
+			reverted := isReverted(itx, &revertSource)
 			if !isValidItx(itx) {
 				continue
 			}
@@ -280,6 +305,7 @@ func TransformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock)
 				From:        itx.GetFrom(),
 				To:          itx.GetTo(),
 				Value:       itx.GetValue(),
+				Reverted:    reverted,
 			}
 			if itx.GetType() == "delegatecall" {
 				continue
@@ -463,6 +489,9 @@ func TransformWithdrawal(chainID string, block *types.Eth1Block, res *db2.Indexe
 
 func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	ensContractAddresses := ens.ENSContractFor(chainID)
+	if ensContractAddresses == nil {
+		return nil
+	}
 	var ensLogs []db2.ENSLog
 	for i, tx := range block.GetTransactions() {
 		for j, txLog := range tx.GetLogs() {
@@ -651,6 +680,7 @@ func isBlobTx(txType uint32) bool {
 
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
 	// skip top level and empty calls
+	// itx.Path == "0" is a legacy check and should be removed in the future
 	if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) {
 		return false
 	}
@@ -728,7 +758,7 @@ func updateITxStatus(indexedTx *types.Eth1TransactionIndexed, internals []*types
 	for _, itx := range internals {
 		if itx.ErrorMsg != "" {
 			indexedTx.ErrorMsg = itx.ErrorMsg
-			if indexedTx.Status == types.StatusType_SUCCESS {
+			if indexedTx.GetStatus() == types.StatusType_SUCCESS {
 				indexedTx.Status = types.StatusType_PARTIAL
 			}
 			break

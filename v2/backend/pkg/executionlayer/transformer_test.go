@@ -25,6 +25,8 @@ var (
 	aliceAddress = common.BytesToAddress(leftPad(alice, 20))
 	bob          = []byte("bob")
 	bobAddress   = common.BytesToAddress(leftPad(bob, 20))
+	carol        = []byte("carol")
+	dave         = []byte("dave")
 	john         = []byte("john")
 	contract     = []byte("contract")
 	usdc         = []byte("usdc")
@@ -429,6 +431,67 @@ func TestTransformITx(t *testing.T) {
 			},
 		},
 		{
+			name: "failed internal",
+			block: &types.Eth1Block{
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:     alice,
+								To:       bob,
+								Value:    []byte{1},
+								ErrorMsg: "failed",
+								Path:     "[0]",
+							},
+						},
+					},
+				},
+			},
+			want: []*types.Eth1InternalTransactionIndexed{
+				{
+					From:     alice,
+					To:       bob,
+					Reverted: true,
+				},
+			},
+		},
+		{
+			name: "cascading failed",
+			block: &types.Eth1Block{
+				Transactions: []*types.Eth1Transaction{
+					{
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:     alice,
+								To:       bob,
+								Value:    []byte{1},
+								ErrorMsg: "failed",
+								Path:     "[0]",
+							},
+							{
+								From:  carol,
+								To:    dave,
+								Value: []byte{1},
+								Path:  "[0 0]",
+							},
+						},
+					},
+				},
+			},
+			want: []*types.Eth1InternalTransactionIndexed{
+				{
+					From:     alice,
+					To:       bob,
+					Reverted: true,
+				},
+				{
+					From:     carol,
+					To:       dave,
+					Reverted: true,
+				},
+			},
+		},
+		{
 			name: "ignore without value",
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
@@ -443,7 +506,7 @@ func TestTransformITx(t *testing.T) {
 			},
 		},
 		{
-			name: "ignore without top call - geth",
+			name: "ignore without top call - legacy geth",
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
 					{
@@ -458,7 +521,7 @@ func TestTransformITx(t *testing.T) {
 			},
 		},
 		{
-			name: "ignore without top call - parity",
+			name: "ignore without top call - parity / current geth",
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
 					{
@@ -506,6 +569,7 @@ func TestTransformContracts(t *testing.T) {
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
 					{
+						Status: 1,
 						Itx: []*types.Eth1InternalTransaction{
 							{
 								Type: "create",
@@ -526,10 +590,11 @@ func TestTransformContracts(t *testing.T) {
 			},
 		},
 		{
-			name: "failed",
+			name: "failed - internal",
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
 					{
+						Status: 1,
 						Itx: []*types.Eth1InternalTransaction{
 							{
 								Type:     "create",
@@ -551,10 +616,36 @@ func TestTransformContracts(t *testing.T) {
 			},
 		},
 		{
+			name: "failed - tx failed",
+			block: &types.Eth1Block{
+				Transactions: []*types.Eth1Transaction{
+					{
+						Status: 0,
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								Type: "create",
+								To:   contract,
+							},
+						},
+					},
+				},
+			},
+			want: []db2.ContractUpdateWithAddress{
+				{
+					Address: contract,
+					Indexed: &types.IsContractUpdate{
+						IsContract: true,
+						Success:    false,
+					},
+				},
+			},
+		},
+		{
 			name: "suicide",
 			block: &types.Eth1Block{
 				Transactions: []*types.Eth1Transaction{
 					{
+						Status: 1,
 						Itx: []*types.Eth1InternalTransaction{
 							{
 								Type: "suicide",
