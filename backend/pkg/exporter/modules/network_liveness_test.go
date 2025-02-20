@@ -5,11 +5,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/coocood/freecache"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 func TestCreateNetworkStatusReport(t *testing.T) {
@@ -50,6 +54,71 @@ func TestHandleNetworkSuccess(t *testing.T) {
 			handleNetworkSuccess(tt.slotDuration, statusReport)
 		})
 	}
+}
+
+func TestGetPreviousHeadEpoch(t *testing.T) {
+	tests := []struct {
+		name              string
+		mockRows          *sqlmock.Rows
+		mockError         error
+		expectedHeadEpoch uint64
+		expectedError     bool
+	}{
+		{
+			name:              "valid previous head epoch",
+			mockRows:          sqlmock.NewRows([]string{"headepoch"}).AddRow(2),
+			mockError:         nil,
+			expectedHeadEpoch: 2,
+			expectedError:     false,
+		},
+		{
+			name:          "GetNetworkLivenessPreviousHeadEpoch error",
+			mockRows:      nil,
+			mockError:     errors.New("database error"),
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbMock, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to create sqlmock: %v", err)
+			}
+			defer dbMock.Close()
+
+			sqlxDB := sqlx.NewDb(dbMock, "sqlmock")
+			db.WriterDb = sqlxDB
+
+			// mock GetNetworkLivenessPreviousHeadEpoch query
+			query := `SELECT COALESCE\(MAX\(headepoch\), 0\) FROM network_liveness`
+			if tt.mockError != nil {
+				mock.ExpectQuery(query).WillReturnError(tt.mockError)
+			} else {
+				mock.ExpectQuery(query).WillReturnRows(tt.mockRows)
+			}
+
+			prevHeadEpoch, err := getPreviousHeadEpoch()
+
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+
+				if prevHeadEpoch != tt.expectedHeadEpoch {
+					t.Errorf("expected head epoch: %v, got: %v", tt.expectedHeadEpoch, prevHeadEpoch)
+				}
+
+			}
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected error: %v, got nil", tt.expectedError)
+				}
+			}
+
+		})
+	}
+
 }
 
 func TestIsNodeSynced(t *testing.T) {
