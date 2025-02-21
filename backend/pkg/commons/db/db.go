@@ -3036,6 +3036,20 @@ func SaveRocketPoolRewardTree(id uint64, data []byte) error {
 	return tx.Commit()
 }
 
+type Data struct {
+	ID   uint64 `db:"id"`
+	Data []byte `db:"data"`
+}
+
+func GetRocketPoolRewardTrees() ([]Data, error) {
+	var jsonData []Data
+	err := ReaderDb.Select(&jsonData, `
+	SELECT id, data 
+	FROM rocketpool_reward_tree`)
+
+	return jsonData, err
+}
+
 func CheckRocketPoolMVExists() (bool, error) {
 	var exists bool
 	err := ReaderDb.Get(&exists, `SELECT EXISTS (

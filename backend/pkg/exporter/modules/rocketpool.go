@@ -24,7 +24,6 @@ import (
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/hashicorp/go-version"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/jmoiron/sqlx"
 	"github.com/klauspost/compress/zstd"
 	"github.com/lib/pq"
 	rpDAO "github.com/rocket-pool/rocketpool-go/dao"
@@ -61,43 +60,76 @@ var leb16, _ = big.NewInt(0).SetString("16000000000000000000", 10)
 
 func rocketpoolExporter() {
 	RP_CONFIG = initRPConfig()
-	endpoint := utils.Config.Eth1GethEndpoint
-	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
-		endpoint = "ws" + endpoint[4:]
-	}
+	endpoint := getWebSocketEndpoint(utils.Config.Eth1GethEndpoint)
 
 	var err error
 	rpEth1RPRCClient, err = gethrpc.Dial(endpoint)
 	if err != nil {
 		log.Fatal(err, "new rocketpool geth client error", 0)
 	}
+
 	rpEth1Client = ethclient.NewClient(rpEth1RPRCClient)
-	rpExporter, err := NewRocketpoolExporter(
+
+	rpExporter, err := createRocketPoolExporter(
 		rpEth1Client,
 		RP_CONFIG.GetStorageAddress(),
-		db.WriterDb,
 	)
 	if err != nil {
 		log.Fatal(err, "new rocketpool exporter error", 0)
 	}
+
 	err = rpExporter.Run()
 	if err != nil {
 		log.Error(err, "rocketpool exporter run error", 0)
 	}
 }
 
+func getWebSocketEndpoint(endpoint string) string {
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		return "ws" + endpoint[4:]
+	}
+	return endpoint
+}
+
 func initRPConfig() *smartnodeCfg.SmartnodeConfig {
 	config := smartnodeCfg.NewSmartnodeConfig(&smartnodeCfg.RocketPoolConfig{
 		RocketPoolDirectory: "/tmp/rocketpool",
 	})
-	if utils.Config.Chain.Name == "mainnet" {
+
+	switch utils.Config.Chain.Name {
+	case "mainnet":
 		config.Network.Value = smartnodeNetwork.Network_Mainnet
-	} else if utils.Config.Chain.Name == "holesky" {
+	case "holesky":
 		config.Network.Value = smartnodeNetwork.Network_Holesky
-	} else {
-		log.Warnf("unknown network")
+	default:
+		log.Warnf("unknown network: %s", utils.Config.Chain.Name)
 	}
+
 	return config
+}
+
+func createRocketPoolExporter(eth1Client *ethclient.Client, storageContractAddressHex string) (*RocketpoolExporter, error) {
+	rp, err := rocketpool.NewRocketPool(eth1Client, common.HexToAddress(storageContractAddressHex))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create RocketPool instance: %w", err)
+	}
+
+	return &RocketpoolExporter{
+		Eth1Client:                         eth1Client,
+		API:                                rp,
+		UpdateInterval:                     time.Minute,
+		MinipoolsByAddress:                 make(map[string]*RocketpoolMinipool),
+		NodesByAddress:                     make(map[string]*RocketpoolNode),
+		DAOProposalsByID:                   make(map[uint64]*RocketpoolDAOProposal),
+		DAOMembersByAddress:                make(map[string]*RocketpoolDAOMember),
+		NodeRPLCumulative:                  make(map[string]*big.Int),
+		LastRewardTree:                     0,
+		RocketpoolRewardTreesDownloadQueue: []RocketpoolRewardTreeDownloadable{},
+		RocketpoolRewardTreeData:           make(map[uint64]RewardsFile),
+		OnchainConfig: &RocketPoolOnchainConfig{
+			SmoothingPoolAddress: common.HexToAddress(storageContractAddressHex),
+		},
+	}, nil
 }
 
 type RocketpoolNetworkStats struct {
@@ -120,7 +152,6 @@ type RocketPoolOnchainConfig struct {
 type RocketpoolExporter struct {
 	Eth1Client                         *ethclient.Client
 	API                                *rocketpool.RocketPool
-	DB                                 *sqlx.DB
 	UpdateInterval                     time.Duration
 	MinipoolsByAddress                 map[string]*RocketpoolMinipool
 	NodesByAddress                     map[string]*RocketpoolNode
@@ -137,26 +168,6 @@ type RocketpoolExporter struct {
 type RocketpoolRewardTreeDownloadable struct {
 	ID   uint64
 	Data []byte
-}
-
-func NewRocketpoolExporter(eth1Client *ethclient.Client, storageContractAddressHex string, db *sqlx.DB) (*RocketpoolExporter, error) {
-	rpe := &RocketpoolExporter{}
-	rp, err := rocketpool.NewRocketPool(eth1Client, common.HexToAddress(storageContractAddressHex))
-	if err != nil {
-		return nil, err
-	}
-	rpe.Eth1Client = eth1Client
-	rpe.API = rp
-	rpe.DB = db
-	rpe.UpdateInterval = time.Minute
-	rpe.MinipoolsByAddress = map[string]*RocketpoolMinipool{}
-	rpe.NodesByAddress = map[string]*RocketpoolNode{}
-	rpe.DAOProposalsByID = map[uint64]*RocketpoolDAOProposal{}
-	rpe.DAOMembersByAddress = map[string]*RocketpoolDAOMember{}
-	rpe.LastRewardTree = 0
-	rpe.RocketpoolRewardTreesDownloadQueue = []RocketpoolRewardTreeDownloadable{}
-	rpe.RocketpoolRewardTreeData = map[uint64]RewardsFile{}
-	return rpe, nil
 }
 
 func (rp *RocketpoolExporter) Run() error {
@@ -188,42 +199,47 @@ func (rp *RocketpoolExporter) Run() error {
 	log.Infof("rocketpool exporter initialized")
 
 	for {
-		t0 := time.Now()
+		timeStart := time.Now()
 		// TODO: re-enable status reports after this thing is more stable
 		//r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, time.Hour*4, rp.UpdateInterval) // currently takes 2h40m on mainnet...
 		//r(constants.Running, nil)
-		var err error
-		err = rp.Update(count)
+		err := rp.updateAndSaveRocketpoolData(count)
 		if err != nil {
-			log.Error(err, "error updating rocketpool-data", 0)
-			//r(constants.Failure, map[string]string{"error": err.Error()})
-			time.Sleep(errorInterval)
-			continue
-		}
-		err = rp.Save(count)
-		if err != nil {
-			log.Error(err, "error saving rocketpool-data", 0)
-			//r(constants.Failure, map[string]string{"error": err.Error()})
+			log.Error(err, "error updating or saving rocketpool-data", 0)
 			time.Sleep(errorInterval)
 			continue
 		}
 
 		services.ReportStatus("rocketpoolExporter", "Running", nil)
 
-		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(t0).Seconds())
+		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(timeStart).Seconds())
 		//r(constants.Success, map[string]string{"took": time.Since(t0).String(), "took_raw": fmt.Sprintf("%v", time.Since(t0).Milliseconds())})
 
-		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "exported rocketpool-data")
+		log.InfoWithFields(log.Fields{"duration": time.Since(timeStart)}, "exported rocketpool-data")
 		count++
 		<-t.C
 	}
 }
 
+func (rp *RocketpoolExporter) updateAndSaveRocketpoolData(count int64) error {
+	if err := rp.Update(count); err != nil {
+		//r(constants.Failure, map[string]string{"error": err.Error()})
+		return fmt.Errorf("error updating rocketpool-data: %w", err)
+	}
+
+	if err := rp.Save(count); err != nil {
+		//r(constants.Failure, map[string]string{"error": err.Error()})
+		return fmt.Errorf("error saving rocketpool-data: %w", err)
+	}
+
+	return nil
+}
+
 func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
-	t0 := time.Now()
-	defer func(t0 time.Time) {
-		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "updated rocketpool-reward-trees")
-	}(t0)
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		log.InfoWithFields(log.Fields{"duration": time.Since(timeStart)}, "updated rocketpool-reward-trees")
+	}(timeStart)
 
 	isMergeUpdateDeployed, err := IsMergeUpdateDeployed(rp.API)
 	if err != nil {
@@ -234,10 +250,23 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		return nil
 	}
 
+	missingIntervals, err := rp.findMissingRewardIntervals()
+	if err != nil {
+		return err
+	}
+
+	if len(missingIntervals) == 0 {
+		return nil
+	}
+
+	log.Infof("downloading %v reward trees", len(missingIntervals))
+
+	return rp.downloadAndValidateRewardTrees(missingIntervals)
+}
+
+func (rp *RocketpoolExporter) findMissingRewardIntervals() ([]rewards.RewardsEvent, error) {
 	missingIntervals := []rewards.RewardsEvent{}
 	for interval := rp.LastRewardTree; ; interval++ {
-		var event rewards.RewardsEvent
-		log.Infof("retrieving reward tree %v", interval)
 		event, err := smartnodeRewards.GetRewardSnapshotEvent(
 			rp.API,
 			&smartnodeCfg.RocketPoolConfig{
@@ -248,28 +277,23 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 			nil,
 		)
 		if err != nil {
-			if strings.Contains(err.Error(), "found") { // could not be found && not found
-				log.Infof("retrieving reward tree not found %v", interval)
+			if strings.Contains(err.Error(), "found") {
 				break
-			} else {
-				log.Error(err, "retrieving reward tree not found", 0, map[string]interface{}{"interval": interval})
-				return err
 			}
+			return nil, fmt.Errorf("error retrieving reward tree for interval %v: %w", interval, err)
 		}
 
-		_, exists := rp.RocketpoolRewardTreeData[event.Index.Uint64()]
-		if !exists {
+		if _, exists := rp.RocketpoolRewardTreeData[event.Index.Uint64()]; !exists {
 			missingIntervals = append(missingIntervals, event)
 		} else {
 			rp.LastRewardTree = interval + 1
 		}
 	}
 
-	log.Infof("downloading %v reward trees", len(missingIntervals))
-	if len(missingIntervals) == 0 {
-		return nil
-	}
+	return missingIntervals, nil
+}
 
+func (rp *RocketpoolExporter) downloadAndValidateRewardTrees(missingIntervals []rewards.RewardsEvent) error {
 	for _, missingInterval := range missingIntervals {
 		if contains(rp.RocketpoolRewardTreesDownloadQueue, missingInterval.Index.Uint64()) {
 			continue
@@ -277,12 +301,12 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 
 		bytes, err := DownloadRewardsFile(fmt.Sprintf("rp-rewards-%v-%v.json", utils.Config.Chain.Name, missingInterval.Index), missingInterval.Index.Uint64(), missingInterval.MerkleTreeCID, true)
 		if err != nil {
-			return fmt.Errorf("can not download reward file %v, error: %w", missingInterval.Index, err)
+			return fmt.Errorf("can not download reward file %v: %w", missingInterval.Index, err)
 		}
 
 		proofWrapper, err := getRewardsData(bytes)
 		if err != nil {
-			return fmt.Errorf("can not parse reward file %v, error: %w", missingInterval.Index, err)
+			return fmt.Errorf("can not parse reward file %v: %w", missingInterval.Index, err)
 		}
 
 		merkleRootFromFile := common.HexToHash(proofWrapper.MerkleRoot)
@@ -305,9 +329,9 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 	return nil
 }
 
-func contains(s []RocketpoolRewardTreeDownloadable, e uint64) bool {
-	for _, a := range s {
-		if a.ID == e {
+func contains(rewardTree []RocketpoolRewardTreeDownloadable, index uint64) bool {
+	for _, reward := range rewardTree {
+		if reward.ID == index {
 			return true
 		}
 	}
@@ -474,17 +498,11 @@ func (rp *RocketpoolExporter) UpdateNodes(includeCumulativeRpl bool) error {
 }
 
 func (rp *RocketpoolExporter) getRocketpoolRewardTrees() (map[uint64]RewardsFile, error) {
-	var allRewards map[uint64]RewardsFile = map[uint64]RewardsFile{}
-
-	type Data struct {
-		ID   uint64 `db:"id"`
-		Data []byte `db:"data"`
-	}
+	allRewards := map[uint64]RewardsFile{}
 
 	log.Infof("rocketpool refreshing all reward tree data...")
 
-	var jsonData []Data
-	err := rp.DB.Select(&jsonData, `SELECT id, data FROM rocketpool_reward_tree`)
+	jsonData, err := db.GetRocketPoolRewardTrees()
 	if err != nil {
 		return allRewards, fmt.Errorf("can not load claimedInterval tree from database, is it exported? %v", err)
 	}
@@ -495,6 +513,7 @@ func (rp *RocketpoolExporter) getRocketpoolRewardTrees() (map[uint64]RewardsFile
 			return allRewards, fmt.Errorf("can parsing reward tree data to struct for interval %v. Error %w", data.ID, err)
 		}
 	}
+
 	return allRewards, nil
 }
 
@@ -1443,11 +1462,9 @@ func (r *RocketpoolNode) Update(rp *rocketpool.RocketPool, rewardTrees map[uint6
 
 func getRewardsData(jsonData []byte) (RewardsFile, error) {
 	var proofWrapper RewardsFile
-
 	err := json.Unmarshal(jsonData, &proofWrapper)
 	if err != nil {
-		err = fmt.Errorf("error deserializing : %w", err)
-		return proofWrapper, err
+		return proofWrapper, fmt.Errorf("error deserializing reward data: %w", err)
 	}
 
 	return proofWrapper, err
