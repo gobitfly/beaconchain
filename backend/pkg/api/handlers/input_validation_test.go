@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -653,6 +655,440 @@ func TestCheckAddress(t *testing.T) {
 				assert.Contains(t, v["address"], tt.errMsg)
 			} else {
 				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+			}
+		})
+	}
+}
+
+func TestCheckInt(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     string
+		expectErr bool
+		expected  int64
+		errMsg    string
+	}{
+		{
+			name:      "Valid positive integer",
+			param:     "123",
+			expectErr: false,
+			expected:  123,
+		},
+		{
+			name:      "Valid negative integer",
+			param:     "-456",
+			expectErr: false,
+			expected:  -456,
+		},
+		{
+			name:      "Zero",
+			param:     "0",
+			expectErr: false,
+			expected:  0,
+		},
+		{
+			name:      "Non-numeric string",
+			param:     "abc",
+			expectErr: true,
+			errMsg:    "given value 'abc' is not an integer",
+		},
+		{
+			name:      "Floating point number",
+			param:     "3.14",
+			expectErr: true,
+			errMsg:    "given value '3.14' is not an integer",
+		},
+		{
+			name:      "Empty string",
+			param:     "",
+			expectErr: true,
+			errMsg:    "given value '' is not an integer",
+		},
+		{
+			name:      "Large integer",
+			param:     "9223372036854775807", // Max int64
+			expectErr: false,
+			expected:  math.MaxInt64,
+		},
+		{
+			name:      "Too large for int64",
+			param:     "9223372036854775808",
+			expectErr: true,
+			errMsg:    "given value '9223372036854775808' is not an integer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkInt(tt.param, "param")
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.Contains(t, v["param"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected integer conversion to be correct")
+			}
+		})
+	}
+}
+
+func TestCheckUint(t *testing.T) {
+	tests := []validationTestCase[uint64]{
+		{
+			name:     "Valid positive integer",
+			param:    "123",
+			expected: 123,
+		},
+		{
+			name:     "Zero",
+			param:    "0",
+			expected: 0,
+		},
+		{
+			name:   "Negative number",
+			param:  "-5",
+			errMsg: "given value -5 is not a positive integer",
+		},
+		{
+			name:   "Non-numeric string",
+			param:  "abc",
+			errMsg: "given value abc is not a positive integer",
+		},
+		{
+			name:   "Floating point number",
+			param:  "3.14",
+			errMsg: "given value 3.14 is not a positive integer",
+		},
+		{
+			name:   "Empty string",
+			param:  "",
+			errMsg: "given value  is not a positive integer",
+		},
+		{
+			name:     "Max uint64",
+			param:    "18446744073709551615", // Max uint64
+			expected: math.MaxUint64,
+		},
+		{
+			name:   "Too large for uint64",
+			param:  "18446744073709551616",
+			errMsg: "given value 18446744073709551616 is not a positive integer",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[uint64]) uint64 {
+		return v.checkUint(tt.param, "param")
+	})
+}
+func TestCheckWeiDecimal(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     string
+		expectErr bool
+		expected  decimal.Decimal
+		errMsg    string
+	}{
+		{
+			name:      "Valid wei value",
+			param:     "1000000000000000000",
+			expectErr: false,
+			expected:  decimal.RequireFromString("1000000000000000000"),
+		},
+		{
+			name:      "Zero",
+			param:     "0",
+			expectErr: false,
+			expected:  decimal.Zero,
+		},
+		{
+			name:      "Negative number",
+			param:     "-1",
+			expectErr: true,
+			errMsg:    "given value '-1' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Non-numeric string",
+			param:     "abc",
+			expectErr: true,
+			errMsg:    "given value 'abc' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Floating point number",
+			param:     "3.14",
+			expectErr: true,
+			errMsg:    "given value '3.14' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Empty string",
+			param:     "",
+			expectErr: true,
+			errMsg:    "given value '' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Leading zeros (valid)",
+			param:     "000123456789",
+			expectErr: false,
+			expected:  decimal.RequireFromString("123456789"),
+		},
+		{
+			name:      "Very large wei value",
+			param:     "115792089237316195423570985008687907853269984665640564039457584007913129639935", // max uint256
+			expectErr: false,
+			expected:  decimal.RequireFromString("115792089237316195423570985008687907853269984665640564039457584007913129639935"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkWeiDecimal(tt.param, "param")
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.Contains(t, v["param"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.True(t, tt.expected.Equal(result), "Expected decimal conversion to be correct")
+			}
+		})
+	}
+}
+
+func TestCheckWeiMinMax(t *testing.T) {
+	min := decimal.RequireFromString("1000")   // Minimum allowed value
+	max := decimal.RequireFromString("100000") // Maximum allowed value
+
+	tests := []struct {
+		name      string
+		param     string
+		expectErr bool
+		expected  decimal.Decimal
+		errMsg    string
+	}{
+		{
+			name:      "Valid value within range",
+			param:     "50000",
+			expectErr: false,
+			expected:  decimal.RequireFromString("50000"),
+		},
+		{
+			name:      "Exactly at minimum",
+			param:     "1000",
+			expectErr: false,
+			expected:  decimal.RequireFromString("1000"),
+		},
+		{
+			name:      "Exactly at maximum",
+			param:     "100000",
+			expectErr: false,
+			expected:  decimal.RequireFromString("100000"),
+		},
+		{
+			name:      "Below minimum",
+			param:     "999",
+			expectErr: true,
+			errMsg:    "given value '999' is too small, minimum value is 1000",
+		},
+		{
+			name:      "Above maximum",
+			param:     "100001",
+			expectErr: true,
+			errMsg:    "given value '100001' is too large, maximum value is 100000",
+		},
+		{
+			name:      "Invalid non-numeric input",
+			param:     "abc",
+			expectErr: true,
+			errMsg:    "given value 'abc' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Empty string",
+			param:     "",
+			expectErr: true,
+			errMsg:    "given value '' is not a wei string (must be positive integer)",
+		},
+		{
+			name:      "Negative number",
+			param:     "-5000",
+			expectErr: true,
+			errMsg:    "given value '-5000' is not a wei string (must be positive integer)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkWeiMinMax(tt.param, "param", min, max)
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.Contains(t, v["param"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.True(t, tt.expected.Equal(result), "Expected decimal conversion to be correct")
+			}
+		})
+	}
+}
+
+func TestCheckMinMax(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     int
+		min       int
+		max       int
+		expectErr bool
+		expected  int
+		errMsg    string
+	}{
+		{
+			name:      "Within range",
+			param:     50,
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  50,
+		},
+		{
+			name:      "Exactly at minimum",
+			param:     10,
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  10,
+		},
+		{
+			name:      "Exactly at maximum",
+			param:     100,
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  100,
+		},
+		{
+			name:      "Below minimum",
+			param:     5,
+			min:       10,
+			max:       100,
+			expectErr: true,
+			expected:  5,
+			errMsg:    "given value '5' is too small, minimum value is 10",
+		},
+		{
+			name:      "Above maximum",
+			param:     150,
+			min:       10,
+			max:       100,
+			expectErr: true,
+			expected:  150,
+			errMsg:    "given value '150' is too large, maximum value is 100",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := checkMinMax(&v, tt.param, tt.min, tt.max, "param")
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.Contains(t, v["param"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected correct value within range")
+			}
+		})
+	}
+}
+
+func TestCheckUintMinMax(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     string
+		min       uint64
+		max       uint64
+		expectErr bool
+		expected  uint64
+		errMsg    string
+	}{
+		{
+			name:      "Valid within range",
+			param:     "50",
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  50,
+		},
+		{
+			name:      "Exactly at minimum",
+			param:     "10",
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  10,
+		},
+		{
+			name:      "Exactly at maximum",
+			param:     "100",
+			min:       10,
+			max:       100,
+			expectErr: false,
+			expected:  100,
+		},
+		{
+			name:      "Below minimum",
+			param:     "5",
+			min:       10,
+			max:       100,
+			expectErr: true,
+			expected:  5,
+			errMsg:    "given value '5' is too small, minimum value is 10",
+		},
+		{
+			name:      "Above maximum",
+			param:     "150",
+			min:       10,
+			max:       100,
+			expectErr: true,
+			expected:  150,
+			errMsg:    "given value '150' is too large, maximum value is 100",
+		},
+		{
+			name:      "Empty string",
+			param:     "",
+			min:       10,
+			max:       100,
+			expectErr: true,
+			errMsg:    "given value  is not a positive integer",
+		},
+		{
+			name:      "Negative number (invalid for uint64)",
+			param:     "-5",
+			min:       10,
+			max:       100,
+			expectErr: true,
+			errMsg:    "given value -5 is not a positive integer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkUintMinMax(tt.param, tt.min, tt.max, "param")
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.Contains(t, v["param"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected correct uint64 within range")
 			}
 		})
 	}
