@@ -2831,12 +2831,23 @@ func SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, b
 	defer utils.Rollback(tx)
 
 	_, err = tx.Exec(`
-		INSERT INTO relays_blocks (
-			tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient
+		INSERT INTO relays_blocks
+		(
+			tag_id,
+			block_slot,
+			block_root,
+			exec_block_hash,
+			value,
+			builder_pubkey,
+			proposer_pubkey,
+			proposer_fee_recipient
 		)
-		SELECT $1, blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
+		SELECT
+			$1,	blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
 		FROM blocks
-		WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
+		WHERE
+			blocks.slot = $2 and
+			blocks.exec_block_hash = $3
 		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
 		tagID, slot, blockHash,
 		payloadValue, builderPubkey,
