@@ -536,6 +536,9 @@ func TestShouldLogExportAsError(t *testing.T) {
 
 func toWeiString(value string) types.WeiString {
 	weiValue := &types.WeiString{}
-	weiValue.Set(value)
+	err := weiValue.Set(value)
+	if err != nil {
+		panic(err)
+	}
 	return *weiValue
 }
