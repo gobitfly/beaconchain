@@ -27,7 +27,7 @@ func (c VDBSummaryColumn) Int() int {
 
 func (VDBSummaryColumn) NewFromString(s string) VDBSummaryColumn {
 	switch s {
-	case "group_id":
+	case "", "group_id":
 		return VDBSummaryGroup
 	case "validators":
 		return VDBSummaryValidators
@@ -77,7 +77,7 @@ func (c VDBRewardsColumn) Int() int {
 
 func (VDBRewardsColumn) NewFromString(s string) VDBRewardsColumn {
 	switch s {
-	case "epoch":
+	case "", "epoch":
 		return VDBRewardEpoch
 	default:
 		return VDBRewardsColumn(-1)
@@ -108,7 +108,7 @@ func (c VDBDutiesColumn) Int() int {
 
 func (VDBDutiesColumn) NewFromString(s string) VDBDutiesColumn {
 	switch s {
-	case "validator":
+	case "", "validator":
 		return VDBDutyValidator
 	case "reward":
 		return VDBDutyReward
@@ -148,7 +148,7 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	switch s {
 	case "proposer":
 		return VDBBlockProposer
-	case "slot":
+	case "", "slot":
 		return VDBBlockSlot
 	case "block":
 		return VDBBlockBlock
@@ -221,7 +221,7 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 	switch s {
 	case "epoch":
 		return VDBWithdrawalEpoch
-	case "slot":
+	case "", "slot":
 		return VDBWithdrawalSlot
 	case "index":
 		return VDBWithdrawalIndex
@@ -269,7 +269,7 @@ func (c VDBManageValidatorsColumn) Int() int {
 
 func (VDBManageValidatorsColumn) NewFromString(s string) VDBManageValidatorsColumn {
 	switch s {
-	case "index":
+	case "", "index":
 		return VDBManageValidatorsIndex
 	case "public_key":
 		return VDBManageValidatorsPublicKey
@@ -409,7 +409,7 @@ func (c VDBRocketPoolColumn) Int() int {
 
 func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	switch s {
-	case "node":
+	case "", "node":
 		return VDBRocketPoolNode
 	case "collateral":
 		return VDBRocketPoolCollateral
@@ -473,7 +473,7 @@ func (c VDBRocketPoolMinipoolsColumn) Int() int {
 
 func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
 	switch s {
-	case "group_id":
+	case "", "group_id":
 		return VDBRocketPoolMinipoolsGroup
 	default:
 		return VDBRocketPoolMinipoolsColumn(-1)
