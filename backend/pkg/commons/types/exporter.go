@@ -575,6 +575,11 @@ type WeiString struct {
 	pgtype.Numeric
 }
 
+func (b *WeiString) Set(s string) error {
+	b.Numeric.Set(s)
+	return nil
+}
+
 func (b WeiString) MarshalJSON() ([]byte, error) {
 	return []byte("\"" + b.BigInt().String() + "\""), nil
 }
