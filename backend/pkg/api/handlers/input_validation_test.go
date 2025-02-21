@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -887,4 +888,414 @@ func TestCheckUintMinMax(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSplitParameters(t *testing.T) {
+	tests := []struct {
+		name     string
+		param    string
+		delim    rune
+		expected []string
+	}{
+		{
+			name:     "Single value",
+			param:    "value",
+			delim:    ',',
+			expected: []string{"value"},
+		},
+		{
+			name:     "Multiple values with comma",
+			param:    "one,two,three",
+			delim:    ',',
+			expected: []string{"one", "two", "three"},
+		},
+		{
+			name:     "Multiple values with spaces and comma",
+			param:    " one , two , three ",
+			delim:    ',',
+			expected: []string{" one ", " two ", " three "},
+		},
+		{
+			name:     "Empty string",
+			param:    "",
+			delim:    ',',
+			expected: []string{},
+		},
+		{
+			name:     "Only delimiters",
+			param:    ",,,,",
+			delim:    ',',
+			expected: []string{},
+		},
+		{
+			name:     "Mixed empty and non-empty values",
+			param:    "one,,two,,three",
+			delim:    ',',
+			expected: []string{"one", "two", "three"},
+		},
+		{
+			name:     "Newline delimiter",
+			param:    "line1\nline2\nline3",
+			delim:    '\n',
+			expected: []string{"line1", "line2", "line3"},
+		},
+		{
+			name:     "Whitespace as delimiter",
+			param:    "one two  three",
+			delim:    ' ',
+			expected: []string{"one", "two", "three"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := splitParameters(tt.param, tt.delim)
+
+			assert.Equal(t, tt.expected, result, "Expected correct splitting of parameters")
+		})
+	}
+}
+
+func TestCheckAdConfigurationKeys(t *testing.T) {
+	tests := []validationTestCase[[]string]{
+		{
+			name:     "Valid single key",
+			param:    "validKey",
+			expected: []string{"validKey"},
+		},
+		{
+			name:     "Valid multiple keys",
+			param:    "key1,key2,key3",
+			expected: []string{"key1", "key2", "key3"},
+		},
+		{
+			name:     "Valid keys with spaces",
+			param:    " key1 , key2 , key3 ",
+			expected: []string{"key1", "key2", "key3"},
+		},
+		{
+			name:     "Empty string (should return empty slice)",
+			param:    "",
+			expected: []string{},
+		},
+		{
+			name:   "Single invalid key",
+			param:  "invalid@key",
+			errMsg: "given value 'invalid@key' has incorrect format",
+		},
+		{
+			name:   "One invalid key among valid ones",
+			param:  "validKey,invalid@key,anotherValid",
+			errMsg: "given value 'invalid@key' has incorrect format",
+		},
+		{
+			name:   "Only invalid keys",
+			param:  "invalid@key,$wrongKey,another#bad",
+			errMsg: "given value 'invalid@key' has incorrect format",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[[]string]) []string {
+		return v.checkAdConfigurationKeys(tt.param)
+	})
+}
+
+func TestCheckBool(t *testing.T) {
+	tests := []validationTestCase[bool]{
+		{
+			name:     "Valid true (lowercase)",
+			param:    "true",
+			expected: true,
+		},
+		{
+			name:     "Valid false (lowercase)",
+			param:    "false",
+			expected: false,
+		},
+		{
+			name:     "Valid true (uppercase T)",
+			param:    "True",
+			expected: true,
+		},
+		{
+			name:     "Valid false (uppercase F)",
+			param:    "False",
+			expected: false,
+		},
+		{
+			name:     "Valid true (1)",
+			param:    "1",
+			expected: true,
+		},
+		{
+			name:     "Valid false (0)",
+			param:    "0",
+			expected: false,
+		},
+		{
+			name:   "Invalid boolean string",
+			param:  "yes",
+			errMsg: "given value 'yes' is not a boolean",
+		},
+		{
+			name:     "Empty string (should return false without error)",
+			param:    "",
+			expected: false,
+		},
+		{
+			name:   "Random string",
+			param:  "randomText",
+			errMsg: "given value 'randomText' is not a boolean",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[bool]) bool {
+		return v.checkBool(tt.param, "param")
+	})
+}
+
+func TestCheckPrimaryDashboardId(t *testing.T) {
+	tests := []validationTestCase[types.VDBIdPrimary]{
+		{
+			name:     "Valid dashboard ID",
+			param:    "123",
+			expected: types.VDBIdPrimary(123),
+		},
+		{
+			name:     "Zero (valid ID)",
+			param:    "0",
+			expected: types.VDBIdPrimary(0),
+		},
+		{
+			name:   "Negative number",
+			param:  "-5",
+			errMsg: "given value -5 is not a positive integer",
+		},
+		{
+			name:   "Non-numeric string",
+			param:  "abc",
+			errMsg: "given value abc is not a positive integer",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[types.VDBIdPrimary]) types.VDBIdPrimary {
+		return v.checkPrimaryDashboardId(tt.param)
+	})
+}
+
+func TestCheckGroupId(t *testing.T) {
+	tests := []struct {
+		name       string
+		param      string
+		allowEmpty bool
+		expected   int64
+		errMsg     string
+	}{
+		{
+			name:       "Valid group ID",
+			param:      "123",
+			allowEmpty: false,
+			expected:   123,
+		},
+		{
+			name:       "Zero (valid ID)",
+			param:      "0",
+			allowEmpty: false,
+			expected:   0,
+		},
+		{
+			name:       "Negative number",
+			param:      "-1",
+			allowEmpty: false,
+			expected:   -1,
+		},
+		{
+			name:       "Empty string with allowEmpty=true (should return AllGroups)",
+			param:      "",
+			allowEmpty: true,
+			expected:   types.AllGroups,
+		},
+		{
+			name:       "Empty string with allowEmpty=false (should fail)",
+			param:      "",
+			allowEmpty: false,
+			errMsg:     "given value '' is not an integer",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkGroupId(tt.param, tt.allowEmpty)
+			err := v.AsError()
+
+			if tt.errMsg != "" {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.ErrorContains(t, err, tt.errMsg)
+			} else {
+				assert.Nil(t, err, "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected correct value")
+			}
+		})
+	}
+}
+
+func TestCheckExistingGroupId(t *testing.T) {
+	tests := []validationTestCase[uint64]{
+		{
+			name:     "Valid group ID",
+			param:    "123",
+			expected: 123,
+		},
+		{
+			name:     "Zero (valid ID)",
+			param:    "0",
+			expected: 0,
+		},
+		{
+			name:   "Negative number (invalid)",
+			param:  "-5",
+			errMsg: "given value -5 is not a positive integer",
+		},
+		{
+			name:   "Empty string (invalid)",
+			param:  "",
+			errMsg: "given value  is not a positive integer",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[uint64]) uint64 {
+		return v.checkExistingGroupId(tt.param)
+	})
+}
+
+func TestParseGroupIdList(t *testing.T) {
+	convertMock := func(id string, paramName string) int {
+		num, _ := strconv.Atoi(id) // Simulating conversion function
+		return num
+	}
+
+	tests := []struct {
+		name     string
+		param    string
+		expected []int
+	}{
+		{
+			name:     "Single valid ID",
+			param:    "123",
+			expected: []int{123},
+		},
+		{
+			name:     "Multiple valid IDs",
+			param:    "1,2,3",
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "IDs with spaces",
+			param:    " 1 , 2 , 3 ",
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "Empty string (should return nil slice)",
+			param:    "",
+			expected: nil,
+		},
+		{
+			name:     "delimiter only string (should return nil slice)",
+			param:    ",",
+			expected: nil,
+		},
+		{
+			name:     "Extra commas",
+			param:    ",1,,2,3,",
+			expected: []int{1, 2, 3},
+		},
+		{
+			name:     "Invalid numbers (should ignore but normally would return errors)",
+			param:    "1,a,3",
+			expected: []int{1, 0, 3}, // "a" converts to 0 due to strconv.Atoi ignoring errors
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseGroupIdList(tt.param, convertMock)
+
+			assert.Equal(t, tt.expected, result, "Expected correct parsing and conversion")
+		})
+	}
+}
+
+func TestCheckExistingGroupIdList(t *testing.T) {
+	tests := []validationTestCase[[]uint64]{
+		{
+			name:     "Valid single ID",
+			param:    "123",
+			expected: []uint64{123},
+		},
+		{
+			name:     "Multiple valid IDs",
+			param:    "1,2,3",
+			expected: []uint64{1, 2, 3},
+		},
+		{
+			name:     "IDs with spaces",
+			param:    " 1 , 2 , 3 ",
+			expected: []uint64{1, 2, 3},
+		},
+		{
+			name:     "Empty string (should return nil)",
+			param:    "",
+			expected: nil,
+		},
+		{
+			name:   "Contains invalid ID (negative)",
+			param:  "1,-2,3",
+			errMsg: "given value -2 is not a positive integer",
+		},
+		{
+			name:   "Contains non-numeric ID",
+			param:  "1,abc,3",
+			errMsg: "given value abc is not a positive integer",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[[]uint64]) []uint64 {
+		return v.checkExistingGroupIdList(tt.param)
+	})
+}
+
+func TestCheckGroupIdList(t *testing.T) {
+	tests := []validationTestCase[[]int64]{
+		{
+			name:     "Valid single ID",
+			param:    "123",
+			expected: []int64{123},
+		},
+		{
+			name:     "Multiple valid IDs",
+			param:    "1,2,3",
+			expected: []int64{1, 2, 3},
+		},
+		{
+			name:     "IDs with spaces",
+			param:    " 1 , 2 , 3 ",
+			expected: []int64{1, 2, 3},
+		},
+		{
+			name:     "Empty string (should return nil)",
+			param:    "",
+			expected: nil,
+		},
+		{
+			name:   "Contains non-numeric ID",
+			param:  "1,abc,3",
+			errMsg: "given value 'abc' is not an integer",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[[]int64]) []int64 {
+		return v.checkGroupIdList(tt.param)
+	})
 }
