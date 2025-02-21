@@ -378,7 +378,11 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: defaultDesc}
+		sortCol := c.NewFromString(sortString)
+		if enums.IsInvalidEnum(sortCol) {
+			sortCol = c
+		}
+		return &types.Sort[T]{Column: sortCol, Desc: defaultDesc}
 	}
 	sortSplit := splitParameters(sortString, ':')
 	if len(sortSplit) > 2 {
