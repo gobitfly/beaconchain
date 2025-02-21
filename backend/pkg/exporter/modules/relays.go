@@ -51,7 +51,7 @@ func exportRelaysConcurrently(relays []types.Relay) {
 func singleRelayExport(r types.Relay, mux *sync.Mutex) {
 	err := exportRelayBlocks(r)
 	if err != nil {
-		handleRelayExportError(r, err, mux)
+		_ = handleRelayExportError(r, err, mux)
 		log.Error(err, "error while updating relay export", 0, map[string]interface{}{"relay": r.ID})
 		return
 	}
