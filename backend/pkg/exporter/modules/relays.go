@@ -52,14 +52,20 @@ func singleRelayExport(r types.Relay, mux *sync.Mutex) {
 	err := exportRelayBlocks(r)
 	if err != nil {
 		handleRelayExportError(r, err, mux)
+		log.Error(err, "error while updating relay export", 0, map[string]interface{}{"relay": r.ID})
 		return
 	}
 
-	handleRelayExportSuccess(r, mux)
+	err = handleRelayExportSuccess(r, mux)
+	if err != nil {
+		log.Error(err, "error while updating relay export", 0, map[string]interface{}{"relay": r.ID})
+		return
+	}
+
 	log.Infof("finished syncing payloads from relay %v", r.ID)
 }
 
-func handleRelayExportError(r types.Relay, err error, mux *sync.Mutex) {
+func handleRelayExportError(r types.Relay, err error, mux *sync.Mutex) error {
 	errMsg := fmt.Errorf("failed to export blocks for relay %v: %w", r.ID, err)
 	if shouldLogExportAsError(r) {
 		log.Error(errMsg, "", 0, map[string]interface{}{"relay": r.ID})
@@ -67,20 +73,23 @@ func handleRelayExportError(r types.Relay, err error, mux *sync.Mutex) {
 		log.WarnWithFields(log.Fields{"relay": r.ID}, errMsg.Error())
 	}
 
-	updateRelayExportFailure(r, mux)
+	return updateRelayExportFailure(r, mux)
 }
 
-func handleRelayExportSuccess(r types.Relay, mux *sync.Mutex) {
+func handleRelayExportSuccess(r types.Relay, mux *sync.Mutex) error {
 	mux.Lock()
 	defer mux.Unlock()
 
 	err := db.UpdateRelays(r.ID, r.Endpoint)
 	if err != nil {
 		log.Error(err, "could not update successful relay export", 0, map[string]interface{}{"relay": r.ID})
+		return err
 	}
+
+	return nil
 }
 
-func updateRelayExportFailure(r types.Relay, mux *sync.Mutex) {
+func updateRelayExportFailure(r types.Relay, mux *sync.Mutex) error {
 	var err error
 	mux.Lock()
 	defer mux.Unlock()
@@ -96,7 +105,10 @@ func updateRelayExportFailure(r types.Relay, mux *sync.Mutex) {
 
 	if err != nil {
 		log.Error(err, "could not update failed relay export", 0, map[string]interface{}{"relay": r.ID})
+		return err
 	}
+
+	return nil
 }
 
 func exportRelayBlocks(r types.Relay) error {
@@ -242,7 +254,7 @@ func waitTimeToExportRelay(r types.Relay) (waitTime time.Duration, isMaxWaitTime
 		waitTime = maxWaitTimeForRelayExport
 		isMaxWaitTime = true
 	}
-	return
+	return waitTime, isMaxWaitTime
 }
 
 func shouldLogExportAsError(r types.Relay) bool {
