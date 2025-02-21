@@ -82,8 +82,18 @@ defineProps<Props>()
       height: 100%;
     }
   }
-}
-.has-backdrop {
+
+  &.has-backdrop {
     backdrop-filter: blur(2px);
+
+    &::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: var(--container-background);
+      opacity: 0.5;
+    }
   }
+}
 </style>

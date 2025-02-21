@@ -2,20 +2,19 @@
 import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
 import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
 } from '~/types/dashboard'
 import { totalElCl } from '~/utils/bigMath'
-import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { formatRewardValueOption } from '~/utils/dashboard/table'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import type { Paging } from '~/types/api/common'
 
 const {
-  dashboardKey,
   isGuestDashboard,
 } = useDashboardKey()
 
@@ -23,24 +22,19 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const {
-  getRewards,
-  isLoading,
-  query: lastQuery,
-  rewards,
-} = useValidatorDashboardRewardsStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-const { slotViz } = useValidatorSlotVizStore()
+defineProps<{
+  data?: VDBRewardsTableRow[],
+  isLoading: boolean,
+  paging?: Paging,
+}>()
+const query = defineModel<TableQueryParams>('query', {
+  required: true,
+})
 
-const { groups } = useValidatorDashboardGroups()
-const validatorDashboardsOverviewStore = useValidatorDashboardOverviewStore()
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  hasValidators, overview,
-} = storeToRefs(validatorDashboardsOverviewStore)
+  groups, hasValidators,
+} = storeToRefs(validatorDashboardStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -52,57 +46,26 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'epoch:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getRewards(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  query.value = getQueryWithSort(sort, query.value)
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  query.value = getQueryWithCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  query.value = getQueryWithPageSize(value, query.value)
 }
 
 const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
+  query.value = getQueryWithSearch(value, query.value)
 }
 
 const getRowClass = (row: VDBRewardsTableRow) => {
@@ -116,28 +79,6 @@ const getRowClass = (row: VDBRewardsTableRow) => {
 
 const isRowExpandable = (row: VDBRewardsTableRow) => {
   return row.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID
-}
-
-const findNextEpochDuties = (epoch: number) => {
-  const epochData = slotViz.value?.find(e => e.epoch === epoch)
-  if (!epochData) {
-    return
-  }
-  const list = []
-  if (epochData.slots?.find(s => s.attestations)) {
-    list.push($t('dashboard.validator.rewards.attestation'))
-  }
-  if (epochData.slots?.find(s => s.proposal)) {
-    list.push($t('dashboard.validator.rewards.proposal'))
-  }
-  if (epochData.slots?.find(s => s.sync)) {
-    list.push($t('dashboard.validator.rewards.sync_committee'))
-  }
-  if (epochData.slots?.find(s => s.slashing)) {
-    list.push($t('dashboard.validator.rewards.slashing'))
-  }
-
-  return list.join(', ')
 }
 </script>
 
@@ -157,7 +98,8 @@ const findNextEpochDuties = (epoch: number) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="addIdentifier(rewards, 'epoch', 'group_id')"
+            :data="addIdentifier(data, 'epoch', 'group_id') "
+            :paging
             data-key="identifier"
             :expandable="true"
             class="rewards-table"
@@ -166,8 +108,8 @@ const findNextEpochDuties = (epoch: number) => {
             :row-class="getRowClass"
             :add-spacer="colsVisible.age"
             :is-row-expandable
-            :selected-sort="tempQuery?.sort"
-            :loading="isLoading"
+            :selected-sort="query.sort"
+            :is-loading
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
@@ -209,13 +151,8 @@ const findNextEpochDuties = (epoch: number) => {
               :header="$t('dashboard.validator.col.duty')"
             >
               <template #body="slotProps">
-                <span
-                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
-                >
-                  {{ findNextEpochDuties(slotProps.data.epoch) }}
-                </span>
                 <DashboardTableValueDuty
-                  v-else
+                  :has-number="slotProps.data.group_id !== DAHSHBOARDS_NEXT_EPOCH_ID"
                   :duty="slotProps.data.duty"
                 />
               </template>

@@ -3,7 +3,7 @@ import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
 
-export const setQueryPageSize = (
+export const getQueryWithPageSize = (
   limit: number,
   query?: TableQueryParams,
 ): TableQueryParams => {
@@ -13,7 +13,7 @@ export const setQueryPageSize = (
   }
 }
 
-export const setQueryCursor = (
+export const getQueryWithCursor = (
   cursor: Cursor,
   query?: TableQueryParams,
 ): TableQueryParams => {
@@ -23,7 +23,7 @@ export const setQueryCursor = (
   }
 }
 
-export const setQuerySearch = (
+export const getQueryWithSearch = (
   search?: string,
   query?: TableQueryParams,
 ): TableQueryParams => {
@@ -36,7 +36,7 @@ export const setQuerySearch = (
 export const getSortOrder = (dir?: null | number) =>
   dir === -1 ? 'asc' : 'desc'
 
-export const setQuerySort = (
+export const getQueryWithSort = (
   sort?: DataTableSortEvent,
   query?: TableQueryParams,
 ): TableQueryParams => {

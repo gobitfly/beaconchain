@@ -1,41 +1,37 @@
 <script setup lang="ts">
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
+import type { SlotVizEpoch } from '~/types/api/slot_viz'
+import type { VDBOverviewData } from '~/types/api/validator_dashboard'
 
 const {
-  dashboardKey,
-} = useDashboardKey()
+  epochsData, isLoading, overviewData, refetchingSlotVizData, timestamp,
+} = defineProps<{
+  epochsData: SlotVizEpoch[],
+  isLoading: boolean,
+  overviewData: VDBOverviewData,
+  refetchingSlotVizData: boolean,
+  timestamp: number,
+}>()
+
 const { networkInfo } = useNetworkStore()
-const {
-  loading: loadingSlotViz, refreshSlotViz, slotViz,
-} = useValidatorSlotVizStore()
-const { secondsPerSlot = 12 } = networkInfo.value
-const {
-  resetTick, tick,
-} = useInterval(secondsPerSlot)
 const { getSlotFromTimestamp } = useNetworkStore()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  loading: loadingOverview, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
 
 const selectedCategories = ref<SlotVizCategories[]>([])
-const selectedGroupIds = ref<number[]>([])
-const refetchingSlotViz = ref(false)
 
-const activeValidatorGroups = computed(() =>
-  overview.value?.groups.filter(group => !!group.count) || [],
-)
+const selectedGroups = defineModel<number[]>('selectedGroups', {
+  default: [],
+})
+
 const mostRecentScheduledSlotId = computed(() => {
-  if (!slotViz.value?.length) {
+  if (!epochsData || !epochsData.length) {
     return
   }
   let id = -1
 
-  for (let i = 0; i < slotViz.value.length; i++) {
-    const row = slotViz.value[i]
+  for (let i = 0; i < epochsData.length; i++) {
+    const row = epochsData[i]
     if (!row.slots?.length) {
       continue
     }
@@ -54,36 +50,11 @@ const currentSlotId = computed(() => {
   // in case of some backend issues Inan want's us to tick in the future ... so let's tick
   return Math.max(
     mostRecentScheduledSlotId.value ?? 0,
-    getSlotFromTimestamp((tick.value ?? 0) / 1000) - 1)
+    getSlotFromTimestamp((timestamp ?? 0) / 1000) - 1)
 })
 
-watch(
-  () =>
-    activeValidatorGroups.value,
-  () => {
-    selectedGroupIds.value = activeValidatorGroups.value.length > 1
-      ? activeValidatorGroups.value.map(group => group.id)
-      : []
-  },
-  { immediate: true },
-)
-watch(
-  () => selectedGroupIds.value,
-  () => {
-    useAsyncData('validator_dashboard_slot_viz', () =>
-      refreshSlotViz(dashboardKey.value, selectedGroupIds.value),
-    )
-    resetTick()
-  },
-  { immediate: true },
-)
-watch(
-  () => tick.value,
-  async () => {
-    refetchingSlotViz.value = true
-    await refreshSlotViz(dashboardKey.value, selectedGroupIds.value)
-    refetchingSlotViz.value = false
-  },
+const activeValidatorGroups = computed(() =>
+  overviewData.groups.filter(group => !!group.count) || [],
 )
 </script>
 
@@ -106,6 +77,7 @@ watch(
 
       <DashboardSlotVizDutyVisibilityToggle
         class="dashboard-slot-viz-toggle"
+        :overview-data
         @update-categories="(categories) => selectedCategories = categories"
       />
 
@@ -118,27 +90,25 @@ watch(
 
       <DashboardSlotVizGroupSelector
         v-if="activeValidatorGroups.length > 1"
+        v-model:selected-groups="selectedGroups"
         :validator-groups="activeValidatorGroups"
         class="dashboard-slot-viz-group-selector"
-        @update-selected-group-ids="(newGroupIdSelection) => selectedGroupIds = newGroupIdSelection"
       />
     </div>
 
     <div
-      v-if="(loadingSlotViz && !refetchingSlotViz) || loadingOverview"
-      class="dashboard-slot-viz-grid-loading-skeleton"
-    >
-      <BcLoadingSpinner
-        loading
-        alignment="center"
-      />
-    </div>
-    <div
-      v-else
       class="dashboard-slot-viz-grid"
     >
+      <BcLoadingSpinner
+        v-if="isLoading && !refetchingSlotVizData"
+        class="dashboard-slot-viz-grid-loading-spinner"
+        loading
+        has-backdrop
+        alignment="center"
+      />
+
       <template
-        v-for="row in slotViz"
+        v-for="row in epochsData"
         :key="row.epoch"
       >
         <div class="dashboard-slot-viz-grid-epoch">
@@ -218,6 +188,7 @@ watch(
     overflow-y: hidden;
     grid-template-columns: 3.75rem auto;
     padding-bottom: var(--padding);
+    position: relative;
 
     @media (max-width: 490px) {
       padding-right: var(--padding);
@@ -238,8 +209,10 @@ watch(
       justify-self: center;
     }
 
-    &-loading-skeleton {
-      height: 165px
+    &-loading-spinner {
+        position: absolute;
+        width: 100%;
+        height: 100%;
     }
   }
 }

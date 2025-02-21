@@ -18,21 +18,21 @@ export function useTableQuery(
   } = useDebounceValue<TableQueryParams | undefined>(initialQuery, 500)
 
   const onSort = (sort: DataTableSortEvent) => {
-    setQuery(setQuerySort(sort, pendingQuery.value))
+    setQuery(getQueryWithSort(sort, pendingQuery.value))
   }
 
   const setCursor = (value: Cursor) => {
     cursor.value = value
-    setQuery(setQueryCursor(value, pendingQuery.value))
+    setQuery(getQueryWithCursor(value, pendingQuery.value))
   }
 
   const setPageSize = (value: number) => {
     pageSize.value = value
-    setQuery(setQueryPageSize(value, pendingQuery.value))
+    setQuery(getQueryWithPageSize(value, pendingQuery.value))
   }
 
   const setSearch = (value?: string) => {
-    setQuery(setQuerySearch(value, pendingQuery.value))
+    setQuery(getQueryWithSearch(value, pendingQuery.value))
   }
 
   const setStoredQuery = (q?: TableQueryParams) => {

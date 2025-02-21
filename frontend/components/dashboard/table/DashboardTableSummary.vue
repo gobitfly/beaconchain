@@ -5,7 +5,8 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import { useStorage } from '@vueuse/core'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
@@ -15,36 +16,24 @@ import {
   type SummaryTimeFrame,
   SummaryTimeFrames,
 } from '~/types/dashboard/summary'
+import type { Paging } from '~/types/api/common'
 
 type ShowAbsoluteValuesStorage = {
   [dashboardId: string]: boolean,
 }
 
+const props = defineProps<{
+  data?: VDBSummaryTableRow[],
+  isLoading: boolean,
+  paging?: Paging,
+}>()
+
 const {
   dashboardKey,
+  hasGuestDashboardKeyChanged,
   isGuestDashboard,
   isSharedDashboard,
 } = useDashboardKey()
-const {
-  getSummary,
-  isLoading,
-  query: lastQuery,
-  summary,
-} = useValidatorDashboardSummaryStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators, isLargeDashboard, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
-const { width } = useWindowSize()
-const storageDashboardKey = computed(() => {
-  return dashboardKey.value || 'guest-dashboard'
-})
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -54,7 +43,23 @@ const chartFilter = ref<SummaryChartFilter>({
   efficiency: 'all',
   groupIds: [],
 })
-const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
+
+const query = defineModel<TableQueryParams>('query', {
+  required: true,
+})
+const timeFrame = defineModel<SummaryTimeFrame>('timeFrame', {
+  required: true,
+})
+
+const validatorDashboardStore = useValidatorDashboardStore()
+const {
+  groups, hasValidators, isLargeDashboard,
+} = storeToRefs(validatorDashboardStore)
+const { width } = useWindowSize()
+const storageDashboardKey = computed(() => {
+  return dashboardKey.value || 'empty-guest-dashboard'
+})
+
 const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
 
 const timeFrames = computed(() =>
@@ -73,46 +78,6 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
     validatorsSortable: width.value >= 571,
   }
 })
-const searchPlaceholder = computed(() =>
-  $t(
-    isGuestDashboard.value && (groups.value?.length ?? 0) <= 1
-      ? 'dashboard.validator.summary.search_placeholder_public'
-      : 'dashboard.validator.summary.search_placeholder',
-  ),
-)
-const loadData = (q?: TableQueryParams) => {
-  if (!q) {
-    q = query.value
-      ? { ...query.value }
-      : {
-          limit: pageSize.value,
-          sort: 'efficiency:desc',
-        }
-  }
-  setQuery(q, true, true)
-}
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery?.value))
-}
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery?.value))
-}
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery?.value))
-}
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery?.value))
-}
-const getRowClass = (row: VDBSummaryTableRow) => {
-  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
-    return 'total-row'
-  }
-}
 
 onMounted(() => {
   if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
@@ -120,36 +85,62 @@ onMounted(() => {
   }
 })
 
-watch(() => overview.value, () => {
-  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
-    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
+const groupNameLabel = (groupId?: number) => {
+  return getGroupLabel($t, groupId, groups.value, 'Σ')
+}
+
+const onSort = (sort: DataTableSortEvent) => {
+  query.value = getQueryWithSort(sort, query.value)
+}
+
+const setCursor = (value: Cursor) => {
+  cursor.value = value
+  query.value = getQueryWithCursor(value, query.value)
+}
+
+const setPageSize = (value: number) => {
+  pageSize.value = value
+  query.value = getQueryWithPageSize(value, query.value)
+}
+
+const setSearch = (value?: string) => {
+  query.value = getQueryWithSearch(value, query.value)
+}
+
+const getRowClass = (row: VDBSummaryTableRow) => {
+  if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
+    return 'total-row'
   }
-})
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
+}
+
+const searchPlaceholder = computed(() =>
+  $t(
+    isGuestDashboard.value && (groups.value?.length ?? 0) <= 1
+      ? 'dashboard.validator.summary.search_placeholder_public'
+      : 'dashboard.validator.summary.search_placeholder',
+  ),
 )
+
 watch(
-  [
-    query,
-    selectedTimeFrame,
-  ],
-  ([
-    q,
-    timeFrame,
-  ]) => {
-    if (q) {
-      getSummary(dashboardKey.value, timeFrame, q)
+  () => props.data,
+  () => {
+    if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
+      showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
     }
   },
-  { immediate: true },
 )
+watch(() => dashboardKey.value, (_, prevDashboardKey) => {
+  // Whenever a guest dashboard key changes, we remove the old value from the storage in
+  // order to avoid edge cases where a dashboard changes back to a previou key,
+  // and to avoid accumulating unused dashboard keys in the storage.
+  if (hasGuestDashboardKeyChanged) {
+    const {
+      [prevDashboardKey]: _, ...otherSavedDashboardKeys
+    } = showAbsoluteValuesPersisted.value
+
+    showAbsoluteValuesPersisted.value = otherSavedDashboardKeys
+  }
+})
 </script>
 
 <template>
@@ -165,12 +156,13 @@ watch(
         </h1>
         <BcDropdown
           v-if="tableIsShown"
-          v-model="selectedTimeFrame"
+          :model-value="timeFrame"
           :options="timeFrames"
           option-value="id"
           option-label="name"
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
+          @select="value => timeFrame = value"
         />
         <DashboardChartSummaryFilter
           v-else
@@ -180,15 +172,16 @@ watch(
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="summary"
+            :data
+            :paging
             data-key="group_id"
             :expandable="true"
             class="summary_table"
             :cursor
             :page-size
             :row-class="getRowClass"
-            :selected-sort="tempQuery?.sort"
-            :loading="isLoading"
+            :selected-sort="query.sort"
+            :is-loading
             :hide-pager="true"
             @set-cursor="setCursor"
             @sort="onSort"
@@ -246,7 +239,7 @@ watch(
                   :row="slotProps.data"
                   :group-id="slotProps.data.group_id"
                   :dashboard-key
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   context="group"
                 />
               </template>
@@ -262,7 +255,7 @@ watch(
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="efficiency"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -278,7 +271,7 @@ watch(
                   :class="slotProps.data.className"
                   property="attestations"
                   :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -295,7 +288,7 @@ watch(
                   property="proposals"
                   class="no-space-between-value"
                   :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -312,7 +305,7 @@ watch(
                   property="reward"
                   class="no-space-between-value"
                   :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame
                   :row="slotProps.data"
                 />
               </template>
@@ -321,8 +314,8 @@ watch(
               <DashboardTableSummaryDetails
                 :table-visibility="colsVisible"
                 :row="slotProps.data"
-                :time-frame="selectedTimeFrame"
                 :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
+                :time-frame
               />
             </template>
             <template #empty>

@@ -10,7 +10,6 @@ import {
   BcPremiumModal,
   DashboardGroupSelectionDialog,
 } from '#components'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
   GetValidatorDashboardValidatorsResponse,
   PostValidatorDashboardValidatorsRequest,
@@ -33,11 +32,8 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { refreshOverview } = validatorDashboardOverviewStore
+const validatorDashboardStore = useValidatorDashboardStore()
+const { validatorCount } = storeToRefs(validatorDashboardStore)
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
@@ -97,6 +93,9 @@ const mapIndexOrPubKey = (
   return [ ...new Set(validators?.map(
     validator => validator.index ?? validator.public_key)) ]
 }
+const emit = defineEmits<{
+  (e: 'dashboard-modified'): void,
+}>()
 
 const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupId?: number) => {
   if (
@@ -120,7 +119,7 @@ const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupI
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -143,7 +142,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   )
 
   loadData()
-  refreshOverview(dashboardKey.value)
+  emit('dashboard-modified')
 }
 
 const { premium_perks } = useUserStore()
@@ -169,21 +168,21 @@ const editSelected = () => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  setQuery(setQuerySort(sort, query?.value))
+  setQuery(getQueryWithSort(sort, query?.value))
 }
 
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  setQuery(setQueryCursor(value, query?.value))
+  setQuery(getQueryWithCursor(value, query?.value))
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  setQuery(setQueryPageSize(value, query?.value))
+  setQuery(getQueryWithPageSize(value, query?.value))
 }
 
 const setSearch = (value?: string) => {
-  setQuery(setQuerySearch(value, query?.value))
+  setQuery(getQueryWithSearch(value, query?.value))
 }
 
 watch(selectedGroup, (value) => {
@@ -265,11 +264,8 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
   })
 }
-const totalValidators = computed(() => {
-  // this is necessary after an `typescript update`
-  // for types created by api, we should use `types` instead of `interfaces`
-  return addUpValues(overview.value?.validators as unknown as Record<string, number>)
-})
+
+const totalValidators = computed(() => validatorCount.value ?? 0)
 
 const maxValidatorsPerDashboard = computed(() =>
   isGuestDashboard.value || !user.value?.premium_perks?.validators_per_dashboard
@@ -396,7 +392,8 @@ const inputValidator = ref('')
         <ClientOnly fallback-tag="span">
           <BcTable
             v-model:selection="selected"
-            :data
+            :data="data?.data"
+            :paging="data?.paging"
             data-key="public_key"
             :expandable="size.expandable"
             selection-mode="multiple"

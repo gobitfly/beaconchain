@@ -55,12 +55,13 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="networkNotifications"
+            :data="networkNotifications?.data"
+            :paging="networkNotifications?.paging"
             data-key="notification_id"
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             :add-spacer="true"
             @set-cursor="setCursor"
             @sort="onSort"

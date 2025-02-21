@@ -44,12 +44,13 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="machineNotifications"
+            :data="machineNotifications?.data"
+            :paging="machineNotifications?.paging"
             data-key="machine_name"
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             :add-spacer="true"
             :expandable="!colsVisible.threshold"
             @set-cursor="setCursor"

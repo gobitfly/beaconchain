@@ -1,19 +1,34 @@
 <script setup lang="ts">
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import type { ClElValue } from '~/types/api/common'
+import type {
+  ClElValue,
+  PeriodicValues,
+  ValidatorStateCounts,
+} from '~/types/api/common'
 import {
   type NumberOrString, TimeFrames,
 } from '~/types/value'
 import { totalElClNumbers } from '~/utils/bigMath'
 import { DashboardValidatorSubsetModal } from '#components'
+import type { ValidatorBalances } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useTranslation()
 const { converter } = useValue()
 
-const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
-const { overview } = storeToRefs(validatorDashoboardOverviewStore)
+const {
+  apr,
+  balances,
+  efficiency,
+  rewards,
+  validators,
+} = defineProps<{
+  apr?: PeriodicValues<ClElValue<number /* float64 */>>,
+  balances?: ValidatorBalances,
+  efficiency?: PeriodicValues<number /* float64 */>,
+  rewards?: PeriodicValues<ClElValue<string /* decimal.Decimal */>>,
+  validators?: ValidatorStateCounts,
+}>()
 
 const formatValueWei = (value: NumberOrString): NumberOrString => {
   return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 4 })
@@ -34,31 +49,31 @@ const createInfo = (
 }
 
 const rewardFull = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
+  totalElCl(rewards?.last_30d ?? {
     cl: '0',
     el: '0',
   }), { addPlus: true }).fullLabel)
 const reward = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
+  totalElCl(rewards?.last_30d ?? {
     cl: '0',
     el: '0',
   }), { addPlus: true }).label)
 
-const validatorsOffline = computed(() => overview.value?.validators.offline ?? 0)
-const validatorsOnline = computed(() => overview.value?.validators.online ?? 0)
+const validatorsOffline = computed(() => validators?.offline ?? 0)
+const validatorsOnline = computed(() => validators?.online ?? 0)
 const validatorsInfos = computed(() =>
   [
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_total_tooltip'),
-      value: formatValueWei(overview.value?.balances.total ?? 0),
+      value: formatValueWei(balances?.total ?? 0),
     },
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_effective'),
-      value: formatValueWei(overview.value?.balances.effective ?? 0),
+      value: formatValueWei(balances?.effective ?? 0),
     },
     {
       label: $t('dashboard.validator.overview.validators_balance.balance_staked'),
-      value: formatValueWei(overview.value?.balances.staked_eth ?? 0),
+      value: formatValueWei(balances?.staked_eth ?? 0),
     },
   ],
 )
@@ -80,26 +95,32 @@ const openValidatorModal = () => {
 const efficiencyInfos = computed(() =>
   TimeFrames.map(timeFrame => ({
     label: $t(`statistics.${timeFrame}`),
-    value: formatToPercent(overview.value?.efficiency[timeFrame] ?? 0),
+    value: formatToPercent(efficiency ? efficiency[timeFrame] : 0),
   })),
 )
 
 const rewardsInfos = TimeFrames.map(timeFrame =>
-  createInfo(timeFrame, overview.value?.rewards[timeFrame] ?? {
-    cl: '0',
-    el: '0',
-  }, formatValueWei),
+  createInfo(timeFrame, rewards
+    ? rewards[timeFrame]
+    : {
+        cl: '0',
+        el: '0',
+      }, formatValueWei),
 )
 
-const apr = computed(() => formatToPercent(totalElClNumbers(overview.value?.apr.last_30d ?? {
+const formattedApr = computed(() => formatToPercent(totalElClNumbers(apr?.last_30d ?? {
   cl: 0,
   el: 0,
-})))
+})),
+)
+
 const aprInfos = TimeFrames.map(timeFrame =>
-  createInfo(timeFrame, overview.value?.apr[timeFrame] ?? {
-    cl: 0,
-    el: 0,
-  }, formatToPercent),
+  createInfo(timeFrame, apr
+    ? apr[timeFrame]
+    : {
+        cl: 0,
+        el: 0,
+      }, formatToPercent),
 )
 </script>
 
@@ -127,7 +148,7 @@ const aprInfos = TimeFrames.map(timeFrame =>
       <template #additionalInfo>
         {{ $t('dashboard.validator.overview.validators_balance.balance_total') }}
         <span class="bold">
-          {{ formatValueWei(overview?.balances.total ?? 0) }}
+          {{ formatValueWei(balances?.total ?? 0) }}
         </span>
       </template>
     </DashboardValidatorOverviewItem>
@@ -135,7 +156,7 @@ const aprInfos = TimeFrames.map(timeFrame =>
       :infos="efficiencyInfos"
       :title="$t('dashboard.validator.overview.24h_efficiency')"
     >
-      {{ formatToPercent(overview?.efficiency.last_24h ?? 0) }}
+      {{ formatToPercent(efficiency?.last_24h ?? 0) }}
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :infos="rewardsInfos"
@@ -152,7 +173,7 @@ const aprInfos = TimeFrames.map(timeFrame =>
       :infos="aprInfos"
       :title="$t('dashboard.validator.overview.30d_apr')"
     >
-      {{ apr }}
+      {{ formattedApr }}
     </DashboardValidatorOverviewItem>
   </div>
 </template>

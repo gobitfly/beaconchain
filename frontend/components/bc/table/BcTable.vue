@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import type { ApiPagingResponse } from '~/types/api/common'
+import type { Paging } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
 interface Props {
   addSpacer?: boolean,
   cursor?: Cursor,
-  data?: ApiPagingResponse<any>,
+  data?: any[],
   dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
   hidePager?: boolean,
+  isLoading?: boolean,
   isRowExpandable?: (item: any) => boolean,
-  loading?: boolean,
   pageSize?: number,
+  paging?: Paging,
   selectedSort?: string,
   selectionMode?: 'multiple' | 'single',
   tableClass?: string,
 }
+
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
@@ -26,10 +28,10 @@ const emit = defineEmits<{
 const expandedRows = ref<Record<any, boolean>>({})
 
 const allExpanded = computed(() => {
-  if (!props.expandable || !props.dataKey || !props.data?.data?.length) {
+  if (!props.expandable || !props.dataKey || !props.data?.length) {
     return false
   }
-  return !!props.data?.data?.every((item) => {
+  return !!props.data?.every((item) => {
     if (props.isRowExpandable && !props.isRowExpandable(item)) {
       return true // ignore rows that can't be expanded
     }
@@ -38,11 +40,8 @@ const allExpanded = computed(() => {
 })
 
 const toggleAll = (forceClose = false) => {
-  if (!props.dataKey) {
-    return
-  }
   const wasExpanded = allExpanded.value
-  props.data?.data?.forEach((item) => {
+  props.data?.forEach((item) => {
     if (wasExpanded || forceClose) {
       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
       delete expandedRows.value[item[props.dataKey!]]
@@ -115,9 +114,9 @@ const sort = computed(() => {
     lazy
     :sort-field="sort?.field"
     :sort-order="sort?.order"
-    :value="data?.data"
+    :value="data"
     :data-key
-    :loading
+    :loading="isLoading"
   >
     <Column
       v-if="selectionMode"
@@ -162,7 +161,7 @@ const sort = computed(() => {
     </Column>
     <template #empty>
       <slot
-        v-if="!loading"
+        v-if="!isLoading"
         name="empty"
       >
         <DashboardTableEmpty />
@@ -186,9 +185,9 @@ const sort = computed(() => {
     </template>
     <template #footer>
       <BcTablePager
-        v-if="!hidePager && data?.paging"
+        v-if="!hidePager && paging"
         :page-size="pageSize ?? 0"
-        :paging="data?.paging"
+        :paging
         :cursor
         @set-cursor="setCursor"
         @set-page-size="setPageSize"

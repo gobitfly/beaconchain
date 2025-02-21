@@ -1,41 +1,39 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useValidatorDashboardClDepositsStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-
-const { dashboardKey } = useDashboardKey()
+import type { Paging } from '~/types/api/common'
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
 const { getEpochFromSlot } = useNetworkStore()
-
 const {
-  deposits,
-  getDeposits,
-  getTotalAmount,
-  isLoadingDeposits,
+  data,
+  isLoading,
   isLoadingTotal,
-  query: lastQuery,
+  paging,
   totalAmount,
-} = useValidatorDashboardClDepositsStore()
+} = defineProps<{
+  data?: VDBConsensusDepositsTableRow[],
+  isLoading: boolean,
+  isLoadingTotal: boolean,
+  paging?: Paging,
+  totalAmount?: string,
+}>()
+const query = defineModel<TableQueryParams>('query', {
+  required: true,
+})
+
+const validatorDashboardStore = useValidatorDashboardStore()
 const {
-  bounce: setQuery, value: query,
-} = useDebounceValue<
-  TableQueryParams | undefined
->(undefined, 500)
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators, overview,
-} = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
+  groups, hasValidators,
+} = storeToRefs(validatorDashboardStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -48,65 +46,17 @@ const colsVisible = computed(() => {
     withdrawalCredentials: width.value >= 800,
   }
 })
-
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  async (q) => {
-    if (q) {
-      await getDeposits(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
-const tableData = computed(() => {
-  if (!deposits.value?.data?.length) {
-    return
-  }
-  return {
-    data: [
-      { amount: totalAmount.value },
-      ...deposits.value.data,
-    ],
-    paging: deposits.value.paging,
-  }
-})
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value)
 }
-
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
-}
-
 const setCursor = (value: Cursor) => {
   cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+  query.value = getQueryWithCursor(value, query.value)
 }
 
 const setPageSize = (value: number) => {
   pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+  query.value = getQueryWithPageSize(value, query.value)
 }
 
 const getRowClass = (row: VDBConsensusDepositsTableRow) => {
@@ -118,6 +68,18 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
 const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
+
+// data with total row at the top
+const tableData = computed(() => {
+  if (!data || data.length === 0) {
+    return
+  }
+
+  return [
+    { amount: totalAmount },
+    ...data,
+  ]
+})
 </script>
 
 <template>
@@ -127,6 +89,7 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="tableData"
+            :paging
             data-key="index"
             :expandable="!colsVisible.group"
             class="cl_deposits_table"
@@ -134,9 +97,8 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
             :page-size
             :row-class="getRowClass"
             :is-row-expandable
-            :loading="isLoadingDeposits"
+            :is-loading
             @set-cursor="setCursor"
-            @sort="onSort"
             @set-page-size="setPageSize"
           >
             <Column

@@ -7,9 +7,9 @@ const props = defineProps<{ validatorGroups: VDBOverviewGroup[] }>()
 
 const { t: $t } = useTranslation()
 
-const selectedGroupIds = ref<number[]>([])
-
-const emit = defineEmits<{ (e: 'updateSelectedGroupIds', value: number[]): void }>()
+const selectedGroups = defineModel<number[]>('selectedGroups', {
+  default: [],
+})
 
 const groups = computed(() => {
   return orderBy(
@@ -20,27 +20,27 @@ const groups = computed(() => {
 })
 const selectedLabel = computed(() => {
   if (
-    selectedGroupIds.value.length === 0
-    || selectedGroupIds.value.length === groups.value.length
+    selectedGroups.value.length === 0
+    || selectedGroups.value.length === groups.value.length
   ) {
     return $t('dashboard.group.selection.all')
   }
   return orderBy(
-    selectedGroupIds.value.map(id => getGroupLabel($t, id, groups.value)),
+    selectedGroups.value.map(id => getGroupLabel($t, id, groups.value)),
     [ g => g.toLowerCase() ],
     'asc',
   ).join(', ')
 })
 
 const selectAll = () => {
-  selectedGroupIds.value = groups.value.map(g => g.id)
+  selectedGroups.value = groups.value.map(g => g.id)
 }
 const toggleAll = () => {
-  if (selectedGroupIds.value.length < groups.value.length) {
+  if (selectedGroups.value.length < groups.value.length) {
     selectAll()
   }
   else {
-    selectedGroupIds.value = []
+    selectedGroups.value = []
   }
 }
 
@@ -48,7 +48,7 @@ watch(
   groups,
   (newGroups, oldGroups) => {
     if (!newGroups || newGroups.length <= 0) {
-      selectedGroupIds.value = []
+      selectedGroups.value = []
     }
     if (!oldGroups || JSON.stringify(newGroups) !== JSON.stringify(oldGroups)) {
       selectAll()
@@ -56,15 +56,11 @@ watch(
   },
   { immediate: true },
 )
-watch(() => selectedGroupIds.value, () => {
-  emit('updateSelectedGroupIds', selectedGroupIds.value)
-},
-)
 </script>
 
 <template>
   <BcMultiSelect
-    v-model="selectedGroupIds"
+    v-model="selectedGroups"
     :options="groups"
     option-label="name"
     option-value="id"

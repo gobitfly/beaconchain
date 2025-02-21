@@ -2,8 +2,10 @@ import { inject } from 'vue'
 import type { DashboardKeyData } from '~/types/dashboard'
 
 export function useDashboardKey() {
-  const data = inject<DashboardKeyData>('dashboard-key')
   const { isLoggedIn } = useUserStore()
+
+  const data = inject<DashboardKeyData>('dashboard-key')
+  const hasGuestDashboardKeyChanged = ref(false)
 
   if (!data) {
     throw new Error(
@@ -19,10 +21,28 @@ export function useDashboardKey() {
   const setDashboardKey = (key: string) => data.setDashboardKey(key)
   const dashboardType = computed(() => data.dashboardType.value)
 
+  watch(() => [
+    dashboardKey.value,
+    isGuestDashboard.value,
+  ] as const, (newValues, oldValues) => {
+    // Since guest dashboards change their key depending on the validators they contain,
+    // sometimes we need to track if the key change is because of this reason.
+    const [
+      ,isGuestDashboard,
+    ] = newValues
+    const [
+      prevDashboardKey,
+      wasGuestDashboard,
+    ] = oldValues
+
+    hasGuestDashboardKeyChanged.value = !!prevDashboardKey && wasGuestDashboard && isGuestDashboard
+  })
+
   return {
     ...data,
     dashboardKey,
     dashboardType,
+    hasGuestDashboardKeyChanged,
     isGuestDashboard,
     isPrivateDashboard,
     isSharedDashboard,

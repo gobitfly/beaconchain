@@ -37,12 +37,13 @@ const { overview } = useNotificationsDashboardOverviewStore()
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="clientsNotifications"
+            :data="clientsNotifications?.data"
+            :paging="clientsNotifications?.paging"
             data-key="client_name"
             :cursor
             :page-size
             :selected-sort="query?.sort"
-            :loading="isLoading"
+            :is-loading
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"

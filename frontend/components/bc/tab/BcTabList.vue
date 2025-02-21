@@ -12,6 +12,15 @@ const props = defineProps<Props>()
 const {
   activeTab,
 } = useHashTabs(props.tabs, props.defaultTab, props.useRouteHash)
+const emit = defineEmits<{
+  (e: 'changed-tab', value: string): void,
+}>()
+watch(
+  activeTab,
+  (value) => {
+    emit('changed-tab', value)
+  },
+)
 </script>
 
 <template>
