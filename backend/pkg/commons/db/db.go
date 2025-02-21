@@ -2849,6 +2849,27 @@ func SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, b
 	return tx.Commit()
 }
 
+func UpdatePubkeyTags() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
+		SELECT publickey, FORMAT('pool:%s', sps.name) tag
+		FROM eth1_deposits
+		inner join stake_pools_stats as sps on ENCODE(from_address::bytea, 'hex')=sps.address
+		WHERE sps.name NOT LIKE '%Rocketpool -%'
+		ON CONFLICT (publickey, tag) DO NOTHING;`)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // copy from utils func
 func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 	conn, err := WriterDb.Conn(context.Background())
