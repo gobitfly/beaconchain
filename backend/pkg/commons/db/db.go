@@ -2736,6 +2736,119 @@ func DeleteInvalidTags() error {
 	return nil
 }
 
+func GetRelays() ([]types.Relay, error) {
+	var relays []types.Relay
+	err := ReaderDb.Select(&relays, `
+		SELECT tag_id, endpoint, public_link, is_censoring, is_ethical, export_failure_count, last_export_try_ts, last_export_success_ts 
+		FROM relays`)
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return relays, nil
+}
+
+func UpdateRelays(tagID, endpoint string) error {
+	_, err := WriterDb.Exec(`
+		UPDATE relays SET
+			export_failure_count = 0,
+			last_export_try_ts = NOW() AT TIME ZONE 'utc',
+			last_export_success_ts = NOW() AT TIME ZONE 'utc'
+		WHERE tag_id = $1 AND endpoint = $2`, tagID, endpoint)
+
+	return err
+}
+
+func UpdateRelayLastExportTry(tagID, endpoint string) error {
+	_, err := WriterDb.Exec(`
+			UPDATE relays SET
+				last_export_try_ts = (NOW() AT TIME ZONE 'utc')
+			WHERE tag_id = $1 AND endpoint = $2`, tagID, endpoint)
+
+	return err
+}
+
+func UpdateRelayExportFailureCount(exportFailureCount uint64, tagID, endpoint string) error {
+	_, err := WriterDb.Exec(`
+	UPDATE relays SET
+		export_failure_count = $1,
+		last_export_try_ts = (NOW() AT TIME ZONE 'utc')
+	WHERE tag_id = $2 AND endpoint = $3`, exportFailureCount+1, tagID, endpoint)
+
+	return err
+}
+
+func GetFirstRelayBlock(tagID string) (types.RelayBlock, error) {
+	var block types.RelayBlock
+	err := ReaderDb.Get(&block, `
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
+		FROM relays_blocks 
+		WHERE tag_id=$1 
+		ORDER BY block_slot ASC 
+		LIMIT 1`, tagID)
+
+	return block, err
+}
+
+func GetLastRelayBlock(tagID string) (types.RelayBlock, error) {
+	var block types.RelayBlock
+	err := ReaderDb.Get(&block, `
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
+		FROM relays_blocks 
+		WHERE tag_id=$1 
+		ORDER BY block_slot DESC 
+		LIMIT 1`, tagID)
+
+	return block, err
+}
+
+func SaveBlocksTags(tagID string, slot uint64, blockHash []byte) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+	INSERT INTO blocks_tags
+	SELECT blocks.slot, blocks.blockroot, $1
+	FROM blocks
+	WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
+	ON CONFLICT DO NOTHING`, tagID, slot, blockHash)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient []byte) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+		INSERT INTO relays_blocks (
+			tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient
+		)
+		SELECT $1, blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
+		FROM blocks
+		WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
+		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
+		tagID, slot, blockHash,
+		payloadValue, builderPubkey,
+		proposerPubkey, proposerFeeRecipient)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // copy from utils func
 func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 	conn, err := WriterDb.Conn(context.Background())
