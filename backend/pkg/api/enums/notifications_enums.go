@@ -26,7 +26,7 @@ func (NotificationDashboardsColumn) NewFromString(s string) NotificationDashboar
 	switch s {
 	case "chain_id":
 		return NotificationDashboardChainId
-	case "epoch":
+	case "", "epoch":
 		return NotificationDashboardEpoch
 	case "dashboard_name", "dashboard_id": // accepting id for frontend
 		return NotificationDashboardDashboardName
@@ -98,7 +98,7 @@ func (NotificationMachinesColumn) NewFromString(s string) NotificationMachinesCo
 		return NotificationMachineThreshold
 	case "event_type":
 		return NotificationMachineEventType
-	case "timestamp":
+	case "", "timestamp":
 		return NotificationMachineTimestamp
 	default:
 		return NotificationMachinesColumn(-1)
@@ -157,7 +157,7 @@ func (NotificationClientsColumn) NewFromString(s string) NotificationClientsColu
 	switch s {
 	case "client_name":
 		return NotificationClientName
-	case "timestamp":
+	case "", "timestamp":
 		return NotificationClientTimestamp
 	default:
 		return NotificationClientsColumn(-1)
@@ -203,7 +203,7 @@ func (c NotificationRocketPoolColumn) Int() int {
 
 func (NotificationRocketPoolColumn) NewFromString(s string) NotificationRocketPoolColumn {
 	switch s {
-	case "timestamp":
+	case "", "timestamp":
 		return NotificationRocketPoolTimestamp
 	case "event_type":
 		return NotificationRocketPoolEventType
@@ -243,7 +243,7 @@ func (c NotificationNetworksColumn) Int() int {
 
 func (NotificationNetworksColumn) NewFromString(s string) NotificationNetworksColumn {
 	switch s {
-	case "timestamp":
+	case "", "timestamp":
 		return NotificationNetworkTimestamp
 	case "event_type":
 		return NotificationNetworkEventType
@@ -294,7 +294,7 @@ func (c NotificationSettingsDashboardColumn) Int() int {
 
 func (NotificationSettingsDashboardColumn) NewFromString(s string) NotificationSettingsDashboardColumn {
 	switch s {
-	case "dashboard_name", "dashboard_id":
+	case "", "dashboard_name", "dashboard_id":
 		return NotificationSettingsDashboardDashboardName
 	case "group_name":
 		return NotificationSettingsDashboardGroupName
