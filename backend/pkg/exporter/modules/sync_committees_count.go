@@ -90,7 +90,7 @@ func getEpochPeriodAndCountFromDB(rowCount uint64, firstPeriod uint64) (uint64, 
 
 func exportSyncCommitteesCount(firstPeriod, currentPeriod uint64, countSoFar float64) error {
 	for period := firstPeriod; period <= currentPeriod; period++ {
-		timeStart := time.Now()
+		startTime := time.Now()
 
 		count, err := calculateCountForPeriod(period, countSoFar)
 		if err != nil {
@@ -106,7 +106,7 @@ func exportSyncCommitteesCount(firstPeriod, currentPeriod uint64, countSoFar flo
 
 		log.InfoWithFields(log.Fields{
 			"period":   period,
-			"duration": time.Since(timeStart),
+			"duration": time.Since(startTime),
 		}, "exported sync_committees_count_per_validator")
 	}
 
