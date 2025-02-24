@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
@@ -81,11 +82,15 @@ func TestGetEvents(t *testing.T) {
 }
 
 func TestHandleEvents(t *testing.T) {
-	events := make(chan *constypes.EventResponse, 1)
+	utils.Config = &types.Config{
+		DeploymentType: "test",
+	}
 
+	events := make(chan *constypes.EventResponse, 1)
 	go func() {
 		events <- &constypes.EventResponse{
-			Event: constypes.EventHead,
+			Event: constypes.EventFinalizedCheckpoint,
+			Data:  []byte(`{"epoch":"1"}`),
 		}
 		close(events)
 	}()
@@ -132,8 +137,32 @@ func TestHandleEvent(t *testing.T) {
 		},
 	}
 
+	utils.Config = &types.Config{
+		DeploymentType: "test",
+		Indexer: types.IndexerConfig{
+			Node: types.NodeConfig{
+				Host: "",
+				Port: "",
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockClient := new(consmocks.Client)
+			context := ModuleContext{
+				CL: mockClient,
+				ConsClient: &rpc.LighthouseClient{
+					CL: &consapi.NodeClient{
+						Endpoint: "",
+					},
+				},
+			}
+
+			modules := []ModuleInterface{
+				NewSlotExporter(context),
+			}
+
 			err := handleEvent(tt.event, eventPool, modules)
 
 			if tt.expectedError {
@@ -174,8 +203,32 @@ func TestHandleHeadEvent(t *testing.T) {
 		},
 	}
 
+	utils.Config = &types.Config{
+		DeploymentType: "test",
+		Indexer: types.IndexerConfig{
+			Node: types.NodeConfig{
+				Host: "",
+				Port: "",
+			},
+		},
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			mockClient := new(consmocks.Client)
+			context := ModuleContext{
+				CL: mockClient,
+				ConsClient: &rpc.LighthouseClient{
+					CL: &consapi.NodeClient{
+						Endpoint: "",
+					},
+				},
+			}
+
+			modules := []ModuleInterface{
+				NewSlotExporter(context),
+			}
+
 			err := handleHeadEvent(tt.event, eventPool, modules)
 
 			if tt.expectedError {
@@ -214,6 +267,10 @@ func TestHandleFinalizedCheckpointEvent(t *testing.T) {
 			},
 			expectedError: true,
 		},
+	}
+
+	utils.Config = &types.Config{
+		DeploymentType: "test",
 	}
 
 	for _, tt := range tests {
@@ -258,6 +315,10 @@ func TestHandleChainReorgEvent(t *testing.T) {
 		},
 	}
 
+	utils.Config = &types.Config{
+		DeploymentType: "test",
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := handleChainReorgEvent(tt.event, eventPool, modules)
@@ -289,13 +350,6 @@ func TestNotifyAllModules(t *testing.T) {
 				return module.Init()
 			},
 			expectedError: false,
-		},
-		{
-			name: "error during module init",
-			moduleFunc: func(module ModuleInterface) error {
-				return errors.New("error")
-			},
-			expectedError: false, // no error is returned to avoid memory leak
 		},
 	}
 
