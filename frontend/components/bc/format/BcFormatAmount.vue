@@ -26,13 +26,14 @@ type FormatAmountOptions = (
       value: `${number}` | string,
     }
 ) & {
-  fractionDigits?: number,
   hasAdditionalSelectedCurrencyMain?: boolean,
   hasColor?: boolean,
   hasDashForZero?: boolean,
   hasHigherPrecision?: boolean,
   hasSignDisplay?: boolean,
   hasTooltip?: boolean,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
   /**
    * @description
    * Display currencies take into account, that the currency in the binary data
@@ -133,8 +134,8 @@ const format = (value: string, optionsOverride?: Parameters<typeof formatAmount>
   return formatAmount(value, {
     hasHigherPrecision: props.hasHigherPrecision,
     hasUnitDisplay: getTargetUnit() !== 'base',
-    maximumFractionDigits: props.fractionDigits,
-    minimumFractionDigits: props.fractionDigits,
+    maximumFractionDigits: props.maximumFractionDigits,
+    minimumFractionDigits: props.minimumFractionDigits,
     signDisplay: signDisplay.value,
     sourceCurrency: sourceCurrency.value,
     targetCurrency: targetCurrency.value,

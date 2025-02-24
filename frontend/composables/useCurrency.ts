@@ -103,9 +103,6 @@ export const useCurrency = () => {
    * @param {number} [options.maximumFractionDigits] - Defaults:
    *   - fiat: 2 (4 if hasHigherPrecision=true)
    *   - crypto: 6 (8 if hasHigherPrecision=true)
-   * @param {number} [options.minimumFractionDigits] - Default:
-   *   - fiat: 2 (4 if hasHigherPrecision=true)
-   *   - crypto: 6 (8 if hasHigherPrecision=true)
    * @returns {string} The formatted amount with currency code
    */
   const formatAmount = (
@@ -134,10 +131,7 @@ export const useCurrency = () => {
         hasHigherPrecision,
         targetCurrency,
       }),
-      minimumFractionDigits = getFractionDigitDefault({
-        hasHigherPrecision,
-        targetCurrency,
-      }),
+      minimumFractionDigits,
       signDisplay,
       sourceCurrency = clCurrency,
       sourceUnit = 'wei',

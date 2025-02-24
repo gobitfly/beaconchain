@@ -295,7 +295,7 @@ const {
                     :value="slotProps.data.amount"
                     source-currency="elCurrency"
                     target-currency="elDisplayCurrency"
-                    :fraction-digits="0"
+                    :maximum-fraction-digits="0"
                   />
                   <template
                     v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"

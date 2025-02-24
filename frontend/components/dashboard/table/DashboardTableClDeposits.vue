@@ -268,7 +268,7 @@ const {
                   <BcFormatAmount
                     :value="slotProps.data.amount"
                     target-currency="clDisplayCurrency"
-                    :fraction-digits="0"
+                    :maximum-fraction-digits="0"
                   />
                   <template
                     v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
