@@ -53,9 +53,10 @@ type ServiceConfig struct {
 // 1. Chain Config, used to define the "Specification" of each chain
 // 3. Service Config, which is used to define the parameters that the service itself runs with.
 
-func LoadChainConfig(chain ChainName) {
-	// "configs/chain/default.yaml"
-	viper.AddConfigPath("configs/chain")
+func LoadServiceConfig(env Environment) *ServiceConfig {
+	// "configs/service/default.yaml"
+	viper.AddConfigPath("configs/service")    // Typical "Run from cmd-line path"
+	viper.AddConfigPath("../configs/service") // Typical "Run debug from vs-code path"
 	viper.SetConfigName("default")
 	viper.SetConfigType("yaml")
 
@@ -66,16 +67,24 @@ func LoadChainConfig(chain ChainName) {
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
-	viper.SetConfigName(string(chain))
+	viper.SetConfigName(string(env))
 	err = viper.MergeInConfig()
 	if err != nil {
-		log.Fatal("Error reading config file, %s", err)
+		log.Fatal("Error reading %s config: %v", env, err)
 	}
 
 	// Optionally read from environment variables (e.g., override with ENV vars)
 	viper.AutomaticEnv()
 
+	serviceConfig := &ServiceConfig{}
+	err = viper.Unmarshal(serviceConfig)
+	if err != nil {
+		log.Warnf("unable to decode into config struct, %v", err)
+	}
+
 	logDebugConfigKeys()
+
+	return serviceConfig
 }
 
 func logDebugConfigKeys() {
