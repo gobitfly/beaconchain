@@ -141,4 +141,21 @@ type ClChainConfig struct {
 	FieldElementsPerBlob       uint64 `yaml:"FIELD_ELEMENTS_PER_BLOB"`
 	MaxBlobCommitmentsPerBlock uint64 `yaml:"MAX_BLOB_COMMITMENTS_PER_BLOCK"`
 	MaxBlobsPerBlock           uint64 `yaml:"MAX_BLOBS_PER_BLOCK"`
+
+	// electra
+	// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/electra.yaml
+	MinActivationBalance                  uint64 `yaml:"MIN_ACTIVATION_BALANCE"`
+	MaxEffectiveBalanceElectra            uint64 `yaml:"MAX_EFFECTIVE_BALANCE_ELECTRA"`
+	PendingDepositsLimit                  uint64 `yaml:"PENDING_DEPOSITS_LIMIT"`
+	PendingPartialWithdrawalsLimit        uint64 `yaml:"PENDING_PARTIAL_WITHDRAWALS_LIMIT"`
+	PendingConsolidationsLimit            uint64 `yaml:"PENDING_CONSOLIDATIONS_LIMIT"`
+	MinSlashingPenaltyQuotientElectra     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA"`
+	WhistleblowerRewardQuotientElectra    uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA"`
+	MaxAttesterSlashingsElectra           uint64 `yaml:"MAX_ATTESTER_SLASHINGS_ELECTRA"`
+	MaxAttestationsElectra                uint64 `yaml:"MAX_ATTESTATIONS_ELECTRA"`
+	MaxConsolidationRequestsPerPayload    uint64 `yaml:"MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD"`
+	MaxDepositRequestsPerPayload          uint64 `yaml:"MAX_DEPOSIT_REQUESTS_PER_PAYLOAD"`
+	MaxWithdrawalRequestsPerPayload       uint64 `yaml:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD"`
+	MaxPendingPartialsPerWithdrawalsSweep uint64 `yaml:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP"`
+	MaxPendingDepositsPerEpoch            uint64 `yaml:"MAX_PENDING_DEPOSITS_PER_EPOCH"`
 }
