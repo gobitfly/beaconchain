@@ -30,14 +30,14 @@ type ValidatorDashboardRepository interface {
 	GetValidatorDashboardGroupExists(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) (bool, error)
 
 	GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error)
-	AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error)
+	AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator, limit uint64) ([]t.VDBPostValidatorsData, error)
 	AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error)
 	AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, credential string, limit uint64) ([]t.VDBPostValidatorsData, error)
 	AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error)
 
 	RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error
 	GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error)
-	GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error)
+	GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId) (uint64, error)
 
 	CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error)
 	GetValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error)
