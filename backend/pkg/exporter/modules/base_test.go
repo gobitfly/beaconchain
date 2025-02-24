@@ -43,7 +43,7 @@ func TestInitializeModules(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			utils.Config = &types.Config{
-				DeploymentType: "development",
+				DeploymentType: "test",
 			}
 
 			err := initializeModules(tt.modules)
@@ -301,7 +301,7 @@ func TestNotifyAllModules(t *testing.T) {
 	}
 
 	utils.Config = &types.Config{
-		DeploymentType: "development",
+		DeploymentType: "test",
 	}
 
 	for _, tt := range tests {
