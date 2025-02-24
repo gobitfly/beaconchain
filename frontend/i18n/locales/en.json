@@ -98,6 +98,7 @@
         "label": {
             "AUD": "Australian Dollar",
             "CAD": "Canadian Dollar",
+            "CNY": "Chinese Yuan",
             "DAI": "DAI Stablecoin",
             "ETH": "Ether",
             "EUR": "Euro",
