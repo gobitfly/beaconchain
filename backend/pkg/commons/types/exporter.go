@@ -576,8 +576,8 @@ type WeiString struct {
 }
 
 func (b *WeiString) Set(s string) error {
-	b.Numeric.Set(s)
-	return nil
+	err := b.Numeric.Set(s)
+	return err
 }
 
 func (b WeiString) MarshalJSON() ([]byte, error) {
