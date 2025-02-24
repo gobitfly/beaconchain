@@ -40,20 +40,19 @@ func TestInitializeModules(t *testing.T) {
 		},
 	}
 
+	utils.Config = &types.Config{
+		DeploymentType: "test",
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			utils.Config = &types.Config{
-				DeploymentType: "test",
-			}
 
 			err := initializeModules(tt.modules)
-
 			if tt.expectedError {
 				if err == nil {
 					t.Error("expected error, got nil")
 				}
 			}
-
 			if !tt.expectedError {
 				if err != nil {
 					t.Errorf("expected no error, got: %v", err)
