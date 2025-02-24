@@ -242,12 +242,12 @@ func (_m *Client) GetGenesis() (*types.StandardGenesisResponse, error) {
 	return r0, r1
 }
 
-// GetPropoalAssignments provides a mock function with given fields: epoch
-func (_m *Client) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
+// GetProposalAssignments provides a mock function with given fields: epoch
+func (_m *Client) GetProposalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
 	ret := _m.Called(epoch)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetPropoalAssignments")
+		panic("no return value specified for GetProposalAssignments")
 	}
 
 	var r0 *types.StandardProposerAssignmentsResponse
@@ -272,12 +272,12 @@ func (_m *Client) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAs
 	return r0, r1
 }
 
-// GetPropoalRewards provides a mock function with given fields: blockID
-func (_m *Client) GetPropoalRewards(blockID interface{}) (*types.StandardBlockRewardsResponse, error) {
+// GetProposalRewards provides a mock function with given fields: blockID
+func (_m *Client) GetProposalRewards(blockID interface{}) (*types.StandardBlockRewardsResponse, error) {
 	ret := _m.Called(blockID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetPropoalRewards")
+		panic("no return value specified for GetProposalRewards")
 	}
 
 	var r0 *types.StandardBlockRewardsResponse
