@@ -151,7 +151,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 			return nil, err
 		}
 		if validatorEb > maxEBInList {
-			return nil, newBadRequestErr("validators in list contain too much ETH, maximum is %d", maxEBInList)
+			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", maxEBInList/1e9)
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
