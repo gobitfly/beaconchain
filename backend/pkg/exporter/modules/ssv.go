@@ -101,14 +101,16 @@ func unmarshalSSVResponse(message []byte) (*types.SSVExporterResponse, error) {
 }
 
 func processSSVResponse(res *types.SSVExporterResponse) error {
-	timeStart := time.Now()
 	log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
+
+	startTime := time.Now()
+	defer func(startTime time.Time) {
+		log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(startTime)}, "tagged ssv validators")
+	}(startTime)
 
 	if err := saveSSV(res); err != nil {
 		return err
 	}
-
-	log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(timeStart)}, "tagged ssv validators")
 
 	return nil
 }

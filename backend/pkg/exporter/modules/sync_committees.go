@@ -88,6 +88,14 @@ func calculateSyncPeriodRange() (uint64, uint64) {
 
 func ExportSyncCommitteeData(rpcClient rpc.Client, period uint64) error {
 	startTime := time.Now()
+	defer func(startTime time.Time) {
+		log.InfoWithFields(log.Fields{
+			"period":   period,
+			"epoch":    utils.FirstEpochOfSyncPeriod(period),
+			"duration": time.Since(startTime),
+		}, "exported sync_committee")
+	}(startTime)
+
 	data, err := GetSyncCommitteAtPeriod(rpcClient, period)
 	if err != nil {
 		return err
@@ -99,12 +107,6 @@ func ExportSyncCommitteeData(rpcClient rpc.Client, period uint64) error {
 	if err != nil {
 		return err
 	}
-
-	log.InfoWithFields(log.Fields{
-		"period":   period,
-		"epoch":    utils.FirstEpochOfSyncPeriod(period),
-		"duration": time.Since(startTime),
-	}, "exported sync_committee")
 
 	return nil
 }
