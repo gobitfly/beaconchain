@@ -7,6 +7,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
@@ -41,7 +42,7 @@ func updatePubkeyTagOnce() error {
 }
 
 func createPubkeyTagStatusReport() func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, constants.Duration10Mins, time.Second*12)
+	return services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, constants.Duration10Mins, time.Second*12, utils.Config.DeploymentType)
 }
 
 func handlePubkeyTagsError(err error, statusReport func(status constants.StatusType, metadata map[string]string)) {

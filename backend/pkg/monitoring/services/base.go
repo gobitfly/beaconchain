@@ -45,7 +45,7 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func NewStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func NewStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration, deploymentType string) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
@@ -88,14 +88,14 @@ func NewStatusReport(id constants.Event, timeout time.Duration, check_interval t
 			log.TraceWithFields(log.Fields{
 				"emitter":         id,
 				"event_id":        utils.GetUUID(),
-				"deployment_type": utils.Config.DeploymentType,
+				"deployment_type": deploymentType,
 				"insert_id":       flake,
 				"expires_at":      expires_at,
 				"timeouts_at":     timeouts_at,
 				"metadata":        metadata,
 			}, "sending status report")
 			var err error
-			if utils.Config.DeploymentType == "test" {
+			if deploymentType == "test" {
 				return
 			}
 			if db.ClickHouseNativeWriter != nil {
@@ -105,16 +105,16 @@ func NewStatusReport(id constants.Event, timeout time.Duration, check_interval t
 					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
 					utils.GetUUID(),
 					id,
-					utils.Config.DeploymentType,
+					deploymentType,
 					flake,
 					expires_at,
 					timeouts_at,
 					metadata,
 				)
-			} else if utils.Config.DeploymentType != "development" {
+			} else if deploymentType != "development" {
 				log.Error(nil, "clickhouse native writer is nil", 0)
 			}
-			if err != nil && utils.Config.DeploymentType != "development" {
+			if err != nil && deploymentType != "development" {
 				log.Error(err, "error inserting status report", 0)
 			}
 		}()

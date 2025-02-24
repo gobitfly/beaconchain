@@ -202,11 +202,12 @@ func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group
 }
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
+	deploymentType := utils.Config.DeploymentType
 	for _, module := range modules {
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			statusReport := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			statusReport := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default, deploymentType)
 			statusReport(constants.Running, nil)
 			err := f(module)
 			if err != nil {

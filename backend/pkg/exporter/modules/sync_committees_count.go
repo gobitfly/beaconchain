@@ -29,7 +29,7 @@ func syncCommitteesCountExporter() {
 }
 
 func createCommitteesCountStatusReport() func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
+	return services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12, utils.Config.DeploymentType)
 }
 
 func handleCommitteesCountError(err error, statusReport func(status constants.StatusType, metadata map[string]string)) {
