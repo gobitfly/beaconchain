@@ -34,7 +34,7 @@ defineProps<{
             source-currency="elCurrency"
             target-currency="elDisplayCurrency"
             has-additional-selected-currency-main
-            has-higher-precision
+            :maximum-fraction-digits="unitFactorCrypto.base"
           />
         </div>
         <div class="tt-row">
@@ -46,7 +46,7 @@ defineProps<{
               :value="reward?.cl"
               target-currency="clDisplayCurrency"
               has-additional-selected-currency-main
-              has-higher-precision
+              :maximum-fraction-digits="unitFactorCrypto.base"
             />
           </template>
           <span v-else>{{ $t("dashboard.validator.blocks.pending") }}</span>
