@@ -19,7 +19,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -1431,7 +1430,7 @@ func GetDepositsCountForBlockSlot() (uint64, error) {
 	return count, nil
 }
 
-func SaveBlockDeposits(validator constypes.StandardValidator) error {
+func SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
 	tx, err := WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -1440,7 +1439,7 @@ func SaveBlockDeposits(validator constypes.StandardValidator) error {
 
 	_, err = tx.Exec(`INSERT INTO blocks_deposits (block_slot, block_root, block_index, publickey, withdrawalcredentials, amount, signature)
 	VALUES (0, '\x01', $1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-		validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance, []byte{0x0},
+		vIndex, vPubkey, vWithdrawalCredentials, vBalance, []byte{0x0},
 	)
 
 	if err != nil {
@@ -2669,7 +2668,6 @@ func SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
 	}
 
 	return tx.Commit()
-
 }
 
 func DeleteValidatorTags() error {
