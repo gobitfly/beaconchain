@@ -24,6 +24,7 @@ import (
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/hashicorp/go-version"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 	"github.com/klauspost/compress/zstd"
 	"github.com/lib/pq"
 	rpDAO "github.com/rocket-pool/rocketpool-go/dao"
@@ -60,76 +61,43 @@ var leb16, _ = big.NewInt(0).SetString("16000000000000000000", 10)
 
 func rocketpoolExporter() {
 	RP_CONFIG = initRPConfig()
-	endpoint := getWebSocketEndpoint(utils.Config.Eth1GethEndpoint)
+	endpoint := utils.Config.Eth1GethEndpoint
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		endpoint = "ws" + endpoint[4:]
+	}
 
 	var err error
 	rpEth1RPRCClient, err = gethrpc.Dial(endpoint)
 	if err != nil {
 		log.Fatal(err, "new rocketpool geth client error", 0)
 	}
-
 	rpEth1Client = ethclient.NewClient(rpEth1RPRCClient)
-
-	rpExporter, err := createRocketPoolExporter(
+	rpExporter, err := NewRocketpoolExporter(
 		rpEth1Client,
 		RP_CONFIG.GetStorageAddress(),
+		db.WriterDb,
 	)
 	if err != nil {
 		log.Fatal(err, "new rocketpool exporter error", 0)
 	}
-
 	err = rpExporter.Run()
 	if err != nil {
 		log.Error(err, "rocketpool exporter run error", 0)
 	}
 }
 
-func getWebSocketEndpoint(endpoint string) string {
-	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
-		return "ws" + endpoint[4:]
-	}
-	return endpoint
-}
-
 func initRPConfig() *smartnodeCfg.SmartnodeConfig {
 	config := smartnodeCfg.NewSmartnodeConfig(&smartnodeCfg.RocketPoolConfig{
 		RocketPoolDirectory: "/tmp/rocketpool",
 	})
-
-	switch utils.Config.Chain.Name {
-	case "mainnet":
+	if utils.Config.Chain.Name == "mainnet" {
 		config.Network.Value = smartnodeNetwork.Network_Mainnet
-	case "holesky":
+	} else if utils.Config.Chain.Name == "holesky" {
 		config.Network.Value = smartnodeNetwork.Network_Holesky
-	default:
-		log.Warnf("unknown network: %s", utils.Config.Chain.Name)
+	} else {
+		log.Warnf("unknown network")
 	}
-
 	return config
-}
-
-func createRocketPoolExporter(eth1Client *ethclient.Client, storageContractAddressHex string) (*RocketpoolExporter, error) {
-	rp, err := rocketpool.NewRocketPool(eth1Client, common.HexToAddress(storageContractAddressHex))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create RocketPool instance: %w", err)
-	}
-
-	return &RocketpoolExporter{
-		Eth1Client:                         eth1Client,
-		API:                                rp,
-		UpdateInterval:                     time.Minute,
-		MinipoolsByAddress:                 make(map[string]*RocketpoolMinipool),
-		NodesByAddress:                     make(map[string]*RocketpoolNode),
-		DAOProposalsByID:                   make(map[uint64]*RocketpoolDAOProposal),
-		DAOMembersByAddress:                make(map[string]*RocketpoolDAOMember),
-		NodeRPLCumulative:                  make(map[string]*big.Int),
-		LastRewardTree:                     0,
-		RocketpoolRewardTreesDownloadQueue: []RocketpoolRewardTreeDownloadable{},
-		RocketpoolRewardTreeData:           make(map[uint64]RewardsFile),
-		OnchainConfig: &RocketPoolOnchainConfig{
-			SmoothingPoolAddress: common.HexToAddress(storageContractAddressHex),
-		},
-	}, nil
 }
 
 type RocketpoolNetworkStats struct {
@@ -152,6 +120,7 @@ type RocketPoolOnchainConfig struct {
 type RocketpoolExporter struct {
 	Eth1Client                         *ethclient.Client
 	API                                *rocketpool.RocketPool
+	DB                                 *sqlx.DB
 	UpdateInterval                     time.Duration
 	MinipoolsByAddress                 map[string]*RocketpoolMinipool
 	NodesByAddress                     map[string]*RocketpoolNode
@@ -168,6 +137,26 @@ type RocketpoolExporter struct {
 type RocketpoolRewardTreeDownloadable struct {
 	ID   uint64
 	Data []byte
+}
+
+func NewRocketpoolExporter(eth1Client *ethclient.Client, storageContractAddressHex string, db *sqlx.DB) (*RocketpoolExporter, error) {
+	rpe := &RocketpoolExporter{}
+	rp, err := rocketpool.NewRocketPool(eth1Client, common.HexToAddress(storageContractAddressHex))
+	if err != nil {
+		return nil, err
+	}
+	rpe.Eth1Client = eth1Client
+	rpe.API = rp
+	rpe.DB = db
+	rpe.UpdateInterval = time.Minute
+	rpe.MinipoolsByAddress = map[string]*RocketpoolMinipool{}
+	rpe.NodesByAddress = map[string]*RocketpoolNode{}
+	rpe.DAOProposalsByID = map[uint64]*RocketpoolDAOProposal{}
+	rpe.DAOMembersByAddress = map[string]*RocketpoolDAOMember{}
+	rpe.LastRewardTree = 0
+	rpe.RocketpoolRewardTreesDownloadQueue = []RocketpoolRewardTreeDownloadable{}
+	rpe.RocketpoolRewardTreeData = map[uint64]RewardsFile{}
+	return rpe, nil
 }
 
 func (rp *RocketpoolExporter) Run() error {
@@ -199,47 +188,42 @@ func (rp *RocketpoolExporter) Run() error {
 	log.Infof("rocketpool exporter initialized")
 
 	for {
-		timeStart := time.Now()
+		t0 := time.Now()
 		// TODO: re-enable status reports after this thing is more stable
 		//r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyRocketPool, time.Hour*4, rp.UpdateInterval) // currently takes 2h40m on mainnet...
 		//r(constants.Running, nil)
-		err := rp.updateAndSaveRocketpoolData(count)
+		var err error
+		err = rp.Update(count)
 		if err != nil {
-			log.Error(err, "error updating or saving rocketpool-data", 0)
+			log.Error(err, "error updating rocketpool-data", 0)
+			//r(constants.Failure, map[string]string{"error": err.Error()})
+			time.Sleep(errorInterval)
+			continue
+		}
+		err = rp.Save(count)
+		if err != nil {
+			log.Error(err, "error saving rocketpool-data", 0)
+			//r(constants.Failure, map[string]string{"error": err.Error()})
 			time.Sleep(errorInterval)
 			continue
 		}
 
 		services.ReportStatus("rocketpoolExporter", "Running", nil)
 
-		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(timeStart).Seconds())
+		metrics.TaskDuration.WithLabelValues("exporter_rocketpoolExporter").Observe(time.Since(t0).Seconds())
 		//r(constants.Success, map[string]string{"took": time.Since(t0).String(), "took_raw": fmt.Sprintf("%v", time.Since(t0).Milliseconds())})
 
-		log.InfoWithFields(log.Fields{"duration": time.Since(timeStart)}, "exported rocketpool-data")
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "exported rocketpool-data")
 		count++
 		<-t.C
 	}
 }
 
-func (rp *RocketpoolExporter) updateAndSaveRocketpoolData(count int64) error {
-	if err := rp.Update(count); err != nil {
-		//r(constants.Failure, map[string]string{"error": err.Error()})
-		return fmt.Errorf("error updating rocketpool-data: %w", err)
-	}
-
-	if err := rp.Save(count); err != nil {
-		//r(constants.Failure, map[string]string{"error": err.Error()})
-		return fmt.Errorf("error saving rocketpool-data: %w", err)
-	}
-
-	return nil
-}
-
 func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.InfoWithFields(log.Fields{"duration": time.Since(timeStart)}, "updated rocketpool-reward-trees")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.InfoWithFields(log.Fields{"duration": time.Since(t0)}, "updated rocketpool-reward-trees")
+	}(t0)
 
 	isMergeUpdateDeployed, err := IsMergeUpdateDeployed(rp.API)
 	if err != nil {
@@ -250,23 +234,10 @@ func (rp *RocketpoolExporter) DownloadMissingRewardTrees() error {
 		return nil
 	}
 
-	missingIntervals, err := rp.findMissingRewardIntervals()
-	if err != nil {
-		return err
-	}
-
-	if len(missingIntervals) == 0 {
-		return nil
-	}
-
-	log.Infof("downloading %v reward trees", len(missingIntervals))
-
-	return rp.downloadAndValidateRewardTrees(missingIntervals)
-}
-
-func (rp *RocketpoolExporter) findMissingRewardIntervals() ([]rewards.RewardsEvent, error) {
 	missingIntervals := []rewards.RewardsEvent{}
 	for interval := rp.LastRewardTree; ; interval++ {
+		var event rewards.RewardsEvent
+		log.Infof("retrieving reward tree %v", interval)
 		event, err := smartnodeRewards.GetRewardSnapshotEvent(
 			rp.API,
 			&smartnodeCfg.RocketPoolConfig{
@@ -277,23 +248,28 @@ func (rp *RocketpoolExporter) findMissingRewardIntervals() ([]rewards.RewardsEve
 			nil,
 		)
 		if err != nil {
-			if strings.Contains(err.Error(), "found") {
+			if strings.Contains(err.Error(), "found") { // could not be found && not found
+				log.Infof("retrieving reward tree not found %v", interval)
 				break
+			} else {
+				log.Error(err, "retrieving reward tree not found", 0, map[string]interface{}{"interval": interval})
+				return err
 			}
-			return nil, fmt.Errorf("error retrieving reward tree for interval %v: %w", interval, err)
 		}
 
-		if _, exists := rp.RocketpoolRewardTreeData[event.Index.Uint64()]; !exists {
+		_, exists := rp.RocketpoolRewardTreeData[event.Index.Uint64()]
+		if !exists {
 			missingIntervals = append(missingIntervals, event)
 		} else {
 			rp.LastRewardTree = interval + 1
 		}
 	}
 
-	return missingIntervals, nil
-}
+	log.Infof("downloading %v reward trees", len(missingIntervals))
+	if len(missingIntervals) == 0 {
+		return nil
+	}
 
-func (rp *RocketpoolExporter) downloadAndValidateRewardTrees(missingIntervals []rewards.RewardsEvent) error {
 	for _, missingInterval := range missingIntervals {
 		if contains(rp.RocketpoolRewardTreesDownloadQueue, missingInterval.Index.Uint64()) {
 			continue
@@ -301,12 +277,12 @@ func (rp *RocketpoolExporter) downloadAndValidateRewardTrees(missingIntervals []
 
 		bytes, err := DownloadRewardsFile(fmt.Sprintf("rp-rewards-%v-%v.json", utils.Config.Chain.Name, missingInterval.Index), missingInterval.Index.Uint64(), missingInterval.MerkleTreeCID, true)
 		if err != nil {
-			return fmt.Errorf("can not download reward file %v: %w", missingInterval.Index, err)
+			return fmt.Errorf("can not download reward file %v, error: %w", missingInterval.Index, err)
 		}
 
 		proofWrapper, err := getRewardsData(bytes)
 		if err != nil {
-			return fmt.Errorf("can not parse reward file %v: %w", missingInterval.Index, err)
+			return fmt.Errorf("can not parse reward file %v, error: %w", missingInterval.Index, err)
 		}
 
 		merkleRootFromFile := common.HexToHash(proofWrapper.MerkleRoot)
@@ -329,9 +305,9 @@ func (rp *RocketpoolExporter) downloadAndValidateRewardTrees(missingIntervals []
 	return nil
 }
 
-func contains(rewardTree []RocketpoolRewardTreeDownloadable, index uint64) bool {
-	for _, reward := range rewardTree {
-		if reward.ID == index {
+func contains(s []RocketpoolRewardTreeDownloadable, e uint64) bool {
+	for _, a := range s {
+		if a.ID == e {
 			return true
 		}
 	}
@@ -498,11 +474,17 @@ func (rp *RocketpoolExporter) UpdateNodes(includeCumulativeRpl bool) error {
 }
 
 func (rp *RocketpoolExporter) getRocketpoolRewardTrees() (map[uint64]RewardsFile, error) {
-	allRewards := map[uint64]RewardsFile{}
+	var allRewards map[uint64]RewardsFile = map[uint64]RewardsFile{}
+
+	type Data struct {
+		ID   uint64 `db:"id"`
+		Data []byte `db:"data"`
+	}
 
 	log.Infof("rocketpool refreshing all reward tree data...")
 
-	jsonData, err := db.GetRocketPoolRewardTrees()
+	var jsonData []Data
+	err := rp.DB.Select(&jsonData, `SELECT id, data FROM rocketpool_reward_tree`)
 	if err != nil {
 		return allRewards, fmt.Errorf("can not load claimedInterval tree from database, is it exported? %v", err)
 	}
@@ -513,7 +495,6 @@ func (rp *RocketpoolExporter) getRocketpoolRewardTrees() (map[uint64]RewardsFile
 			return allRewards, fmt.Errorf("can parsing reward tree data to struct for interval %v. Error %w", data.ID, err)
 		}
 	}
-
 	return allRewards, nil
 }
 
@@ -703,22 +684,35 @@ func getBigIntFrom(rp *rocketpool.RocketPool, contract string, method string, ar
 }
 
 func (rp *RocketpoolExporter) SaveConfigs() error {
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-configs")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-configs")
+	}(t0)
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 
 	storageAddress, err := hex.DecodeString(strings.Trim(RP_CONFIG.GetStorageAddress(), "0x"))
 	if err != nil {
 		return errors.Wrap(err, "error decoding storage address")
 	}
 
-	err = db.SaveRocketPoolConfig(storageAddress, rp.OnchainConfig.SmoothingPoolAddress.Bytes())
+	_, err = tx.Exec(`
+		INSERT INTO rocketpool_onchain_configs (
+			rocketpool_storage_address,
+			smoothing_pool_address
+		) VALUES ($1, $2) ON CONFLICT (rocketpool_storage_address) DO UPDATE SET
+		 	smoothing_pool_address = excluded.smoothing_pool_address
+	`, storageAddress, rp.OnchainConfig.SmoothingPoolAddress.Bytes())
+
 	if err != nil {
 		return errors.Wrap(err, "error inserting into rocketpool_onchain_configs")
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveMinipools() error {
@@ -726,10 +720,10 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		return nil
 	}
 
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-minipools")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-minipools")
+	}(t0)
 
 	data := make([]*RocketpoolMinipool, len(rp.MinipoolsByAddress))
 	i := 0
@@ -738,6 +732,11 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 		i++
 	}
 
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 	nArgs := 14
 	valueStringsArr := make([]string, nArgs)
 	for i := range valueStringsArr {
@@ -776,20 +775,43 @@ func (rp *RocketpoolExporter) SaveMinipools() error {
 			valueArgs = append(valueArgs, d.IsVacant)
 			valueArgs = append(valueArgs, d.Version)
 		}
-
-		err := db.SaveRocketPoolMiniPools(valueStrings, valueArgs)
+		stmt := fmt.Sprintf(`
+			insert into rocketpool_minipools (
+				rocketpool_storage_address, address, pubkey, status, status_time, node_address, node_fee,
+				deposit_type, penalty_count, node_deposit_balance, node_refund_balance,
+				user_deposit_balance, is_vacant, version
+			) values %s on conflict (rocketpool_storage_address, address) do update set
+				pubkey = excluded.pubkey,
+				status = excluded.status,
+				status_time = excluded.status_time,
+				node_address = excluded.node_address,
+				node_fee = excluded.node_fee,
+				deposit_type = excluded.deposit_type,
+				penalty_count = excluded.penalty_count,
+				node_deposit_balance = excluded.node_deposit_balance,
+				node_refund_balance = excluded.node_refund_balance,
+				user_deposit_balance = excluded.user_deposit_balance,
+				is_vacant = excluded.is_vacant,
+				version = excluded.version`,
+			strings.Join(valueStrings, ","))
+		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_minipools: %w", err)
 		}
 	}
 
 	// updating index column after writing minipools for cheaper access later
-	err := db.UpdateRocketPoolMiniPools()
+	_, err = tx.Exec(`
+		UPDATE rocketpool_minipools
+		SET validator_index = validators.validatorindex
+		FROM validators
+		WHERE rocketpool_minipools.pubkey = validators.pubkey
+	`)
 	if err != nil {
 		return fmt.Errorf("error updating rocketpool_minipools with validatorindex: %w", err)
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveNodes() error {
@@ -809,6 +831,12 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 		i++
 	}
 
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
 	nArgs := 13
 
 	valueStringsArr := make([]string, nArgs)
@@ -818,6 +846,7 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 	valueStringsTpl := "(" + strings.Join(valueStringsArr, ",") + ")"
 	valueStringsArgs := make([]interface{}, nArgs)
 
+	var stmt string
 	batchSize := 1000
 	for b := 0; b < len(data); b += batchSize {
 		start := b
@@ -848,13 +877,44 @@ func (rp *RocketpoolExporter) SaveNodes() error {
 			valueArgs = append(valueArgs, d.DepositCredit.String())
 		}
 
-		err := db.SaveRocketPoolNodes(valueStrings, valueArgs)
+		stmt = fmt.Sprintf(`
+			insert into rocketpool_nodes (
+				rocketpool_storage_address,
+				address,
+				timezone_location,
+				rpl_stake,
+				min_rpl_stake,
+				max_rpl_stake,
+				rpl_cumulative_rewards,
+				smoothing_pool_opted_in,
+				claimed_smoothing_pool,
+				unclaimed_smoothing_pool,
+				unclaimed_rpl_rewards,
+				effective_rpl_stake,
+				deposit_credit
+			)
+			values %s
+			on conflict (rocketpool_storage_address, address) do update set
+				rpl_stake = excluded.rpl_stake,
+				min_rpl_stake = excluded.min_rpl_stake,
+				max_rpl_stake = excluded.max_rpl_stake,
+				rpl_cumulative_rewards = excluded.rpl_cumulative_rewards,
+				smoothing_pool_opted_in = excluded.smoothing_pool_opted_in,
+				claimed_smoothing_pool = excluded.claimed_smoothing_pool,
+				unclaimed_smoothing_pool = excluded.unclaimed_smoothing_pool,
+				unclaimed_rpl_rewards = excluded.unclaimed_rpl_rewards,
+				effective_rpl_stake = excluded.effective_rpl_stake,
+				timezone_location = excluded.timezone_location,
+				deposit_credit = excluded.deposit_credit
+		`, strings.Join(valueStrings, ","))
+
+		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_nodes: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveRewardTrees() error {
@@ -867,29 +927,44 @@ func (rp *RocketpoolExporter) SaveRewardTrees() error {
 		return nil
 	}
 
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 	log.Infof("saving %v rocketpool reward trees", len(rp.RocketpoolRewardTreesDownloadQueue))
 
 	for _, rewardTree := range rp.RocketpoolRewardTreesDownloadQueue {
-		err := db.SaveRocketPoolRewardTree(rewardTree.ID, rewardTree.Data)
+		_, err = tx.Exec(`INSERT INTO rocketpool_reward_tree (id, data) VALUES($1, $2) ON CONFLICT DO NOTHING`, rewardTree.ID, rewardTree.Data)
 		if err != nil {
 			return fmt.Errorf("can not store reward file %v. Error %w", rewardTree.ID, err)
 		}
 	}
 
 	// refreshing materialized view
-	exists, err := db.CheckRocketPoolMVExists()
+	var exists bool
+	err = tx.Get(&exists, `SELECT EXISTS (
+		SELECT 1 
+		FROM pg_catalog.pg_matviews 
+		WHERE matviewname = 'rocketpool_rewards_summary'
+	)`)
 	if err != nil {
 		return fmt.Errorf("failed to check if materialized view exists: %w", err)
 	}
 
 	// If the view exists, refresh it concurrently
 	if exists {
-		err = db.RefreshRocketPoolMV()
+		_, err = tx.Exec(`REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`)
 		if err != nil {
 			return fmt.Errorf("cannot refresh materialized view rocketpool_rewards_summary. Error %w", err)
 		}
 	} else {
 		log.Infof("Materialized view rocketpool_rewards_summary does not exist, skipping refresh.")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 
 	rp.RocketpoolRewardTreeData, err = rp.getRocketpoolRewardTrees()
@@ -909,10 +984,10 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 		return nil
 	}
 
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-dao-proposals")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-dao-proposals")
+	}(t0)
 
 	data := make([]*RocketpoolDAOProposal, len(rp.DAOProposalsByID))
 	i := 0
@@ -920,6 +995,12 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 		data[i] = val
 		i++
 	}
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 
 	nArgs := 18
 	valueStringsArr := make([]string, nArgs)
@@ -963,14 +1044,14 @@ func (rp *RocketpoolExporter) SaveDAOProposals() error {
 			valueArgs = append(valueArgs, d.Payload)
 			valueArgs = append(valueArgs, d.State)
 		}
-
-		err := db.SaveRocketPoolDAOProposals(valueStrings, valueArgs)
+		stmt := fmt.Sprintf(`insert into rocketpool_dao_proposals (rocketpool_storage_address, id, dao, proposer_address, message, created_time, start_time, end_time, expiry_time, votes_required, votes_for, votes_against, member_voted, member_supported, is_cancelled, is_executed, payload, state) values %s on conflict (rocketpool_storage_address, id) do update set dao = excluded.dao, proposer_address = excluded.proposer_address, message = excluded.message, created_time = excluded.created_time, start_time = excluded.start_time, end_time = excluded.end_time, expiry_time = excluded.expiry_time, votes_required = excluded.votes_required, votes_for = excluded.votes_for, votes_against = excluded.votes_against, member_voted = excluded.member_voted, member_supported = excluded.member_supported, is_cancelled = excluded.is_cancelled, is_executed = excluded.is_executed, payload = excluded.payload, state = excluded.state`, strings.Join(valueStrings, ","))
+		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_dao_proposals: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
@@ -978,15 +1059,21 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 		return nil
 	}
 
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-dao-proposals-member-votes")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-dao-proposals-member-votes")
+	}(t0)
 
 	data := []RocketpoolDAOProposalMemberVotes{}
 	for _, val := range rp.DAOProposalsByID {
 		data = append(data, val.MemberVotes...)
 	}
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 
 	nArgs := 5
 	valueStringsArr := make([]string, nArgs)
@@ -1018,13 +1105,19 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 			valueArgs = append(valueArgs, d.Supported)
 		}
 
-		err := db.SaveRocketPoolDAOProposalVotes(valueStrings, valueArgs)
+		stmt := fmt.Sprintf(`
+			insert into rocketpool_dao_proposals_member_votes (rocketpool_storage_address, id, member_address, voted, supported)
+			values %s
+			on conflict (rocketpool_storage_address, id, member_address) do update
+				set voted = excluded.voted,
+				supported = excluded.supported`, strings.Join(valueStrings, ","))
+		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_dao_proposals_member_votes: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveDAOMembers() error {
@@ -1032,10 +1125,10 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 		return nil
 	}
 
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-dao-members")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-dao-members")
+	}(t0)
 
 	data := make([]*RocketpoolDAOMember, len(rp.DAOMembersByAddress))
 	i := 0
@@ -1043,6 +1136,12 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 		data[i] = val
 		i++
 	}
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 
 	nArgs := 8
 	valueStringsArr := make([]string, nArgs)
@@ -1078,18 +1177,40 @@ func (rp *RocketpoolExporter) SaveDAOMembers() error {
 			valueArgs = append(valueArgs, d.UnbondedValidatorCount)
 			addresses = append(addresses, d.Address)
 		}
-		err := db.SaveRocketPoolDAOMembers(valueStrings, valueArgs)
+		stmt := fmt.Sprintf(`
+			INSERT INTO rocketpool_dao_members (
+				rocketpool_storage_address,
+				address,
+				id,
+				url,
+				joined_time,
+				last_proposal_time,
+				rpl_bond_amount,
+				unbonded_validator_count
+			)
+			values %s
+			on conflict (rocketpool_storage_address, address) do update set
+				id = excluded.id,
+				url = excluded.url,
+				joined_time = excluded.joined_time,
+				last_proposal_time = excluded.last_proposal_time,
+				rpl_bond_amount = excluded.rpl_bond_amount,
+				unbonded_validator_count = excluded.unbonded_validator_count
+			`, strings.Join(valueStrings, ","))
+		_, err := tx.Exec(stmt, valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into rocketpool_dao_members: %w", err)
 		}
 
-		err = db.DeleteRocketPoolDAOMembers(pq.ByteaArray(addresses))
+		_, err = tx.Exec(`
+			DELETE FROM rocketpool_dao_members
+			WHERE NOT address = ANY($1)`, pq.ByteaArray(addresses))
 		if err != nil {
 			return fmt.Errorf("error deleting from rocketpool_dao_members: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) TagValidators() error {
@@ -1097,10 +1218,16 @@ func (rp *RocketpoolExporter) TagValidators() error {
 		return nil
 	}
 
-	timeStart := time.Now()
-	defer func(timeStart time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-validator-tags")
-	}(timeStart)
+	t0 := time.Now()
+	defer func(t0 time.Time) {
+		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-validator-tags")
+	}(t0)
+
+	tx, err := db.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
 
 	data := make([]*RocketpoolMinipool, len(rp.MinipoolsByAddress))
 	i := 0
@@ -1123,22 +1250,31 @@ func (rp *RocketpoolExporter) TagValidators() error {
 			valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'rocketpool')", i*n+1))
 			valueArgs = append(valueArgs, d.Pubkey)
 		}
-		err := db.SaveValidatorTags(valueStrings, valueArgs)
+		_, err := tx.Exec(fmt.Sprintf(`insert into validator_tags (publickey, tag) values %s on conflict (publickey, tag) do nothing`, strings.Join(valueStrings, ",")), valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into validator_tags: %w", err)
 		}
-
-		err = db.SaveValidatorPool(valueStrings, valueArgs)
+		_, err = tx.Exec(fmt.Sprintf(`insert into validator_pool (publickey, pool) values %s on conflict (publickey) do nothing`, strings.Join(valueStrings, ",")), valueArgs...)
 		if err != nil {
 			return fmt.Errorf("error inserting into validator_pool: %w", err)
 		}
 	}
 
-	return nil
+	return tx.Commit()
 }
 
 func (rp *RocketpoolExporter) SaveNetworkStats() error {
-	err := db.SaveRocketPoolNetworkStats(
+	_, err := db.WriterDb.Exec(`
+		INSERT INTO rocketpool_network_stats
+		(
+			ts, rpl_price, claim_interval_time, claim_interval_time_start, current_node_fee, current_node_demand,
+			reth_supply, node_operator_rewards, reth_exchange_rate, node_count, minipool_count, odao_member_count,
+			total_eth_staking, total_eth_balance, effective_rpl_staked
+		)
+		VALUES(
+			now(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+			(SELECT sum(effective_rpl_stake) FROM rocketpool_nodes)
+		)`,
 		rp.NetworkStats.RPLPrice.String(),
 		rp.NetworkStats.ClaimIntervalTime.String(),
 		rp.NetworkStats.ClaimIntervalTimeStart,
@@ -1462,9 +1598,11 @@ func (r *RocketpoolNode) Update(rp *rocketpool.RocketPool, rewardTrees map[uint6
 
 func getRewardsData(jsonData []byte) (RewardsFile, error) {
 	var proofWrapper RewardsFile
+
 	err := json.Unmarshal(jsonData, &proofWrapper)
 	if err != nil {
-		return proofWrapper, fmt.Errorf("error deserializing reward data: %w", err)
+		err = fmt.Errorf("error deserializing : %w", err)
+		return proofWrapper, err
 	}
 
 	return proofWrapper, err
