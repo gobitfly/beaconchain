@@ -213,6 +213,10 @@ func (d *DummyService) GetValidatorsFromSlices(ctx context.Context, indices []ui
 	return getDummyData[[]t.VDBValidator](ctx)
 }
 
+func (d *DummyService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, indices []uint64) (uint64, error) {
+	return getDummyData[uint64](ctx)
+}
+
 func (d *DummyService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	return getDummyStruct[t.UserDashboardsData](ctx)
 }
@@ -265,7 +269,7 @@ func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, das
 	return true, nil
 }
 
-func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator, limit uint64) ([]t.VDBPostValidatorsData, error) {
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
@@ -541,7 +545,7 @@ func (d *DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dash
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
+func (d *DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 

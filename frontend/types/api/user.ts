@@ -54,7 +54,8 @@ export const ProductStoreAndroidPlaystore: ProductStore = "android-playstore";
 export const ProductStoreEthpool: ProductStore = "ethpool";
 export const ProductStoreCustom: ProductStore = "custom";
 export interface ProductSummary {
-  validators_per_dashboard_limit: number /* uint64 */;
+  validators_per_dashboard_limit: number /* uint64 */; // remove after Pectra
+  effective_balance_per_dashboard_limit: number /* uint64 */;
   stripe_public_key: string;
   api_products: ApiProduct[];
   premium_products: PremiumProduct[];
@@ -94,7 +95,8 @@ export interface PremiumProduct {
 }
 export interface ExtraDashboardValidatorsPremiumAddon {
   product_name: string;
-  extra_dashboard_validators: number /* uint64 */;
+  extra_dashboard_validators: number /* uint64 */; // remove after Pectra
+  extra_dashboard_effective_balance: number /* uint64 */;
   price_per_year_eur: number /* float64 */;
   price_per_month_eur: number /* float64 */;
   product_id_monthly: string;
@@ -105,7 +107,8 @@ export interface ExtraDashboardValidatorsPremiumAddon {
 export interface PremiumPerks {
   ad_free: boolean; // note that this is somhow redunant, since there is already ApiPerks.NoAds
   validator_dashboards: number /* uint64 */;
-  validators_per_dashboard: number /* uint64 */;
+  validators_per_dashboard: number /* uint64 */; // remove after Pectra
+  effective_balance_per_dashboard: number /* uint64 */;
   validator_groups_per_dashboard: number /* uint64 */;
   share_custom_dashboards: boolean;
   manage_dashboard_via_api: boolean;

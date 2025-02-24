@@ -133,6 +133,10 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "pectra-devnet-5":
+			cfg.Chain.GenesisTimestamp = 1737034260
+		case "pectra-devnet-6":
+			cfg.Chain.GenesisTimestamp = 1738603860
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
@@ -369,6 +373,10 @@ func setCLConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &cfg.Chain.ClConfig)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &cfg.Chain.ClConfig)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ClConfigPath)
 		}
