@@ -134,4 +134,9 @@ type StandardSpec struct {
 	MaxWithdrawalRequestsPerPayload       int64 `json:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,string"`
 	MaxPendingPartialsPerWithdrawalsSweep int64 `json:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP,string"`
 	MaxPendingDepositsPerEpoch            int64 `json:"MAX_PENDING_DEPOSITS_PER_EPOCH,string"`
+	MinPerEpochChurnLimitElectra          int64 `json:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,string"`
+	MaxPerEpochActivationExitChurnLimit   int64 `json:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT,string"`
+	BlobSidecarSubnetCountElectra         int64 `json:"BLOB_SIDECAR_SUBNET_COUNT_ELECTRA,string"`
+	MaxBlobsPerBlockElectra               int64 `json:"MAX_BLOBS_PER_BLOCK_ELECTRA,string"`
+	MaxRequestBlobSidecarsElectra         int64 `json:"MAX_REQUEST_BLOB_SIDECARS_ELECTRA,string"`
 }
