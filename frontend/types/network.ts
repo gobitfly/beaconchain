@@ -155,6 +155,13 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Pectra_Devnet_5]: {
     clCurrency: 'ETH',
     description: 'Devnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
+    hasRocketPool: false,
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
     mainCurrency: 'ETH',
@@ -175,6 +182,13 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Pectra_Devnet_6]: {
     clCurrency: 'ETH',
     description: 'Devnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
+    hasRocketPool: false,
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
     mainCurrency: 'ETH',
