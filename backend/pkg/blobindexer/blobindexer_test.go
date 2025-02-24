@@ -290,7 +290,7 @@ func TestGetBlobSidecarsAtSlot(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			if tt.status.LastIndexedFinalizedBlobSlot > 0 {
 				mockClient.On("GetBlobSidecars", tt.status.LastIndexedFinalizedBlobSlot).Return(tt.mockResponse, tt.mockError)
 			}
@@ -566,7 +566,7 @@ func TestFetchNodeData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			mockClient.On("GetSpec").Return(tt.mockSpecResp, tt.mockError)
 			mockClient.On("GetBlockHeader", "head").Return(tt.mockHeadResp, tt.mockError)
 			mockClient.On("GetBlockHeader", "finalized").Return(tt.mockFinalizedResp, tt.mockError)
@@ -637,7 +637,7 @@ func TestFetchSpec(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			spec := &constypes.StandardSpecResponse{}
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			mockClient.On("GetSpec").Return(tt.mockResponse, tt.mockError)
 			blobIndexer := &BlobIndexer{
 				cl: mockClient,
@@ -724,7 +724,7 @@ func TestFetchBlockHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			header := &constypes.StandardBeaconHeaderResponse{}
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			mockClient.On("GetBlockHeader", tt.blockID).Return(tt.mockResponse, tt.mockError)
 			blobIndexer := &BlobIndexer{
 				cl: mockClient,
@@ -990,7 +990,7 @@ func TestCheckNodePruning(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			if tt.status.LastIndexedFinalizedBlobSlot > 0 {
 				mockClient.On("GetBlobSidecars", tt.status.LastIndexedFinalizedBlobSlot).Return(tt.mockResponse, tt.mockError)
 			}
@@ -1111,7 +1111,7 @@ func TestIndexBlobsInBatches(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockClient := new(mocks.ClientInt)
+			mockClient := new(mocks.Client)
 			mockClient.On("GetBlobSidecars", tt.slot).Return(tt.mockBlobSidecarsResponse, nil)
 
 			writtenBlobsCache, err := lru.New[string, bool](1000)

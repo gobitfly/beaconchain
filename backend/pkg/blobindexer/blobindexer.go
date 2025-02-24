@@ -38,7 +38,7 @@ type BlobIndexer struct {
 	running           bool
 	runningMu         *sync.Mutex
 	clEndpoint        string
-	cl                consapi.ClientInt
+	cl                consapi.Client
 	id                string
 	networkID         string
 	writtenBlobsCache *lru.Cache[string, bool]
