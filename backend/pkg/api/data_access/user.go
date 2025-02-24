@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -361,6 +362,61 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		return nil
 	})
 
+	// TODO could merge with above query
+	validatorDashboardEBs := make(map[uint64]uint64, 0)
+	wg.Go(func() error {
+		validatorsDs := goqu.Dialect("postgres").
+			From(goqu.T("users_val_dashboards").As("uvd")).
+			LeftJoin(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(goqu.I("uvd.id").Eq(goqu.I("uvdv.dashboard_id"))),
+			).
+			Select(
+				goqu.I("uvd.id").As("dashboard_id"),
+				goqu.I("uvdv.validator_index").As("validator_index"),
+			).
+			Where(goqu.I("uvd.user_id").Eq(userId))
+
+		validatorsQuery, args, err := validatorsDs.Prepared(true).ToSQL()
+		if err != nil {
+			return err
+		}
+
+		// could also scan into array
+		dashboardValidators := []struct {
+			Id             uint64 `db:"dashboard_id"`
+			ValidatorIndex uint64 `db:"validator_index"`
+		}{}
+		err = d.alloyReader.SelectContext(ctx, &dashboardValidators, validatorsQuery, args...)
+		if err != nil {
+			return err
+		}
+		dashboardValidatorsMap := make(map[uint64][]t.VDBValidator, 0)
+		validators := make([]t.VDBValidator, 0, len(dashboardValidators))
+		for _, row := range dashboardValidators {
+			dashboardValidatorsMap[row.Id] = append(dashboardValidatorsMap[row.Id], row.ValidatorIndex)
+			validators = append(validators, row.ValidatorIndex)
+		}
+		validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
+		if err != nil {
+			return err
+		}
+
+		for dashboard_id, validators := range dashboardValidatorsMap {
+			var dashboardTotalEb uint64
+			for _, validator := range validators {
+				if eb, ok := validatorEbs[validator]; !ok {
+					return fmt.Errorf("effective balance for validator %d not found", validator)
+				} else {
+					dashboardTotalEb += eb
+				}
+			}
+			validatorDashboardEBs[dashboard_id] = dashboardTotalEb
+		}
+
+		return nil
+	})
+
 	err := wg.Wait()
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving user dashboards data: %w", err)
@@ -370,6 +426,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	for _, validatorDashboard := range validatorDashboardMap {
 		validatorDashboard.GroupCount = validatorDashboardCountMap[validatorDashboard.Id].GroupCount
 		validatorDashboard.ValidatorCount = validatorDashboardCountMap[validatorDashboard.Id].ValidatorCount
+		validatorDashboard.EffectiveBalance = validatorDashboardEBs[validatorDashboard.Id]
 
 		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}

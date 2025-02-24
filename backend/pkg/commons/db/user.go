@@ -27,7 +27,7 @@ var freeTierProduct t.PremiumProduct = t.PremiumProduct{
 		AdFree:                       false,
 		ValidatorDashboards:          1,
 		ValidatorsPerDashboard:       20,
-		EffectiveBalancePerDashboard: 20 * 1e9,
+		EffectiveBalancePerDashboard: 20 * 32 * 1e9,
 		ValidatorGroupsPerDashboard:  1,
 		ShareCustomDashboards:        false,
 		ManageDashboardViaApi:        false,
@@ -269,8 +269,9 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 
 func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	return &t.ProductSummary{
-		ValidatorsPerDashboardLimit: 102_000,
-		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
+		ValidatorsPerDashboardLimit:       102_000,
+		EffectiveBalancePerDashboardLimit: uint64(102_000 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
+		StripePublicKey:                   utils.Config.Frontend.Stripe.PublicKey,
 		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
 				ProductId:        "api_free",
@@ -345,7 +346,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 					AdFree:                       true,
 					ValidatorDashboards:          1,
 					ValidatorsPerDashboard:       100,
-					EffectiveBalancePerDashboard: uint64(100 * utils.Config.Frontend.ClCurrencyDivisor),
+					EffectiveBalancePerDashboard: uint64(100 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
 					ValidatorGroupsPerDashboard:  3,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -380,7 +381,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 					AdFree:                       true,
 					ValidatorDashboards:          2,
 					ValidatorsPerDashboard:       300,
-					EffectiveBalancePerDashboard: uint64(300 * utils.Config.Frontend.ClCurrencyDivisor),
+					EffectiveBalancePerDashboard: uint64(300 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
 					ValidatorGroupsPerDashboard:  10,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -415,7 +416,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 					AdFree:                       true,
 					ValidatorDashboards:          2,
 					ValidatorsPerDashboard:       1000,
-					EffectiveBalancePerDashboard: uint64(1000 * utils.Config.Frontend.ClCurrencyDivisor),
+					EffectiveBalancePerDashboard: uint64(1000 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
 					ValidatorGroupsPerDashboard:  30,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        true,
