@@ -387,6 +387,18 @@ func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
 
 	return result
 }
+func GetMaxEffectiveBalanceByWithdrawalCredentials(withCred []byte) uint64 {
+	switch withCred[0] {
+	case 0x00, 0x01:
+		// phase0, capella
+		return Config.Chain.ClConfig.MaxEffectiveBalance
+	case 0x02:
+		// electra
+		return Config.Chain.ClConfig.MaxEffectiveBalanceElectra
+	default:
+		return 0
+	}
+}
 
 func Deduplicate[T comparable](slice []T) []T {
 	keys := make(map[T]struct{})
