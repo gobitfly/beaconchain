@@ -29,6 +29,10 @@ func TestCreateNetworkStatusReport(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				DeploymentType: "test",
+			}
+
 			reportFunc := createNetworkStatusReport(tt.slotDuration)
 			if reportFunc == nil {
 				t.Error("expected a non-nil function")
