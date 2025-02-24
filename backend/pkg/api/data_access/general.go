@@ -179,7 +179,7 @@ func runQuery[T any](ctx context.Context, db *sqlx.DB, ds *goqu.SelectDataset) (
 }
 
 // returns the effective balances of the provided validators
-// executed from the vdb premium limits pov, i.e. exited validators account for the EB at exit time
+// if onlyActive = true: executed from the vdb premium limits pov, i.e. exited validators account for the EB at exit time
 func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
 	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
@@ -241,8 +241,8 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 	return effectiveBalances, nil
 }
 
-func (d *DataAccessService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, validators []t.VDBValidator) (uint64, error) {
-	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
+func (d *DataAccessService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (uint64, error) {
+	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, onlyActive)
 	if err != nil {
 		return 0, err
 	}

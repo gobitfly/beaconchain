@@ -545,7 +545,7 @@ func (d *DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dash
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId) (uint64, error) {
+func (d *DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 

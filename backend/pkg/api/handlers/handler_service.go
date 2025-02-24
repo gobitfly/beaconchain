@@ -146,7 +146,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		if len(validators) == 0 {
 			return nil, newNotFoundErr("no validators found for given id")
 		}
-		validatorEb, err := h.daService.GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Validators: validators})
+		validatorEb, err := h.daService.GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Validators: validators}, false)
 		if err != nil {
 			return nil, err
 		}
