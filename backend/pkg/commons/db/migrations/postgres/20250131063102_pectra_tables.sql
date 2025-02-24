@@ -65,7 +65,7 @@ ALTER TABLE blocks_attestations
 ADD COLUMN IF NOT EXISTS committeebits BYTEA;
 
 SELECT
-    'creating eth1_consolidation_requests table'
+    'creating eth1_consolidation_requests table';
 
 CREATE TABLE
     IF NOT EXISTS eth1_consolidation_requests (
@@ -80,7 +80,7 @@ CREATE TABLE
     );
 
 SELECT
-    'creating eth1_withdrawal_requests table'
+    'creating eth1_withdrawal_requests table';
 
 CREATE TABLE
     IF NOT EXISTS eth1_withdrawal_requests (
