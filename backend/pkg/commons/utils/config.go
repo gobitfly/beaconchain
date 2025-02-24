@@ -133,6 +133,10 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "pectra-devnet-5":
+			cfg.Chain.GenesisTimestamp = 1737034260
+		case "pectra-devnet-6":
+			cfg.Chain.GenesisTimestamp = 1738603860
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
@@ -319,6 +323,8 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.MekongChainYml), &minimalCfg)
 		case "pectra-devnet-5":
 			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &minimalCfg)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &minimalCfg)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ElConfigPath)
 		}
@@ -352,6 +358,8 @@ func setELConfig(cfg *types.Config) error {
 	return nil
 }
 
+var MaxForkEpoch = uint64(18446744073709551615)
+
 func setCLConfig(cfg *types.Config) error {
 	var err error
 	if cfg.Chain.ClConfigPath == "" {
@@ -369,6 +377,10 @@ func setCLConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &cfg.Chain.ClConfig)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &cfg.Chain.ClConfig)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ClConfigPath)
 		}
@@ -388,23 +400,25 @@ func setCLConfig(cfg *types.Config) error {
 			return err
 		}
 
-		maxForkEpoch := uint64(18446744073709551615)
-
 		if jr.Data.AltairForkEpoch == nil {
 			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.AltairForkEpoch = &maxForkEpoch
+			jr.Data.AltairForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
 			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.BellatrixForkEpoch = &maxForkEpoch
+			jr.Data.BellatrixForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
 			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.CapellaForkEpoch = &maxForkEpoch
+			jr.Data.CapellaForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
 			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.DenebForkEpoch = &maxForkEpoch
+			jr.Data.DenebForkEpoch = &MaxForkEpoch
+		}
+		if jr.Data.ElectraForkEpoch == nil {
+			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
+			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
 
 		chainCfg := types.ClChainConfig{
@@ -490,6 +504,7 @@ func setCLConfig(cfg *types.Config) error {
 			MaxWithdrawalsPerPayload:                uint64(jr.Data.MaxWithdrawalsPerPayload),
 			MaxValidatorsPerWithdrawalSweep:         uint64(jr.Data.MaxValidatorsPerWithdrawalsSweep),
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
+			MaxEffectiveBalanceElectra:              uint64(jr.Data.MaxEffectiveBalanceElectra),
 		}
 
 		cfg.Chain.ClConfig = chainCfg
