@@ -21,40 +21,6 @@ const week = 7 * day
 const month = 30 * day
 const maxJsInt uint64 = 9007199254740991 // 2^53-1 (max safe int in JS)
 
-var freeTierProduct t.PremiumProduct = t.PremiumProduct{
-	ProductName: "Free",
-	PremiumPerks: t.PremiumPerks{
-		AdFree:                       false,
-		ValidatorDashboards:          1,
-		ValidatorsPerDashboard:       20,
-		EffectiveBalancePerDashboard: 20 * 32 * 1e9,
-		ValidatorGroupsPerDashboard:  1,
-		ShareCustomDashboards:        false,
-		ManageDashboardViaApi:        false,
-		BulkAdding:                   false,
-		ChartHistorySeconds: t.ChartHistorySeconds{
-			Epoch:  0,
-			Hourly: 12 * hour,
-			Daily:  0,
-			Weekly: 0,
-		},
-		EmailNotificationsPerDay:                       10,
-		ConfigureNotificationsViaApi:                   false,
-		ValidatorGroupNotifications:                    1,
-		WebhookEndpoints:                               1,
-		MobileAppCustomThemes:                          false,
-		MobileAppWidget:                                false,
-		MonitorMachines:                                1,
-		MachineMonitoringHistorySeconds:                3600 * 3,
-		NotificationsMachineCustomThreshold:            false,
-		NotificationsValidatorDashboardGroupEfficiency: false,
-	},
-	PricePerMonthEur: 0,
-	PricePerYearEur:  0,
-	ProductIdMonthly: "premium_free",
-	ProductIdYearly:  "premium_free.yearly",
-}
-
 var adminPerks = t.PremiumPerks{
 	AdFree:                       false, // admins want to see ads to check ad configuration
 	ValidatorDashboards:          maxJsInt,
@@ -267,8 +233,18 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 	return userInfo, nil
 }
 
+func premiumLimitNetworkfactor() uint64 {
+	networkFactor := uint64(1)
+	if utils.Config.Chain.Id == 100 { // gnosis
+		networkFactor = 5
+	}
+	return networkFactor
+}
+
 func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
-	return &t.ProductSummary{
+	freeTierProduct, err := GetFreeTierProduct(ctx)
+	factor := premiumLimitNetworkfactor()
+	summary := t.ProductSummary{
 		ValidatorsPerDashboardLimit:       102_000,
 		EffectiveBalancePerDashboardLimit: uint64(102_000 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
 		StripePublicKey:                   utils.Config.Frontend.Stripe.PublicKey,
@@ -339,14 +315,14 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			},
 		},
 		PremiumProducts: []t.PremiumProduct{
-			freeTierProduct,
+			*freeTierProduct,
 			{
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          1,
-					ValidatorsPerDashboard:       100,
-					EffectiveBalancePerDashboard: uint64(100 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorsPerDashboard:       100 * factor,
+					EffectiveBalancePerDashboard: uint64(100*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
 					ValidatorGroupsPerDashboard:  3,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -380,8 +356,8 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          2,
-					ValidatorsPerDashboard:       300,
-					EffectiveBalancePerDashboard: uint64(300 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorsPerDashboard:       300 * factor,
+					EffectiveBalancePerDashboard: uint64(300*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
 					ValidatorGroupsPerDashboard:  10,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -415,8 +391,8 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          2,
-					ValidatorsPerDashboard:       1000,
-					EffectiveBalancePerDashboard: uint64(1000 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
+					ValidatorsPerDashboard:       1000 * factor,
+					EffectiveBalancePerDashboard: uint64(1000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
 					ValidatorGroupsPerDashboard:  30,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        true,
@@ -449,29 +425,67 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 		},
 		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
 			{
-				ProductName:              "1k extra valis per dashboard",
-				ExtraDashboardValidators: 1000,
-				PricePerMonthEur:         74.99,
-				PricePerYearEur:          719.88,
-				ProductIdMonthly:         "vdb_addon_1k",
-				ProductIdYearly:          "vdb_addon_1k.yearly",
-				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
-				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
+				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 1_000*32*factor),
+				ExtraDashboardValidators:       1_000 * factor,
+				ExtraDashboardEffectiveBalance: uint64(1_000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+				PricePerMonthEur:               74.99,
+				PricePerYearEur:                719.88,
+				ProductIdMonthly:               "vdb_addon_1k",
+				ProductIdYearly:                "vdb_addon_1k.yearly",
+				StripePriceIdMonthly:           utils.Config.Frontend.Stripe.VdbAddon1k,
+				StripePriceIdYearly:            utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 			},
 			{
-				ProductName:              "10k extra valis per dashboard",
-				ExtraDashboardValidators: 10000,
-				PricePerMonthEur:         449.99,
-				PricePerYearEur:          4319.88,
-				ProductIdMonthly:         "vdb_addon_10k",
-				ProductIdYearly:          "vdb_addon_10k.yearly",
-				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon10k,
-				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon10kYearly,
+				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 10_000*32*factor),
+				ExtraDashboardValidators:       10_000 * factor,
+				ExtraDashboardEffectiveBalance: uint64(10_000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+				PricePerMonthEur:               449.99,
+				PricePerYearEur:                4319.88,
+				ProductIdMonthly:               "vdb_addon_10k",
+				ProductIdYearly:                "vdb_addon_10k.yearly",
+				StripePriceIdMonthly:           utils.Config.Frontend.Stripe.VdbAddon10k,
+				StripePriceIdYearly:            utils.Config.Frontend.Stripe.VdbAddon10kYearly,
 			},
 		},
-	}, nil
+	}
+
+	return &summary, err
 }
 
-func GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
-	return &freeTierProduct.PremiumPerks, nil
+func GetFreeTierProduct(ctx context.Context) (*t.PremiumProduct, error) {
+	factor := premiumLimitNetworkfactor()
+
+	return &t.PremiumProduct{
+		ProductName: "Free",
+		PremiumPerks: t.PremiumPerks{
+			AdFree:                       false,
+			ValidatorDashboards:          1,
+			ValidatorsPerDashboard:       20 * factor,
+			EffectiveBalancePerDashboard: 20 * 32 * 1e9 * factor,
+			ValidatorGroupsPerDashboard:  1,
+			ShareCustomDashboards:        false,
+			ManageDashboardViaApi:        false,
+			BulkAdding:                   false,
+			ChartHistorySeconds: t.ChartHistorySeconds{
+				Epoch:  0,
+				Hourly: 12 * hour,
+				Daily:  0,
+				Weekly: 0,
+			},
+			EmailNotificationsPerDay:                       10,
+			ConfigureNotificationsViaApi:                   false,
+			ValidatorGroupNotifications:                    1,
+			WebhookEndpoints:                               1,
+			MobileAppCustomThemes:                          false,
+			MobileAppWidget:                                false,
+			MonitorMachines:                                1,
+			MachineMonitoringHistorySeconds:                3600 * 3,
+			NotificationsMachineCustomThreshold:            false,
+			NotificationsValidatorDashboardGroupEfficiency: false,
+		},
+		PricePerMonthEur: 0,
+		PricePerYearEur:  0,
+		ProductIdMonthly: "premium_free",
+		ProductIdYearly:  "premium_free.yearly",
+	}, nil
 }

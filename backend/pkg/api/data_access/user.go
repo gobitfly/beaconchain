@@ -269,7 +269,11 @@ func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSu
 }
 
 func (d *DataAccessService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
-	return db.GetFreeTierPerks(ctx)
+	perks, err := db.GetFreeTierProduct(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &perks.PremiumPerks, nil
 }
 
 func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
