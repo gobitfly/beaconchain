@@ -32,7 +32,7 @@ func syncCommitteesExporter(rpcClient rpc.Client) {
 }
 
 func createStatusReport() func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+	return services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12, utils.Config.DeploymentType)
 }
 
 func handleExportError(err error, startTime time.Time, statusReport func(status constants.StatusType, metadata map[string]string)) {

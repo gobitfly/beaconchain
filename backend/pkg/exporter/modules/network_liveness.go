@@ -64,7 +64,7 @@ func networkLivenessUpdater(client rpc.Client) {
 }
 
 func createNetworkStatusReport(slotDuration time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+	return services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration, utils.Config.DeploymentType)
 }
 
 func handleNetworkSuccess(slotDuration time.Duration, statusReport func(status constants.StatusType, metadata map[string]string)) {
