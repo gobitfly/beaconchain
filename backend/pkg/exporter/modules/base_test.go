@@ -41,12 +41,11 @@ func TestInitializeModules(t *testing.T) {
 		},
 	}
 
-	utils.Config = &types.Config{
-		DeploymentType: "test",
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				DeploymentType: "test",
+			}
 
 			err := initializeModules(tt.modules)
 			if tt.expectedError {
@@ -85,7 +84,6 @@ func TestHandleEvents(t *testing.T) {
 	utils.Config = &types.Config{
 		DeploymentType: "test",
 	}
-
 	events := make(chan *constypes.EventResponse, 1)
 	go func() {
 		events <- &constypes.EventResponse{
@@ -137,16 +135,6 @@ func TestHandleEvent(t *testing.T) {
 		},
 	}
 
-	utils.Config = &types.Config{
-		DeploymentType: "test",
-		Indexer: types.IndexerConfig{
-			Node: types.NodeConfig{
-				Host: "",
-				Port: "",
-			},
-		},
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockClient := new(consmocks.Client)
@@ -157,6 +145,9 @@ func TestHandleEvent(t *testing.T) {
 						Endpoint: "",
 					},
 				},
+			}
+			utils.Config = &types.Config{
+				DeploymentType: "test",
 			}
 
 			modules := []ModuleInterface{
@@ -315,12 +306,12 @@ func TestHandleChainReorgEvent(t *testing.T) {
 		},
 	}
 
-	utils.Config = &types.Config{
-		DeploymentType: "test",
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				DeploymentType: "test",
+			}
+
 			err := handleChainReorgEvent(tt.event, eventPool, modules)
 
 			if tt.expectedError {
@@ -353,12 +344,11 @@ func TestNotifyAllModules(t *testing.T) {
 		},
 	}
 
-	utils.Config = &types.Config{
-		DeploymentType: "test",
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			utils.Config = &types.Config{
+				DeploymentType: "test",
+			}
 			notifyAllModules(eventPool, modules, tt.moduleFunc)
 			err := eventPool.Wait()
 
