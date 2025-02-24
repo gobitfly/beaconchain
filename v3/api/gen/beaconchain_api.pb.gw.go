@@ -35,42 +35,6 @@ var (
 	_ = metadata.Join
 )
 
-func request_BeaconchainApiService_ExecutionBlock_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconchainApiServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq ExecutionBlockRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["blockNumber"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "blockNumber")
-	}
-	protoReq.BlockNumber, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "blockNumber", err)
-	}
-	msg, err := client.ExecutionBlock(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_BeaconchainApiService_ExecutionBlock_0(ctx context.Context, marshaler runtime.Marshaler, server BeaconchainApiServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq ExecutionBlockRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["blockNumber"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "blockNumber")
-	}
-	protoReq.BlockNumber, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "blockNumber", err)
-	}
-	msg, err := server.ExecutionBlock(ctx, &protoReq)
-	return msg, metadata, err
-}
-
 func request_BeaconchainApiService_CreateValidatorDashboard_0(ctx context.Context, marshaler runtime.Marshaler, client BeaconchainApiServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq CreateValidatorDashboardRequest
@@ -199,26 +163,6 @@ func local_request_BeaconchainApiService_DeleteValidatorDashboard_0(ctx context.
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterBeaconchainApiServiceHandlerFromEndpoint instead.
 // GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
 func RegisterBeaconchainApiServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server BeaconchainApiServiceServer) error {
-	mux.Handle(http.MethodGet, pattern_BeaconchainApiService_ExecutionBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/.BeaconchainApiService/ExecutionBlock", runtime.WithHTTPPathPattern("/api/v1/execution/block/{blockNumber}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_BeaconchainApiService_ExecutionBlock_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_BeaconchainApiService_ExecutionBlock_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodPost, pattern_BeaconchainApiService_CreateValidatorDashboard_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -339,23 +283,6 @@ func RegisterBeaconchainApiServiceHandler(ctx context.Context, mux *runtime.Serv
 // doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
 // "BeaconchainApiServiceClient" to call the correct interceptors. This client ignores the HTTP middlewares.
 func RegisterBeaconchainApiServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client BeaconchainApiServiceClient) error {
-	mux.Handle(http.MethodGet, pattern_BeaconchainApiService_ExecutionBlock_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/.BeaconchainApiService/ExecutionBlock", runtime.WithHTTPPathPattern("/api/v1/execution/block/{blockNumber}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_BeaconchainApiService_ExecutionBlock_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_BeaconchainApiService_ExecutionBlock_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodPost, pattern_BeaconchainApiService_CreateValidatorDashboard_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -428,7 +355,6 @@ func RegisterBeaconchainApiServiceHandlerClient(ctx context.Context, mux *runtim
 }
 
 var (
-	pattern_BeaconchainApiService_ExecutionBlock_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v1", "execution", "block", "blockNumber"}, ""))
 	pattern_BeaconchainApiService_CreateValidatorDashboard_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"api", "validatorDashboard"}, ""))
 	pattern_BeaconchainApiService_GetValidatorDashboard_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"api", "validatorDashboard", "dashboardId"}, ""))
 	pattern_BeaconchainApiService_ListValidatorDashboards_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"api", "validatorDashboard"}, ""))
@@ -436,7 +362,6 @@ var (
 )
 
 var (
-	forward_BeaconchainApiService_ExecutionBlock_0           = runtime.ForwardResponseMessage
 	forward_BeaconchainApiService_CreateValidatorDashboard_0 = runtime.ForwardResponseMessage
 	forward_BeaconchainApiService_GetValidatorDashboard_0    = runtime.ForwardResponseMessage
 	forward_BeaconchainApiService_ListValidatorDashboards_0  = runtime.ForwardResponseMessage

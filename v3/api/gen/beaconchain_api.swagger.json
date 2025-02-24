@@ -16,38 +16,6 @@
     "application/json"
   ],
   "paths": {
-    "/api/v1/execution/block/{blockNumber}": {
-      "get": {
-        "summary": "Get execution blocks by execution block number",
-        "operationId": "BeaconchainApiService_ExecutionBlock",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/ExecutionBlockResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "blockNumber",
-            "description": "Provide one or more execution block numbers. Comma separated up to max 100.",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "BeaconchainApiService"
-        ]
-      }
-    },
     "/api/validatorDashboard": {
       "get": {
         "summary": "Retrieves multiple Validator Dashboards by ID or for the entire account",
@@ -166,17 +134,6 @@
     }
   },
   "definitions": {
-    "BlockSummary": {
-      "type": "object",
-      "properties": {
-        "blockHash": {
-          "type": "string"
-        },
-        "blockNumber": {
-          "type": "string"
-        }
-      }
-    },
     "CreateValidatorDashboardResponse": {
       "type": "object",
       "properties": {
@@ -188,18 +145,6 @@
     "DeleteValidatorDashboardResponse": {
       "type": "object",
       "title": "nil; no response"
-    },
-    "ExecutionBlockResponse": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
-        },
-        "data": {
-          "$ref": "#/definitions/BlockSummary"
-        }
-      },
-      "title": "A Response containing a summary of the execution block"
     },
     "GetValidatorDashboardResponse": {
       "type": "object",

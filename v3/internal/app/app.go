@@ -73,7 +73,7 @@ func Run(
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
 	// Establish a connection to the gRPC server above
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", config.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(fmt.Sprintf(":%s", config.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Infof("fail to dial: %v", err)
 	}
@@ -87,16 +87,30 @@ func Run(
 		log.Info(err)
 	}
 
+	clientv1 := model.NewBeaconchainApiV1ServiceClient(conn)
+	err = model.RegisterBeaconchainApiV1ServiceHandlerClient(ctx, rmux, clientv1)
+	if err != nil {
+		log.Info(err)
+	}
+
 	// create a standard HTTP router
 	mux := http.NewServeMux()
 
 	// mount a path to expose the generated OpenAPI specification on disk
+	// http://localhost:8080/swagger-ui/#/BeaconchainApiService
 	mux.HandleFunc("/swagger-ui/swagger.json", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./api/gen/beaconchain_api.swagger.json")
 	})
 
+	// mount a path to expose the generated OpenAPI specification on disk
+	// http://localhost:8080/swagger-ui/v1/#/BeaconchainApiV1Service
+	mux.HandleFunc("/swagger-ui/v1/swagger.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./api/gen/beaconchain_api_v1.swagger.json")
+	})
+
 	// mount the Swagger UI that uses the OpenAPI specification path above
 	mux.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.Dir("./web/swagger-ui"))))
+	mux.Handle("/swagger-ui/v1/", http.StripPrefix("/swagger-ui/v1/", http.FileServer(http.Dir("./web/swagger-ui"))))
 
 	// mount the gRPC HTTP gateway to the root
 	mux.Handle("/", rmux)

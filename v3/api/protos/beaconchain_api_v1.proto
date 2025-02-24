@@ -1,0 +1,54 @@
+// For specification see 
+// https://protobuf.dev/programming-guides/proto3/
+// https://protobuf.dev/reference/go/go-generated/
+// https://protobuf.dev/reference/python/python-generated/
+syntax = "proto3";
+
+option go_package = "github.com/gobitfly/beaconchain-api/model";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+//////////////////////////////////////////////////
+/////////////// Service Definition ///////////////
+//////////////////////////////////////////////////
+
+service BeaconchainApiV1Service {
+
+  // Get execution blocks by execution block number
+  rpc ExecutionBlock (ExecutionBlockRequest) returns (ExecutionBlockResponse) {
+    option (google.api.http) = {
+      get: "/api/v1/execution/block/{blockNumber}"
+    };
+  }
+}
+
+/////////////////////////////////////////////////
+/////////// Request/Response Definition ////////////
+/////////////////////////////////////////////////
+
+/* ExecutionBlock */
+// A request to get a summary of a particular execution block
+message ExecutionBlockRequest {
+  // Provide one or more execution block numbers. Comma separated up to max 100.
+  string blockNumber = 1;
+}
+
+// A Response containing a summary of the execution block
+message ExecutionBlockResponse {
+  string status = 1;
+  BlockSummary data = 2;
+}
+
+
+//////////////////////////////////////////////////
+/////////////// Message Definition ///////////////
+//////////////////////////////////////////////////
+
+message BlockSummary {
+  string blockHash = 1;
+  string blockNumber = 2;
+}
+
+
+

@@ -24,7 +24,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BeaconchainApiService_ExecutionBlock_FullMethodName           = "/BeaconchainApiService/ExecutionBlock"
 	BeaconchainApiService_CreateValidatorDashboard_FullMethodName = "/BeaconchainApiService/CreateValidatorDashboard"
 	BeaconchainApiService_GetValidatorDashboard_FullMethodName    = "/BeaconchainApiService/GetValidatorDashboard"
 	BeaconchainApiService_ListValidatorDashboards_FullMethodName  = "/BeaconchainApiService/ListValidatorDashboards"
@@ -35,8 +34,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BeaconchainApiServiceClient interface {
-	// Get execution blocks by execution block number
-	ExecutionBlock(ctx context.Context, in *ExecutionBlockRequest, opts ...grpc.CallOption) (*ExecutionBlockResponse, error)
 	// Creates a new Validator Dashboard
 	CreateValidatorDashboard(ctx context.Context, in *CreateValidatorDashboardRequest, opts ...grpc.CallOption) (*CreateValidatorDashboardResponse, error)
 	// Retrieves a Validator Dashboard by its Id
@@ -53,16 +50,6 @@ type beaconchainApiServiceClient struct {
 
 func NewBeaconchainApiServiceClient(cc grpc.ClientConnInterface) BeaconchainApiServiceClient {
 	return &beaconchainApiServiceClient{cc}
-}
-
-func (c *beaconchainApiServiceClient) ExecutionBlock(ctx context.Context, in *ExecutionBlockRequest, opts ...grpc.CallOption) (*ExecutionBlockResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ExecutionBlockResponse)
-	err := c.cc.Invoke(ctx, BeaconchainApiService_ExecutionBlock_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *beaconchainApiServiceClient) CreateValidatorDashboard(ctx context.Context, in *CreateValidatorDashboardRequest, opts ...grpc.CallOption) (*CreateValidatorDashboardResponse, error) {
@@ -109,8 +96,6 @@ func (c *beaconchainApiServiceClient) DeleteValidatorDashboard(ctx context.Conte
 // All implementations must embed UnimplementedBeaconchainApiServiceServer
 // for forward compatibility.
 type BeaconchainApiServiceServer interface {
-	// Get execution blocks by execution block number
-	ExecutionBlock(context.Context, *ExecutionBlockRequest) (*ExecutionBlockResponse, error)
 	// Creates a new Validator Dashboard
 	CreateValidatorDashboard(context.Context, *CreateValidatorDashboardRequest) (*CreateValidatorDashboardResponse, error)
 	// Retrieves a Validator Dashboard by its Id
@@ -129,9 +114,6 @@ type BeaconchainApiServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedBeaconchainApiServiceServer struct{}
 
-func (UnimplementedBeaconchainApiServiceServer) ExecutionBlock(context.Context, *ExecutionBlockRequest) (*ExecutionBlockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExecutionBlock not implemented")
-}
 func (UnimplementedBeaconchainApiServiceServer) CreateValidatorDashboard(context.Context, *CreateValidatorDashboardRequest) (*CreateValidatorDashboardResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateValidatorDashboard not implemented")
 }
@@ -163,24 +145,6 @@ func RegisterBeaconchainApiServiceServer(s grpc.ServiceRegistrar, srv Beaconchai
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&BeaconchainApiService_ServiceDesc, srv)
-}
-
-func _BeaconchainApiService_ExecutionBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExecutionBlockRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconchainApiServiceServer).ExecutionBlock(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: BeaconchainApiService_ExecutionBlock_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconchainApiServiceServer).ExecutionBlock(ctx, req.(*ExecutionBlockRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _BeaconchainApiService_CreateValidatorDashboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -262,10 +226,6 @@ var BeaconchainApiService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "BeaconchainApiService",
 	HandlerType: (*BeaconchainApiServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "ExecutionBlock",
-			Handler:    _BeaconchainApiService_ExecutionBlock_Handler,
-		},
 		{
 			MethodName: "CreateValidatorDashboard",
 			Handler:    _BeaconchainApiService_CreateValidatorDashboard_Handler,

@@ -14,14 +14,6 @@ import "google/api/annotations.proto";
 //////////////////////////////////////////////////
 
 service BeaconchainApiService {
-
-  // Get execution blocks by execution block number
-  rpc ExecutionBlock (ExecutionBlockRequest) returns (ExecutionBlockResponse) {
-    option (google.api.http) = {
-      get: "/api/v1/execution/block/{blockNumber}"
-    };
-  }
-
   
   // Creates a new Validator Dashboard
   rpc CreateValidatorDashboard (CreateValidatorDashboardRequest) returns (CreateValidatorDashboardResponse) {
@@ -106,28 +98,11 @@ message DeleteValidatorDashboardResponse {
   // nil; no response
 }
 
-/* ExecutionBlock */
-// A request to get a summary of a particular execution block
-message ExecutionBlockRequest {
-  // Provide one or more execution block numbers. Comma separated up to max 100.
-  string blockNumber = 1;
-}
-
-// A Response containing a summary of the execution block
-message ExecutionBlockResponse {
-  string status = 1;
-  BlockSummary data = 2;
-}
 
 
 //////////////////////////////////////////////////
 /////////////// Message Definition ///////////////
 //////////////////////////////////////////////////
-
-message BlockSummary {
-  string blockHash = 1;
-  string blockNumber = 2;
-}
 
 message ValidatorDashboard {
   string dashboardId = 1;
