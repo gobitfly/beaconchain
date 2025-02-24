@@ -119,16 +119,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-			goqu.L(`
-				(
-					SUM(finalizeAggregation(r.balance_end)) +
-					SUM(r.withdrawals_amount) + 
-					SUM(r.consolidations_outgoing_amount) -
-					SUM(r.deposits_amount) -
-					SUM(finalizeAggregation(r.balance_start)) -
-					SUM(r.consolidations_incoming_amount)
-				) AS cl_rewards
-			`),
+			goqu.L(d.getTotalRewardsColumns()).As("cl_rewards"),
 			goqu.L("SUM(r.attestations_reward)::decimal AS attestations_reward"),
 			goqu.L("SUM(r.attestations_ideal_reward)::decimal AS attestations_ideal_reward"),
 			goqu.L("SUM(r.attestations_observed) AS attestations_observed"),

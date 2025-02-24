@@ -140,6 +140,22 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 	return timeToWithdrawal
 }
 
+func (d *DataAccessService) getTotalRewardsColumns() string {
+	rewardColumns := `
+		SUM(finalizeAggregation(r.balance_end)) +
+		SUM(r.withdrawals_amount) -
+		SUM(r.deposits_amount) -
+		SUM(finalizeAggregation(r.balance_start))
+	`
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		rewardColumns += `+ 
+			SUM(r.consolidations_outgoing_amount) -
+			SUM(r.consolidations_incoming_amount)
+		`
+	}
+	return rewardColumns
+}
+
 func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
 	table := ""
 
@@ -175,16 +191,8 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
 			goqu.L("COUNT(*) AS validator_count"),
-			goqu.L(`
-				(
-					SUM(finalizeAggregation(r.balance_end)) +
-					SUM(r.withdrawals_amount) + 
-					SUM(r.consolidations_outgoing_amount) -
-					SUM(r.deposits_amount) -
-					SUM(finalizeAggregation(r.balance_start)) -
-					SUM(r.consolidations_incoming_amount)
-				) AS reward
-			`))
+			goqu.L(d.getTotalRewardsColumns()).As("reward"),
+		)
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
 			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
