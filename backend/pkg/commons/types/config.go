@@ -19,24 +19,15 @@ type Bigtable struct {
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2         bool           `yaml:"justV2" env:"JUST_V2"` // temp, remove at some point
-	DeploymentType string         `yaml:"deploymentType" env:"DEPLOYMENT_TYPE"`
-	ReaderDatabase DatabaseConfig `yaml:"readerDatabase" env:", prefix=READER_"`
-	WriterDatabase DatabaseConfig `yaml:"writerDatabase" env:", prefix=WRITER_"`
-	AlloyReader    DatabaseConfig `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
-	AlloyWriter    DatabaseConfig `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
-	Bigtable       Bigtable       `yaml:"bigtable" env:", prefix=BIGTABLE_"`
-	RawBigtable    Bigtable       `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`
-	BlobIndexer    struct {
-		S3 struct {
-			Endpoint        string `yaml:"endpoint" env:"ENDPOINT"`                 // s3 endpoint
-			Bucket          string `yaml:"bucket" env:"BUCKET"`                     // s3 bucket
-			AccessKeyId     string `yaml:"accessKeyId" env:"ACCESS_KEY_ID"`         // s3 access key id
-			AccessKeySecret string `yaml:"accessKeySecret" env:"ACCESS_KEY_SECRET"` // s3 access key secret
-		} `yaml:"s3" env:", prefix=S3_"`
-		PruneMarginEpochs    uint64 `yaml:"pruneMarginEpochs" env:"PRUNE_MARGIN_EPOCHS"`       // PruneMarginEpochs helps blobindexer to decide if connected node has pruned too far to have no holes in the data, set it to same value as lighthouse flag --blob-prune-margin-epochs
-		DisableStatusReports bool   `yaml:"disableStatusReports" env:"DISABLE_STATUS_REPORTS"` // disable status reports (no connection to db needed)
-	} `yaml:"blobIndexer" env:", prefix=BLOB_INDEXER_"`
+	JustV2                    bool              `yaml:"justV2" env:"JUST_V2"` // temp, remove at some point
+	DeploymentType            string            `yaml:"deploymentType" env:"DEPLOYMENT_TYPE"`
+	ReaderDatabase            DatabaseConfig    `yaml:"readerDatabase" env:", prefix=READER_"`
+	WriterDatabase            DatabaseConfig    `yaml:"writerDatabase" env:", prefix=WRITER_"`
+	AlloyReader               DatabaseConfig    `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
+	AlloyWriter               DatabaseConfig    `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
+	Bigtable                  Bigtable          `yaml:"bigtable" env:", prefix=BIGTABLE_"`
+	RawBigtable               Bigtable          `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`
+	BlobIndexer               BlobIndexerConfig `yaml:"blobIndexer" env:", prefix=BLOB_INDEXER_"`
 	Chain                     `yaml:"chain"`
 	Eth1ErigonEndpoint        string `yaml:"eth1ErigonEndpoint" env:"ETH1_ERIGON_ENDPOINT"`
 	Eth1GethEndpoint          string `yaml:"eth1GethEndpoint" env:"ETH1_GETH_ENDPOINT"`
@@ -50,23 +41,7 @@ type Config struct {
 		ReaderDatabase DatabaseConfig `yaml:"readerDatabase" env:", prefix=READER_"`
 		WriterDatabase DatabaseConfig `yaml:"writerDatabase" env:", prefix=WRITER_"`
 	} `yaml:"clickhouse" env:", prefix=CLICKHOUSE_"`
-	Indexer struct {
-		Enabled bool `yaml:"enabled" env:"INDEXER_ENABLED"`
-		Node    struct {
-			Port     string `yaml:"port" env:"PORT"`
-			Host     string `yaml:"host" env:"HOST"`
-			Type     string `yaml:"type" env:"TYPE"`
-			PageSize int32  `yaml:"pageSize" env:"PAGE_SIZE"`
-		} `yaml:"node" env:", prefix=INDEXER_NODE_"`
-		ELDepositContractFirstBlock uint64 `yaml:"eth1DepositContractFirstBlock" env:"INDEXER_ETH1_DEPOSIT_CONTRACT_FIRST_BLOCK"`
-		DoNotTraceDeposits          bool   `yaml:"doNotTraceDeposits" env:"INDEXER_DO_NOT_TRACE_DEPOSITS"`
-		PubKeyTagsExporter          struct {
-			Enabled bool `yaml:"enabled" env:"ENABLED"`
-		} `yaml:"pubkeyTagsExporter" env:", prefix=PUBKEY_TAGS_EXPORTER_"`
-		EnsTransformer struct {
-			ValidRegistrarContracts []string `yaml:"validRegistrarContracts" env:"VALID_REGISTRAR_CONTRACTS"`
-		} `yaml:"ensTransformer" env:", prefix=ENS"`
-	} `yaml:"indexer"`
+	Indexer  IndexerConfig `yaml:"indexer"`
 	Frontend struct {
 		Debug                          bool   `yaml:"debug" env:"DEBUG"`
 		BeaconchainETHPoolBridgeSecret string `yaml:"beaconchainETHPoolBridgeSecret" env:"BEACONCHAIN_ETHPOOL_BRIDGE_SECRET"`
@@ -290,4 +265,39 @@ type DatabaseConfig struct {
 type ServiceMonitoringConfiguration struct {
 	Name     string        `yaml:"name" env:"NAME"`
 	Duration time.Duration `yaml:"duration" env:"DURATION"`
+}
+
+type BlobIndexerConfig struct {
+	S3                   S3Config `yaml:"s3" env:", prefix=S3_"`
+	PruneMarginEpochs    uint64   `yaml:"pruneMarginEpochs" env:"PRUNE_MARGIN_EPOCHS"`       // PruneMarginEpochs helps blobindexer to decide if connected node has pruned too far to have no holes in the data, set it to same value as lighthouse flag --blob-prune-margin-epochs
+	DisableStatusReports bool     `yaml:"disableStatusReports" env:"DISABLE_STATUS_REPORTS"` // disable status reports (no connection to db needed)
+}
+
+type S3Config struct {
+	Endpoint        string `yaml:"endpoint" env:"ENDPOINT"`                 // s3 endpoint
+	Bucket          string `yaml:"bucket" env:"BUCKET"`                     // s3 bucket
+	AccessKeyId     string `yaml:"accessKeyId" env:"ACCESS_KEY_ID"`         // s3 access key id
+	AccessKeySecret string `yaml:"accessKeySecret" env:"ACCESS_KEY_SECRET"` // s3 access key secret
+}
+
+type IndexerConfig struct {
+	Enabled                     bool       `yaml:"enabled" env:"INDEXER_ENABLED"`
+	Node                        NodeConfig `yaml:"node" env:", prefix=INDEXER_NODE_"`
+	ELDepositContractFirstBlock uint64     `yaml:"eth1DepositContractFirstBlock" env:"INDEXER_ETH1_DEPOSIT_CONTRACT_FIRST_BLOCK"`
+	DoNotTraceDeposits          bool       `yaml:"doNotTraceDeposits" env:"INDEXER_DO_NOT_TRACE_DEPOSITS"`
+	PubKeyTagsExporter          struct {
+		Enabled bool `yaml:"enabled" env:"ENABLED"`
+	} `yaml:"pubkeyTagsExporter" env:", prefix=PUBKEY_TAGS_EXPORTER_"`
+	EnsTransformer struct {
+		ValidRegistrarContracts []string `yaml:"validRegistrarContracts" env:"VALID_REGISTRAR_CONTRACTS"`
+	} `yaml:"ensTransformer" env:", prefix=ENS"`
+	MulticallAddresses string `yaml:"multicallAddresses" env:"MULTICALL_ADDRESSES"`
+	BatchLimit         int    `yaml:"multicallLimit" env:"MULTICALL_LIMIT"`
+}
+
+type NodeConfig struct {
+	Port     string `yaml:"port" env:"PORT"`
+	Host     string `yaml:"host" env:"HOST"`
+	Type     string `yaml:"type" env:"TYPE"`
+	PageSize int32  `yaml:"pageSize" env:"PAGE_SIZE"`
 }

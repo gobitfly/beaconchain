@@ -400,3 +400,217 @@ func (d *DataAccessService) calculateValidatorDashboardBalance(ctx context.Conte
 	}
 	return balances, nil
 }
+
+// Builds a query to select the maximum timestamp from the validator_dashboard_data view for an interval (epoch, hourly, daily, weekly)
+func buildLatestExportedChartQuery(view, dateColumn string) *goqu.SelectDataset {
+	return goqu.Dialect("postgres").From(view).Select(goqu.MAX(dateColumn))
+}
+
+// Converts a time.Time value into a Unix timestamp (uint64).
+func processLastExportedChartResult(ts time.Time) (uint64, error) {
+	return uint64(ts.Unix()), nil
+}
+
+// Retrieves the latest exported chart timestamp for a given aggregation level
+// 1. Determines the appropriate view and date column based on the aggregation type
+// 2. Constructs and executes the query to fetch the latest timestamp
+// 3. Converts the result into a Unix timestamp and returns it
+func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+	view, dateColumn, err := getViewAndDateColumn(aggregation)
+	if err != nil {
+		return 0, err
+	}
+
+	ds := buildLatestExportedChartQuery(view, dateColumn)
+
+	ts, err := runQuery[time.Time](ctx, d.clickhouseReader, ds)
+	if err != nil {
+		return 0, err
+	}
+
+	return processLastExportedChartResult(ts)
+}
+
+type SyncCommitteeResult struct {
+	ValidatorIndex uint64 `db:"validatorindex"`
+	Period         uint64 `db:"period"`
+}
+
+// Pass the latest (most recently finalized epoch)
+// to determine validators current and upcoming sync committees
+func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Context, latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+	ds := buildSyncCommitteeQuery(currentSyncPeriod)
+	queryResult, err := runQueryRows[[]SyncCommitteeResult](ctx, d.readerDb, ds)
+	if err != nil {
+		return nil, nil, err
+	}
+	return processSyncCommitteeResults(queryResult, utils.SyncPeriodOfEpoch(latestEpoch))
+}
+
+// Builds a query to fetch sync committee validators for the current and next period
+func buildSyncCommitteeQuery(currentSyncPeriod uint64) *goqu.SelectDataset {
+	return goqu.Dialect("postgres").
+		Select(
+			goqu.L("validatorindex"),
+			goqu.L("period"),
+		).
+		From("sync_committees").
+		Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
+}
+
+// Processes query results and categorizes validators into current and upcoming sync committees
+func processSyncCommitteeResults(queryResult []SyncCommitteeResult, currentSyncPeriod uint64) (map[uint64]bool, map[uint64]bool, error) {
+	currentSyncCommitteeValidators := make(map[uint64]bool)
+	upcomingSyncCommitteeValidators := make(map[uint64]bool)
+
+	for _, entry := range queryResult {
+		if entry.Period == currentSyncPeriod {
+			currentSyncCommitteeValidators[entry.ValidatorIndex] = true
+		} else {
+			upcomingSyncCommitteeValidators[entry.ValidatorIndex] = true
+		}
+	}
+
+	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
+}
+
+// Retrieves the start epoch for a given time period (last 1h, 24h, 7d, 30d)
+func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.TimePeriod) (uint64, error) {
+	clickhouseTable, _, err := getTablesForPeriod(period)
+	if err != nil {
+		return 0, err
+	}
+
+	ds := buildEpochStartQuery(clickhouseTable)
+	epochStart, err := runQuery[uint64](ctx, d.clickhouseReader, ds)
+	if err != nil {
+		return 0, err
+	}
+
+	return epochStart, nil
+}
+
+// Builds a query to retrieve the earliest epoch start value
+// Orders results in ascending order and limits to the first row.
+func buildEpochStartQuery(table string) *goqu.SelectDataset {
+	return goqu.Dialect("postgres").
+		Select(goqu.L("epoch_start")).
+		From(goqu.L(fmt.Sprintf("%s FINAL", table))).
+		Order(goqu.L("epoch_start").Asc()).
+		Limit(1)
+}
+
+// Retrieves past sync committee validators for the given validator indices and epoch range
+// 1. Determines the sync period range from the epochStart and latestEpoch values
+// 2. Constructs a query to fetch validators who were part of past sync committees within the given range
+// 3. Processes the results to count occurrences of each validator in past committees
+func (d *DataAccessService) getPastSyncCommittees(ctx context.Context, indices []uint64, epochStart uint64, latestEpoch uint64) (map[uint64]uint64, error) {
+	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
+	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
+
+	ds := buildPastSyncCommitteesQuery(indices, pastSyncPeriodCutoff, currentSyncPeriod)
+
+	validatorIndices, err := runQueryRows[[]uint64](ctx, d.alloyReader, ds)
+	if err != nil {
+		return nil, err
+	}
+
+	return processPastSyncCommitteesResults(validatorIndices)
+}
+
+// Builds a query to retrieve past sync committee validators within a given sync period range
+func buildPastSyncCommitteesQuery(indices []uint64, pastSyncPeriodCutoff, currentSyncPeriod uint64) *goqu.SelectDataset {
+	return goqu.Dialect("postgres").
+		Select(goqu.L("sc.validatorindex")).
+		From(goqu.L("sync_committees sc")).
+		Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(indices)))
+}
+
+// Processes past sync committee results by counting occurrences of each validator
+func processPastSyncCommitteesResults(validatorIndices []uint64) (map[uint64]uint64, error) {
+	validatorCountMap := make(map[uint64]uint64)
+	for _, validatorIndex := range validatorIndices {
+		validatorCountMap[validatorIndex]++
+	}
+	return validatorCountMap, nil
+}
+
+// Determines the validator dashboard data table and associated time duration in hours
+// based on the given time period (1h, 24h, 7d, 30d, all_time)
+func getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
+	table := ""
+	hours := 0
+
+	switch period {
+	case enums.TimePeriods.Last1h:
+		table = "validator_dashboard_data_rolling_1h"
+		hours = 1
+	case enums.TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_24h"
+		hours = 24
+	case enums.TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_7d"
+		hours = 7 * 24
+	case enums.TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_30d"
+		hours = 30 * 24
+	case enums.TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+		hours = -1
+	default:
+		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
+	}
+
+	return table, hours, nil
+}
+
+// Retrieves the validator dashboard data table and corresponding date column
+// for a given chart aggregation range (epoch, hourly, daily, weekly)
+func getTableAndDateColumn(aggregation enums.ChartAggregation) (string, string, error) {
+	var table, dateColumn string
+
+	switch aggregation {
+	case enums.IntervalEpoch:
+		table = "validator_dashboard_data_epoch"
+		dateColumn = "epoch_timestamp"
+	case enums.IntervalHourly:
+		table = "validator_dashboard_data_hourly"
+		dateColumn = "t"
+	case enums.IntervalDaily:
+		table = "validator_dashboard_data_daily"
+		dateColumn = "t"
+	case enums.IntervalWeekly:
+		table = "validator_dashboard_data_weekly"
+		dateColumn = "t"
+	default:
+		return "", "", fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
+
+	return table, dateColumn, nil
+}
+
+// Retrieves the validator dashboard data view and corresponding date column
+// for a given chart aggregation range (epoch, hourly, daily, weekly)
+func getViewAndDateColumn(aggregation enums.ChartAggregation) (string, string, error) {
+	var view, dateColumn string
+
+	switch aggregation {
+	case enums.IntervalEpoch:
+		view = "view_validator_dashboard_data_epoch_max_ts"
+		dateColumn = "t"
+	case enums.IntervalHourly:
+		view = "view_validator_dashboard_data_hourly_max_ts"
+		dateColumn = "t"
+	case enums.IntervalDaily:
+		view = "view_validator_dashboard_data_daily_max_ts"
+		dateColumn = "t"
+	case enums.IntervalWeekly:
+		view = "view_validator_dashboard_data_weekly_max_ts"
+		dateColumn = "t"
+	default:
+		return "", "", fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	}
+
+	return view, dateColumn, nil
+}

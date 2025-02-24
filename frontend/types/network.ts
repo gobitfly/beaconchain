@@ -1,5 +1,3 @@
-import type { CryptoCurrency } from '~/types/currencies'
-
 export enum ChainFamily {
   Any = 'Any',
   Arbitrum = 'Arbitrum',
@@ -23,11 +21,13 @@ const ChainIDs = {
 export type ChainId = (typeof ChainIDs)[keyof typeof ChainIDs]
 
 export interface ChainInfoFields {
-  clCurrency: CryptoCurrency,
+  clCurrency: CurrencyCodeCrypto,
   description: string,
-  elCurrency: CryptoCurrency,
+  displayCurrencyDefault: DisplayCurrency,
+  elCurrency: CurrencyCodeCrypto,
   family: ChainFamily,
-  mainCurrency: CryptoCurrency,
+  hasRocketPool: boolean,
+  mainCurrency: CurrencyCodeCrypto,
   mainNet: ChainId,
   name: string,
   nameParts: string[],
@@ -38,12 +38,31 @@ export interface ChainInfoFields {
   timeStampSlot0: number, // if this property is 0, it means that the network has no slots
 }
 
+export type DisplayCurrency = {
+  consensusLayer: 'ETH',
+  executionLayer: 'ETH',
+  fiat: 'USD',
+  main: 'ETH',
+} | {
+  consensusLayer: 'GNO',
+  executionLayer: 'xDAI',
+  fiat: 'USD',
+  main: 'GNO',
+}
+
 export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Any]: {
     clCurrency: 'ETH',
     description: 'Any network',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Any,
+    hasRocketPool: false,
     mainCurrency: 'ETH',
     mainNet: ChainIDs.Any,
     name: 'Any network',
@@ -60,8 +79,15 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Ethereum]: {
     clCurrency: 'ETH',
     description: 'Mainnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    hasRocketPool: true,
     mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum',
@@ -78,8 +104,15 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Gnosis]: {
     clCurrency: 'mGNO',
     description: '',
+    displayCurrencyDefault: {
+      consensusLayer: 'GNO',
+      executionLayer: 'xDAI',
+      fiat: 'USD',
+      main: 'GNO',
+    },
     elCurrency: 'xDAI',
     family: ChainFamily.Gnosis,
+    hasRocketPool: false,
     mainCurrency: 'GNO',
     mainNet: ChainIDs.Gnosis,
     name: 'Gnosis',
@@ -93,12 +126,18 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     slotsPerEpoch: 16,
     timeStampSlot0: 1638993340,
   },
-
   [ChainIDs.Holesky]: {
     clCurrency: 'ETH',
     description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    hasRocketPool: true,
     mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Holesky',
@@ -115,8 +154,15 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Sepolia]: {
     clCurrency: 'ETH',
     description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
+    hasRocketPool: false,
     mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Sepolia',

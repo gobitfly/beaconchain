@@ -21,10 +21,10 @@ type ClientInt interface {
 	GetValidator(validatorID, stateID any) (*types.StandardSingleValidatorsResponse, error)
 
 	// /eth/v1/validator/duties/proposer/{epoch}
-	GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error)
+	GetProposalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error)
 
 	// /eth/v1/beacon/rewards/blocks/{block_id}
-	GetPropoalRewards(blockID any) (*types.StandardBlockRewardsResponse, error)
+	GetProposalRewards(blockID any) (*types.StandardBlockRewardsResponse, error)
 
 	// /eth/v1/beacon/rewards/sync_committee/{block_id}
 	GetSyncRewards(blockID any) (*types.StandardSyncCommitteeRewardsResponse, error)

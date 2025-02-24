@@ -11,7 +11,6 @@ import {
   GUEST_DASHBOARD_ID,
   type GuestDashboard,
 } from '~/types/dashboard'
-import { COOKIE_KEY } from '~/types/cookie'
 import type { ChainId } from '~/types/network'
 import {
   isGuestDashboardKey, isSharedDashboardKey,
@@ -21,7 +20,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
   const { fetch } = useCustomFetch()
   const { t: $t } = useTranslation()
   const { isLoggedIn } = useUserStore()
-  const dashboardCookie = useCookie(COOKIE_KEY.USER_DASHBOARDS)
+  const dashboardCookie = useBcCookie('bc-user-dashboards')
   const dashboards = ref<UserDashboardsData>()
   const cookieDashboards = computed(() => {
     if (dashboardCookie.value) {

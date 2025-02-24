@@ -1,46 +1,54 @@
 <script setup lang="ts">
 import type { ClElValue } from '~/types/api/common'
 
-interface Props {
+defineProps<{
   reward?: ClElValue<string>,
   status?: 'missed' | 'orphaned' | 'scheduled' | 'success',
-}
-defineProps<Props>()
+}>()
 </script>
 
 <template>
   <BcTooltip
     v-if="status === 'success' && reward"
     class="combine-rewards"
+    fit-content
   >
-    <BcFormatValue
+    <BcFormatAmount
       :value="reward?.el"
-      :no-tooltip="true"
+      source-currency="elCurrency"
+      target-currency="elDisplayCurrency"
     />
-    <BcFormatValue
+    <BcFormatAmount
       v-if="reward?.cl && reward.cl != '0'"
       :value="reward?.cl"
-      :no-tooltip="true"
+      source-currency="clCurrency"
+      target-currency="clDisplayCurrency"
     />
     <span v-else>{{ $t("dashboard.validator.blocks.cl_pending") }}</span>
     <template #tooltip>
       <div>
         <div class="tt-row">
           <span>{{ $t("dashboard.validator.blocks.el_rewards") }}: </span>
-          <BcFormatValue
+          <BcFormatAmount
             :value="reward?.el"
-            :no-tooltip="true"
-            :full-value="true"
+            source-currency="elCurrency"
+            target-currency="elDisplayCurrency"
+            has-additional-selected-currency-main
+            has-higher-precision
           />
         </div>
         <div class="tt-row">
           <span>{{ $t("dashboard.validator.blocks.cl_rewards") }}: </span>
-          <BcFormatValue
+          <template
             v-if="reward?.cl && reward.cl != '0'"
-            :value="reward?.cl"
-            :no-tooltip="true"
-            :full-value="true"
-          />
+          >
+            <BcFormatAmount
+              :value="reward?.cl"
+              target-currency="clDisplayCurrency"
+              has-additional-selected-currency-main
+              has-higher-precision
+            />
+          </template>
           <span v-else>{{ $t("dashboard.validator.blocks.pending") }}</span>
         </div>
       </div>

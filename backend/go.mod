@@ -7,6 +7,7 @@ require (
 	cloud.google.com/go/secretmanager v1.14.1
 	firebase.google.com/go/v4 v4.14.1
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.3
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/Gurpartap/storekit-go v0.0.0-20201205024111-36b6cd5c6a21
 	github.com/Tangui-Bitfly/ethsimtracer v0.0.0-20241031103622-e76546c3d9c1
 	github.com/alexedwards/scs/redisstore v0.0.0-20240316134038-7e11d57e8885
@@ -273,6 +274,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	github.com/thomaso-mirodin/intmath v0.0.0-20160323211736-5dc6d854e46e // indirect
 	github.com/tklauser/go-sysconf v0.3.13 // indirect

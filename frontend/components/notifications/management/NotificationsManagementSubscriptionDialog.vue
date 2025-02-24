@@ -80,6 +80,8 @@ const { minutes: minutesUntilNetworkFinality } = formatSecondsTo(secondsUntilNet
   maximumFractionDigits: 0,
   minimumFractionDigits: 0,
 })
+
+const { hasRocketPool } = useNetworkStore()
 </script>
 
 <template>
@@ -147,12 +149,14 @@ const { minutes: minutesUntilNetworkFinality } = formatSecondsTo(secondsUntilNet
           :has-premium-gem="!hasPremiumPerkGroupEfficiency"
         />
         <BcSettingsRow
+          v-if="hasRocketPool"
           v-model:checkbox="checkboxes.is_min_collateral_subscribed"
           v-model:input="thresholds.min_collateral_threshold"
           has-unit
           :label="$t('notifications.subscriptions.validators.min_collateral_reached.label')"
         />
         <BcSettingsRow
+          v-if="hasRocketPool"
           v-model:checkbox="checkboxes.is_max_collateral_subscribed"
           v-model:input="thresholds.max_collateral_threshold"
           has-unit

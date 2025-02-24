@@ -2339,53 +2339,6 @@ func (bigtable *Bigtable) SaveContractMetadata(address []byte, metadata *types.C
 	return bigtable.tableMetadata.Apply(ctx, fmt.Sprintf("%s:%x", bigtable.chainId, address), mut)
 }
 
-func (bigtable *Bigtable) SaveBalances(balances []*types.Eth1AddressBalance, deleteKeys []string) error {
-	if len(balances) == 0 {
-		return nil
-	}
-
-	mutsWrite := &types.BulkMutations{
-		Keys: make([]string, 0, len(balances)),
-		Muts: make([]*gcp_bigtable.Mutation, 0, len(balances)),
-	}
-
-	for _, balance := range balances {
-		mutWrite := gcp_bigtable.NewMutation()
-
-		mutWrite.Set(ACCOUNT_METADATA_FAMILY, fmt.Sprintf("B:%x", balance.Token), gcp_bigtable.Timestamp(0), balance.Balance)
-		mutsWrite.Keys = append(mutsWrite.Keys, fmt.Sprintf("%s:%x", bigtable.chainId, balance.Address))
-		mutsWrite.Muts = append(mutsWrite.Muts, mutWrite)
-	}
-
-	err := bigtable.WriteBulk(mutsWrite, bigtable.tableMetadata, DEFAULT_BATCH_INSERTS)
-
-	if err != nil {
-		return err
-	}
-
-	if len(deleteKeys) == 0 {
-		return nil
-	}
-	mutsDelete := &types.BulkMutations{
-		Keys: make([]string, 0, len(balances)),
-		Muts: make([]*gcp_bigtable.Mutation, 0, len(balances)),
-	}
-	for _, key := range deleteKeys {
-		mutDelete := gcp_bigtable.NewMutation()
-		mutDelete.DeleteRow()
-		mutsDelete.Keys = append(mutsDelete.Keys, key)
-		mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-	}
-
-	err = bigtable.WriteBulk(mutsDelete, bigtable.tableMetadataUpdates, DEFAULT_BATCH_INSERTS)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (bigtable *Bigtable) SaveERC20TokenPrices(prices []*types.ERC20TokenPrice) error {
 	if len(prices) == 0 {
 		return nil

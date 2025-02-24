@@ -16,8 +16,12 @@ const currentNetwork = computed(
 )
 const currentNetworkSettings = computed(() => currentNetwork.value?.settings)
 
-const thresholdGasAbove = ref(formatWeiTo(currentNetworkSettings.value?.gas_above_threshold ?? '0', { unit: 'gwei' }))
-const thresholdGasBelow = ref(formatWeiTo(currentNetworkSettings.value?.gas_below_threshold ?? '0', { unit: 'gwei' }))
+const thresholdGasAbove = ref(formatValue(currentNetworkSettings.value?.gas_above_threshold ?? '0', {
+  to: 'gwei',
+}))
+const thresholdGasBelow = ref(formatValue(currentNetworkSettings.value?.gas_below_threshold ?? '0', {
+  to: 'gwei',
+}))
 const thresholdParticipationRate = ref(formatFraction(currentNetworkSettings.value?.participation_rate_threshold ?? 0))
 const hasGasAbove = ref(currentNetworkSettings.value?.is_gas_above_subscribed ?? false)
 const hasGasBelow = ref(currentNetworkSettings.value?.is_gas_below_subscribed ?? false)
@@ -39,8 +43,14 @@ watchDebounced([
   currentNetworkSettings.value.is_new_reward_round_subscribed = hasNewRewardRound.value
   currentNetworkSettings.value.is_participation_rate_subscribed = hasParticipationRate.value
 
-  currentNetworkSettings.value.gas_above_threshold = formatToWei(thresholdGasAbove.value, { from: 'gwei' })
-  currentNetworkSettings.value.gas_below_threshold = formatToWei(thresholdGasBelow.value, { from: 'gwei' })
+  currentNetworkSettings.value.gas_above_threshold = formatValue(thresholdGasAbove.value, {
+    from: 'gwei',
+    to: 'wei',
+  })
+  currentNetworkSettings.value.gas_below_threshold = formatValue(thresholdGasBelow.value, {
+    from: 'gwei',
+    to: 'wei',
+  })
   currentNetworkSettings.value.participation_rate_threshold = Number(formatToFraction(thresholdParticipationRate.value))
 
   await notificationsManagementStore.setNotificationForNetwork({
@@ -50,6 +60,8 @@ watchDebounced([
 },
 { deep: true },
 )
+
+const { hasRocketPool } = useNetworkStore()
 </script>
 
 <template>
@@ -73,20 +85,22 @@ watchDebounced([
 
       <div class="notifications-management-machines__content">
         <BcListSection class="grid-overwrite">
-          <span class="grid-span-2">
-            {{ $t('notifications.network.settings.new_reward_round') }}
-          </span>
-          <BcToggle
-            v-model="hasNewRewardRound"
-            class="toggle"
-          />
+          <template v-if="hasRocketPool">
+            <span class="grid-span-2">
+              {{ $t('notifications.network.settings.new_reward_round') }}
+            </span>
+            <BcToggle
+              v-model="hasNewRewardRound"
+              class="toggle"
+            />
+          </template>
           <span>
             {{ $t('notifications.network.settings.alert_if_gas_below') }}
           </span>
           <span class="">
             <BcInputUnit
               v-model="thresholdGasBelow"
-              :unit="$t('common.units.GWEI')"
+              :unit="$t('common.units.gwei')"
             />
           </span>
           <BcToggle
@@ -99,7 +113,7 @@ watchDebounced([
           <span class="">
             <BcInputUnit
               v-model="thresholdGasAbove"
-              :unit="$t('common.units.GWEI')"
+              :unit="$t('common.units.gwei')"
             />
           </span>
           <BcToggle

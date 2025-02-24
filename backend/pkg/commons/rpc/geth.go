@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
@@ -13,8 +12,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types/geth"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethrpc "github.com/ethereum/go-ethereum/rpc"
@@ -27,11 +24,10 @@ import (
 )
 
 type GethClient struct {
-	endpoint     string
-	rpcClient    *gethrpc.Client
-	ethClient    *ethclient.Client
-	chainID      *big.Int
-	multiChecker *Balance
+	endpoint  string
+	rpcClient *gethrpc.Client
+	ethClient *ethclient.Client
+	chainID   *big.Int
 }
 
 var CurrentGethClient *GethClient
@@ -54,11 +50,6 @@ func NewGethClient(endpoint string) (*GethClient, error) {
 		return nil, fmt.Errorf("error dialing rpc node: %v", err)
 	}
 	client.ethClient = ethClient
-
-	client.multiChecker, err = NewBalance(common.HexToAddress("0xb1F8e55c7f64D203C1400B9D8555d050F94aDF39"), client.ethClient)
-	if err != nil {
-		return nil, fmt.Errorf("error initiation balance checker contract: %v", err)
-	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
@@ -213,118 +204,6 @@ func (client *GethClient) TraceGeth(blockHash common.Hash) ([]*geth.Trace, error
 	}
 
 	return res, nil
-}
-
-func (client *GethClient) GetBalances(pairs []string) ([]*types.Eth1AddressBalance, error) {
-	batchElements := make([]gethrpc.BatchElem, 0, len(pairs))
-
-	ret := make([]*types.Eth1AddressBalance, len(pairs))
-
-	for i, pair := range pairs {
-		s := strings.Split(pair, ":")
-
-		if len(s) != 3 {
-			log.Fatal(fmt.Errorf("%v has an invalid format", pair), "", 0)
-		}
-
-		if s[0] != "B" {
-			log.Fatal(fmt.Errorf("%v has invalid balance update prefix", pair), "", 0)
-		}
-
-		address := s[1]
-		token := s[2]
-		result := ""
-
-		ret[i] = &types.Eth1AddressBalance{
-			Address: common.FromHex(address),
-			Token:   common.FromHex(token),
-		}
-
-		if token == "00" {
-			batchElements = append(batchElements, gethrpc.BatchElem{
-				Method: "eth_getBalance",
-				Args:   []interface{}{common.HexToAddress(address), "latest"},
-				Result: &result,
-			})
-		} else {
-			to := common.HexToAddress(token)
-			msg := ethereum.CallMsg{
-				To:   &to,
-				Gas:  1000000,
-				Data: common.Hex2Bytes("70a08231000000000000000000000000" + address),
-			}
-
-			batchElements = append(batchElements, gethrpc.BatchElem{
-				Method: "eth_call",
-				Args:   []interface{}{toCallArg(msg), "latest"},
-				Result: &result,
-			})
-		}
-	}
-
-	err := client.rpcClient.BatchCall(batchElements)
-	if err != nil {
-		return nil, fmt.Errorf("error during batch request: %v", err)
-	}
-
-	for i, el := range batchElements {
-		if el.Error != nil {
-			log.Warnf("error in batch call: %v", el.Error) // PPR: are smart contracts that pretend to implement the erc20 standard but are somehow buggy
-		}
-
-		res := strings.TrimPrefix(*el.Result.(*string), "0x")
-		ret[i].Balance = new(big.Int).SetBytes(common.Hex2Bytes(res)).Bytes()
-	}
-
-	return ret, nil
-}
-
-func (client *GethClient) GetBalancesForAddress(address string, tokenStr []string) ([]*types.Eth1AddressBalance, error) {
-	opts := &bind.CallOpts{
-		BlockNumber: nil,
-	}
-
-	tokens := getTokens(tokenStr)
-	balancesInt, err := client.multiChecker.Balances(opts, []common.Address{common.HexToAddress(address)}, tokens)
-	if err != nil {
-		return nil, err
-	}
-
-	res, err := parseAddressBalance(tokens, address, balancesInt)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (client *GethClient) GetNativeBalance(address string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	balance, err := client.ethClient.BalanceAt(ctx, common.HexToAddress(address), nil)
-
-	if err != nil {
-		return nil, err
-	}
-	return balance.Bytes(), nil
-}
-
-func (client *GethClient) GetERC20TokenBalance(address string, token string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	to := common.HexToAddress(token)
-	balance, err := client.ethClient.CallContract(ctx, ethereum.CallMsg{
-		To:   &to,
-		Gas:  1000000,
-		Data: common.Hex2Bytes("70a08231000000000000000000000000" + address),
-	}, nil)
-
-	if err != nil && !strings.HasPrefix(err.Error(), "execution reverted") {
-		return nil, err
-	}
-	return balance, nil
 }
 
 func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metadata, error) {

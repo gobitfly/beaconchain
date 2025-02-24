@@ -13,7 +13,8 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const { latestState } = useLatestStateStore()
+const store = useLatestStateStore()
+const { latestState } = storeToRefs(store)
 
 // we don't want to be reactive to the current_slot
 const currentSlot = latestState.value?.current_slot || 0
@@ -26,8 +27,8 @@ const mapped = computed(() => {
   let color: TagColor
   const status
     = props.status === 'scheduled'
-    && props.blockSlot
-    && props.blockSlot < currentSlot
+      && props.blockSlot
+      && props.blockSlot < currentSlot
       ? 'probably_missed'
       : props.status
   const tStatus = $t(`block.status.${status}`)

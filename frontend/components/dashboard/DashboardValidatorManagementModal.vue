@@ -452,7 +452,9 @@ const inputValidator = ref('')
             >
               <template #body="slotProps">
                 <div class="balance-col">
-                  <BcFormatValue :value="slotProps.data.balance" />
+                  <BcFormatAmount
+                    :value="slotProps.data.balance"
+                  />
                 </div>
               </template>
             </Column>
@@ -525,7 +527,7 @@ const inputValidator = ref('')
                   <div class="label">
                     {{ $t("dashboard.validator.col.balance") }}
                   </div>
-                  <BcFormatValue :value="slotProps.data.balance" />
+                  <BcFormatAmount :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
                   <div class="label">

@@ -15,7 +15,6 @@ import {
   DashboardRenameModal,
   DashboardShareCodeModal,
   DashboardShareModal,
-  RocketpoolToggle,
 } from '#components'
 import type {
   Dashboard, DashboardKey,
@@ -127,8 +126,6 @@ const shareButtonOptions = computed(() => {
 
 const editButtons = computed<MenuBarEntry[]>(() => {
   const buttons: MenuBarButton[] = []
-
-  buttons.push({ component: RocketpoolToggle })
 
   if (isPrivateDashboard.value) {
     buttons.push({

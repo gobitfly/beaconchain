@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/blobstore"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
@@ -23,7 +23,6 @@ import (
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -35,14 +34,22 @@ var enableCheckingBeforePutting = false
 var waitForOtherBlobIndexerDuration = time.Second * 60
 
 type BlobIndexer struct {
-	S3Client          *s3.Client
+	BlobStore         blobstore.BlobStore
 	running           bool
 	runningMu         *sync.Mutex
 	clEndpoint        string
-	cl                consapi.Client
+	cl                consapi.ClientInt
 	id                string
 	networkID         string
 	writtenBlobsCache *lru.Cache[string, bool]
+}
+
+type BlobIndexerStatus struct {
+	LastIndexedFinalizedSlot     uint64    `json:"last_indexed_finalized_slot"`      // last finalized slot that was indexed
+	LastIndexedFinalizedBlobSlot uint64    `json:"last_indexed_finalized_blob_slot"` // last finalized slot that included a blob
+	CurrentBlobIndexerId         string    `json:"current_blob_indexer_id"`
+	LastUpdate                   time.Time `json:"last_update"`
+	BlobIndexerVersion           string    `json:"blob_indexer_version"`
 }
 
 func NewBlobIndexer() (*BlobIndexer, error) {
@@ -63,6 +70,7 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 		o.BaseEndpoint = aws.String(utils.Config.BlobIndexer.S3.Endpoint)
 	})
 
+	blobStore := blobstore.NewS3BlobStore(s3Client)
 	writtenBlobsCache, err := lru.New[string, bool](1000)
 	if err != nil {
 		return nil, err
@@ -70,7 +78,7 @@ func NewBlobIndexer() (*BlobIndexer, error) {
 
 	id := utils.GetUUID()
 	bi := &BlobIndexer{
-		S3Client:          s3Client,
+		BlobStore:         blobStore,
 		runningMu:         &sync.Mutex{},
 		clEndpoint:        "http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port,
 		cl:                consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port),
@@ -113,97 +121,254 @@ func (bi *BlobIndexer) index() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	headHeader := &constypes.StandardBeaconHeaderResponse{}
-	finalizedHeader := &constypes.StandardBeaconHeaderResponse{}
-	spec := &constypes.StandardSpecResponse{}
-
-	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(3)
-	g.Go(func() error {
-		var err error
-		spec, err = bi.cl.GetSpec()
-		if err != nil {
-			return fmt.Errorf("error bi.cl.GetSpec: %w", err)
-		}
-		return nil
-	})
-	g.Go(func() error {
-		var err error
-		headHeader, err = bi.cl.GetBlockHeader("head")
-		if err != nil {
-			return fmt.Errorf("error bi.cl.GetBlockHeader(head): %w", err)
-		}
-		return nil
-	})
-	g.Go(func() error {
-		var err error
-		finalizedHeader, err = bi.cl.GetBlockHeader("finalized")
-		if err != nil {
-			return fmt.Errorf("error bi.cl.GetBlockHeader(finalized): %w", err)
-		}
-		return nil
-	})
-	err := g.Wait()
+	headHeader, finalizedHeader, spec, err := bi.fetchNodeData(ctx)
 	if err != nil {
 		return err
 	}
 
+	if err := validateSpec(spec); err != nil {
+		return err
+	}
+
+	bi.networkID = fmt.Sprintf("%d", uint64(spec.Data.DepositNetworkID))
+
+	status, err := bi.getIndexerStatusFromS3()
+	if err != nil {
+		return fmt.Errorf("error getting indexer status from S3: %w", err)
+	}
+
+	// skip if another blobIndexer is already indexing - it is ok if multiple blobIndexers are
+	// indexing the same finalized slot, this is just best effort to avoid duplicate work
+	if bi.shouldSkipBlobIndexing(status) {
+		log.InfoWithFields(log.Fields{
+			"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot,
+			"currentBlobIndexerId":     status.CurrentBlobIndexerId,
+			"finalizedSlot":            finalizedHeader.Data.Header.Message.Slot,
+			"lastUpdate":               status.LastUpdate},
+			"found other blobIndexer indexing, skipping")
+		return nil
+	}
+
+	// check if node still has last indexed blobs (if its outside the range defined by MAX_REQUEST_BLOCKS_DENEB),
+	// otherwise assume that the node has pruned too far and we would miss blobs
+	minBlobSlot := calculateMinBlobSlot(spec, headHeader)
+
+	// check if node has pruned too far
+	if err := bi.checkNodePruning(minBlobSlot, status); err != nil {
+		return err
+	}
+
+	startSlot, denebForkSlot := calculateStartSlot(status, spec)
+	if headHeader.Data.Header.Message.Slot <= startSlot {
+		return fmt.Errorf("headHeader.Data.Header.Message.Slot <= startSlot: %v < %v (denebForkEpoch: %v, denebForkSlot: %v, slotsPerEpoch: %v)", headHeader.Data.Header.Message.Slot, startSlot, utils.Config.Chain.ClConfig.DenebForkEpoch, denebForkSlot, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	}
+
+	if err := bi.indexBlobsInBatches(status, headHeader, finalizedHeader, startSlot); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (bi *BlobIndexer) getIndexerStatusFromS3() (*BlobIndexerStatus, error) {
+	key := fmt.Sprintf("%s/blob-indexer-status.json", bi.networkID)
+	label := "blobindexer_get_indexer_status"
+	obj, err := bi.getObjectFromS3(key, label)
+	if err != nil {
+		return nil, fmt.Errorf("error getting object from S3 with key %s: %w", key, err)
+	}
+
+	status := &BlobIndexerStatus{}
+	err = json.NewDecoder(obj.Body).Decode(status)
+	return status, err
+}
+
+func (bi *BlobIndexer) storeIndexerStatusInS3(status BlobIndexerStatus) error {
+	key := fmt.Sprintf("%s/blob-indexer-status.json", bi.networkID)
+	contentType := "application/json"
+	metadata := map[string]string{
+		"last_indexed_finalized_slot":      fmt.Sprintf("%d", status.LastIndexedFinalizedSlot),
+		"last_indexed_finalized_blob_slot": fmt.Sprintf("%d", status.LastIndexedFinalizedBlobSlot),
+		"current_blob_indexer_id":          status.CurrentBlobIndexerId,
+		"last_update":                      status.LastUpdate.Format(time.RFC3339),
+		"blob_indexer_version":             status.BlobIndexerVersion,
+	}
+
+	body, err := json.Marshal(&status)
+	if err != nil {
+		return err
+	}
+
+	err = bi.putObjectInS3(key, "blobindexer_put_indexer_status", &contentType, body, metadata)
+	if err != nil {
+		return fmt.Errorf("error putting object in S3 with key %s: %w", key, err)
+	}
+	return nil
+}
+
+func (bi *BlobIndexer) getBlobSidecarsAtSlot(slot uint64) (*constypes.StandardBlobSidecarsResponse, error) {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("blobindexer_get_blob_sidecars").Observe(time.Since(start).Seconds())
+	}()
+
+	blobSidecar, err := bi.cl.GetBlobSidecars(slot)
+	if err != nil {
+		httpErr := network.SpecificError(err)
+		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
+			// no sidecar for this slot
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	if len(blobSidecar.Data) == 0 {
+		return nil, nil
+	}
+
+	return blobSidecar, nil
+}
+
+func (bi *BlobIndexer) putObjectInS3(key, logLabel string, contentType *string, data []byte, metadata map[string]string) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(logLabel).Observe(time.Since(start).Seconds())
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	blob := blobstore.Blob{
+		Body:        bytes.NewReader(data),
+		ContentType: contentType,
+		Metadata:    metadata,
+	}
+
+	err := bi.BlobStore.Put(ctx,
+		utils.Config.BlobIndexer.S3.Bucket,
+		key,
+		blob)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (bi *BlobIndexer) getObjectFromS3(key, logLabel string) (blobstore.Blob, error) {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(logLabel).Observe(time.Since(start).Seconds())
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	blob, err := bi.BlobStore.Get(ctx,
+		utils.Config.BlobIndexer.S3.Bucket,
+		key)
+	if err != nil {
+		return blobstore.Blob{}, err
+	}
+
+	return blob, nil
+}
+
+func (bi *BlobIndexer) checkIfObjectExistsInS3(key, logLabel string) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(logLabel).Observe(time.Since(start).Seconds())
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	exists, err := bi.BlobStore.Exist(ctx,
+		utils.Config.BlobIndexer.S3.Bucket,
+		key)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return fmt.Errorf("object with key %s does not exist", key)
+	}
+
+	return nil
+}
+
+func (bi *BlobIndexer) fetchNodeData(ctx context.Context) (*constypes.StandardBeaconHeaderResponse, *constypes.StandardBeaconHeaderResponse, *constypes.StandardSpecResponse, error) {
+	headHeader := &constypes.StandardBeaconHeaderResponse{}
+	finalizedHeader := &constypes.StandardBeaconHeaderResponse{}
+	spec := &constypes.StandardSpecResponse{}
+	g, _ := errgroup.WithContext(ctx)
+	g.SetLimit(3)
+
+	g.Go(func() error {
+		return bi.fetchSpec(spec)
+	})
+	g.Go(func() error {
+		return bi.fetchBlockHeader("head", headHeader)
+	})
+	g.Go(func() error {
+		return bi.fetchBlockHeader("finalized", finalizedHeader)
+	})
+
+	if err := g.Wait(); err != nil {
+		return nil, nil, nil, err
+	}
+	return headHeader, finalizedHeader, spec, nil
+}
+
+func (bi *BlobIndexer) fetchSpec(spec *constypes.StandardSpecResponse) error {
+	s, err := bi.cl.GetSpec()
+	if err != nil {
+		return fmt.Errorf("error fetching node spec: %w", err)
+	}
+	*spec = *s
+	return nil
+}
+
+func (bi *BlobIndexer) fetchBlockHeader(blockID string, header *constypes.StandardBeaconHeaderResponse) error {
+	h, err := bi.cl.GetBlockHeader(blockID)
+	if err != nil {
+		return fmt.Errorf("error fetching node block header (%s): %w", blockID, err)
+	}
+	*header = *h
+	return nil
+}
+
+func validateSpec(spec *constypes.StandardSpecResponse) error {
 	if spec.Data.DenebForkEpoch == nil {
 		return fmt.Errorf("DENEB_FORK_EPOCH not set in spec")
 	}
 	if spec.Data.MinEpochsForBlobSidecarsRequests == nil {
 		return fmt.Errorf("MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS not set in spec")
 	}
-
 	nodeDepositNetworkId := uint64(spec.Data.DepositNetworkID)
 	if utils.Config.Chain.ClConfig.DepositNetworkID != nodeDepositNetworkId {
-		return fmt.Errorf("config.DepositNetworkId != node.DepositNetworkId: %v != %v", utils.Config.Chain.ClConfig.DepositNetworkID, nodeDepositNetworkId)
-	}
-	bi.networkID = fmt.Sprintf("%d", nodeDepositNetworkId)
-
-	status, err := bi.GetIndexerStatus()
-	if err != nil {
-		return fmt.Errorf("error bi.GetIndexerStatus: %w", err)
+		return fmt.Errorf("ClConfig.DepositNetworkID mismatch: %v != %v", utils.Config.Chain.ClConfig.DepositNetworkID, nodeDepositNetworkId)
 	}
 
-	// skip if another blobIndexer is already indexing - it is ok if multiple blobIndexers are indexing the same finalized slot, this is just best effort to avoid duplicate work
-	if status.CurrentBlobIndexerId != bi.id && status.LastUpdate.After(time.Now().Add(-waitForOtherBlobIndexerDuration)) {
-		log.InfoWithFields(log.Fields{"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot, "currentBlobIndexerId": status.CurrentBlobIndexerId, "finalizedSlot": finalizedHeader.Data.Header.Message.Slot, "lastUpdate": status.LastUpdate}, "found other blobIndexer indexing, skipping")
-		return nil
-	}
+	return nil
+}
 
-	// check if node still has last indexed blobs (if its outside the range defined by MAX_REQUEST_BLOCKS_DENEB), otherwise assume that the node has pruned too far and we would miss blobs
-	minBlobSlotRange := *spec.Data.MinEpochsForBlobSidecarsRequests * uint64(spec.Data.SlotsPerEpoch)
-	minBlobSlot := uint64(0)
-	if headHeader.Data.Header.Message.Slot > minBlobSlotRange {
-		minBlobSlot = headHeader.Data.Header.Message.Slot - minBlobSlotRange
-	}
-	pruneMarginSlotRange := utils.Config.BlobIndexer.PruneMarginEpochs * uint64(spec.Data.SlotsPerEpoch)
-	if minBlobSlot > pruneMarginSlotRange {
-		minBlobSlot = minBlobSlot - pruneMarginSlotRange
-	}
+func (bi *BlobIndexer) shouldSkipBlobIndexing(status *BlobIndexerStatus) bool {
+	return status.CurrentBlobIndexerId != bi.id &&
+		status.LastUpdate.After(time.Now().Add(-waitForOtherBlobIndexerDuration))
+}
+
+func (bi *BlobIndexer) checkNodePruning(minBlobSlot uint64, status *BlobIndexerStatus) error {
 	if status.LastIndexedFinalizedSlot < minBlobSlot && status.LastIndexedFinalizedBlobSlot > 0 {
-		bs, err := bi.cl.GetBlobSidecars(status.LastIndexedFinalizedBlobSlot)
+		_, err := bi.getBlobSidecarsAtSlot(status.LastIndexedFinalizedBlobSlot)
 		if err != nil {
 			return err
 		}
-		if len(bs.Data) == 0 {
-			return fmt.Errorf("no blobs found at lastIndexedFinalizedBlobSlot: %v, node has pruned too far?", status.LastIndexedFinalizedBlobSlot)
-		}
 	}
+	return nil
+}
 
-	lastIndexedFinalizedBlobSlot := atomic.NewUint64(status.LastIndexedFinalizedBlobSlot)
-
-	denebForkSlot := *spec.Data.DenebForkEpoch * uint64(spec.Data.SlotsPerEpoch)
-	startSlot := status.LastIndexedFinalizedSlot + 1
-	if status.LastIndexedFinalizedSlot <= denebForkSlot {
-		startSlot = denebForkSlot
-	}
-
-	if headHeader.Data.Header.Message.Slot <= startSlot {
-		return fmt.Errorf("headHeader.Data.Header.Message.Slot <= startSlot: %v < %v (denebForkEpoch: %v, denebForkSlot: %v, slotsPerEpoch: %v)", headHeader.Data.Header.Message.Slot, startSlot, utils.Config.Chain.ClConfig.DenebForkEpoch, denebForkSlot, utils.Config.Chain.ClConfig.SlotsPerEpoch)
-	}
-
+func (bi *BlobIndexer) indexBlobsInBatches(status *BlobIndexerStatus, headHeader, finalizedHeader *constypes.StandardBeaconHeaderResponse, startSlot uint64) error {
 	start := time.Now()
 	log.InfoWithFields(log.Fields{
 		"lastIndexedFinalizedSlot": status.LastIndexedFinalizedSlot,
@@ -222,63 +387,29 @@ func (bi *BlobIndexer) index() error {
 		}, "finished indexing blobs")
 	}()
 
+	lastIndexedFinalizedBlobSlot := atomic.NewUint64(status.LastIndexedFinalizedBlobSlot)
 	batchSize := uint64(100)
 	for batchStart := startSlot; batchStart <= headHeader.Data.Header.Message.Slot; batchStart += batchSize {
 		batchStartTs := time.Now()
-		batchBlobsIndexed := atomic.NewInt64(0)
-		batchEnd := batchStart + batchSize
-		if batchEnd > headHeader.Data.Header.Message.Slot {
-			batchEnd = headHeader.Data.Header.Message.Slot
-		}
-		g, gCtx = errgroup.WithContext(context.Background())
-		g.SetLimit(4)
-		for slot := batchStart; slot <= batchEnd; slot++ {
-			slot := slot
-			g.Go(func() error {
-				select {
-				case <-gCtx.Done():
-					return gCtx.Err()
-				default:
-				}
-				numBlobs, err := bi.indexBlobsAtSlot(slot)
-				if err != nil {
-					return fmt.Errorf("error bi.IndexBlobsAtSlot(%v): %w", slot, err)
-				}
-				if numBlobs > 0 && slot <= finalizedHeader.Data.Header.Message.Slot && slot > lastIndexedFinalizedBlobSlot.Load() {
-					lastIndexedFinalizedBlobSlot.Store(slot)
-				}
-				batchBlobsIndexed.Add(int64(numBlobs))
-				return nil
-			})
-		}
-		err = g.Wait()
+
+		batchEnd := calculateBatchEnd(batchStart, batchSize, headHeader.Data.Header.Message.Slot)
+
+		blobsIndexed, err := bi.processBlobs(batchStart, batchEnd, finalizedHeader, lastIndexedFinalizedBlobSlot)
 		if err != nil {
 			return err
 		}
-		lastIndexedFinalizedSlot := uint64(0)
-		if batchEnd <= finalizedHeader.Data.Header.Message.Slot {
-			lastIndexedFinalizedSlot = batchEnd
-		} else {
-			lastIndexedFinalizedSlot = finalizedHeader.Data.Header.Message.Slot
-		}
-		newBlobIndexerStatus := BlobIndexerStatus{
-			LastIndexedFinalizedSlot:     lastIndexedFinalizedSlot,
-			LastIndexedFinalizedBlobSlot: lastIndexedFinalizedBlobSlot.Load(),
-			CurrentBlobIndexerId:         bi.id,
-			LastUpdate:                   time.Now(),
-			BlobIndexerVersion:           version.Version,
-		}
-		if status.LastIndexedFinalizedBlobSlot > newBlobIndexerStatus.LastIndexedFinalizedBlobSlot {
-			newBlobIndexerStatus.LastIndexedFinalizedBlobSlot = status.LastIndexedFinalizedBlobSlot
-		}
-		err := bi.putIndexerStatus(newBlobIndexerStatus)
+
+		newBlobIndexerStatus := updateIndexerStatus(batchEnd, finalizedHeader, lastIndexedFinalizedBlobSlot, status, bi)
+		err = bi.storeIndexerStatusInS3(newBlobIndexerStatus)
 		if err != nil {
 			return fmt.Errorf("error updating indexer status at slot %v: %w", batchEnd, err)
 		}
-		slotsPerSecond := float64(batchEnd-batchStart) / time.Since(batchStartTs).Seconds()
-		blobsPerSecond := float64(batchBlobsIndexed.Load()) / time.Since(batchStartTs).Seconds()
-		estimatedTimeToHead := float64(headHeader.Data.Header.Message.Slot-batchStart) / slotsPerSecond
-		estimatedTimeToHeadDuration := time.Duration(estimatedTimeToHead) * time.Second
+
+		slotsPerSecond := calculateSlotsPerSecond(batchEnd, batchStart, batchStartTs)
+		blobsPerSecond := calculateBlobsPerSecond(blobsIndexed, batchStartTs)
+		estimatedTimeToHead := calculateEstimatedTimeToHead(headHeader, batchStart, slotsPerSecond)
+		estimatedTimeToHeadDuration := calculateEstimatedTimeToHeadDuration(estimatedTimeToHead)
+
 		log.InfoWithFields(log.Fields{
 			"lastIdxFinSlot":      newBlobIndexerStatus.LastIndexedFinalizedSlot,
 			"lastIdxFinBlobSlot":  newBlobIndexerStatus.LastIndexedFinalizedBlobSlot,
@@ -287,165 +418,191 @@ func (bi *BlobIndexer) index() error {
 			"slotsPerSecond":      fmt.Sprintf("%.3f", slotsPerSecond),
 			"blobsPerSecond":      fmt.Sprintf("%.3f", blobsPerSecond),
 			"estimatedTimeToHead": estimatedTimeToHeadDuration,
-			"blobsIndexed":        batchBlobsIndexed.Load(),
+			"blobsIndexed":        blobsIndexed.Load(),
 		}, "updated indexer status")
-		if !utils.Config.BlobIndexer.DisableStatusReports {
-			services.ReportStatus("blobindexer", "Running", nil)
-		}
+
+		reportBlobIndexerStatus()
 	}
 	return nil
 }
 
-func (bi *BlobIndexer) indexBlobsAtSlot(slot uint64) (int, error) {
-	tGetBlobSidcar := time.Now()
+func (bi *BlobIndexer) processBlobs(batchStart, batchEnd uint64, finalizedHeader *constypes.StandardBeaconHeaderResponse, lastIndexedFinalizedBlobSlot *atomic.Uint64) (*atomic.Int64, error) {
+	batchBlobsIndexed := atomic.NewInt64(0)
 
-	blobSidecar, err := bi.cl.GetBlobSidecars(slot)
-	if err != nil {
-		httpErr := network.SpecificError(err)
-		if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
-			// no sidecar for this slot
-			return 0, nil
-		}
-		return 0, err
-	}
-	metrics.TaskDuration.WithLabelValues("blobindexer_get_blob_sidecars").Observe(time.Since(tGetBlobSidcar).Seconds())
-
-	if len(blobSidecar.Data) <= 0 {
-		return 0, nil
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-
-	g, gCtx := errgroup.WithContext(ctx)
+	g, gCtx := errgroup.WithContext(context.Background())
 	g.SetLimit(4)
-	for _, d := range blobSidecar.Data {
-		d := d
-		versionedBlobHash := fmt.Sprintf("%#x", utils.VersionedBlobHash(d.KzgCommitment).Bytes())
-		key := fmt.Sprintf("%s/blobs/%s", bi.networkID, versionedBlobHash)
 
-		if bi.writtenBlobsCache.Contains(key) {
-			continue
-		}
-
+	for slot := batchStart; slot <= batchEnd; slot++ {
+		slot := slot
 		g.Go(func() error {
 			select {
 			case <-gCtx.Done():
 				return gCtx.Err()
 			default:
 			}
-
-			if enableCheckingBeforePutting {
-				tS3HeadObj := time.Now()
-				_, err = bi.S3Client.HeadObject(gCtx, &s3.HeadObjectInput{
-					Bucket: &utils.Config.BlobIndexer.S3.Bucket,
-					Key:    &key,
-				})
-				metrics.TaskDuration.WithLabelValues("blobindexer_check_blob").Observe(time.Since(tS3HeadObj).Seconds())
-				if err != nil {
-					// Only put the object if it does not exist yet
-					var httpResponseErr *awshttp.ResponseError
-					if errors.As(err, &httpResponseErr) && (httpResponseErr.HTTPStatusCode() == http.StatusNotFound || httpResponseErr.HTTPStatusCode() == 403) {
-						return nil
-					}
-					return fmt.Errorf("error getting headObject: %s (%v/%v): %w", key, d.SignedBlockHeader.Message.Slot, d.Index, err)
-				}
+			blobSidecar, err := bi.getBlobSidecarsAtSlot(slot)
+			if err != nil {
+				return fmt.Errorf("error getting blob sidecars for slot %v: %w", slot, err)
 			}
 
-			tS3PutObj := time.Now()
-			_, putErr := bi.S3Client.PutObject(gCtx, &s3.PutObjectInput{
-				Bucket: &utils.Config.BlobIndexer.S3.Bucket,
-				Key:    &key,
-				Body:   bytes.NewReader(d.Blob),
-				Metadata: map[string]string{
-					"blob_index":        fmt.Sprintf("%d", d.Index),
-					"block_slot":        fmt.Sprintf("%d", d.SignedBlockHeader.Message.Slot),
-					"block_proposer":    fmt.Sprintf("%d", d.SignedBlockHeader.Message.ProposerIndex),
-					"block_state_root":  d.SignedBlockHeader.Message.StateRoot.String(),
-					"block_parent_root": d.SignedBlockHeader.Message.ParentRoot.String(),
-					"block_body_root":   d.SignedBlockHeader.Message.BodyRoot.String(),
-					"kzg_commitment":    d.KzgCommitment.String(),
-					"kzg_proof":         d.KzgProof.String(),
-				},
-			})
-			metrics.TaskDuration.WithLabelValues("blobindexer_put_blob").Observe(time.Since(tS3PutObj).Seconds())
-			if putErr != nil {
-				return fmt.Errorf("error putting object: %s (%v/%v): %w", key, d.SignedBlockHeader.Message.Slot, d.Index, putErr)
+			err = bi.storeBlobsInS3(blobSidecar.Data)
+			if err != nil {
+				return fmt.Errorf("error indexing blobs at slot %v: %w", slot, err)
 			}
-			bi.writtenBlobsCache.Add(key, true)
 
+			if len(blobSidecar.Data) > 0 &&
+				slot <= finalizedHeader.Data.Header.Message.Slot &&
+				slot > lastIndexedFinalizedBlobSlot.Load() {
+				lastIndexedFinalizedBlobSlot.Store(slot)
+			}
+
+			batchBlobsIndexed.Add(int64(len(blobSidecar.Data)))
 			return nil
 		})
 	}
-	err = g.Wait()
-	if err != nil {
-		return len(blobSidecar.Data), fmt.Errorf("error indexing blobs at slot %v: %w", slot, err)
-	}
 
-	return len(blobSidecar.Data), nil
-}
-
-func (bi *BlobIndexer) GetIndexerStatus() (*BlobIndexerStatus, error) {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("blobindexer_get_indexer_status").Observe(time.Since(start).Seconds())
-	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	key := fmt.Sprintf("%s/blob-indexer-status.json", bi.networkID)
-	obj, err := bi.S3Client.GetObject(ctx, &s3.GetObjectInput{
-		Bucket: &utils.Config.BlobIndexer.S3.Bucket,
-		Key:    &key,
-	})
-	if err != nil {
-		// If the object that you request doesn’t exist, the error that Amazon S3 returns depends on whether you also have the s3:ListBucket permission. If you have the s3:ListBucket permission on the bucket, Amazon S3 returns an HTTP status code 404 (Not Found) error. If you don’t have the s3:ListBucket permission, Amazon S3 returns an HTTP status code 403 ("access denied") error.
-		var httpResponseErr *awshttp.ResponseError
-		if errors.As(err, &httpResponseErr) && (httpResponseErr.HTTPStatusCode() == 404 || httpResponseErr.HTTPStatusCode() == 403) {
-			return &BlobIndexerStatus{}, nil
-		}
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	status := &BlobIndexerStatus{}
-	err = json.NewDecoder(obj.Body).Decode(status)
-	return status, err
+
+	return batchBlobsIndexed, nil
 }
 
-func (bi *BlobIndexer) putIndexerStatus(status BlobIndexerStatus) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("blobindexer_put_indexer_status").Observe(time.Since(start).Seconds())
-	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+func (bi *BlobIndexer) storeBlobsInS3(blobs []constypes.BlobSidecarsData) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
-	key := fmt.Sprintf("%s/blob-indexer-status.json", bi.networkID)
-	contentType := "application/json"
-	body, err := json.Marshal(&status)
-	if err != nil {
-		return err
+
+	g, gCtx := errgroup.WithContext(ctx)
+	g.SetLimit(4)
+
+	for _, d := range blobs {
+		d := d
+		g.Go(func() error {
+			select {
+			case <-gCtx.Done():
+				return gCtx.Err()
+			default:
+				return bi.storeBlobInS3(d)
+			}
+		})
 	}
-	_, err = bi.S3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:      &utils.Config.BlobIndexer.S3.Bucket,
-		Key:         &key,
-		Body:        bytes.NewReader(body),
-		ContentType: &contentType,
-		Metadata: map[string]string{
-			"last_indexed_finalized_slot":      fmt.Sprintf("%d", status.LastIndexedFinalizedSlot),
-			"last_indexed_finalized_blob_slot": fmt.Sprintf("%d", status.LastIndexedFinalizedBlobSlot),
-			"current_blob_indexer_id":          status.CurrentBlobIndexerId,
-			"last_update":                      status.LastUpdate.Format(time.RFC3339),
-			"blob_indexer_version":             status.BlobIndexerVersion,
-		},
-	})
-	if err != nil {
-		return err
+
+	return g.Wait()
+}
+
+func (bi *BlobIndexer) storeBlobInS3(blob constypes.BlobSidecarsData) error {
+	versionedBlobHash := fmt.Sprintf("%#x", utils.VersionedBlobHash(blob.KzgCommitment).Bytes())
+	key := fmt.Sprintf("%s/blobs/%s", bi.networkID, versionedBlobHash)
+	label := "blobindexer_check_blob"
+	metadata := map[string]string{
+		"blob_index":        fmt.Sprintf("%d", blob.Index),
+		"block_slot":        fmt.Sprintf("%d", blob.SignedBlockHeader.Message.Slot),
+		"block_proposer":    fmt.Sprintf("%d", blob.SignedBlockHeader.Message.ProposerIndex),
+		"block_state_root":  blob.SignedBlockHeader.Message.StateRoot.String(),
+		"block_parent_root": blob.SignedBlockHeader.Message.ParentRoot.String(),
+		"block_body_root":   blob.SignedBlockHeader.Message.BodyRoot.String(),
+		"kzg_commitment":    blob.KzgCommitment.String(),
+		"kzg_proof":         blob.KzgProof.String(),
 	}
+
+	if bi.writtenBlobsCache.Contains(key) {
+		return nil
+	}
+
+	// check if the blob exists in S3
+	if enableCheckingBeforePutting {
+		if err := bi.checkIfObjectExistsInS3(key, label); err != nil {
+			return fmt.Errorf("error checking object metadata in S3 with key %s: %w", key, err)
+		}
+	}
+
+	err := bi.putObjectInS3(key, "blobindexer_put_blob", nil, blob.Blob, metadata)
+	if err != nil {
+		return fmt.Errorf("error putting object in S3: %s (%v/%v): %w", key, blob.SignedBlockHeader.Message.Slot, blob.Index, err)
+	}
+
+	bi.writtenBlobsCache.Add(key, true)
+
 	return nil
 }
 
-type BlobIndexerStatus struct {
-	LastIndexedFinalizedSlot     uint64    `json:"last_indexed_finalized_slot"`      // last finalized slot that was indexed
-	LastIndexedFinalizedBlobSlot uint64    `json:"last_indexed_finalized_blob_slot"` // last finalized slot that included a blob
-	CurrentBlobIndexerId         string    `json:"current_blob_indexer_id"`
-	LastUpdate                   time.Time `json:"last_update"`
-	BlobIndexerVersion           string    `json:"blob_indexer_version"`
+func updateIndexerStatus(batchEnd uint64, finalizedHeader *constypes.StandardBeaconHeaderResponse, lastIndexedFinalizedBlobSlot *atomic.Uint64, status *BlobIndexerStatus, bi *BlobIndexer) BlobIndexerStatus {
+	lastIndexedFinalizedSlot := getLastIndexedFinalizedSlot(batchEnd, finalizedHeader)
+	newBlobIndexerStatus := BlobIndexerStatus{
+		LastIndexedFinalizedSlot:     lastIndexedFinalizedSlot,
+		LastIndexedFinalizedBlobSlot: lastIndexedFinalizedBlobSlot.Load(),
+		CurrentBlobIndexerId:         bi.id,
+		LastUpdate:                   time.Now(),
+		BlobIndexerVersion:           version.Version,
+	}
+	if status.LastIndexedFinalizedBlobSlot > newBlobIndexerStatus.LastIndexedFinalizedBlobSlot {
+		newBlobIndexerStatus.LastIndexedFinalizedBlobSlot = status.LastIndexedFinalizedBlobSlot
+	}
+	return newBlobIndexerStatus
+}
+
+func calculateBatchEnd(batchStart, batchSize, headSlot uint64) uint64 {
+	batchEnd := batchStart + batchSize
+	if batchEnd > headSlot {
+		batchEnd = headSlot
+	}
+	return batchEnd
+}
+
+func calculateMinBlobSlot(spec *constypes.StandardSpecResponse, headHeader *constypes.StandardBeaconHeaderResponse) uint64 {
+	minBlobSlotRange := *spec.Data.MinEpochsForBlobSidecarsRequests * uint64(spec.Data.SlotsPerEpoch)
+	minBlobSlot := uint64(0)
+	if headHeader.Data.Header.Message.Slot > minBlobSlotRange {
+		minBlobSlot = headHeader.Data.Header.Message.Slot - minBlobSlotRange
+	}
+	pruneMarginSlotRange := utils.Config.BlobIndexer.PruneMarginEpochs * uint64(spec.Data.SlotsPerEpoch)
+	if minBlobSlot > pruneMarginSlotRange {
+		minBlobSlot = minBlobSlot - pruneMarginSlotRange
+	}
+	return minBlobSlot
+}
+
+func calculateStartSlot(status *BlobIndexerStatus, spec *constypes.StandardSpecResponse) (uint64, uint64) {
+	denebForkSlot := *spec.Data.DenebForkEpoch * uint64(spec.Data.SlotsPerEpoch)
+	startSlot := status.LastIndexedFinalizedSlot + 1
+	if status.LastIndexedFinalizedSlot <= denebForkSlot {
+		startSlot = denebForkSlot
+	}
+	return startSlot, denebForkSlot
+}
+
+func reportBlobIndexerStatus() {
+	if !utils.Config.BlobIndexer.DisableStatusReports {
+		services.ReportStatus("blobindexer", "Running", nil)
+	}
+}
+
+func calculateEstimatedTimeToHeadDuration(estimatedTimeToHead float64) time.Duration {
+	estimatedTimeToHeadDuration := time.Duration(estimatedTimeToHead) * time.Second
+	return estimatedTimeToHeadDuration
+}
+
+func calculateEstimatedTimeToHead(headHeader *constypes.StandardBeaconHeaderResponse, batchStart uint64, slotsPerSecond float64) float64 {
+	estimatedTimeToHead := (float64(headHeader.Data.Header.Message.Slot) - float64(batchStart)) / slotsPerSecond
+	return estimatedTimeToHead
+}
+
+func calculateBlobsPerSecond(batchBlobsIndexed *atomic.Int64, batchStartTs time.Time) float64 {
+	blobsPerSecond := float64(batchBlobsIndexed.Load()) / time.Since(batchStartTs).Seconds()
+	return blobsPerSecond
+}
+
+func calculateSlotsPerSecond(batchEnd, batchStart uint64, batchStartTs time.Time) float64 {
+	slotsPerSecond := float64(batchEnd-batchStart) / time.Since(batchStartTs).Seconds()
+	return slotsPerSecond
+}
+
+func getLastIndexedFinalizedSlot(batchEnd uint64, finalizedHeader *constypes.StandardBeaconHeaderResponse) uint64 {
+	lastIndexedFinalizedSlot := uint64(0)
+	if batchEnd <= finalizedHeader.Data.Header.Message.Slot {
+		lastIndexedFinalizedSlot = batchEnd
+	} else {
+		lastIndexedFinalizedSlot = finalizedHeader.Data.Header.Message.Slot
+	}
+	return lastIndexedFinalizedSlot
 }

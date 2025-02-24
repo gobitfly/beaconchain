@@ -101,9 +101,8 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 		Select(
 			goqu.L("b.epoch"),
 			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
-		From(goqu.L("users_val_dashboards_validators v")).
+		From(goqu.I("execution_rewards_finalized").As("b")).
 		Where(goqu.L("b.epoch >= ?", startEpoch)).
-		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 		GroupBy(goqu.L("b.epoch"))
 
 	if dashboardId.Validators == nil {
@@ -111,6 +110,7 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
 			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
 		elDs = elDs.
+			InnerJoin(goqu.I("users_val_dashboards_validators").As("v"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 		if currentCursor.IsValid() {
 			if currentCursor.IsReverse() {
@@ -546,10 +546,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		Where(goqu.L("e.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix()))
 
 	elDs := goqu.Dialect("postgres").
-		Select(
-			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("blocks_el_rewards")).
-		From(goqu.L("users_val_dashboards_validators v")).
-		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
+		Select(goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("blocks_el_rewards")).
+		From(goqu.I("execution_rewards_finalized").As("b")).
 		Where(goqu.L("b.epoch = ?", epoch))
 
 	// handle the case when we have a list of validators
@@ -559,6 +557,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
 			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
 		elDs = elDs.
+			InnerJoin(goqu.I("users_val_dashboards_validators").As("v"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 		if groupId != t.AllGroups {
 			rewardsDs = rewardsDs.Where(goqu.L("v.group_id = ?", groupId))
@@ -659,16 +658,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 			ret.Inactivity.StatusCount.Success++
 		}
 
-		ret.Proposal.Income = ret.Proposal.Income.Add(entry.BlocksClReward.Mul(gWei))
-		ret.Proposal.StatusCount.Success += uint64(entry.BlocksProposed)
-		ret.Proposal.StatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
+		ret.ProposalStatusCount.Success += uint64(entry.BlocksProposed)
+		ret.ProposalStatusCount.Failed += uint64(entry.BlocksScheduled) - uint64(entry.BlocksProposed)
 
 		ret.Sync.Income = ret.Sync.Income.Add(entry.SyncReward.Mul(gWei))
 		ret.Sync.StatusCount.Success += uint64(entry.SyncExecuted)
 		ret.Sync.StatusCount.Failed += uint64(entry.SyncScheduled) - uint64(entry.SyncExecuted)
 
-		ret.Slashing.Income = ret.Slashing.Income.Add(entry.SlasherRewards.Mul(gWei))
-		ret.Slashing.StatusCount.Success += uint64(entry.SlashedAmount)
+		// TODO: add slashing penalties to ret.Slashing.Income
 		if entry.SlashedInEpoch {
 			ret.Slashing.StatusCount.Failed++
 		}
@@ -678,7 +675,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 		ret.ProposalClSlashingIncReward = ret.ProposalClSlashingIncReward.Add(entry.SlasherRewards.Mul(gWei))
 	}
 
-	ret.Proposal.Income = ret.Proposal.Income.Add(elRewards)
 	ret.ProposalElReward = elRewards
 
 	return ret, nil

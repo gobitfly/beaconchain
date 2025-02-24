@@ -3,31 +3,31 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBGroupSummaryMissedRewards } from '~/types/api/validator_dashboard'
 
-interface Props {
-  missedRewards?: VDBGroupSummaryMissedRewards,
-}
-const props = defineProps<Props>()
-
-const total = computed(() =>
-  props.missedRewards
-    ? convertSum(
-      props.missedRewards.proposer_rewards.cl,
-      props.missedRewards.proposer_rewards.el,
-      props.missedRewards.attestations,
-      props.missedRewards.sync,
-    )
-    : undefined,
-)
+const { missedRewards } = defineProps<{
+  missedRewards: VDBGroupSummaryMissedRewards,
+}>()
 </script>
 
 <template>
   <div
-    v-if="total && !total.isZero()"
     class="summary-reward"
   >
-    <BcFormatValue
-      :value="total"
-      :no-tooltip="true"
+    <BcFormatAmount
+      :currency-items=" [
+        {
+          consensusLayerValue: missedRewards.proposer_rewards.cl,
+        },
+        {
+          executionLayerValue: missedRewards.proposer_rewards.el,
+        },
+        {
+          consensusLayerValue: missedRewards.attestations,
+        },
+        {
+          consensusLayerValue: missedRewards.sync,
+        },
+      ]"
+      target-unit-crypto="auto"
     />
     <BcTooltip :fit-content="true">
       <FontAwesomeIcon :icon="faInfoCircle" />
@@ -40,45 +40,42 @@ const total = computed(() =>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:
             </span>
-            <BcFormatValue
-              :value="missedRewards?.proposer_rewards.el"
-              :no-tooltip="true"
-              :full-value="true"
+            <BcFormatAmount
+              :value="missedRewards.proposer_rewards.el"
+              source-currency="elCurrency"
+              has-higher-precision
             />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:
             </span>
-            <BcFormatValue
-              :value="missedRewards?.proposer_rewards.cl"
-              :no-tooltip="true"
-              :full-value="true"
+            <BcFormatAmount
+              :value="missedRewards.proposer_rewards.cl"
+              has-additional-selected-currency-main
+              has-higher-precision
             />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.summary.row.attestations") }}:
             </span>
-            <BcFormatValue
-              :value="missedRewards?.attestations"
-              :no-tooltip="true"
-              :full-value="true"
+            <BcFormatAmount
+              :value="missedRewards.attestations"
+              has-additional-selected-currency-main
+              has-higher-precision
             />
           </div>
           <div class="tt-row">
             <span class="bold">{{ $t("dashboard.validator.summary.row.sync_committee") }}:
             </span>
-            <BcFormatValue
-              :value="missedRewards?.sync"
-              :no-tooltip="true"
-              :full-value="true"
+            <BcFormatAmount
+              :value="missedRewards.sync"
+              has-additional-selected-currency-main
+              has-higher-precision
             />
           </div>
         </div>
       </template>
     </BcTooltip>
-  </div>
-  <div v-else>
-    -
   </div>
 </template>
 

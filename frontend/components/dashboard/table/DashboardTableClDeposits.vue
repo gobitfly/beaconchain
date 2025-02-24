@@ -118,6 +118,11 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
 const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
+
+const {
+  displayCurrencyDefault,
+  selectedCurrencyMain,
+} = useCurrency()
 </script>
 
 <template>
@@ -257,11 +262,23 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                     size="small"
                   />
                 </div>
-                <BcFormatValue
-                  v-else
-                  :value="slotProps.data.amount"
-                  :options="{ fixedDecimalCount: 0 }"
-                />
+                <BcTooltip
+                  fit-content
+                >
+                  <BcFormatAmount
+                    :value="slotProps.data.amount"
+                    target-currency="clDisplayCurrency"
+                    :fraction-digits="0"
+                  />
+                  <template
+                    v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
+                    #tooltip
+                  >
+                    <BcFormatAmount
+                      :value="slotProps.data.amount"
+                    />
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <Column

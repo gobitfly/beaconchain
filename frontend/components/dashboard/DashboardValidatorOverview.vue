@@ -6,19 +6,12 @@ import type { ClElValue } from '~/types/api/common'
 import {
   type NumberOrString, TimeFrames,
 } from '~/types/value'
-import { totalElClNumbers } from '~/utils/bigMath'
 import { DashboardValidatorSubsetModal } from '#components'
 
 const { t: $t } = useTranslation()
-const { converter } = useValue()
 
 const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
 const { overview } = storeToRefs(validatorDashoboardOverviewStore)
-
-const formatValueWei = (value: NumberOrString): NumberOrString => {
-  return converter.value.weiToValue(`${value}`, { fixedDecimalCount: 4 })
-    .label
-}
 
 const createInfo = (
   key: string,
@@ -33,35 +26,8 @@ const createInfo = (
   }
 }
 
-const rewardFull = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
-    cl: '0',
-    el: '0',
-  }), { addPlus: true }).fullLabel)
-const reward = computed(() => converter.value.weiToValue(
-  totalElCl(overview.value?.rewards.last_30d ?? {
-    cl: '0',
-    el: '0',
-  }), { addPlus: true }).label)
-
 const validatorsOffline = computed(() => overview.value?.validators.offline ?? 0)
 const validatorsOnline = computed(() => overview.value?.validators.online ?? 0)
-const validatorsInfos = computed(() =>
-  [
-    {
-      label: $t('dashboard.validator.overview.validators_balance.balance_total_tooltip'),
-      value: formatValueWei(overview.value?.balances.total ?? 0),
-    },
-    {
-      label: $t('dashboard.validator.overview.validators_balance.balance_effective'),
-      value: formatValueWei(overview.value?.balances.effective ?? 0),
-    },
-    {
-      label: $t('dashboard.validator.overview.validators_balance.balance_staked'),
-      value: formatValueWei(overview.value?.balances.staked_eth ?? 0),
-    },
-  ],
-)
 
 const dialog = useDialog()
 const { dashboardKey } = useDashboardKey()
@@ -84,17 +50,9 @@ const efficiencyInfos = computed(() =>
   })),
 )
 
-const rewardsInfos = TimeFrames.map(timeFrame =>
-  createInfo(timeFrame, overview.value?.rewards[timeFrame] ?? {
-    cl: '0',
-    el: '0',
-  }, formatValueWei),
+const apr = computed(
+  () => formatToPercent((overview.value?.apr.last_30d.el ?? 0) + (overview.value?.apr.last_30d.cl ?? 0)),
 )
-
-const apr = computed(() => formatToPercent(totalElClNumbers(overview.value?.apr.last_30d ?? {
-  cl: 0,
-  el: 0,
-})))
 const aprInfos = TimeFrames.map(timeFrame =>
   createInfo(timeFrame, overview.value?.apr[timeFrame] ?? {
     cl: 0,
@@ -106,7 +64,6 @@ const aprInfos = TimeFrames.map(timeFrame =>
 <template>
   <div class="container">
     <DashboardValidatorOverviewItem
-      :infos="validatorsInfos"
       :title="$t('dashboard.validator.overview.online_validators')"
     >
       <span :class="{ positive: validatorsOnline }">
@@ -126,9 +83,37 @@ const aprInfos = TimeFrames.map(timeFrame =>
       </BcButtonIcon>
       <template #additionalInfo>
         {{ $t('dashboard.validator.overview.validators_balance.balance_total') }}
-        <span class="bold">
-          {{ formatValueWei(overview?.balances.total ?? 0) }}
-        </span>
+        <BcFormatAmount
+          :value="overview?.balances.total ?? '0'"
+        />
+      </template>
+      <template #tooltip>
+        <div>
+          <section>
+            <span>
+              {{ $t('dashboard.validator.overview.validators_balance.balance_total_tooltip') }}:
+            </span>
+            <BcFormatAmount
+              :value="overview?.balances.total ?? '0'"
+            />
+          </section>
+          <section>
+            <span>
+              {{ $t('dashboard.validator.overview.validators_balance.balance_effective') }}:
+            </span>
+            <BcFormatAmount
+              :value="overview?.balances.effective ?? '0'"
+            />
+          </section>
+          <section>
+            <span>
+              {{ $t('dashboard.validator.overview.validators_balance.balance_staked') }}:
+            </span>
+            <BcFormatAmount
+              :value="overview?.balances.staked_eth ?? '0'"
+            />
+          </section>
+        </div>
       </template>
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
@@ -138,15 +123,88 @@ const aprInfos = TimeFrames.map(timeFrame =>
       {{ formatToPercent(overview?.efficiency.last_24h ?? 0) }}
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
-      :infos="rewardsInfos"
       :title="$t('dashboard.validator.overview.30d_rewards')"
     >
-      <BcTooltip
-        :text="rewardFull"
-        :fit-content="true"
-      >
-        {{ reward }}
-      </BcTooltip>
+      <BcFormatAmount
+        :currency-items="[{
+          consensusLayerValue: overview?.rewards.last_30d.cl ?? '0',
+          executionLayerValue: overview?.rewards.last_30d.el ?? '0',
+        }]"
+        has-sign-display
+        has-tooltip
+      />
+      <template #tooltip>
+        <div>
+          <section>
+            <span>{{ $t('statistics.last_24h') }}: </span>
+            <span>
+              CL: <BcFormatAmount
+                :value="overview?.rewards.last_24h.cl ?? '0'"
+                target-currency="clDisplayCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+            <span>
+              EL: <BcFormatAmount
+                :value="overview?.rewards.last_24h.el ?? '0'"
+                source-currency="elCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+          </section>
+          <section>
+            <span>{{ $t('statistics.last_7d') }}: </span>
+            <span>
+              CL: <BcFormatAmount
+                :value="overview?.rewards.last_7d.cl ?? '0'"
+                target-currency="clDisplayCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+            <span>
+              EL: <BcFormatAmount
+                :value="overview?.rewards.last_7d.el ?? '0'"
+                source-currency="elCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+          </section>
+          <section>
+            <span>{{ $t('statistics.last_30d') }}: </span>
+            <span>
+              CL: <BcFormatAmount
+                :value="overview?.rewards.last_30d.cl ?? '0'"
+                target-currency="clDisplayCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+            <span>
+              EL: <BcFormatAmount
+                :value="overview?.rewards.last_30d.el ?? '0'"
+                source-currency="elCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+          </section>
+          <section>
+            <span>{{ $t('statistics.all_time') }}: </span>
+            <span>
+              CL: <BcFormatAmount
+                :value="overview?.rewards.all_time.cl ?? '0'"
+                target-currency="clDisplayCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+            <span>
+              EL: <BcFormatAmount
+                :value="overview?.rewards.all_time.el ?? '0'"
+                source-currency="elCurrency"
+                has-additional-selected-currency-main
+              />
+            </span>
+          </section>
+        </div>
+      </template>
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :infos="aprInfos"

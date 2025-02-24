@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { CryptoCurrency } from '~/types/currencies'
-
 interface Props {
-  currency?: CryptoCurrency,
+  currency?: CurrencyCodeCrypto,
 }
 defineProps<Props>()
 </script>
@@ -12,10 +10,7 @@ defineProps<Props>()
     v-if="currency === 'ETH'"
     class="monochromatic"
   />
-  <IconNetworkGnosis
-    v-else-if="currency === 'GNO'"
-    class="monochromatic"
-  />
+
   <IconCryptoDai
     v-else-if="currency === 'DAI' || currency === 'xDAI'"
     class="monochromatic"

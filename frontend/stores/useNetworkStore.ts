@@ -12,6 +12,10 @@ export function useNetworkStore() {
   const currentNetwork = computed(() => (Number(chainIdByDefault)) as ChainId)
   const networkInfo = computed(() => ChainInfo[currentNetwork.value])
   const {
+    clCurrency,
+    displayCurrencyDefault,
+    elCurrency,
+    hasRocketPool,
     secondsPerSlot,
     slotsPerEpoch,
     timeStampSlot0,
@@ -33,6 +37,10 @@ export function useNetworkStore() {
     return epoch
   }
 
+  /**
+   *
+   * @returns timestamp in seconds (backend also uses seconds instead of milliseconds like in js)
+   */
   const getTimestampFromEpoch = (epoch: number) => {
     return timeStampSlot0 + epoch * slotsPerEpoch * secondsPerSlot
   }
@@ -43,13 +51,17 @@ export function useNetworkStore() {
   )
 
   return {
+    clCurrency,
     currentNetwork,
+    displayCurrencyDefault,
+    elCurrency,
     epochsPerDay,
     getEpochFromSlot,
     getEpochFromTimestamp,
     getSlotFromTimestamp,
     getTimestampFromEpoch,
     getTimestampFromSlot,
+    hasRocketPool,
     networkInfo,
     secondsPerEpoch,
     secondsUntilNetworkFinality,

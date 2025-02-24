@@ -1,7 +1,4 @@
-import {
-  commify,
-  formatUnits,
-} from '@ethersproject/units'
+import { commify } from '@ethersproject/units'
 import {
   DateTime, type StringUnitLength,
 } from 'luxon'
@@ -82,9 +79,32 @@ export function formatGoTimestamp(
     withTime,
   )
 }
-
-export function formatNumber(value?: number): string {
-  return value?.toLocaleString('en-US') ?? ''
+export function formatNumber(value: number | string, {
+  locale = 'en-US',
+  maximumFractionDigits,
+  minimumFractionDigits,
+  scaleBy = 0,
+  signDisplay,
+  useGrouping,
+}: {
+  locale?: string,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+  scaleBy?: number,
+  signDisplay?: Intl.NumberFormatOptions['signDisplay'],
+  useGrouping?: Intl.NumberFormatOptions['useGrouping'],
+} = {}) {
+  const [
+    number,
+    exponent = 0,
+  ] = `${value}`.toLowerCase().split('e')
+  const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}`
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    signDisplay,
+    useGrouping,
+  }).format(numberInScientificNotation as `${number}`)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {
@@ -179,8 +199,8 @@ export function formatTsToTime(ts: number, locales: string): string {
 export function nZeros(count: number): string {
   return count > 0
     ? Array.from(Array(count))
-      .map(() => '0')
-      .join('')
+        .map(() => '0')
+        .join('')
     : ''
 }
 
@@ -309,31 +329,24 @@ export function formatToPercent(value: NumberOrString, option?: { locale?: strin
   }).format(Number(value))
 }
 
-export function formatToWei(value: string, {
-  from,
-}: {
-  from: 'gwei',
-},
-) {
-  const bigValue = BigInt(Math.round(Number(value)))
-  let result = ''
-  if (from === 'gwei') {
-    result = `${bigValue * 1_000_000_000n}`
-  }
-  return result
-}
-
-export function formatWeiTo(wei: string, {
+export const formatValue = (value: string, {
+  from = 'wei',
   maximumFractionDigits = 0,
   minimumFractionDigits = 0,
-  unit,
+  to,
+  useGrouping = false,
 }: {
+  from?: CryptoUnit,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
-  unit: 'gwei',
-}) {
-  return new Intl.NumberFormat('en-US', {
+  to: CryptoUnit,
+  useGrouping?: boolean,
+}) => {
+  const scaleBy = unitFactorCrypto[from] - unitFactorCrypto[to]
+  return formatNumber(value, {
     maximumFractionDigits,
     minimumFractionDigits,
-  }).format(Number(formatUnits(wei, unit)))
+    scaleBy,
+    useGrouping,
+  })
 }

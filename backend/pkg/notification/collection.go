@@ -238,7 +238,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 		return nil
 	}
 
-	assignments, err := mc.CL.GetPropoalAssignments(nextEpoch)
+	assignments, err := mc.CL.GetProposalAssignments(nextEpoch)
 	if err != nil {
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}
@@ -612,7 +612,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 	}
 
 	log.Info("retrieving block proposal data")
-	proposalAssignments, err := mc.CL.GetPropoalAssignments(epoch)
+	proposalAssignments, err := mc.CL.GetProposalAssignments(epoch)
 	if err != nil {
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}

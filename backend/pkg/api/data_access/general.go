@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/jmoiron/sqlx"
 )
 
 // retrieve (primary) ens name and optional name (=label) maintained by beaconcha.in, if present
@@ -130,4 +131,45 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 	}
 
 	return queryOrder, queryWhere, nil
+}
+
+// Generic function to execute a query
+// Ensures T is a slice in compile-time
+// Retrieves multiple rows and stores them in a slice
+// Used when the query returns multiple results (e.g., SELECT * FROM users)
+// The destination must be a slice ([]T)
+func runQueryRows[T ~[]E, E any](ctx context.Context, db *sqlx.DB, ds *goqu.SelectDataset) (T, error) {
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	var result T // slice of type T
+	err = db.SelectContext(ctx, &result, query, args...)
+	if err != nil {
+		return result, fmt.Errorf("error executing query: %w", err)
+	}
+
+	return result, nil
+}
+
+// Generic function to execute a query
+// Retrieves a single row and stores it in a struct or variable
+// Used when the query is expected to return only one row (e.g., SELECT * FROM users WHERE id = ?)
+// The destination must be a single struct or variable (T)
+func runQuery[T any](ctx context.Context, db *sqlx.DB, ds *goqu.SelectDataset) (T, error) {
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		var zero T
+		return zero, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	var result T
+	err = db.GetContext(ctx, &result, query, args...)
+	if err != nil {
+		return result, fmt.Errorf("error executing query: %w", err)
+	}
+
+	return result, nil
 }

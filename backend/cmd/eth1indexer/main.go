@@ -19,6 +19,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/data"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadata"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/metadataupdates"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -29,6 +30,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/executionlayer"
+	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
@@ -145,8 +147,6 @@ func Run() {
 
 	chainId := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
 
-	balanceUpdaterPrefix := chainId + ":B:"
-
 	nodeChainId, err := client.GetNativeClient().ChainID(context.Background())
 	if err != nil {
 		log.Fatal(err, "node chain id error", 0)
@@ -179,25 +179,42 @@ func Run() {
 		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
 	}
 
-	if *enableFullBalanceUpdater {
-		ProcessMetadataUpdates(bt, client, balanceUpdaterPrefix, *balanceUpdaterBatchSize, -1)
-		return
-	}
-
-	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-
 	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
 	if err != nil {
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 
+	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	metadataUpdatesStore := metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache)
+	dataStore := data.NewStore(database.Wrap(bigtable, data.Table))
+	metadataStore := metadata.NewStore(database.Wrap(bigtable, metadata.Table))
+
 	indexer := executionlayer.NewIndexer(
 		executionlayer.NewAdaptorV1(
-			data.NewStore(database.Wrap(bigtable, data.Table)),
-			metadataupdates.NewStore(database.Wrap(bigtable, metadataupdates.Table), cache),
+			dataStore,
+			metadataUpdatesStore,
 		),
 		executionlayer.AllTransformers...,
 	)
+
+	batcherConfig := evm.BatcherConfig{
+		Limit: utils.Config.Indexer.BatchLimit,
+	}
+	if utils.Config.Indexer.MulticallAddresses != "" {
+		parsed := common.HexToAddress(utils.Config.Indexer.MulticallAddresses)
+		batcherConfig.MulticallAddress = &parsed
+	}
+	balanceUpdater := executionlayer.NewBalanceUpdater(
+		chainId,
+		metadataUpdatesStore,
+		metadataStore,
+		evm.NewBatcher(nodeChainId, client.GetNativeClient(), batcherConfig),
+	)
+
+	if *enableFullBalanceUpdater {
+		ProcessBalanceUpdates(balanceUpdater, *balanceUpdaterBatchSize, -1)
+		return
+	}
 
 	if *block != 0 {
 		err = IndexFromNode(bt, client, *block, *block, *concurrencyBlocks, *traceMode)
@@ -361,7 +378,7 @@ func Run() {
 		}
 
 		if *enableBalanceUpdater {
-			ProcessMetadataUpdates(bt, client, balanceUpdaterPrefix, *balanceUpdaterBatchSize, 10)
+			ProcessBalanceUpdates(balanceUpdater, *balanceUpdaterBatchSize, 10)
 		}
 
 		log.Infof("index run completed")
@@ -545,55 +562,17 @@ func HandleChainReorgs(bt *db.Bigtable, client *rpc.ErigonClient, depth int) err
 	return nil
 }
 
-func ProcessMetadataUpdates(bt *db.Bigtable, client *rpc.ErigonClient, prefix string, batchSize int, iterations int) {
-	lastKey := prefix
-
-	its := 0
-	for {
+// ProcessBalanceUpdates will use the balanceUpdater to fetch and update the balances
+// if iterations == -1 it will run forever
+func ProcessBalanceUpdates(balanceUpdater executionlayer.BalanceUpdater, batchSize int, iterations int) {
+	for its := 0; iterations == -1 || its < iterations; its++ {
 		start := time.Now()
-		keys, pairs, err := bt.GetMetadataUpdates(prefix, lastKey, batchSize)
+		balances, err := balanceUpdater.UpdateBalances(int64(batchSize))
 		if err != nil {
-			log.Error(err, "error retrieving metadata updates from bigtable", 0)
+			log.Error(err, "error updating balances", 0)
 			return
 		}
-
-		if len(keys) == 0 {
-			return
-		}
-
-		balances := make([]*types.Eth1AddressBalance, 0, len(pairs))
-		for b := 0; b < len(pairs); b += batchSize {
-			start := b
-			end := b + batchSize
-			if len(pairs) < end {
-				end = len(pairs)
-			}
-
-			log.Infof("processing batch %v with start %v and end %v", b, start, end)
-
-			b, err := client.GetBalances(pairs[start:end], 2, 4)
-
-			if err != nil {
-				log.Error(err, "error retrieving balances from node", 0)
-				return
-			}
-			balances = append(balances, b...)
-		}
-
-		err = bt.SaveBalances(balances, keys)
-		if err != nil {
-			log.Error(err, "error saving balances to bigtable", 0)
-			return
-		}
-
-		lastKey = keys[len(keys)-1]
-		log.Infof("retrieved %v balances in %v, currently at %v", len(balances), time.Since(start), lastKey)
-
-		its++
-
-		if iterations != -1 && its > iterations {
-			return
-		}
+		log.Infof("retrieved %v balances in %v, currently at %s", len(balances), time.Since(start), balances[len(balances)-1].Address)
 	}
 }
 

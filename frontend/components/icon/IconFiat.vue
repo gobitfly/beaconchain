@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { FiatCurrency } from '~/types/currencies'
-
 interface Props {
-  currency?: FiatCurrency,
+  currency?: CurrencyCodeFiat,
 }
 defineProps<Props>()
 </script>

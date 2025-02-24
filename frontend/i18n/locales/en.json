@@ -78,8 +78,9 @@
         "tx_batch": "Tx Batch | Tx Batches",
         "unavailable": "Unavailable",
         "units": {
-            "GWEI": "GWei",
-            "per_day": "per day"
+            "gwei": "GWei",
+            "per_day": "per day",
+            "wei": "Wei"
         },
         "upcoming": "Upcoming",
         "validator": "Validator | Validators",
@@ -97,14 +98,13 @@
         "label": {
             "AUD": "Australian Dollar",
             "CAD": "Canadian Dollar",
+            "CNY": "Chinese Yuan",
             "DAI": "DAI Stablecoin",
             "ETH": "Ether",
             "EUR": "Euro",
             "GBP": "Pound Sterling",
             "GNO": "Gnosis",
             "JPY": "Japanese Yen",
-            "NAT": "Native",
-            "RUB": "Russian Ruble",
             "USD": "United States Dollar",
             "mGNO": "mGnosis",
             "xDAI": "xDAI Stablecoin"
@@ -362,6 +362,7 @@
                         "proposal": "Proposal Eff.",
                         "sync": "Sync Eff."
                     },
+                    "error": "An error occurred. Please try again later.",
                     "groups": "Groups ({count})",
                     "no_data": "No chart data",
                     "total": "Total"
@@ -992,10 +993,6 @@
         "subtitle": "Monitoring without limits on web and mobile.",
         "view_addons": "View Add-Ons",
         "yearly": "Yearly"
-    },
-    "rocketpool": {
-        "mode": "RP Mode",
-        "tooltip": "Enables Rocket Pool stats for this dashboard"
     },
     "search_bar": {
         "account_placeholder": "Address or ENS name",

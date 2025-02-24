@@ -82,6 +82,10 @@ func (w TableWrapper) GetRowsWithKeys(keys []string) ([]Row, error) {
 	return res, nil
 }
 
+func (w TableWrapper) DeleteRowsWithKeys(keys []string, opts ...Option) error {
+	return w.BigTable.DeleteRowsWithKeys(w.table, keys, opts...)
+}
+
 // BigTable is a wrapper around Google Cloud Bigtable for storing and retrieving data
 type BigTable struct {
 	client *bigtable.Client
@@ -160,11 +164,7 @@ func createTableAndFamilies(ctx context.Context, admin *bigtable.AdminClient, ta
 }
 
 func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Option) error {
-	options := apply(opts)
-
-	tbl := b.client.Open(table)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	options := newOptions(opts)
 
 	var keys []string
 	var muts []*bigtable.Mutation
@@ -180,9 +180,17 @@ func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Op
 		keys = append(keys, key)
 		muts = append(muts, mut)
 	}
+	return b.applyBulk(table, keys, muts, options)
+}
+
+func (b BigTable) applyBulk(table string, keys []string, mutations []*bigtable.Mutation, options options) error {
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
 	bulk := &bulkMutations{
 		Keys: keys,
-		Muts: muts,
+		Muts: mutations,
 	}
 	sort.Sort(bulk)
 	for i := int64(0); i < int64(bulk.Len()); i = i + options.BatchSize {
@@ -263,7 +271,7 @@ func (b BigTable) GetRow(table, key string) (*Row, error) {
 }
 
 func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, error) {
-	options := apply(opts)
+	options := newOptions(opts)
 
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -335,6 +343,23 @@ func (b BigTable) GetRowsWithKeys(table string, keys []string) ([]Row, error) {
 	}
 
 	return data, nil
+}
+
+func (b BigTable) DeleteRowsWithKeys(table string, source []string, opts ...Option) error {
+	options := newOptions(opts)
+
+	var muts []*bigtable.Mutation
+	var keys []string
+	for _, key := range source {
+		if key == "" {
+			continue
+		}
+		mut := bigtable.NewMutation()
+		mut.DeleteRow()
+		muts = append(muts, mut)
+		keys = append(keys, key)
+	}
+	return b.applyBulk(table, keys, muts, options)
 }
 
 func (b BigTable) Clear() error {

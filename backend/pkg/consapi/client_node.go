@@ -110,12 +110,12 @@ func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingle
 	return network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
+func (r *NodeClient) GetProposalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
 	return network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalRewards(blockID any) (*types.StandardBlockRewardsResponse, error) {
+func (r *NodeClient) GetProposalRewards(blockID any) (*types.StandardBlockRewardsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/blocks/%v", r.Endpoint, blockID)
 	return network.Get[types.StandardBlockRewardsResponse](r.httpClient, requestURL)
 }

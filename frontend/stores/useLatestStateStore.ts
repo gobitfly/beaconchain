@@ -1,19 +1,12 @@
-import { defineStore } from 'pinia'
 import type {
   InternalGetLatestStateResponse,
   LatestStateData,
 } from '~/types/api/latest_state'
 
-const latestStateStore = defineStore('latest_state_store', () => {
-  const data = ref<LatestStateData | null | undefined>()
-  return { data }
-})
-
-export function useLatestStateStore() {
+export const useLatestStateStore = defineStore('latestState', () => {
   const { fetch } = useCustomFetch()
-  const { data } = storeToRefs(latestStateStore())
 
-  const latestState = computed(() => data.value)
+  const latestState = ref<LatestStateData>()
 
   async function refreshLatestState() {
     try {
@@ -23,16 +16,14 @@ export function useLatestStateStore() {
       if (!res.data) {
         return null
       }
-      data.value = res.data
-      return data.value
+      latestState.value = res.data
     }
     catch {
       return null
     }
   }
-
   return {
     latestState,
     refreshLatestState,
   }
-}
+})

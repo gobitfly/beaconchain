@@ -14,9 +14,9 @@ defineProps<{
   isHomePage: boolean,
   minimalist: boolean,
 }>()
-const { latestState } = useLatestStateStore()
+const latestStateStore = useLatestStateStore()
+const { latestState } = storeToRefs(latestStateStore)
 const {
-  currentNetwork,
   getEpochFromSlot,
   networkInfo,
 } = useNetworkStore()
@@ -24,7 +24,10 @@ const {
   doLogout, isLoggedIn,
 } = useUserStore()
 const {
-  available, currency, rates,
+  displayCurrencyDefault,
+  exchangeRates,
+  formatAmount,
+  selectedCurrencyMain,
 } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
@@ -40,18 +43,20 @@ const hideInDevelopmentClass = showInDevelopment
 
 const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
-const rate = computed(() => {
-  if (isFiat(currency.value) && rates.value?.[currency.value]) {
-    return rates.value[currency.value]
+const hasExchangeRates = computed(() => exchangeRates.value.length > 1)
+
+const currentRate = computed(() => {
+  if (selectedCurrencyMain.value === displayCurrencyDefault.main) {
+    return formatAmount('1', {
+      sourceCurrency: displayCurrencyDefault.main,
+      sourceUnit: 'base',
+      targetCurrency: displayCurrencyDefault.fiat,
+    })
   }
-  else if (rates.value?.USD) {
-    return rates.value.USD
-  }
-  const fiat = available.value?.find(c => isFiat(c))
-  if (fiat && rates.value?.[fiat]) {
-    return rates.value[fiat]
-  }
-  return undefined
+  return formatAmount('1', {
+    sourceCurrency: displayCurrencyDefault.main,
+    sourceUnit: 'base',
+  })
 })
 
 const currentEpoch = computed(() =>
@@ -123,27 +128,28 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             />
           </BcLink>
         </span>
-        <span v-if="rate">
-          <span>
-            <IconNetwork
-              :chain-id="currentNetwork"
-              class="network-icon"
-              :harmonize-perceived-size="true"
-              :colored="false"
-            />{{ networkInfo.elCurrency }} </span>:
-          <span>
-            {{ rate.symbol }}
-            <BcFormatNumber
-              class="bold"
-              :value="rate.rate"
-              :max-decimals="2"
-            />
+        <span
+          v-if="hasExchangeRates"
+          class="currency-info"
+        >
+          <BcIconCrypto
+            width="20"
+            :currency-code="displayCurrencyDefault.main"
+            class="network-icon"
+            color-mode="currentColor"
+          />
+          {{ displayCurrencyDefault.main }}:
+          <span
+            class="bold"
+          >
+            {{ currentRate }}
           </span>
         </span>
       </div>
 
       <div class="grid-cell controls">
         <BcCurrencySelection
+          v-if="hasExchangeRates"
           class="currency"
           :show-currency-icon="!isMobileScreen"
         />
@@ -302,11 +308,13 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         display: none;
       }
+      .currency-info {
+        display: flex;
+        align-items: center;
+        gap: var(--padding-small);
+      }
       .network-icon {
-        vertical-align: middle;
-        height: 18px;
-        width: 18px;
-        margin-right: var(--padding-small);
+        width: 1.25rem;
       }
     }
 
