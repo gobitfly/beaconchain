@@ -6,22 +6,25 @@ import (
 	"strconv"
 
 	model "github.com/gobitfly/beaconchain-api/api/gen"
-	"github.com/gobitfly/beaconchain-api/internal/dataaccess"
+	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
 )
 
 func (service *ApiService) GetValidatorDashboard(ctx context.Context, in *model.GetValidatorDashboardRequest) (*model.GetValidatorDashboardResponse, error) {
 	if len(in.DashboardId) <= 0 {
-		return nil, errors.New("dashboardId must be specified")
+		return nil, errors.New("dashboard identifier must be specified")
 	}
 
 	// If dashboardId is specified, then return a specific dashboard for the user who sent the request. Ensure that the requestor only ever sees their own dashboards.
 	dashboardId, err := strconv.Atoi(in.DashboardId)
 	if err != nil {
-		return nil, errors.New("invalid dashboardId")
+		return nil, errors.New("invalid dashboard identifier")
 	}
 
+	// Get the user
+	service.userRepository.GetUserById(ctx, 1234 /*TODO: Get userId from request headers via session/API Key*/)
+
 	// In a proper implementation we would also want to make sure that this dashboard is actually owned by the requesting user.
-	dbDashboard, err := service.dashboardRepository.GetValidatorDashboardByDashboardId(ctx, dashboardId)
+	dbDashboard, err := service.dashboardRepository.GetValidatorDashboardByDashboardId(ctx, uint64(dashboardId))
 	if err != nil {
 		return nil, errors.New("Internal Service Error")
 	}
@@ -40,7 +43,7 @@ func (service *ApiService) CreateValidatorDashboard(ctx context.Context, in *mod
 
 	dummyUserId := 1337 // For testing so that I dont have to wire up correct UserId handling for this PoC
 
-	dbDashboard, err := service.dashboardRepository.CreateValidatorDashboard(ctx, dummyUserId)
+	dbDashboard, err := service.dashboardRepository.CreateValidatorDashboard(ctx, uint64(dummyUserId))
 	if err != nil {
 		return nil, errors.New("Internal Service Error")
 	}
@@ -55,7 +58,7 @@ func (service *ApiService) CreateValidatorDashboard(ctx context.Context, in *mod
  * Converts the abstract database representation of a ValidatorDashboard to the proto model representation.
  */
 func transformDbDashboardToModel(dbDashboard dataaccess.ValidatorDashboard) model.ValidatorDashboard {
-	dashboardId := strconv.Itoa(dbDashboard.DashboardId)
+	dashboardId := strconv.Itoa(int(dbDashboard.DashboardId))
 	return model.ValidatorDashboard{
 		DashboardId: dashboardId,
 		IsPublic:    dbDashboard.IsPublic,

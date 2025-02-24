@@ -1,0 +1,68 @@
+# Re-organized from backend/pkg/commons/types/config.go in beaconchain repo
+
+httpPort: 8080
+grpcPort: 9090
+
+# PSQL
+readerDatabase:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+writerDatabase:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+
+# Clickhouse
+readerClickhouse:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+
+writerClickhouse:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+
+# BigTable
+bigtable:
+  project: "REPLACE_WITH_ENV"
+  instance: "REPLACE_WITH_ENV"
+  remote: "REPLACE_WITH_ENV"
+
+rawBigtable:
+  project: "REPLACE_WITH_ENV"
+  instance: "REPLACE_WITH_ENV"
+  remote: "REPLACE_WITH_ENV"
+
+# EVM Clients
+executionClient:
+  erigon:
+    endpoint: "REPLACE_WITH_ENV"
+  geth: 
+    endpoint: "REPLACE_WITH_ENV"
+consensusClient:
+  lighthouse:
+    endpoint: "REPLACE_WITH_ENV"
+
+# Redis
+redis:
+  cacheEndpoint: "REPLACE_WITH_ENV"
+  sessionStoreEndpoint: "REPLACE_WITH_ENV"
+
+# External Service Configs
+etherscanAPI:
+  mainnetEndpoint: "api.etherscan.io"
+  apiKey:

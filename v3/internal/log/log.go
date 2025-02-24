@@ -4,7 +4,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// TODO: Lots of stuff removed here, for simplicity, from the original implementation of this pkg in github.com/gobitfly/beaconchain/log. Consider re-merging that stuff back in when we get to a more reliable state.
+// Fatal logs a fatal error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
+// callerSkip equal to 0 gives you info directly where Fatal is called.
+func Fatal(args ...interface{}) {
+	logrus.Fatal(args...)
+}
+
+func Fatalf(format string, args ...interface{}) {
+	logrus.Fatalf(format, args...)
+}
 
 func Info(args ...interface{}) {
 	logrus.Info(args...)

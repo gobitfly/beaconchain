@@ -1,0 +1,32 @@
+# Contains the default configurations to be used for each EL chain. Configurations defined here are non-negotiable 
+# constants, usually defined as a part of the chain specification. 
+# Default configurations here are typically, but not always, aligned with mainnet
+
+# Be careful about changing this file, 
+# as it will modify it for all chains. If a chain requires the modification of a configuration value,
+# create a new configuration for that chain and modify the value there, and it will override those values
+
+# Properties related to the specification of the chain
+# Note that we explicitly don't define `ChainSpec.CHAIN_ID` here, as each chain should have its own configuration
+ChainSpec:
+  SECONDS_PER_SLOT: 12
+  MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
+  SHARD_COMMITTEE_PERIOD: 256
+
+Forks:
+  ALTAIR:
+    FORK_VERSION: 0x01000000
+    FORK_EPOCH: 74240 # Oct 27, 2021, 10:56:23am UTC
+  BELLATRIX:
+    FORK_VERSION: 0x02000000
+    FORK_EPOCH: 144896 # Sept 6, 2022, 11:34:47am UTC
+  CAPELLA:
+    FORK_VERSION: 0x03000000
+    FORK_EPOCH: 194048 # April 12, 2023, 10:27:35pm UTC
+  DENEB:
+    FORK_VERSION: 0x04000000
+    FORK_EPOCH: 18446744073709551615
+  BYZANTIUM:
+    FORK_BLOCK: 4370000
+  CONSTANTINOPLE:
+    FORK_BLOCK: 7280000

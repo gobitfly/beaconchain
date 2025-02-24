@@ -7,14 +7,14 @@ import (
 )
 
 type InMemoryValidatorDashboardRepository struct {
-	dashboardDatabase map[int]*ValidatorDashboard // DashboardId => ValidatorDashboard
-	lastId            int
+	dashboardDatabase map[uint64]*ValidatorDashboard // DashboardId => ValidatorDashboard
+	lastId            uint64
 }
 
 func NewInMemoryValidatorDashboardRepository() *InMemoryValidatorDashboardRepository {
 	log.Info("Successfully initialized repo")
 	return &InMemoryValidatorDashboardRepository{
-		dashboardDatabase: make(map[int]*ValidatorDashboard), // DashboardId => Dashboard
+		dashboardDatabase: make(map[uint64]*ValidatorDashboard), // DashboardId => Dashboard
 		lastId:            0,
 	}
 }
@@ -22,7 +22,7 @@ func NewInMemoryValidatorDashboardRepository() *InMemoryValidatorDashboardReposi
 /**
  * Creates an empty Validator Dashboard
  */
-func (r *InMemoryValidatorDashboardRepository) CreateValidatorDashboard(ctx context.Context, userId int) (*ValidatorDashboard, error) {
+func (r *InMemoryValidatorDashboardRepository) CreateValidatorDashboard(ctx context.Context, userId uint64) (*ValidatorDashboard, error) {
 
 	// Create a new dashboard
 	r.lastId = r.lastId + 1
@@ -44,7 +44,7 @@ func (r *InMemoryValidatorDashboardRepository) CreateValidatorDashboard(ctx cont
  * If the user does not exist, return empty dashboard list
  * If the dashboardId does not exist, skip over it (returning empty dashboard list if none found)
  */
-func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardsByUserId(ctx context.Context, userId int) (*[]ValidatorDashboard, error) {
+func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardsByUserId(ctx context.Context, userId uint64) (*[]ValidatorDashboard, error) {
 
 	foundDashboards := make([]ValidatorDashboard, 0)
 	for _, dashboard := range r.dashboardDatabase {
@@ -56,7 +56,7 @@ func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardsByUserId(ct
 	return &foundDashboards, nil
 }
 
-func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardByDashboardId(ctx context.Context, dashboardId int) (*ValidatorDashboard, error) {
+func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardByDashboardId(ctx context.Context, dashboardId uint64) (*ValidatorDashboard, error) {
 	log.Info("got this far really")
 	return r.dashboardDatabase[dashboardId], nil
 }
@@ -67,14 +67,14 @@ func (r *InMemoryValidatorDashboardRepository) GetValidatorDashboardByDashboardI
  * If an attribute is included but modification of that is not possible, an error should be returned
  *    and other attribute modifications should not take place.
  */
-func (r *InMemoryValidatorDashboardRepository) ModifyValidatorDashboard(ctx context.Context, dashboardId int, isPublic bool) (*ValidatorDashboard, error) {
+func (r *InMemoryValidatorDashboardRepository) ModifyValidatorDashboard(ctx context.Context, dashboardId uint64, isPublic bool) (*ValidatorDashboard, error) {
 	dashboard := r.dashboardDatabase[dashboardId]
 	dashboard.IsPublic = isPublic
 	return dashboard, nil
 }
 
 // Returns nothing on success, or error if successfully deleted. Idempotent, if deleted when it DNE, no error should be returned.
-func (r *InMemoryValidatorDashboardRepository) DeleteValidatorDashboard(ctx context.Context, dashboardId int) error {
+func (r *InMemoryValidatorDashboardRepository) DeleteValidatorDashboard(ctx context.Context, dashboardId uint64) error {
 	// Do nothing, pretend it was deleted
 	delete(r.dashboardDatabase, dashboardId)
 	return nil

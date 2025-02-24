@@ -1,0 +1,10 @@
+# Contains Chain configuration overrides for holesky. Depends on `chain/default.yaml` for configurations not specified here.
+# Configurations defined here are non-negotiable constants, usually defined as a part of the chain specification. 
+
+# Mainnet configuration presents a unique problem, because it builds off of the genesis configurations, while also changing
+# over time as hardforks occur. 
+
+
+ChainSpec:
+  CHAIN_ID: 1
+  GENESIS_TIMESTAMP: 1606824023

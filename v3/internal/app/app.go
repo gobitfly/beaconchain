@@ -7,27 +7,12 @@ import (
 	"net/http"
 
 	model "github.com/gobitfly/beaconchain-api/api/gen"
-	"github.com/gobitfly/beaconchain-api/internal/dataaccess"
+	"github.com/gobitfly/beaconchain-api/internal/common/config"
+	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-api/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-)
-
-/*
-"context"
-"fmt"
-"net"
-"net/http"
-
-model "github.com/gobitfly/beaconchain-api/api/gen"
-log "github.com/gobitfly/beaconchain-api/internal/log"
-"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-"google.golang.org/grpc"
-"google.golang.org/grpc/credentials/insecure"*/
-
-var (
-	port = 9090
 )
 
 type ApiService struct {
@@ -47,30 +32,48 @@ func InitWithInMemory() (*ApiService, error) {
 }
 
 /**
+ * Initialize the repositories with proper databases
+ */
+func Init(
+	config config.ServiceConfig,
+	userRepository dataaccess.UserRepository,
+	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
+	return &ApiService{
+		userRepository:      userRepository,
+		dashboardRepository: dashboardRepository,
+	}, nil
+}
+
+/**
  * Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
  *
  */
-func (service *ApiService) Run() {
+func Run(
+	config config.ServiceConfig,
+	userRepo dataaccess.UserRepository,
+	dashboardRepo dataaccess.ValidatorDashboardRepository,
+) {
+
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	log.Info("Starting server...")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GrpcPort))
 	if err != nil {
 		log.Infof("failed to listen: %v", err)
 	}
 
 	s := grpc.NewServer() // Unsecured
-	apiService, _ := InitWithInMemory()
+	apiService, _ := Init(config, userRepo, dashboardRepo)
 	model.RegisterBeaconchainApiServiceServer(s, apiService)
 
 	go s.Serve(lis)
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
 	// Establish a connection to the gRPC server above
-	conn, err := grpc.NewClient(fmt.Sprintf(":%d", port), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(fmt.Sprintf(":%d", config.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Infof("fail to dial: %v", err)
 	}
@@ -99,11 +102,11 @@ func (service *ApiService) Run() {
 	mux.Handle("/", rmux)
 
 	// start a standard HTTP server with the router
-	err = http.ListenAndServe(":8080", mux)
+	err = http.ListenAndServe(fmt.Sprintf(":%s", config.HttpPort), mux)
 	if err != nil {
 		log.Info(err)
 	}
-	log.Infof("HTTP server listening and serving at :8080")
+	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
 	fmt.Println("To close connection CTRL+C :-)")
 }
