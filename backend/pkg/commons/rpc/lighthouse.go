@@ -805,11 +805,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 	if len(parsedBlock.Message.Body.BlobKZGCommitments) > 0 {
 		res, err := lc.GetBlobSidecars(fmt.Sprintf("%#x", block.BlockRoot))
 		if err != nil {
-			// TODO: remove this hack for mekong!!!
-			for i := 0; i < len(block.BlobKZGProofs); i++ {
-				block.BlobKZGProofs[i] = []byte{}
-			}
-			//return nil, err
+			return nil, err
 		} else {
 			if len(res.Data) != len(parsedBlock.Message.Body.BlobKZGCommitments) {
 				return nil, fmt.Errorf("error constructing block at slot %v: len(blob_sidecars) != len(block.blob_kzg_commitments): %v != %v", block.Slot, len(res.Data), len(parsedBlock.Message.Body.BlobKZGCommitments))

@@ -174,7 +174,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 			slotsExported++
 
 			// in case of large export runs, export at most 10 epochs per tx
-			if slotsExported == int(utils.Config.Chain.ClConfig.SlotsPerEpoch)*1 { // TODO: change this back to 10
+			if slotsExported == int(utils.Config.Chain.ClConfig.SlotsPerEpoch)*10 {
 				err := tx.Commit()
 
 				if err != nil {
@@ -515,7 +515,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		})
 
 		// if we are exporting the head epoch, update the validator db table
-		if isHeadEpoch || epoch%5 == 0 {
+		if isHeadEpoch {
 			// this function sets exports the validator status into the db
 			// and also updates the status field in the validators array
 			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)

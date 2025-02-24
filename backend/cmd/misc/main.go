@@ -148,7 +148,7 @@ func Run() {
 			ElNode:        true,
 			UserDBs:       true,
 			NetworkDBs:    true,
-			ClickhouseDBs: false,
+			ClickhouseDBs: true,
 		}
 	}
 
