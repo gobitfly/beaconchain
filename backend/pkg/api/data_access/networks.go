@@ -31,5 +31,10 @@ func (d *DataAccessService) GetAllNetworks() ([]types.NetworkInfo, error) {
 			Name:              "sepolia",
 			NotificationsName: "sepolia",
 		},
+		{
+			ChainId:           7088110746,
+			Name:              "pectra-devnet-5",
+			NotificationsName: "pectra-devnet-5",
+		},
 	}, nil
 }

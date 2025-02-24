@@ -14,7 +14,7 @@ const ChainIDs = {
   Gnosis: 100,
 
   Holesky: 17000,
-
+  Pectra_Devnet_5: 7088110746,
   Sepolia: 11155111,
 } as const
 
@@ -150,6 +150,26 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     shortName: 'Holesky',
     slotsPerEpoch: 32,
     timeStampSlot0: 1695902400,
+  },
+  [ChainIDs.Pectra_Devnet_5]: {
+    clCurrency: 'ETH',
+    description: 'Devnet',
+    elCurrency: 'ETH',
+    family: ChainFamily.Ethereum,
+    mainCurrency: 'ETH',
+    mainNet: ChainIDs.Ethereum,
+    name: 'Ethereum Pectra Devnet 5',
+    nameParts: [
+      'Ethereum',
+      'Pectra',
+      'Devnet',
+      '5',
+    ],
+    priority: 41,
+    secondsPerSlot: 12,
+    shortName: 'Pectra',
+    slotsPerEpoch: 32,
+    timeStampSlot0: 1737034260,
   },
   [ChainIDs.Sepolia]: {
     clCurrency: 'ETH',
