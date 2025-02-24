@@ -358,6 +358,8 @@ func setELConfig(cfg *types.Config) error {
 	return nil
 }
 
+var MaxForkEpoch = uint64(18446744073709551615)
+
 func setCLConfig(cfg *types.Config) error {
 	var err error
 	if cfg.Chain.ClConfigPath == "" {
@@ -398,27 +400,25 @@ func setCLConfig(cfg *types.Config) error {
 			return err
 		}
 
-		maxForkEpoch := uint64(18446744073709551615)
-
 		if jr.Data.AltairForkEpoch == nil {
 			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.AltairForkEpoch = &maxForkEpoch
+			jr.Data.AltairForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
 			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.BellatrixForkEpoch = &maxForkEpoch
+			jr.Data.BellatrixForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
 			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.CapellaForkEpoch = &maxForkEpoch
+			jr.Data.CapellaForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
 			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.DenebForkEpoch = &maxForkEpoch
+			jr.Data.DenebForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.ElectraForkEpoch == nil {
 			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.ElectraForkEpoch = &maxForkEpoch
+			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
 
 		chainCfg := types.ClChainConfig{

@@ -249,7 +249,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		Signature            []byte        `db:"signature"`
 	}
 
-	depositsDs := goqu.Dialect("postgres").
+	depositsBridgeDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_deposits").As("bd")).
 		Select(
 			goqu.I("bd.publickey"),
@@ -286,12 +286,12 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		)
 
 	if dashboardId.Validators != nil {
-		depositsDs = depositsDs.
+		depositsBridgeDs = depositsBridgeDs.
 			Where(goqu.L("bd.publickey = ANY(?)", byteaArray))
 		depositRequestsDs = depositRequestsDs.
 			Where(goqu.L("bdr.pubkey = ANY(?)", byteaArray))
 	} else {
-		depositsDs = depositsDs.
+		depositsBridgeDs = depositsBridgeDs.
 			SelectAppend(
 				goqu.I("cbdl.group_id"),
 			).
@@ -318,8 +318,19 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
 	}
 
-	depositsDs = depositsDs.
-		UnionAll(depositRequestsDs)
+	depositsDs := depositsBridgeDs
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		depositsDs = depositsDs.
+			UnionAll(depositRequestsDs)
+		if currentCursor.IsValid() {
+			postElectra := uint64(currentCursor.Slot)/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			if postElectra && currentCursor.Reverse {
+				depositsDs = depositRequestsDs
+			} else if !postElectra && !currentCursor.Reverse {
+				depositsDs = depositsBridgeDs
+			}
+		}
+	}
 
 	defaultColumns := []t.SortColumn{
 		{Column: goqu.I("block_slot"), Desc: true, Offset: currentCursor.Slot},
@@ -492,9 +503,11 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 			GroupBy(goqu.I("dashboard_id"))
 	}
 
-	depositsTotalDs = goqu.Dialect("postgres").
-		Select(goqu.L("COALESCE(SUM(amount), 0)")).
-		From(depositsTotalDs.UnionAll(depositRequestsTotalDs))
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		depositsTotalDs = goqu.Dialect("postgres").
+			Select(goqu.L("COALESCE(SUM(amount), 0)")).
+			From(depositsTotalDs.UnionAll(depositRequestsTotalDs))
+	}
 
 	query, params, err := depositsTotalDs.Prepared(true).ToSQL()
 	if err != nil {
