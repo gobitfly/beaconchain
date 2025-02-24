@@ -95,6 +95,9 @@ func NewStatusReport(id constants.Event, timeout time.Duration, check_interval t
 				"metadata":        metadata,
 			}, "sending status report")
 			var err error
+			if utils.Config.DeploymentType == "test" {
+				return
+			}
 			if db.ClickHouseNativeWriter != nil {
 				err = db.ClickHouseNativeWriter.AsyncInsert(
 					ctx,
