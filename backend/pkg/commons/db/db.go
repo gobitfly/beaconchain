@@ -83,7 +83,7 @@ func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string
 	// ideally this runs regularly but idk would have to throw into the monitoring process prob? makes the most sense there, tho that isnt exactly connected to prometheus
 	ver, err := getGooseVersion(dbConn, databaseBrand)
 	if err != nil {
-		log.Fatal(fmt.Errorf("unable to get migration version of %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
+		log.Warn(fmt.Errorf("unable to get migration version of %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
 	}
 	metrics.DatabaseVersion.WithLabelValues(databaseBrand, databaseName, fmt.Sprint(ver)).Set(1)
 
