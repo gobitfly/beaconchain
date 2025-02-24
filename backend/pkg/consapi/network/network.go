@@ -78,7 +78,7 @@ func HTTPReq(method string, requestURL string, httpClient *http.Client) (*http.R
 	}
 
 	if httpClient == nil {
-		return nil, errors.New("httpClient is nil")
+		httpClient = &http.Client{Timeout: 20 * time.Second}
 	}
 
 	r.Header.Add("Content-Type", "application/json")
