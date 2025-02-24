@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
@@ -84,6 +85,10 @@ func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSumm
 		}
 	default:
 		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
+	}
+	if efficiency > 100 {
+		log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
+		efficiency = 100
 	}
 	return efficiency, nil
 }

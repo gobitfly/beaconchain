@@ -505,6 +505,7 @@ func setCLConfig(cfg *types.Config) error {
 			MaxValidatorsPerWithdrawalSweep:         uint64(jr.Data.MaxValidatorsPerWithdrawalsSweep),
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
 			MaxEffectiveBalanceElectra:              uint64(jr.Data.MaxEffectiveBalanceElectra),
+			MinPerEpochChurnLimitElectra:            uint64(jr.Data.MinPerEpochChurnLimitElectra),
 		}
 
 		cfg.Chain.ClConfig = chainCfg
