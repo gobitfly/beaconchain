@@ -102,6 +102,7 @@ type RocketpoolExporter struct {
 	RocketpoolRewardTreesDownloadQueue []RocketpoolRewardTreeDownloadable
 	RocketpoolRewardTreeData           map[uint64]RewardsFile
 	OnchainConfig                      *RocketPoolOnchainConfig
+	RPConfig                           *smartnodeCfg.SmartnodeConfig
 }
 
 type RocketPoolOnchainConfig struct {
@@ -129,6 +130,7 @@ func createRocketPoolExporter(eth1Client *ethclient.Client, storageContractAddre
 		OnchainConfig: &RocketPoolOnchainConfig{
 			SmoothingPoolAddress: common.HexToAddress(storageContractAddressHex),
 		},
+		RPConfig: RP_CONFIG,
 	}, nil
 }
 
@@ -279,7 +281,7 @@ func (rp *RocketpoolExporter) SaveConfigs() error {
 		log.DebugWithFields(log.Fields{"duration": time.Since(timeStart)}, "saved rocketpool-configs")
 	}(timeStart)
 
-	storageAddress, err := hex.DecodeString(strings.Trim(RP_CONFIG.GetStorageAddress(), "0x"))
+	storageAddress, err := hex.DecodeString(strings.Trim(rp.RPConfig.GetStorageAddress(), "0x"))
 	if err != nil {
 		return errors.Wrap(err, "error decoding storage address")
 	}
