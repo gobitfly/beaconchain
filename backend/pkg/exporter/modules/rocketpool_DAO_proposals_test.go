@@ -65,11 +65,8 @@ func TestSaveDAOProposals(t *testing.T) {
 			valueStringsTpl := createValueStringsTemplate(nArgs)
 			valueStrings, valueArgs := rp.prepareDAOProposalBatch(tt.daoTProposal, valueStringsTpl, nArgs)
 
-			saveDAOProposalsQuery := fmt.Sprintf(saveDAOProposals, strings.Join(valueStrings, ","))
-			var driverArgs = make([]driver.Value, len(valueArgs))
-			for i, v := range valueArgs {
-				driverArgs[i] = driver.Value(v)
-			}
+			saveDAOProposalsQuery := fmt.Sprintf(saveDAOProposalsQ, strings.Join(valueStrings, ","))
+			args := parseArgs(valueArgs)
 
 			// mock SaveRocketPoolDAOProposals query
 			if tt.mockSaveError != nil {
@@ -78,7 +75,7 @@ func TestSaveDAOProposals(t *testing.T) {
 				mock.ExpectRollback()
 			} else {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(saveDAOProposalsQuery)).WithArgs(driverArgs...).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(saveDAOProposalsQuery)).WithArgs(args...).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 			}
 
@@ -97,6 +94,94 @@ func TestSaveDAOProposals(t *testing.T) {
 
 		})
 	}
+}
+
+func TestSaveDAOProposalsMemberVotes(t *testing.T) {
+	tests := []struct {
+		name               string
+		daoTProposalsVotes []RocketpoolDAOProposalMemberVotes
+		mockSaveError      error
+		expectedError      bool
+	}{
+		{
+			name:               "successful save",
+			daoTProposalsVotes: daoProposal.MemberVotes,
+			expectedError:      false,
+		},
+		{
+			name:               "SaveRocketPoolDAOProposalVotes error",
+			daoTProposalsVotes: daoProposal.MemberVotes,
+			mockSaveError:      errors.New("error"),
+			expectedError:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dbMock, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to create sqlmock: %v", err)
+			}
+			defer dbMock.Close()
+
+			sqlxDB := sqlx.NewDb(dbMock, "sqlmock")
+			db.WriterDb = sqlxDB
+
+			rp := &RocketpoolExporter{
+				API: &rocketpool.RocketPool{
+					RocketStorageContract: &rocketpool.Contract{
+						Address: func() *common.Address {
+							addr := common.HexToAddress("0x001")
+							return &addr
+						}(),
+					},
+				},
+				DAOProposalsByID: map[uint64]*RocketpoolDAOProposal{
+					1: &daoProposal,
+				},
+			}
+
+			nArgs := 5
+			valueStringsTpl := createValueStringsTemplate(nArgs)
+			valueStrings, valueArgs := rp.prepareDAOProposalMemberVotesBatch(tt.daoTProposalsVotes, valueStringsTpl, nArgs)
+
+			saveDAOProposalsVotesQuery := fmt.Sprintf(saveDAOProposalsVotesQ, strings.Join(valueStrings, ","))
+			args := parseArgs(valueArgs)
+
+			// mock SaveRocketPoolDAOProposalVotes query
+			if tt.mockSaveError != nil {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(saveDAOProposalsVotesQuery)).WillReturnError(tt.mockSaveError)
+				mock.ExpectRollback()
+			} else {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(saveDAOProposalsVotesQuery)).WithArgs(args...).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			}
+
+			err = rp.SaveDAOProposalsMemberVotes()
+
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected error got nil")
+				}
+			}
+
+		})
+	}
+}
+
+func parseArgs(valueArgs []interface{}) []driver.Value {
+	var driverArgs = make([]driver.Value, len(valueArgs))
+	for i, v := range valueArgs {
+		driverArgs[i] = driver.Value(v)
+	}
+	return driverArgs
 }
 
 var daoProposals = []*RocketpoolDAOProposal{&daoProposal}
@@ -129,7 +214,7 @@ var daoProposal = RocketpoolDAOProposal{
 }
 
 var (
-	saveDAOProposals = `INSERT INTO rocketpool_dao_proposals (
+	saveDAOProposalsQ = `INSERT INTO rocketpool_dao_proposals (
 				rocketpool_storage_address, 
 				id, 
 				dao, 
@@ -167,5 +252,18 @@ var (
 				is_executed = excluded.is_executed, 
 				payload = excluded.payload, 
 				state = excluded.state
+			`
+	saveDAOProposalsVotesQ = `
+			INSERT INTO rocketpool_dao_proposals_member_votes (
+				rocketpool_storage_address, 
+				id, 
+				member_address, 
+				voted, 
+				supported
+			)
+			VALUES %s 
+			ON CONFLICT (rocketpool_storage_address, id, member_address) DO UPDATE SET
+				voted = excluded.voted,
+				supported = excluded.supported
 			`
 )
