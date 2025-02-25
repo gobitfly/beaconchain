@@ -95,7 +95,7 @@ func (rp *RocketpoolExporter) downloadAndValidateRewardTrees(missingIntervals []
 			continue
 		}
 
-		bytes, err := DownloadRewardsFile(fmt.Sprintf("rp-rewards-%v-%v.json", utils.Config.Chain.Name, missingInterval.Index), missingInterval.Index.Uint64(), missingInterval.MerkleTreeCID, true)
+		bytes, err := DownloadRewardsFile(fmt.Sprintf("rp-rewards-%v-%v.json", utils.Config.Chain.Name, missingInterval.Index), missingInterval.Index.Uint64(), missingInterval.MerkleTreeCID, true, nil)
 		if err != nil {
 			return fmt.Errorf("can not download reward file %v: %w", missingInterval.Index, err)
 		}
@@ -182,7 +182,7 @@ type RewardsFile struct {
 	MinipoolPerformanceFile    MinipoolPerformanceFile             `json:"-"`
 }
 
-func DownloadRewardsFile(fileName string, interval uint64, cid string, isDaemon bool) ([]byte, error) {
+func DownloadRewardsFile(fileName string, interval uint64, cid string, isDaemon bool, client *http.Client) ([]byte, error) {
 	ipfsFilename := fileName + ".zst"
 
 	split := strings.Split(fileName, "-")
@@ -191,8 +191,10 @@ func DownloadRewardsFile(fileName string, interval uint64, cid string, isDaemon 
 		network = split[2]
 	}
 
-	client := &http.Client{
-		Timeout: 40 * time.Second,
+	if client == nil {
+		client = &http.Client{
+			Timeout: 40 * time.Second,
+		}
 	}
 
 	// Create URL list
@@ -296,13 +298,13 @@ func (rp *RocketpoolExporter) getRocketpoolRewardTrees() (map[uint64]RewardsFile
 
 	jsonData, err := db.GetRocketPoolRewardTrees()
 	if err != nil {
-		return nil, fmt.Errorf("can not load claimedInterval tree from database, is it exported? %v", err)
+		return nil, fmt.Errorf("error while getting claimedInterval tree from database, is it exported? %v", err)
 	}
 
 	for _, data := range jsonData {
 		allRewards[data.ID], err = getRewardsData(data.Data)
 		if err != nil {
-			return nil, fmt.Errorf("can parsing reward tree data to struct for interval %v, error: %w", data.ID, err)
+			return nil, fmt.Errorf("error while parsing reward tree data to struct for interval %v, error: %w", data.ID, err)
 		}
 	}
 
