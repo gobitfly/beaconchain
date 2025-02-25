@@ -122,13 +122,12 @@ const formattedAmount = computed(() => {
 })
 
 const format = (value: string, optionsOverride?: Parameters<typeof formatAmount>[1]) => {
-  // avoid values like `0.000000 ETH` by showing values in Gwei
   const getTargetUnit = () => {
     const fractionDigits = fractionDigitsDefault.crypto.base
     if (isFiat(optionsOverride?.targetCurrency ?? targetCurrency.value)) return 'base'
     if (props.targetUnitCrypto !== 'auto') return 'base'
     if (amount.value === '0') return 'base'
-    if (Number(formattedAmount.value) > (10 ** -fractionDigits)) return 'base'
+    if (Math.abs(Number(formattedAmount.value)) > (10 ** -fractionDigits)) return 'base'
     return 'gwei'
   }
   return formatAmount(value, {
