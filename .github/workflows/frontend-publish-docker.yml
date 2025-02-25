@@ -10,6 +10,11 @@ on:
     branches:
       - main
       - staging
+      - deploy-v2-staging-holesky-dev
+      - deploy-v2-staging-gnosis-dev
+      - deploy-v2-pectra-devnet-5
+      - deploy-v2-pectra-devnet-6
+      - deploy-v2-staging-holesky
 
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
