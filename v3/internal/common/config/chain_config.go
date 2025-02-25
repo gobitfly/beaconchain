@@ -30,14 +30,14 @@ func LoadChainConfig(chain ChainName) {
 	// Read the default config file
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatal("Error reading config file, %s", err)
+		log.Fatalf("Error reading config file, %s", err)
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
 	viper.SetConfigName(string(chain))
 	err = viper.MergeInConfig()
 	if err != nil {
-		log.Fatal("Error reading config file, %s", err)
+		log.Fatalf("Error reading config file, %s", err)
 	}
 
 	// Optionally read from environment variables (e.g., override with ENV vars)

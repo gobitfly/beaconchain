@@ -11,7 +11,7 @@ generate-proto:
 	buf generate
 build-service:
 	mkdir -p bin
-	go build -o ./beaconchain-api-service ./cmd/main.go
+	go build -o bin/beaconchain-api-service ./cmd/main.go
 clean:
 	rm -rf bin
 lint:

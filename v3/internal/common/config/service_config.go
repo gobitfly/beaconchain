@@ -39,14 +39,16 @@ type DatabaseConfig struct {
 }
 
 type ServiceConfig struct {
-	HttpPort         string         `yaml:"httpPort"`
-	GrpcPort         string         `yaml:"grpcPort"`
-	ReaderDatabase   DatabaseConfig `yaml:"readerDatabase"`
-	WriterDatabase   DatabaseConfig `yaml:"writerDatabase"`
-	ReaderClickhouse DatabaseConfig `yaml:"readerClickhouse"`
-	WriterClickhouse DatabaseConfig `yaml:"writerClickhouse"`
-	Bigtable         Bigtable       `yaml:"bigtable"`
-	RawBigtable      Bigtable       `yaml:"rawBigtable"`
+	HttpPort            string         `yaml:"httpPort"`
+	GrpcPort            string         `yaml:"grpcPort"`
+	ReaderChainDatabase DatabaseConfig `yaml:"readerChainDatabase"`
+	WriterChainDatabase DatabaseConfig `yaml:"writerChainDatabase"`
+	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`
+	WriterAdminDatabase DatabaseConfig `yaml:"writerAdminDatabase"`
+	ReaderClickhouse    DatabaseConfig `yaml:"readerClickhouse"`
+	WriterClickhouse    DatabaseConfig `yaml:"writerClickhouse"`
+	Bigtable            Bigtable       `yaml:"bigtable"`
+	RawBigtable         Bigtable       `yaml:"rawBigtable"`
 }
 
 // Two kinds of configs:
@@ -63,14 +65,14 @@ func LoadServiceConfig(env Environment) *ServiceConfig {
 	// Read the default config file
 	err := viper.ReadInConfig()
 	if err != nil {
-		log.Fatal("Error reading config file, %s", err)
+		log.Fatalf("Error reading config file, %s", err)
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
 	viper.SetConfigName(string(env))
 	err = viper.MergeInConfig()
 	if err != nil {
-		log.Fatal("Error reading %s config: %v", env, err)
+		log.Fatalf("Error reading %s config: %v", env, err)
 	}
 
 	// Optionally read from environment variables (e.g., override with ENV vars)

@@ -3,15 +3,31 @@
 httpPort: 8080
 grpcPort: 9090
 
-# PSQL
-readerDatabase:
+# Network (i.e. Chain) Database Connection
+readerChainDatabase:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
   port: "REPLACE_WITH_ENV"
   password: "REPLACE_WITH_ENV"
   useSSL: "REPLACE_WITH_ENV"
-writerDatabase:
+writerChainDatabase:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+
+# Admin (i.e. User) Database Connection
+readerAdminDatabase:
+  username: "REPLACE_WITH_ENV"
+  dbName: "REPLACE_WITH_ENV"
+  host: "REPLACE_WITH_ENV"
+  port: "REPLACE_WITH_ENV"
+  password: "REPLACE_WITH_ENV"
+  useSSL: "REPLACE_WITH_ENV"
+writerAdminDatabase:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
