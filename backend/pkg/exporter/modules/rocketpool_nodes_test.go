@@ -16,61 +16,7 @@ import (
 	"github.com/rocket-pool/rocketpool-go/rocketpool"
 )
 
-func TestPrepareNodeData(t *testing.T) {
-	tests := []struct {
-		name     string
-		nodes    map[string]*RocketpoolNode
-		expected []*RocketpoolNode
-	}{
-		{
-			name:     "no nodes",
-			nodes:    map[string]*RocketpoolNode{},
-			expected: []*RocketpoolNode{},
-		},
-		{
-			name: "single node",
-			nodes: map[string]*RocketpoolNode{
-				"0x1": {Address: []byte("0x001")},
-			},
-			expected: []*RocketpoolNode{
-				{Address: []byte("0x001")},
-			},
-		},
-		{
-			name: "multiple nodes",
-			nodes: map[string]*RocketpoolNode{
-				"0x1": {Address: []byte("0x001")},
-				"0x2": {Address: []byte("0x002")},
-			},
-			expected: []*RocketpoolNode{
-				{Address: []byte("0x001")},
-				{Address: []byte("0x002")},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rp := &RocketpoolExporter{
-				NodesByAddress: tt.nodes,
-			}
-
-			result := rp.prepareNodeData()
-
-			if len(result) != len(tt.expected) {
-				t.Errorf("Expected %d nodes, got %d", len(tt.expected), len(result))
-			}
-
-			for i, node := range result {
-				if string(node.Address) != string(tt.expected[i].Address) {
-					t.Errorf("Expected address %s, got %s", tt.expected[i].Address, node.Address)
-				}
-			}
-		})
-	}
-}
-
-func TestSaveNodeData(t *testing.T) {
+func TestSaveNodes(t *testing.T) {
 	tests := []struct {
 		name          string
 		data          []*RocketpoolNode
@@ -78,23 +24,8 @@ func TestSaveNodeData(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name: "single node",
-			data: []*RocketpoolNode{
-				{
-					Address:                []byte("0x001"),
-					TimezoneLocation:       "UTC",
-					RPLStake:               big.NewInt(100),
-					MinRPLStake:            big.NewInt(10),
-					MaxRPLStake:            big.NewInt(1000),
-					RPLCumulativeRewards:   big.NewInt(1000),
-					SmoothingPoolOptedIn:   true,
-					ClaimedSmoothingPool:   big.NewInt(100),
-					UnclaimedSmoothingPool: big.NewInt(1000),
-					UnclaimedRPLRewards:    big.NewInt(1000),
-					EffectiveRPLStake:      big.NewInt(1000),
-					DepositCredit:          big.NewInt(1000),
-				},
-			},
+			name:          "single node",
+			data:          []*RocketpoolNode{&nodeData},
 			expectedError: false,
 		},
 		{
@@ -126,15 +57,68 @@ func TestSaveNodeData(t *testing.T) {
 						}(),
 					},
 				},
+				NodesByAddress: map[string]*RocketpoolNode{
+					"0x001": &nodeData,
+				},
 			}
 
 			nArgs := 13
 			valueStringsTpl := createValueStringsTemplate(nArgs)
 			valueStrings, valueArgs := rp.prepareNodeBatch(tt.data, valueStringsTpl, nArgs)
 
+			query := fmt.Sprintf(saveNodesQ, strings.Join(valueStrings, ","))
+
+			var driverArgs = make([]driver.Value, len(valueArgs))
+			for i, v := range valueArgs {
+				driverArgs[i] = driver.Value(v)
+			}
+
 			// mock SaveRocketPoolNodes query
-			query := fmt.Sprintf(`
-			INSERT INTO rocketpool_nodes (
+			if tt.mockError != nil {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
+				mock.ExpectRollback()
+			} else {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			}
+
+			err = rp.SaveNodes()
+
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected error got nil")
+				}
+			}
+
+		})
+	}
+
+}
+
+var nodeData = RocketpoolNode{
+	Address:                []byte("0x001"),
+	TimezoneLocation:       "UTC",
+	RPLStake:               big.NewInt(100),
+	MinRPLStake:            big.NewInt(10),
+	MaxRPLStake:            big.NewInt(1000),
+	RPLCumulativeRewards:   big.NewInt(1000),
+	SmoothingPoolOptedIn:   true,
+	ClaimedSmoothingPool:   big.NewInt(100),
+	UnclaimedSmoothingPool: big.NewInt(1000),
+	UnclaimedRPLRewards:    big.NewInt(1000),
+	EffectiveRPLStake:      big.NewInt(1000),
+	DepositCredit:          big.NewInt(1000),
+}
+
+var (
+	saveNodesQ = `INSERT INTO rocketpool_nodes (
 				rocketpool_storage_address,
 				address,
 				timezone_location,
@@ -162,36 +146,5 @@ func TestSaveNodeData(t *testing.T) {
 				effective_rpl_stake = excluded.effective_rpl_stake,
 				timezone_location = excluded.timezone_location,
 				deposit_credit = excluded.deposit_credit
-		`, strings.Join(valueStrings, ","))
-
-			var driverArgs = make([]driver.Value, len(valueArgs))
-			for i, v := range valueArgs {
-				driverArgs[i] = driver.Value(v)
-			}
-
-			if tt.mockError != nil {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnError(tt.mockError)
-				mock.ExpectRollback()
-			} else {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
-			}
-
-			err = rp.saveNodeData(tt.data)
-
-			if !tt.expectedError {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-			}
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected error got nil")
-				}
-			}
-
-		})
-	}
-}
+		`
+)
