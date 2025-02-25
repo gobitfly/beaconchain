@@ -27,67 +27,19 @@ func TestSaveMinipools(t *testing.T) {
 	}{
 
 		{
-			name: "single minipool",
-			minipools: map[string]*RocketpoolMinipool{
-				"0x1": {
-					Address:            []byte("0x1"),
-					Pubkey:             []byte("0xabc"),
-					Status:             "active",
-					StatusTime:         time.Now(),
-					NodeAddress:        []byte("0x001"),
-					NodeFee:            0.1,
-					DepositType:        "full",
-					PenaltyCount:       0,
-					NodeDepositBalance: big.NewInt(100),
-					NodeRefundBalance:  big.NewInt(0),
-					UserDepositBalance: big.NewInt(100),
-					IsVacant:           false,
-					Version:            1,
-				},
-			},
+			name:          "single minipool",
+			minipools:     rpminipools,
 			expectedError: false,
 		},
 		{
-			name: "SaveRocketPoolMiniPools error",
-			minipools: map[string]*RocketpoolMinipool{
-				"0x1": {
-					Address:            []byte("0x1"),
-					Pubkey:             []byte("0xabc"),
-					Status:             "active",
-					StatusTime:         time.Now(),
-					NodeAddress:        []byte("0x001"),
-					NodeFee:            0.1,
-					DepositType:        "full",
-					PenaltyCount:       0,
-					NodeDepositBalance: big.NewInt(100),
-					NodeRefundBalance:  big.NewInt(0),
-					UserDepositBalance: big.NewInt(100),
-					IsVacant:           false,
-					Version:            1,
-				},
-			},
+			name:          "SaveRocketPoolMiniPools error",
+			minipools:     rpminipools,
 			mockSaveError: errors.New("error"),
 			expectedError: true,
 		},
 		{
-			name: "UpdateRocketPoolMiniPools error",
-			minipools: map[string]*RocketpoolMinipool{
-				"0x1": {
-					Address:            []byte("0x1"),
-					Pubkey:             []byte("0xabc"),
-					Status:             "active",
-					StatusTime:         time.Now(),
-					NodeAddress:        []byte("0x001"),
-					NodeFee:            0.1,
-					DepositType:        "full",
-					PenaltyCount:       0,
-					NodeDepositBalance: big.NewInt(100),
-					NodeRefundBalance:  big.NewInt(0),
-					UserDepositBalance: big.NewInt(100),
-					IsVacant:           false,
-					Version:            1,
-				},
-			},
+			name:            "UpdateRocketPoolMiniPools error",
+			minipools:       rpminipools,
 			mockUpdateError: errors.New("error"),
 			expectedError:   true,
 		},
@@ -124,9 +76,72 @@ func TestSaveMinipools(t *testing.T) {
 			}
 			valueStrings, valueArgs := rp.prepareMinipoolBatch(minipoolSlice, valueStringsTpl, nArgs)
 
+			query := fmt.Sprintf(saveMinipoolsQ,
+				strings.Join(valueStrings, ","))
+
+			var driverArgs = make([]driver.Value, len(valueArgs))
+			for i, v := range valueArgs {
+				driverArgs[i] = driver.Value(v)
+			}
+
 			// mock SaveRocketPoolMiniPools query
-			query := fmt.Sprintf(`
-			INSERT INTO rocketpool_minipools (
+			if tt.mockSaveError != nil {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnError(tt.mockSaveError)
+				mock.ExpectRollback()
+			} else {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			}
+
+			// mock UpdateRocketPoolMiniPools query
+			if tt.mockUpdateError != nil {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(updateMinipoolsQ)).WillReturnError(tt.mockUpdateError)
+				mock.ExpectRollback()
+			} else {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(updateMinipoolsQ)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			}
+
+			err = rp.SaveMinipools()
+
+			if !tt.expectedError {
+				if err != nil {
+					t.Errorf("unexpected error: %v", err)
+				}
+			}
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected error got nil")
+				}
+			}
+		})
+	}
+}
+
+var rpminipools = map[string]*RocketpoolMinipool{
+	"0x1": {
+		Address:            []byte("0x1"),
+		Pubkey:             []byte("0xabc"),
+		Status:             "active",
+		StatusTime:         time.Now(),
+		NodeAddress:        []byte("0x001"),
+		NodeFee:            0.1,
+		DepositType:        "full",
+		PenaltyCount:       0,
+		NodeDepositBalance: big.NewInt(100),
+		NodeRefundBalance:  big.NewInt(0),
+		UserDepositBalance: big.NewInt(100),
+		IsVacant:           false,
+		Version:            1,
+	},
+}
+
+var (
+	saveMinipoolsQ = `INSERT INTO rocketpool_minipools (
 				rocketpool_storage_address, 
 				address, 
 				pubkey, 
@@ -155,53 +170,10 @@ func TestSaveMinipools(t *testing.T) {
 				node_refund_balance = excluded.node_refund_balance,
 				user_deposit_balance = excluded.user_deposit_balance,
 				is_vacant = excluded.is_vacant,
-				version = excluded.version`,
-				strings.Join(valueStrings, ","))
+				version = excluded.version`
 
-			var driverArgs = make([]driver.Value, len(valueArgs))
-			for i, v := range valueArgs {
-				driverArgs[i] = driver.Value(v)
-			}
-
-			if tt.mockSaveError != nil {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnError(tt.mockSaveError)
-				mock.ExpectRollback()
-			} else {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query)).WithArgs(driverArgs...).WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
-			}
-
-			// mock UpdateRocketPoolMiniPools query
-			updateQuery := `
-		UPDATE rocketpool_minipools
-		SET validator_index = validators.validatorindex
-		FROM validators
-		WHERE rocketpool_minipools.pubkey = validators.pubkey
-	`
-			if tt.mockUpdateError != nil {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(updateQuery)).WillReturnError(tt.mockUpdateError)
-				mock.ExpectRollback()
-			} else {
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(updateQuery)).WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
-			}
-
-			err = rp.SaveMinipools()
-
-			if !tt.expectedError {
-				if err != nil {
-					t.Errorf("unexpected error: %v", err)
-				}
-			}
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected error got nil")
-				}
-			}
-		})
-	}
-}
+	updateMinipoolsQ = `UPDATE rocketpool_minipools
+	SET validator_index = validators.validatorindex
+	FROM validators
+	WHERE rocketpool_minipools.pubkey = validators.pubkey`
+)
