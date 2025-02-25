@@ -240,39 +240,42 @@ func TestSaveRewardTrees(t *testing.T) {
 				RocketpoolRewardTreesDownloadQueue: tt.downloadQueue,
 			}
 
+			// mock SaveRocketPoolRewardTree query
 			for _, rewardTree := range tt.downloadQueue {
 				if tt.mockSaveError != nil {
 					mock.ExpectBegin()
-					mock.ExpectExec(regexp.QuoteMeta(saveQuery)).
+					mock.ExpectExec(regexp.QuoteMeta(saveRewardTreeQ)).
 						WithArgs(rewardTree.ID, rewardTree.Data).
 						WillReturnError(tt.mockSaveError)
 					mock.ExpectRollback()
 				} else {
 					mock.ExpectBegin()
-					mock.ExpectExec(regexp.QuoteMeta(saveQuery)).
+					mock.ExpectExec(regexp.QuoteMeta(saveRewardTreeQ)).
 						WithArgs(rewardTree.ID, rewardTree.Data).
 						WillReturnResult(sqlmock.NewResult(1, 1))
 					mock.ExpectCommit()
 				}
 			}
 
+			// mock CheckRocketPoolMVExists & RefreshRocketPoolMV query
 			if tt.mockRefreshError != nil {
-				mock.ExpectQuery(regexp.QuoteMeta(checkIfExistsQuery)).
+				mock.ExpectQuery(regexp.QuoteMeta(checkIfExistsQ)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
-				mock.ExpectExec(regexp.QuoteMeta(refreshQuery)).
+				mock.ExpectExec(regexp.QuoteMeta(refreshQ)).
 					WillReturnError(tt.mockRefreshError)
 			} else {
-				mock.ExpectQuery(regexp.QuoteMeta(checkIfExistsQuery)).
+				mock.ExpectQuery(regexp.QuoteMeta(checkIfExistsQ)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
-				mock.ExpectExec(regexp.QuoteMeta(refreshQuery)).
+				mock.ExpectExec(regexp.QuoteMeta(refreshQ)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 			}
 
+			// mock GetRocketPoolRewardTrees query
 			if tt.mockGetTreesError != nil {
-				mock.ExpectQuery(regexp.QuoteMeta(getTreesQuery)).
+				mock.ExpectQuery(regexp.QuoteMeta(getTreesQ)).
 					WillReturnError(tt.mockGetTreesError)
 			} else {
-				mock.ExpectQuery(regexp.QuoteMeta(getTreesQuery)).
+				mock.ExpectQuery(regexp.QuoteMeta(getTreesQ)).
 					WillReturnRows(sqlmock.NewRows([]string{"id", "data"}))
 			}
 
@@ -294,18 +297,12 @@ func TestSaveRewardTrees(t *testing.T) {
 }
 
 var (
-	// mock SaveRocketPoolRewardTree query
-	saveQuery = `INSERT INTO rocketpool_reward_tree (id, data) 
-	VALUES($1, $2) 
+	saveRewardTreeQ = `INSERT INTO rocketpool_reward_tree (id, data) VALUES($1, $2) 
 	ON CONFLICT DO NOTHING`
 
-	// mock CheckRocketPoolMVExists query
-	checkIfExistsQuery = `SELECT EXISTS ( SELECT 1 FROM pg_catalog.pg_matviews 
+	checkIfExistsQ = `SELECT EXISTS ( SELECT 1 FROM pg_catalog.pg_matviews 
 	WHERE matviewname = 'rocketpool_rewards_summary')`
 
-	// mock RefreshRocketPoolMV query
-	refreshQuery = `REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`
-
-	// mock GetRocketPoolRewardTrees query
-	getTreesQuery = `SELECT id, data FROM rocketpool_reward_tree`
+	refreshQ  = `REFRESH MATERIALIZED VIEW CONCURRENTLY rocketpool_rewards_summary`
+	getTreesQ = `SELECT id, data FROM rocketpool_reward_tree`
 )
