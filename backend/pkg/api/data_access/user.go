@@ -388,8 +388,8 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 		// could also scan into array
 		dashboardValidators := []struct {
-			Id             uint64 `db:"dashboard_id"`
-			ValidatorIndex uint64 `db:"validator_index"`
+			Id             uint64        `db:"dashboard_id"`
+			ValidatorIndex sql.NullInt64 `db:"validator_index"`
 		}{}
 		err = d.alloyReader.SelectContext(ctx, &dashboardValidators, validatorsQuery, args...)
 		if err != nil {
@@ -398,8 +398,13 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 		dashboardValidatorsMap := make(map[uint64][]t.VDBValidator, 0)
 		validators := make([]t.VDBValidator, 0, len(dashboardValidators))
 		for _, row := range dashboardValidators {
-			dashboardValidatorsMap[row.Id] = append(dashboardValidatorsMap[row.Id], row.ValidatorIndex)
-			validators = append(validators, row.ValidatorIndex)
+			if _, ok := dashboardValidatorsMap[row.Id]; !ok {
+				dashboardValidatorsMap[row.Id] = make([]t.VDBValidator, 0)
+			}
+			if row.ValidatorIndex.Valid {
+				dashboardValidatorsMap[row.Id] = append(dashboardValidatorsMap[row.Id], uint64(row.ValidatorIndex.Int64))
+				validators = append(validators, uint64(row.ValidatorIndex.Int64))
+			}
 		}
 		validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
 		if err != nil {

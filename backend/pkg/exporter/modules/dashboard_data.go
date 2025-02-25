@@ -881,7 +881,7 @@ func (d *dashboardData) fetchEpochValidatorStates(epochStart uint64, epochEnd ui
 			slots = append(slots, 0)
 			continue
 		}
-		slots = append(slots, uint64(i)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1)
+		slots = append(slots, i*utils.Config.Chain.ClConfig.SlotsPerEpoch-1)
 	}
 	writeMutex := &sync.Mutex{}
 	d.log.Debugf("fetching states for epochs %d to %d using slots %v", epochStart, epochEnd, slots)

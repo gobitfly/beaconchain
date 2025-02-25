@@ -1415,7 +1415,7 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
 	}
 	return epochs, nil
-}	
+}
 
 func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	var epochs []EpochMetadata
