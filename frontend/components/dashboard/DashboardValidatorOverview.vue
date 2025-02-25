@@ -134,74 +134,94 @@ const aprInfos = TimeFrames.map(timeFrame =>
         has-tooltip
       />
       <template #tooltip>
-        <div>
+        <div class="tooltip">
           <section>
-            <span>{{ $t('statistics.last_24h') }}: </span>
-            <span>
+            <h3 class="tooltip-title">
+              {{ $t('statistics.last_24h') }}
+            </h3>
+            <div>
               CL: <BcFormatAmount
                 :value="overview?.rewards.last_24h.cl ?? '0'"
                 target-currency="clDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
-            <span>
+            </div>
+            <div>
               EL: <BcFormatAmount
                 :value="overview?.rewards.last_24h.el ?? '0'"
                 source-currency="elCurrency"
+                target-currency="elDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
+            </div>
           </section>
           <section>
-            <span>{{ $t('statistics.last_7d') }}: </span>
-            <span>
+            <h3 class="tooltip-title">
+              {{ $t('statistics.last_7d') }}
+            </h3>
+            <div>
               CL: <BcFormatAmount
                 :value="overview?.rewards.last_7d.cl ?? '0'"
                 target-currency="clDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
-            <span>
+            </div>
+            <div>
               EL: <BcFormatAmount
                 :value="overview?.rewards.last_7d.el ?? '0'"
                 source-currency="elCurrency"
+                target-currency="elDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
+            </div>
           </section>
           <section>
-            <span>{{ $t('statistics.last_30d') }}: </span>
-            <span>
+            <h3 class="tooltip-title">
+              {{ $t('statistics.last_30d') }}
+            </h3>
+            <div>
               CL: <BcFormatAmount
                 :value="overview?.rewards.last_30d.cl ?? '0'"
                 target-currency="clDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
-            <span>
+            </div>
+            <div>
               EL: <BcFormatAmount
                 :value="overview?.rewards.last_30d.el ?? '0'"
                 source-currency="elCurrency"
+                target-currency="elDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
+            </div>
           </section>
           <section>
-            <span>{{ $t('statistics.all_time') }}: </span>
-            <span>
+            <h3 class="tooltip-title">
+              {{ $t('statistics.all_time') }}
+            </h3>
+            <div>
               CL: <BcFormatAmount
                 :value="overview?.rewards.all_time.cl ?? '0'"
                 target-currency="clDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
-            <span>
+            </div>
+            <div>
               EL: <BcFormatAmount
                 :value="overview?.rewards.all_time.el ?? '0'"
                 source-currency="elCurrency"
+                target-currency="elDisplayCurrency"
                 has-additional-selected-currency-main
+                has-higher-precision
               />
-            </span>
+            </div>
           </section>
         </div>
       </template>
@@ -233,5 +253,11 @@ const aprInfos = TimeFrames.map(timeFrame =>
 
 .optical-correction {
   transform: translateY(1px);
+}
+.tooltip {
+  min-width: 6.25rem;
+}
+.tooltip-title {
+  text-align: center;
 }
 </style>

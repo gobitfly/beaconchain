@@ -134,7 +134,12 @@ const format = (value: string, optionsOverride?: Parameters<typeof formatAmount>
   return formatAmount(value, {
     hasHigherPrecision: props.hasHigherPrecision,
     hasUnitDisplay: getTargetUnit() !== 'base',
-    maximumFractionDigits: props.maximumFractionDigits,
+    maximumFractionDigits: props.maximumFractionDigits
+      ?? (
+        getTargetUnit() !== 'base'
+          ? fractionDigitsDefault.crypto.base
+          : undefined
+      ),
     minimumFractionDigits: props.minimumFractionDigits,
     signDisplay: signDisplay.value,
     sourceCurrency: sourceCurrency.value,

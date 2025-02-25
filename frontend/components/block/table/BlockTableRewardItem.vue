@@ -11,6 +11,7 @@ defineProps<{
   <BcTooltip
     v-if="status === 'success' && reward"
     class="combine-rewards"
+    tooltip-text-align="left"
     fit-content
   >
     <BcFormatAmount
@@ -27,8 +28,10 @@ defineProps<{
     <span v-else>{{ $t("dashboard.validator.blocks.cl_pending") }}</span>
     <template #tooltip>
       <div>
-        <div class="tt-row">
-          <span>{{ $t("dashboard.validator.blocks.el_rewards") }}: </span>
+        <div class="tooltip-row">
+          <h3 class="tooltip-titel">
+            {{ $t("dashboard.validator.blocks.el_rewards") }}
+          </h3>
           <BcFormatAmount
             :value="reward?.el"
             source-currency="elCurrency"
@@ -37,8 +40,10 @@ defineProps<{
             has-higher-precision
           />
         </div>
-        <div class="tt-row">
-          <span>{{ $t("dashboard.validator.blocks.cl_rewards") }}: </span>
+        <div class="tooltip-row">
+          <h3 class="tooltip-titel">
+            {{ $t("dashboard.validator.blocks.cl_rewards") }}
+          </h3>
           <template
             v-if="reward?.cl && reward.cl != '0'"
           >
@@ -58,11 +63,11 @@ defineProps<{
 </template>
 
 <style lang="scss" scoped>
-.tt-row {
-  display: flex;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  gap: 3px;
+.tooltip-titel {
+  text-align: center;
+}
+.tooltip-row:not(:first-child) {
+  margin-top: var(--padding-small);
 }
 
 .combine-rewards {
