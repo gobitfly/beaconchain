@@ -299,16 +299,14 @@ const openValidatorModal = () => {
             class="space_before"
             :value="data.apr.income.el"
             source-currency="elCurrency"
-          /> (
-          <BcFormatPercent :percent="data.apr.apr.el" />)
+          /> (<BcFormatPercent :percent="data.apr.apr.el" />)
         </div>
         <div class="row">
           <b>{{ $t("common.consensus_layer") }}:</b>
           <BcFormatAmount
             class="space_before"
             :value="data.apr.income.cl"
-          /> (
-          <BcFormatPercent :percent="data.apr.apr.cl" />)
+          /> (<BcFormatPercent :percent="data.apr.apr.cl" />)
         </div>
       </template>
     </BcTooltip>
