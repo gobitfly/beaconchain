@@ -56,6 +56,7 @@ const currencyItems = computed(() => {
             :value="data.attestation_head?.income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -65,6 +66,7 @@ const currencyItems = computed(() => {
             :value="data.attestation_source?.income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -74,6 +76,7 @@ const currencyItems = computed(() => {
             :value="data.attestation_target?.income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -84,6 +87,7 @@ const currencyItems = computed(() => {
             source-currency="elCurrency"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -93,6 +97,7 @@ const currencyItems = computed(() => {
             :value="data.proposal?.cl_attestation_inclusion_income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -102,6 +107,7 @@ const currencyItems = computed(() => {
             :value="data.proposal?.cl_sync_inclusion_income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
@@ -111,6 +117,7 @@ const currencyItems = computed(() => {
             :value="data.proposal?.cl_slashing_inclusion_income"
             target-unit-crypto="auto"
             has-sign-display
+            has-higher-precision
             has-color
           />
         </div>
