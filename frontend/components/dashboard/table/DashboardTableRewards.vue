@@ -264,6 +264,7 @@ const findNextEpochDuties = (epoch: number) => {
                           :value="slotProps.data.reward.el"
                           has-sign-display
                           has-additional-selected-currency-main
+                          has-higher-precision
                           source-currency="elCurrency"
                           target-currency="elDisplayCurrency"
                           target-unit-crypto="auto"
@@ -275,6 +276,7 @@ const findNextEpochDuties = (epoch: number) => {
                           :value="slotProps.data.reward.cl"
                           has-sign-display
                           has-additional-selected-currency-main
+                          has-higher-precision
                           target-currency="clDisplayCurrency"
                           target-unit-crypto="auto"
                         />

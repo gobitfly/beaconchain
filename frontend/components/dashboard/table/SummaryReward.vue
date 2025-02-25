@@ -28,8 +28,10 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
       <FontAwesomeIcon :icon="faInfoCircle" />
       <template #tooltip>
         <div>
-          <div class="tt-row">
-            <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:</span>
+          <div>
+            <h3 class="bold">
+              {{ $t("dashboard.validator.blocks.el_rewards") }}
+            </h3>
             <BcFormatAmount
               :value="reward.el"
               source-currency="elCurrency"
@@ -38,8 +40,10 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
               target-currency="elDisplayCurrency"
             />
           </div>
-          <div class="tt-row">
-            <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:</span>
+          <div>
+            <h3 class="bold">
+              {{ $t("dashboard.validator.blocks.cl_rewards") }}
+            </h3>
             <BcFormatAmount
               :value="reward.cl"
               has-higher-precision
@@ -54,13 +58,6 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
 </template>
 
 <style lang="scss" scoped>
-.tt-row {
-  display: flex;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-  gap: 3px;
-}
-
 .summary-reward {
   display: flex;
   justify-content: space-between;
