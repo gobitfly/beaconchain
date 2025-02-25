@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/lib/pq"
 	rpDAOTrustedNode "github.com/rocket-pool/rocketpool-go/dao/trustednode"
 	"github.com/rocket-pool/rocketpool-go/rocketpool"
 )
@@ -21,30 +20,6 @@ type RocketpoolDAOMember struct {
 	LastProposalTime       time.Time `db:"last_proposal_time"`
 	RPLBondAmount          *big.Int  `db:"rpl_bond_amount"`
 	UnbondedValidatorCount uint64    `db:"unbonded_validator_count"`
-}
-
-func NewRocketpoolDAOMember(rp *rocketpool.RocketPool, addr []byte) (*RocketpoolDAOMember, error) {
-	m := &RocketpoolDAOMember{}
-	m.Address = addr
-	err := m.Update(rp)
-	if err != nil {
-		return m, err
-	}
-	return m, nil
-}
-
-func (r *RocketpoolDAOMember) Update(rp *rocketpool.RocketPool) error {
-	d, err := rpDAOTrustedNode.GetMemberDetails(rp, common.BytesToAddress(r.Address), nil)
-	if err != nil {
-		return err
-	}
-	r.ID = d.ID
-	r.URL = d.Url
-	r.JoinedTime = time.Unix(int64(d.JoinedTime), 0)
-	r.LastProposalTime = time.Unix(int64(d.LastProposalTime), 0)
-	r.RPLBondAmount = d.RPLBondAmount
-	r.UnbondedValidatorCount = d.UnbondedValidatorCount
-	return nil
 }
 
 func (rp *RocketpoolExporter) SaveDAOMembers() error {
@@ -88,7 +63,7 @@ func (rp *RocketpoolExporter) saveDAOMembers(data []*RocketpoolDAOMember) error 
 			return fmt.Errorf("error inserting into rocketpool_dao_members: %w", err)
 		}
 
-		if err := db.DeleteRocketPoolDAOMembers(pq.ByteaArray(addresses)); err != nil {
+		if err := db.DeleteRocketPoolDAOMembers(addresses); err != nil {
 			return fmt.Errorf("error deleting from rocketpool_dao_members: %w", err)
 		}
 	}
@@ -151,5 +126,29 @@ func (rp *RocketpoolExporter) updateDAOMembers(members []rpDAOTrustedNode.Member
 		}
 		rp.DAOMembersByAddress[addrHex] = member
 	}
+	return nil
+}
+
+func NewRocketpoolDAOMember(rp *rocketpool.RocketPool, addr []byte) (*RocketpoolDAOMember, error) {
+	m := &RocketpoolDAOMember{}
+	m.Address = addr
+	err := m.Update(rp)
+	if err != nil {
+		return m, err
+	}
+	return m, nil
+}
+
+func (r *RocketpoolDAOMember) Update(rp *rocketpool.RocketPool) error {
+	d, err := rpDAOTrustedNode.GetMemberDetails(rp, common.BytesToAddress(r.Address), nil)
+	if err != nil {
+		return err
+	}
+	r.ID = d.ID
+	r.URL = d.Url
+	r.JoinedTime = time.Unix(int64(d.JoinedTime), 0)
+	r.LastProposalTime = time.Unix(int64(d.LastProposalTime), 0)
+	r.RPLBondAmount = d.RPLBondAmount
+	r.UnbondedValidatorCount = d.UnbondedValidatorCount
 	return nil
 }

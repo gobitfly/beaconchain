@@ -2814,8 +2814,8 @@ func DeleteRocketPoolDAOMembers(addresses [][]byte) error {
 	defer utils.Rollback(tx)
 
 	_, err = tx.Exec(`
-	DELETE FROM rocketpool_dao_members
-	WHERE NOT address = ANY($1)`, addresses)
+	DELETE FROM rocketpool_dao_members 
+	WHERE NOT address = ANY($1)`, pq.ByteaArray(addresses))
 
 	if err != nil {
 		return err
