@@ -114,10 +114,7 @@ func TestSaveValidatorTags(t *testing.T) {
 			valueStrings, valueArgs := rp.prepareValidatorTagBatch(tt.data)
 
 			// mock SaveValidatorTags query
-			query := fmt.Sprintf(`
-				INSERT INTO validator_tags (publickey, tag)
-				VALUES %s
-				ON CONFLICT (publickey, tag) DO NOTHING`,
+			query := fmt.Sprintf(saveValidatorTagsQ,
 				strings.Join(valueStrings, ","))
 			if tt.mockValTagsError != nil {
 				mock.ExpectBegin()
@@ -130,18 +127,15 @@ func TestSaveValidatorTags(t *testing.T) {
 			}
 
 			// mock SaveValidatorPool query
-			query2 := fmt.Sprintf(`
-				INSERT INTO validator_pool (publickey, pool)
-				VALUES %s
-				ON CONFLICT (publickey) DO NOTHING`,
+			valPoolQuery := fmt.Sprintf(saveValidatorPoolQ,
 				strings.Join(valueStrings, ","))
 			if tt.mockValPoolError != nil {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query2)).WithArgs(valueArgs[0]).WillReturnError(tt.mockValPoolError)
+				mock.ExpectExec(regexp.QuoteMeta(valPoolQuery)).WithArgs(valueArgs[0]).WillReturnError(tt.mockValPoolError)
 				mock.ExpectRollback()
 			} else {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(query2)).WithArgs(valueArgs[0]).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(valPoolQuery)).WithArgs(valueArgs[0]).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 			}
 
@@ -215,3 +209,10 @@ func TestPrepareValidatorTagBatch(t *testing.T) {
 		})
 	}
 }
+
+var (
+	saveValidatorTagsQ = `INSERT INTO validator_tags (publickey, tag) VALUES %s
+				ON CONFLICT (publickey, tag) DO NOTHING`
+	saveValidatorPoolQ = `INSERT INTO validator_pool (publickey, pool) VALUES %s
+				ON CONFLICT (publickey) DO NOTHING`
+)
