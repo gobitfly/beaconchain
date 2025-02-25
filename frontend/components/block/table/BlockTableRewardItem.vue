@@ -29,7 +29,7 @@ defineProps<{
     <template #tooltip>
       <div>
         <div class="tooltip-row">
-          <h3 class="tooltip-titel">
+          <h3 class="tooltip-title">
             {{ $t("dashboard.validator.blocks.el_rewards") }}
           </h3>
           <BcFormatAmount
@@ -41,7 +41,7 @@ defineProps<{
           />
         </div>
         <div class="tooltip-row">
-          <h3 class="tooltip-titel">
+          <h3 class="tooltip-title">
             {{ $t("dashboard.validator.blocks.cl_rewards") }}
           </h3>
           <template
@@ -63,7 +63,7 @@ defineProps<{
 </template>
 
 <style lang="scss" scoped>
-.tooltip-titel {
+.tooltip-title {
   text-align: center;
 }
 .tooltip-row:not(:first-child) {
