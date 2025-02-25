@@ -27,49 +27,19 @@ func TestSaveDAOMembers(t *testing.T) {
 		expectedError   bool
 	}{
 		{
-			name: "successful save and delete",
-			daoTMembers: []*RocketpoolDAOMember{
-				{
-					Address:                []byte("0x001"),
-					ID:                     "1",
-					URL:                    "url",
-					JoinedTime:             time.Unix(1, 0),
-					LastProposalTime:       time.Unix(2, 0),
-					RPLBondAmount:          big.NewInt(1),
-					UnbondedValidatorCount: 1,
-				},
-			},
+			name:          "successful save and delete",
+			daoTMembers:   daoMembers,
 			expectedError: false,
 		},
 		{
-			name: "SaveRocketPoolDAOMembers error",
-			daoTMembers: []*RocketpoolDAOMember{
-				{
-					Address:                []byte("0x001"),
-					ID:                     "1",
-					URL:                    "url",
-					JoinedTime:             time.Unix(1, 0),
-					LastProposalTime:       time.Unix(2, 0),
-					RPLBondAmount:          big.NewInt(1),
-					UnbondedValidatorCount: 1,
-				},
-			},
+			name:          "SaveRocketPoolDAOMembers error",
+			daoTMembers:   daoMembers,
 			mockSaveError: errors.New("error"),
 			expectedError: true,
 		},
 		{
-			name: "DeleteRocketPoolDAOMembers error",
-			daoTMembers: []*RocketpoolDAOMember{
-				{
-					Address:                []byte("0x001"),
-					ID:                     "1",
-					URL:                    "url",
-					JoinedTime:             time.Unix(1, 0),
-					LastProposalTime:       time.Unix(2, 0),
-					RPLBondAmount:          big.NewInt(1),
-					UnbondedValidatorCount: 1,
-				},
-			},
+			name:            "DeleteRocketPoolDAOMembers error",
+			daoTMembers:     daoMembers,
 			mockDeleteError: errors.New("error"),
 			expectedError:   true,
 		},
@@ -96,15 +66,7 @@ func TestSaveDAOMembers(t *testing.T) {
 					},
 				},
 				DAOMembersByAddress: map[string]*RocketpoolDAOMember{
-					"0x001": {
-						Address:                []byte("0x001"),
-						ID:                     "1",
-						URL:                    "url",
-						JoinedTime:             time.Unix(1, 0),
-						LastProposalTime:       time.Unix(2, 0),
-						RPLBondAmount:          big.NewInt(1),
-						UnbondedValidatorCount: 1,
-					},
+					"0x001": &daoMember,
 				},
 			}
 
@@ -112,7 +74,7 @@ func TestSaveDAOMembers(t *testing.T) {
 			valueStringsTpl := createValueStringsTemplate(nArgs)
 			valueStrings, valueArgs, addresses := rp.prepareDAOMemberBatch(tt.daoTMembers, valueStringsTpl, nArgs)
 
-			saveDAOMembersQuery := fmt.Sprintf(saveDAOMemQuery, strings.Join(valueStrings, ","))
+			saveDAOMembersQuery := fmt.Sprintf(saveDAOMembersQ, strings.Join(valueStrings, ","))
 			var driverArgs = make([]driver.Value, len(valueArgs))
 			for i, v := range valueArgs {
 				driverArgs[i] = driver.Value(v)
@@ -132,11 +94,11 @@ func TestSaveDAOMembers(t *testing.T) {
 			// mock DeleteRocketPoolDAOMembers query
 			if tt.mockDeleteError != nil {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(deleteDAOMemQuery)).WillReturnError(tt.mockDeleteError)
+				mock.ExpectExec(regexp.QuoteMeta(deleteDAOMembersQ)).WillReturnError(tt.mockDeleteError)
 				mock.ExpectRollback()
 			} else {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(deleteDAOMemQuery)).WithArgs(pq.Array(addresses)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(deleteDAOMembersQ)).WithArgs(pq.Array(addresses)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
 			}
 
@@ -157,8 +119,19 @@ func TestSaveDAOMembers(t *testing.T) {
 	}
 }
 
+var daoMembers = []*RocketpoolDAOMember{&daoMember}
+var daoMember = RocketpoolDAOMember{
+	Address:                []byte("0x001"),
+	ID:                     "1",
+	URL:                    "url",
+	JoinedTime:             time.Unix(1, 0),
+	LastProposalTime:       time.Unix(2, 0),
+	RPLBondAmount:          big.NewInt(1),
+	UnbondedValidatorCount: 1,
+}
+
 var (
-	saveDAOMemQuery = `
+	saveDAOMembersQ = `
 			INSERT INTO rocketpool_dao_members (
 				rocketpool_storage_address,
 				address,
@@ -178,5 +151,5 @@ var (
 				rpl_bond_amount = excluded.rpl_bond_amount,
 				unbonded_validator_count = excluded.unbonded_validator_count`
 
-	deleteDAOMemQuery = `DELETE FROM rocketpool_dao_members WHERE NOT address = ANY($1)`
+	deleteDAOMembersQ = `DELETE FROM rocketpool_dao_members WHERE NOT address = ANY($1)`
 )
