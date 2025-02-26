@@ -366,7 +366,8 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
 			}
 			if !exported {
-				log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
+				return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
+				// log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
 			} else {
 				log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
 
