@@ -391,6 +391,12 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 					return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
 				}
 				log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
+
+				removedExcessBalanceProcessed, err := db.TransformRemovedExcessBalanceEvents(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming removed excess balance events for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed removed excess balance events for epoch %v, processed %d events", epoch, removedExcessBalanceProcessed)
 			}
 		}
 
