@@ -1451,6 +1451,7 @@ func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
 	}
 	defer utils.Rollback(tx)
 
+	// hydrate the eth1 deposit signature for all genesis validators that have a corresponding eth1 deposit
 	_, err = tx.Exec(`
 		UPDATE blocks_deposits
 		SET signature = a.signature
