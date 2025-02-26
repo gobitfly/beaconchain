@@ -64,6 +64,16 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
+type ConsensusDB struct {
+	WriterDb *sqlx.DB
+	ReaderDb *sqlx.DB
+}
+
+type ConsensusDBI interface {
+	SaveNetworkLivenessData(head *types.ChainHead) error
+	GetNetworkLivenessPreviousHeadEpoch() (uint64, error)
+}
+
 func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
@@ -2305,6 +2315,21 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	}
 
 	return validatoridxs, nil
+}
+
+func (d *ConsensusDB) SaveNetworkLivenessData(head *types.ChainHead) error {
+	_, err := d.WriterDb.Exec(`
+        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
+        VALUES (NOW(), $1, $2, $3, $4)`,
+		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
+
+	return err
+}
+
+func (d *ConsensusDB) GetNetworkLivenessPreviousHeadEpoch() (uint64, error) {
+	var headEpoch uint64
+	err := d.WriterDb.Get(&headEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+	return headEpoch, err
 }
 
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
