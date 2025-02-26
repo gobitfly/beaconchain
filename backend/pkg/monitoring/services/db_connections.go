@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/jmoiron/sqlx"
 )
@@ -76,6 +77,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 		n(constants.Event_DBConnPersistentRedisDbClient, db.PersistentRedisDbClient),
 		n(constants.Event_DBConnTieredCache, cache.TieredCache),
 	}
+	deployment := utils.Config.DeploymentType
 	wg := sync.WaitGroup{}
 	for _, entry := range entries {
 		if entry == nil {
@@ -89,7 +91,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
-			r := NewStatusReport(entry.ID, constants.Default, 10*time.Second)
+			r := NewStatusReport(entry.ID, constants.Default, 10*time.Second, deployment)
 			switch edb := entry.DB.(type) {
 			case *sqlx.DB:
 				err := edb.PingContext(ctx)

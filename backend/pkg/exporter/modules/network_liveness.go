@@ -34,7 +34,8 @@ func networkLivenessUpdater(client rpc.Client, dbs *db.ConsensusDB) {
 }
 
 func processNetworkLiveness(client rpc.Client, dbs db.ConsensusDBI, prevHeadEpoch uint64, epochDuration, slotDuration time.Duration) (uint64, error) {
-	statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+	deployment := utils.Config.DeploymentType
+	statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration, deployment)
 	statusReport(constants.Running, nil)
 
 	head, err := client.GetChainHead()

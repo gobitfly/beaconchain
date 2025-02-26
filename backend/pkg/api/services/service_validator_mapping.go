@@ -37,11 +37,12 @@ var lastEpochUpdate = uint64(0)
 func (s *Services) startIndexMappingService(wg *sync.WaitGroup) {
 	var err error
 	o := sync.Once{}
+	deployment := utils.Config.DeploymentType
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		err = nil // clear error
-		r := services.NewStatusReport(constants.Event_ApiServiceValidatorMapping, constants.Default, delay)
+		r := services.NewStatusReport(constants.Event_ApiServiceValidatorMapping, constants.Default, delay, deployment)
 		r(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
 		if currentValidatorMapping.Load() == nil || latestEpoch != lastEpochUpdate {

@@ -19,9 +19,10 @@ import (
 )
 
 func syncCommitteesExporter(rpcClient rpc.Client) {
+	deployment := utils.Config.DeploymentType
 	for {
 		t0 := time.Now()
-		r := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+		r := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12, deployment)
 		r(constants.Running, nil)
 		err := exportSyncCommittees(rpcClient)
 		if err != nil {
