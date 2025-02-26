@@ -85,10 +85,8 @@ func TestProcessGenesisDeposits(t *testing.T) {
 			if tt.expectedError {
 				t.Error("expected error, got nil")
 			}
-
 		})
 	}
-
 }
 
 var genesisValidators = &types.StandardValidatorsResponse{
