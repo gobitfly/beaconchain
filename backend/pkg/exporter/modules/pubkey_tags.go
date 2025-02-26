@@ -19,7 +19,7 @@ func UpdatePubkeyTag() {
 		if err != nil {
 			log.Error(err, "error updating pubkey tags", 0)
 		}
-		time.Sleep(constants.Duration10Mins)
+		time.Sleep(time.Minute * 10)
 	}
 }
 
@@ -42,7 +42,7 @@ func updatePubkeyTagOnce() error {
 }
 
 func createPubkeyTagStatusReport() func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, constants.Duration10Mins, time.Second*12, utils.Config.DeploymentType)
+	return services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, time.Minute*10, time.Second*12, utils.Config.DeploymentType)
 }
 
 func handlePubkeyTagsError(err error, statusReport func(status constants.StatusType, metadata map[string]string)) {

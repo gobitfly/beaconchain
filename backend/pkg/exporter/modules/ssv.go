@@ -12,7 +12,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/exporter/types"
-	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 
 	"github.com/gorilla/websocket"
 )
@@ -41,7 +40,7 @@ func exportSSV() error {
 	done := make(chan struct{})
 	go handleWebSocketMessages(conn, done)
 
-	qryValidatorsTicker := time.NewTicker(constants.Duration10Mins)
+	qryValidatorsTicker := time.NewTicker(time.Minute * 10)
 	defer qryValidatorsTicker.Stop()
 
 	for {

@@ -13,7 +13,6 @@ const (
 	Success                                 StatusType    = "success"
 	Failure                                 StatusType    = "failure"
 	Default                                 time.Duration = -1 * time.Second
-	Duration10Mins                          time.Duration = 10 * time.Minute
 	Event_ApiServiceAvgEfficiency           Event         = "api_service_avg_efficiency"
 	Event_ApiServiceSlotViz                 Event         = "api_service_slot_viz"
 	Event_ApiServiceValidatorMapping        Event         = "api_service_validator_mapping"
