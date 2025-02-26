@@ -14,11 +14,11 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 )
 
-func NewClient(endpoint string) Client {
+func NewClient(endpoint string) ClientInt {
 	return NewClientWithConfig(endpoint, nil)
 }
 
-func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
+func NewClientWithConfig(endpoint string, httpClient *http.Client) ClientInt {
 	if httpClient == nil {
 		tr := &http.Transport{}
 		tr.ResponseHeaderTimeout = 60 * time.Second
@@ -32,11 +32,9 @@ func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
 		}
 	}
 
-	retriever := Client{
-		ClientInt: &NodeClient{
-			Endpoint:   endpoint,
-			httpClient: httpClient,
-		},
+	retriever := &NodeClient{
+		Endpoint:   endpoint,
+		httpClient: httpClient,
 	}
 	return retriever
 }
