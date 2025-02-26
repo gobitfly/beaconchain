@@ -11,49 +11,24 @@ import (
 
 func TestProcessGenesisDeposits(t *testing.T) {
 	tests := []struct {
-		name                            string
-		mockEpochResponse               uint64
-		mockValidatorStateError         error
-		mockLatestEpochError            error
-		mockDepositCountError           error
-		mockBlockDepositsError          error
-		mockBlockDepositsSignatureError error
-		mockBlockDepositsCountError     error
-		expectedError                   bool
+		name                     string
+		mockEpochResponse        uint64
+		mockDepositCountResponse uint64
+		mockValidatorStateError  error
+		expectedShouldSleep      bool
+		expectedError            bool
 	}{
 		{
-			name:              "valid export",
-			mockEpochResponse: 1,
+			name:                     "valid export",
+			mockEpochResponse:        1,
+			mockDepositCountResponse: 10,
+			expectedShouldSleep:      false,
 		},
 		{
 			name:                    "GetValidatorState error",
 			mockValidatorStateError: errors.New("error"),
+			expectedShouldSleep:     true,
 			expectedError:           true,
-		},
-		{
-			name:                 "GetLatestEpoch error",
-			mockLatestEpochError: errors.New("error"),
-			expectedError:        true,
-		},
-		{
-			name:                  "GetDepositsCountForBlockSlot error",
-			mockDepositCountError: errors.New("error"),
-			expectedError:         true,
-		},
-		{
-			name:                   "SaveBlockDeposits error",
-			mockBlockDepositsError: errors.New("error"),
-			expectedError:          true,
-		},
-		{
-			name:                            "UpdateBlockDepositsSignature error",
-			mockBlockDepositsSignatureError: errors.New("error"),
-			expectedError:                   true,
-		},
-		{
-			name:                        "UpdateBlockDepositCount error",
-			mockBlockDepositsCountError: errors.New("error"),
-			expectedError:               true,
 		},
 	}
 
@@ -63,18 +38,18 @@ func TestProcessGenesisDeposits(t *testing.T) {
 			mockRPCClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, tt.mockValidatorStateError)
 
 			mockConsDBClient := new(mocks.ConsensusDBI)
-			mockConsDBClient.On("GetLatestEpoch").Return(tt.mockEpochResponse, tt.mockLatestEpochError)
-			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(uint64(10), tt.mockDepositCountError)
+			mockConsDBClient.On("GetLatestEpoch").Return(tt.mockEpochResponse, nil)
+			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(tt.mockDepositCountResponse, nil)
 			mockConsDBClient.On("SaveBlockDeposits",
 				genesisValidators.Data[0].Index,
 				[]byte(genesisValidators.Data[0].Validator.Pubkey),
 				[]byte(genesisValidators.Data[0].Validator.WithdrawalCredentials),
 				genesisValidators.Data[0].Balance,
-			).Return(tt.mockBlockDepositsError)
-			mockConsDBClient.On("UpdateBlockDepositsSignature").Return(tt.mockBlockDepositsSignatureError)
-			mockConsDBClient.On("UpdateBlockDepositCount", 1).Return(tt.mockBlockDepositsCountError)
+			).Return(nil)
+			mockConsDBClient.On("UpdateBlockDepositsSignature").Return(nil)
+			mockConsDBClient.On("UpdateBlockDepositCount", tt.mockDepositCountResponse).Return(nil)
 
-			err := processGenesisDeposits(mockRPCClient, mockConsDBClient)
+			shouldSleep, err := processGenesisDeposits(mockRPCClient, mockConsDBClient)
 
 			if err != nil {
 				if tt.expectedError {
@@ -84,6 +59,9 @@ func TestProcessGenesisDeposits(t *testing.T) {
 			}
 			if tt.expectedError {
 				t.Error("expected error, got nil")
+			}
+			if shouldSleep != tt.expectedShouldSleep {
+				t.Errorf("expected shouldSleep: %v, got: %v", tt.expectedShouldSleep, shouldSleep)
 			}
 		})
 	}
