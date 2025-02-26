@@ -36,7 +36,14 @@ type ModuleInterface interface {
 	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
 }
 
+type ModuleContext struct {
+	CL         consapi.ClientInt
+	ConsClient *rpc.LighthouseClient
+}
+
 var Client *rpc.Client
+
+var EventPoolLimit = 16
 
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
@@ -85,81 +92,131 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		time.Sleep(time.Second * 10)
 	}
 	// start subscription modules
-	startSubscriptionModules(&moduleCtx, modules)
-}
-
-func startSubscriptionModules(moduleCtx *ModuleContext, modules []ModuleInterface) {
-	goPool := &errgroup.Group{}
-	log.Infof("initialising exporter modules")
-
-	// Initialize modules
-	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
-		return module.Init()
-	})
-
-	err := goPool.Wait()
+	err := startSubscriptionModules(&moduleCtx, modules)
 	if err != nil {
 		log.Fatal(err, "error initializing modules", 0)
-		return
 	}
+}
 
-	eventPool := &errgroup.Group{}
-	eventPool.SetLimit(16)
+func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) error {
+	// Initialize modules
+	if err := initializeModules(modules); err != nil {
+		return err
+	}
 
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
-	events := moduleCtx.CL.GetEvents([]types.EventTopic{
+	events := getEvents(context)
+
+	handleEvents(events, modules)
+
+	return nil
+}
+
+func initializeModules(modules []ModuleInterface) error {
+	if len(modules) == 0 {
+		return errors.New("no modules to initialize")
+	}
+
+	goPool := &errgroup.Group{}
+
+	log.Infof("initialising exporter modules")
+
+	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
+		return module.Init()
+	})
+
+	return goPool.Wait()
+}
+
+func getEvents(context *ModuleContext) chan *types.EventResponse {
+	events := context.CL.GetEvents([]types.EventTopic{
 		types.EventHead,
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
 	})
-	log.Infof("subscribed to node events")
+	return events
+}
+
+func handleEvents(events chan *types.EventResponse, modules []ModuleInterface) {
+	eventPool := &errgroup.Group{}
+	eventPool.SetLimit(EventPoolLimit)
 
 	for event := range events {
-		if event.Error != nil {
-			log.Error(event.Error, "error getting event", 0)
-			continue
-		}
-
-		switch event.Event {
-		case types.EventHead:
-			res, err := event.Head()
-			if err != nil {
-				log.Error(err, "error getting head event", 0)
-				continue
-			}
-			log.InfoWithFields(
-				log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
-				"notifying exporter modules about new head",
-			)
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnHead(res)
-			})
-
-		case types.EventFinalizedCheckpoint:
-			res, err := event.FinalizedCheckpoint()
-			if err != nil {
-				log.Error(err, "error getting finalized checkpoint event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnFinalizedCheckpoint(res)
-			})
-
-		case types.EventChainReorg:
-			res, err := event.ChainReorg()
-			if err != nil {
-				log.Error(err, "error getting chain reorg event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnChainReorg(res)
-			})
+		err := handleEvent(event, eventPool, modules)
+		if err != nil {
+			log.Error(err, "error getting event", 0)
 		}
 	}
+}
+
+func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	if event.Error != nil {
+		return fmt.Errorf("error getting event: %v", event.Error)
+	}
+
+	switch event.Event {
+	case types.EventHead:
+		err := handleHeadEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting head event: %v", err)
+		}
+	case types.EventFinalizedCheckpoint:
+		err := handleFinalizedCheckpointEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting finalized checkpoint event: %v", err)
+		}
+	case types.EventChainReorg:
+		err := handleChainReorgEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting chain reorg event: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.Head()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(
+		log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
+		"notifying exporter modules about new head",
+	)
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnHead(res)
+	})
+
+	return nil
+}
+
+func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.FinalizedCheckpoint()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnFinalizedCheckpoint(res)
+	})
+
+	return nil
+}
+
+func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.ChainReorg()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnChainReorg(res)
+	})
+
+	return nil
 }
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
@@ -167,39 +224,30 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
-			r(constants.Running, nil)
+			statusReport := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			statusReport(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
 				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
-			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
+			statusReport(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}
 }
+
 func GetModuleContext() (ModuleContext, error) {
 	var moduleContext ModuleContext
 
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
-
-	spec, err := cl.GetSpec()
+	err := getClientSpec(cl)
 	if err != nil {
 		log.Fatal(err, "error getting spec", 0)
 	}
 
-	config.ClConfig = &spec.Data
-
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
-	}
-
-	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-
-	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
+	clClient, err := createLighthouseClient(cl)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
@@ -209,7 +257,22 @@ func GetModuleContext() (ModuleContext, error) {
 	return moduleContext, nil
 }
 
-type ModuleContext struct {
-	CL         consapi.Client
-	ConsClient *rpc.LighthouseClient
+func getClientSpec(client consapi.ClientInt) error {
+	spec, err := client.GetSpec()
+	if err != nil {
+		return err
+	}
+	config.ClConfig = &spec.Data
+
+	return nil
+}
+
+func createLighthouseClient(cl consapi.ClientInt) (*rpc.LighthouseClient, error) {
+	nodeImpl, ok := cl.(*consapi.NodeClient)
+	if !ok {
+		return nil, errors.New("lighthouse client can only be used with real node impl")
+	}
+	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+
+	return rpc.NewLighthouseClient(nodeImpl, chainID)
 }
