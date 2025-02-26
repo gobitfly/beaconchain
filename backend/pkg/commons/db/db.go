@@ -1417,7 +1417,7 @@ func GetTotalAmountDeposited() (uint64, error) {
 
 func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
 	var count uint64
-	err := WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
+	err := d.WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
 	if err != nil {
 		return 0, err
 	}
@@ -1426,7 +1426,7 @@ func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
 }
 
 func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
-	tx, err := WriterDb.Beginx()
+	tx, err := d.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1445,7 +1445,7 @@ func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCrede
 }
 
 func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
-	tx, err := WriterDb.Beginx()
+	tx, err := d.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1468,7 +1468,7 @@ func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
 }
 
 func (d *ConsensusDB) UpdateBlockDepositCount(count int) error {
-	tx, err := WriterDb.Beginx()
+	tx, err := d.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
