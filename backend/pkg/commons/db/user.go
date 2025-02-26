@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -19,13 +20,13 @@ const hour uint64 = 3600
 const day = 24 * hour
 const week = 7 * day
 const month = 30 * day
-const maxJsInt uint64 = 9007199254740991 // 2^53-1 (max safe int in JS)
+const maxJsInt uint64 = 9007199254740991                       // 2^53-1 (max safe int in JS)
+var maxAdminEB = utils.EtherToWei(big.NewInt(int64(maxJsInt))) // some sufficiently high number
 
 var adminPerks = t.PremiumPerks{
 	AdFree:                       false, // admins want to see ads to check ad configuration
 	ValidatorDashboards:          maxJsInt,
-	ValidatorsPerDashboard:       maxJsInt,
-	EffectiveBalancePerDashboard: maxJsInt,
+	EffectiveBalancePerDashboard: maxAdminEB,
 	ValidatorGroupsPerDashboard:  maxJsInt,
 	ShareCustomDashboards:        true,
 	ManageDashboardViaApi:        true,
@@ -200,8 +201,7 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
 				foundAddon = true
 				for i := 0; i < addon.Quantity; i++ {
-					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
-					userInfo.PremiumPerks.EffectiveBalancePerDashboard += p.ExtraDashboardEffectiveBalance
+					userInfo.PremiumPerks.EffectiveBalancePerDashboard = userInfo.PremiumPerks.EffectiveBalancePerDashboard.Add(p.ExtraDashboardEffectiveBalance)
 					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 						ProductId:       utils.PriceIdToProductId(addon.PriceId),
 						ProductName:     p.ProductName,
@@ -218,11 +218,7 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 		}
 	}
 
-	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
-		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
-	}
-
-	if productSummary.EffectiveBalancePerDashboardLimit < userInfo.PremiumPerks.EffectiveBalancePerDashboard {
+	if productSummary.EffectiveBalancePerDashboardLimit.LessThan(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
 		userInfo.PremiumPerks.EffectiveBalancePerDashboard = productSummary.EffectiveBalancePerDashboardLimit
 	}
 
@@ -233,8 +229,8 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 	return userInfo, nil
 }
 
-func premiumLimitNetworkfactor() uint64 {
-	networkFactor := uint64(1)
+func premiumLimitNetworkfactor() int64 {
+	networkFactor := int64(1)
 	if utils.Config.Chain.Id == 100 { // gnosis
 		networkFactor = 5
 	}
@@ -245,8 +241,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 	freeTierProduct, err := GetFreeTierProduct(ctx)
 	factor := premiumLimitNetworkfactor()
 	summary := t.ProductSummary{
-		ValidatorsPerDashboardLimit:       102_000,
-		EffectiveBalancePerDashboardLimit: uint64(102_000 * 32 * utils.Config.Frontend.ClCurrencyDivisor),
+		EffectiveBalancePerDashboardLimit: utils.EtherToWei(big.NewInt(102_000 * 32)),
 		StripePublicKey:                   utils.Config.Frontend.Stripe.PublicKey,
 		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
@@ -321,8 +316,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          1,
-					ValidatorsPerDashboard:       100 * factor,
-					EffectiveBalancePerDashboard: uint64(100*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(100 * 32 * factor)),
 					ValidatorGroupsPerDashboard:  3,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -356,8 +350,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          2,
-					ValidatorsPerDashboard:       300 * factor,
-					EffectiveBalancePerDashboard: uint64(300*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(300 * 32 * factor)),
 					ValidatorGroupsPerDashboard:  10,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        false,
@@ -391,8 +384,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 				PremiumPerks: t.PremiumPerks{
 					AdFree:                       true,
 					ValidatorDashboards:          2,
-					ValidatorsPerDashboard:       1000 * factor,
-					EffectiveBalancePerDashboard: uint64(1000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(1000 * 32 * factor)),
 					ValidatorGroupsPerDashboard:  30,
 					ShareCustomDashboards:        true,
 					ManageDashboardViaApi:        true,
@@ -426,8 +418,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
 			{
 				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 1_000*32*factor),
-				ExtraDashboardValidators:       1_000 * factor,
-				ExtraDashboardEffectiveBalance: uint64(1_000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+				ExtraDashboardEffectiveBalance: utils.EtherToWei(big.NewInt(1_000 * 32 * factor)),
 				PricePerMonthEur:               74.99,
 				PricePerYearEur:                719.88,
 				ProductIdMonthly:               "vdb_addon_1k",
@@ -437,8 +428,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			},
 			{
 				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 10_000*32*factor),
-				ExtraDashboardValidators:       10_000 * factor,
-				ExtraDashboardEffectiveBalance: uint64(10_000*32*utils.Config.Frontend.ClCurrencyDivisor) * factor,
+				ExtraDashboardEffectiveBalance: utils.EtherToWei(big.NewInt(10_000 * 32 * factor)),
 				PricePerMonthEur:               449.99,
 				PricePerYearEur:                4319.88,
 				ProductIdMonthly:               "vdb_addon_10k",
@@ -460,8 +450,7 @@ func GetFreeTierProduct(ctx context.Context) (*t.PremiumProduct, error) {
 		PremiumPerks: t.PremiumPerks{
 			AdFree:                       false,
 			ValidatorDashboards:          1,
-			ValidatorsPerDashboard:       20 * factor,
-			EffectiveBalancePerDashboard: 20 * 32 * 1e9 * factor,
+			EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(20 * 32 * factor)),
 			ValidatorGroupsPerDashboard:  1,
 			ShareCustomDashboards:        false,
 			ManageDashboardViaApi:        false,

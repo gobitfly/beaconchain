@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -435,7 +436,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	for _, validatorDashboard := range validatorDashboardMap {
 		validatorDashboard.GroupCount = validatorDashboardCountMap[validatorDashboard.Id].GroupCount
 		validatorDashboard.ValidatorCount = validatorDashboardCountMap[validatorDashboard.Id].ValidatorCount
-		validatorDashboard.EffectiveBalance = validatorDashboardEBs[validatorDashboard.Id]
+		validatorDashboard.EffectiveBalance = utils.GWeiToWei(big.NewInt(int64(validatorDashboardEBs[validatorDashboard.Id])))
 
 		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}
