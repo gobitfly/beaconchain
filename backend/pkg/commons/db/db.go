@@ -611,18 +611,6 @@ func GetSlashingCount() (uint64, error) {
 	return slashings, nil
 }
 
-// GetLatestEpoch will return the latest epoch from the database
-func GetLatestEpoch() (uint64, error) {
-	var epoch uint64
-	err := WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
-
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving latest epoch from DB: %w", err)
-	}
-
-	return epoch, nil
-}
-
 func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	var slots []uint64
 	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
@@ -1425,6 +1413,86 @@ func GetTotalAmountDeposited() (uint64, error) {
 	FROM blocks_deposits d
 	INNER JOIN blocks b ON b.blockroot = d.block_root AND b.status = '1'`)
 	return total, err
+}
+
+func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
+	var count uint64
+	err := WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`INSERT INTO blocks_deposits (block_slot, block_root, block_index, publickey, withdrawalcredentials, amount, signature)
+	VALUES (0, '\x01', $1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+		vIndex, vPubkey, vWithdrawalCredentials, vBalance, []byte{0x0},
+	)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+		UPDATE blocks_deposits
+		SET signature = a.signature
+		FROM (
+			SELECT DISTINCT ON(publickey) publickey, signature
+			FROM eth1_deposits
+			WHERE valid_signature = true) AS a
+		WHERE block_slot = 0 AND blocks_deposits.publickey = a.publickey AND blocks_deposits.signature = '\x'`)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (d *ConsensusDB) UpdateBlockDepositCount(count int) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec("UPDATE blocks SET depositscount = $1 WHERE slot = 0", count)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// GetLatestEpoch will return the latest epoch from the database
+func (d *ConsensusDB) GetLatestEpoch() (uint64, error) {
+	var epoch uint64
+	err := d.WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
+
+	if err != nil {
+		return 0, fmt.Errorf("error retrieving latest epoch from DB: %w", err)
+	}
+
+	return epoch, nil
 }
 
 func GetBLSChangeCount() (uint64, error) {
