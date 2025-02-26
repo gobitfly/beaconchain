@@ -24,47 +24,56 @@ func networkLivenessUpdater(client rpc.Client, dbs *db.ConsensusDB) {
 	slotDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
 
 	for {
-		statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
-		statusReport(constants.Running, nil)
-
-		head, err := client.GetChainHead()
+		newPrevHeadEpoch, err := processNetworkLiveness(client, dbs, prevHeadEpoch, epochDuration, slotDuration)
 		if err != nil {
-			log.Error(err, "error getting chainhead when exporting network liveness", 0)
-			statusReport(constants.Failure, map[string]string{"error": err.Error()})
-			time.Sleep(slotDuration)
-			continue
+			log.Error(err, "error processing network liveness, retrying...", 0)
 		}
-
-		if prevHeadEpoch == head.HeadEpoch {
-			statusReport(constants.Success, nil)
-			time.Sleep(slotDuration)
-			continue
-		}
-
-		// wait for node to be synced
-		if !isNodeSynced(head.HeadEpoch, epochDuration) {
-			statusReport(constants.Failure, map[string]string{"error": "node not synced"})
-			time.Sleep(slotDuration)
-			continue
-		}
-
-		if err := dbs.SaveNetworkLivenessData(head); err != nil {
-			log.Error(err, "error saving network liveness in db", 0)
-			statusReport(constants.Failure, map[string]string{"error": err.Error()})
-		} else {
-			log.Infof("updated network liveness for epoch %v", head.HeadEpoch)
-			prevHeadEpoch = head.HeadEpoch
-		}
-
-		if err := updateCache(head); err != nil {
-			log.Error(err, "error updating cache", 0)
-			statusReport(constants.Failure, map[string]string{"error": err.Error()})
-		}
-
-		statusReport(constants.Success, nil)
-
+		prevHeadEpoch = newPrevHeadEpoch
 		time.Sleep(slotDuration)
 	}
+}
+
+func processNetworkLiveness(client rpc.Client, dbs db.ConsensusDBI, prevHeadEpoch uint64, epochDuration, slotDuration time.Duration) (uint64, error) {
+	statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+	statusReport(constants.Running, nil)
+
+	head, err := client.GetChainHead()
+	if err != nil {
+		log.Error(err, "error getting chainhead when exporting network liveness", 0)
+		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		return prevHeadEpoch, fmt.Errorf("error getting chainhead: %w", err)
+	}
+
+	if prevHeadEpoch == head.HeadEpoch {
+		statusReport(constants.Success, nil)
+		return prevHeadEpoch, nil
+	}
+
+	// wait for node to be synced
+	if !isNodeSynced(head.HeadEpoch, epochDuration) {
+		statusReport(constants.Failure, map[string]string{"error": "node not synced"})
+		return prevHeadEpoch, fmt.Errorf("node not synced")
+	}
+
+	if err := dbs.SaveNetworkLivenessData(head); err != nil {
+		log.Error(err, "error saving network liveness in db", 0)
+		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		return prevHeadEpoch, fmt.Errorf("error saving network liveness data: %w", err)
+	} else {
+		log.Infof("updated network liveness for epoch %v", head.HeadEpoch)
+		prevHeadEpoch = head.HeadEpoch
+	}
+
+	if err := updateCache(head); err != nil {
+		log.Error(err, "error updating cache", 0)
+		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		return prevHeadEpoch, fmt.Errorf("error updating cache: %w", err)
+	}
+
+	statusReport(constants.Success, nil)
+
+	return prevHeadEpoch, nil
+
 }
 
 func isNodeSynced(headEpoch uint64, epochDuration time.Duration) bool {
