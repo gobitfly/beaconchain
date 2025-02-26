@@ -197,15 +197,16 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 		return fmt.Errorf("error retrieving all non finalized slots from the db: %w", err)
 	}
 	for _, dbSlot := range dbNonFinalSlots {
-		header, err := d.Client.GetBlockHeader(dbSlot.Slot)
-
-		if err != nil {
-			return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
-		}
-
 		nodeSlotFinalized := dbSlot.Slot <= head.FinalizedSlot
 
 		if nodeSlotFinalized != dbSlot.Finalized {
+			log.Infof("checking slot %d for finalization / reorgs", dbSlot.Slot)
+			header, err := d.Client.GetBlockHeader(dbSlot.Slot)
+
+			if err != nil {
+				return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
+			}
+
 			// slot has finalized, mark it in the db
 			if header != nil && bytes.Equal(dbSlot.BlockRoot, header.Data.Root) {
 				// no reorg happened, simply mark the slot as final
@@ -271,13 +272,14 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 				}
 			}
 		} else { // check if a late slot has been proposed in the meantime
-			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
-				log.Infof("exporting new slot %v", dbSlot.Slot)
-				err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
-				if err != nil {
-					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
-				}
-			}
+			// TODO: reenable once holesky is close to recovery
+			// if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
+			// 	log.Infof("exporting new slot %v", dbSlot.Slot)
+			// 	err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+			// 	if err != nil {
+			// 		return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
+			// 	}
+			// }
 		}
 	}
 
@@ -364,30 +366,31 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
 			}
 			if !exported {
-				return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
-			}
-			log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
+				log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
+			} else {
+				log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
 
-			firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-			lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+				firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+				lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
 
-			switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
-			if err != nil {
-				return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-			}
-			log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
+				switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
 
-			consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
-			if err != nil {
-				return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-			}
-			log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
+				consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
 
-			depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
-			if err != nil {
-				return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
+				depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
 			}
-			log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
 		}
 
 		log.Infof("exporting duties & balances for epoch %v", epoch)
@@ -740,6 +743,13 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 }
 
 func (d *slotExporterData) Init() error {
+	// // Initialize the slot exporter by doing 20 sync runs
+	// for i := 0; i < 20; i++ {
+	// 	err := d.OnHead(nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
