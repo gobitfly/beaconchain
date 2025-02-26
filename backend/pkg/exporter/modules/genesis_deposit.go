@@ -12,52 +12,52 @@ import (
 
 func genesisDepositsExporter(client rpc.Client, dbs db.ConsensusDBI) {
 	for {
-		err := processGenesisDeposits(client, dbs)
+		shouldSleep, err := processGenesisDeposits(client, dbs)
 		if err == nil {
 			return // successfully processed genesis deposits
 		}
 
 		log.Error(err, "error processing genesis deposits, retrying...", 0)
+		if shouldSleep {
+			time.Sleep(time.Minute)
+		}
 	}
 }
 
-func processGenesisDeposits(client rpc.Client, dbs db.ConsensusDBI) error {
+func processGenesisDeposits(client rpc.Client, dbs db.ConsensusDBI) (bool, error) {
 	latestEpoch, err := getLatestEpoch(dbs)
 	if err != nil {
-		return fmt.Errorf("error getting latest epoch: %v", err)
+		return true, fmt.Errorf("error getting latest epoch: %v", err)
 	}
 
 	if latestEpoch == 0 {
-		time.Sleep(time.Minute)
-		return fmt.Errorf("beacon chain not started")
+		return true, fmt.Errorf("beacon chain not started")
 	}
 
 	genesisDepositCount, err := getGenesisDepositCount(dbs)
 	if err != nil {
-		return fmt.Errorf("error getting genesis deposit count: %v", err)
+		return true, fmt.Errorf("error getting genesis deposit count: %v", err)
 	}
 
 	if genesisDepositCount > 0 {
-		return nil
+		return false, nil
 	}
 
 	genesisValidators, err := client.GetValidatorState(0)
 	if err != nil {
 		log.Error(err, "error retrieving genesis validator data for genesis-epoch when exporting genesis-deposits: %v", 0)
-		time.Sleep(time.Minute)
-		return fmt.Errorf("error retrieving genesis validator data: %v", err)
+		return true, fmt.Errorf("error retrieving genesis validator data: %w", err)
 	}
 
 	err = exportGenesisDeposits(genesisValidators, dbs)
 	if err != nil {
 		log.Error(err, "error exporting genesis-deposits: %v", 0)
-		time.Sleep(time.Minute)
-		return fmt.Errorf("error exporting genesis-deposits: %v", err)
+		return true, fmt.Errorf("error exporting genesis deposits: %w", err)
 	}
 
 	log.Infof("exported genesis-deposits for %v genesis-validators", len(genesisValidators.Data))
 
-	return nil
+	return false, nil
 }
 
 func getLatestEpoch(db db.ConsensusDBI) (uint64, error) {
