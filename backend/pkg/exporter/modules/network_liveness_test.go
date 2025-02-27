@@ -81,7 +81,6 @@ func TestNetworkLivenessUpdater_Export(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			mockConsDBClient.On("GetNetworkLivenessPreviousHeadEpoch").Return(tt.prevHeadEpoch, nil)
 			mockRPCClient.On("GetChainHead").Return(tt.mockChainHeadResponse, tt.mockChainHeadError)
 
