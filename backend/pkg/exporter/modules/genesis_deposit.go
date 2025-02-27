@@ -32,7 +32,7 @@ func newGenesisDepositsExporter(client rpc.Client, db db.ConsensusDBI) genesisDe
 	}
 }
 
-func (e genesisDepositsExporter) Export() {
+func (e *genesisDepositsExporter) Export() {
 	for {
 		select {
 		case <-e.ctx.Done():
@@ -85,7 +85,7 @@ func (e genesisDepositsExporter) Export() {
 	}
 }
 
-func (e genesisDepositsExporter) exportGenesisDeposits(genesisValidators *types.StandardValidatorsResponse) error {
+func (e *genesisDepositsExporter) exportGenesisDeposits(genesisValidators *types.StandardValidatorsResponse) error {
 	log.Infof("exporting deposit data for %v genesis validators", len(genesisValidators.Data))
 
 	for i, validator := range genesisValidators.Data {
