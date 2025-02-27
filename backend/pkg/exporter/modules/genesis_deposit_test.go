@@ -18,21 +18,19 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 		mockDepositCountResponse    uint64
 		mockBlockDepositCountUpdate int
 		mockValidatorStateError     error
-		expectedError               bool
 	}{
 		{
 			name:                        "valid export",
 			mockEpochResponse:           1,
 			mockDepositCountResponse:    0,
 			mockBlockDepositCountUpdate: 1,
-			expectedError:               false,
 		},
 		{
 			name:                        "GetValidatorState error",
-			mockDepositCountResponse:    2,
+			mockEpochResponse:           1,
+			mockDepositCountResponse:    1,
 			mockBlockDepositCountUpdate: 1,
 			mockValidatorStateError:     errors.New("error"),
-			expectedError:               true,
 		},
 	}
 
@@ -51,8 +49,8 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// mock expected calls
-			mockConsDBClient.On("GetLatestEpoch").Return(uint64(1), nil)
-			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(uint64(0), nil)
+			mockConsDBClient.On("GetLatestEpoch").Return(tt.mockEpochResponse, nil)
+			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(tt.mockDepositCountResponse, nil)
 			mockRPCClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, nil)
 			mockConsDBClient.On("SaveBlockDeposits",
 				genesisValidators.Data[0].Index,
