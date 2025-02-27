@@ -40,11 +40,13 @@ var Client *rpc.Client
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
-		dbs := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
-		networkLivenessUpdater := newNetworkLivenessUpdater(context.ConsClient, dbs)
+		ctx := context.Background()
+		consDB := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
+
+		networkLivenessUpdater := newNetworkLivenessUpdater(ctx, moduleCtx.ConsClient, consDB)
 		go networkLivenessUpdater.Export()
-		go genesisDepositsExporter(context.ConsClient)
-		go syncCommitteesExporter(context.ConsClient)
+		go genesisDepositsExporter(moduleCtx.ConsClient)
+		go syncCommitteesExporter(moduleCtx.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
 			go ssvExporter()

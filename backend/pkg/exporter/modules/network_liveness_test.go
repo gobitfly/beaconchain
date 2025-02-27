@@ -73,7 +73,7 @@ func TestNetworkLivenessUpdater_Export(t *testing.T) {
 		client: mockRPCClient,
 		db:     mockConsDBClient,
 		ctx:    ctx,
-		cache:  *tieredCache,
+		cache:  tieredCache,
 	}
 
 	latestNodeEpochKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)

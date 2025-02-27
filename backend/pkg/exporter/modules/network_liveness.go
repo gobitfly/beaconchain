@@ -26,10 +26,10 @@ type networkLivenessUpdater struct {
 	client EpochClient
 	db     db.ConsensusDBI
 	ctx    context.Context
-	cache  cache.TieredCacheBase
+	cache  *cache.TieredCacheBase
 }
 
-func newNetworkLivenessUpdater(client rpc.Client, db db.ConsensusDBI) networkLivenessUpdater {
+func newNetworkLivenessUpdater(ctx context.Context, client rpc.Client, db db.ConsensusDBI) networkLivenessUpdater {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}
@@ -37,8 +37,8 @@ func newNetworkLivenessUpdater(client rpc.Client, db db.ConsensusDBI) networkLiv
 	return networkLivenessUpdater{
 		client: client,
 		db:     db,
-		ctx:    context.Background(),
-		cache:  *cache.TieredCache,
+		ctx:    ctx,
+		cache:  cache.TieredCache,
 	}
 }
 
