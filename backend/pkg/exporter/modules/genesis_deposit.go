@@ -24,7 +24,7 @@ func genesisDepositsExporter(client rpc.Client, dbs db.ConsensusDBI) {
 	}
 }
 
-func processGenesisDeposits(client rpc.Client, dbs db.ConsensusDBI) (bool, error) {
+func processGenesisDeposits(client rpc.ValidatorClient, dbs db.ConsensusDBI) (bool, error) {
 	latestEpoch, err := getLatestEpoch(dbs)
 	if err != nil {
 		return true, fmt.Errorf("error getting latest epoch: %v", err)
