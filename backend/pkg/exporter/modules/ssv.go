@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -35,9 +36,21 @@ type SSVExporterData struct {
 
 var batchSize = 5000
 
-func ssvExporter(db *db.ConsensusDB) {
+type ssvExporter struct {
+	db  db.ConsensusDBI
+	ctx context.Context
+}
+
+func newSSVExporter(db db.ConsensusDBI) ssvExporter {
+	return ssvExporter{
+		db:  db,
+		ctx: context.Background(),
+	}
+}
+
+func (ssv *ssvExporter) Export() {
 	for {
-		err := exportSSV(db)
+		err := ssv.exportSSV()
 		if err != nil {
 			log.Error(err, "error exporting ssv validators", 0)
 		}
@@ -46,7 +59,7 @@ func ssvExporter(db *db.ConsensusDB) {
 	}
 }
 
-func exportSSV(db db.ConsensusDBI) error {
+func (ssv *ssvExporter) exportSSV() error {
 	conn, r, err := connectToWebSocket()
 	if err != nil {
 		return err
@@ -55,7 +68,7 @@ func exportSSV(db db.ConsensusDBI) error {
 	defer r.Body.Close()
 
 	done := make(chan struct{})
-	go handleWebSocketMessages(conn, done, db)
+	go ssv.handleWebSocketMessages(conn, done)
 
 	qryValidatorsTicker := time.NewTicker(time.Minute * 10)
 	defer qryValidatorsTicker.Stop()
@@ -83,7 +96,7 @@ func connectToWebSocket() (*websocket.Conn, *http.Response, error) {
 	return conn, r, nil
 }
 
-func handleWebSocketMessages(conn *websocket.Conn, done chan struct{}, db db.ConsensusDBI) {
+func (ssv *ssvExporter) handleWebSocketMessages(conn *websocket.Conn, done chan struct{}) {
 	defer close(done)
 	for {
 		_, message, err := conn.ReadMessage()
@@ -101,7 +114,7 @@ func handleWebSocketMessages(conn *websocket.Conn, done chan struct{}, db db.Con
 		}
 
 		log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
-		err = saveSSV(&res, db)
+		err = ssv.saveSSV(&res)
 		if err != nil {
 			log.Error(err, "error tagging ssv validators", 0)
 			continue
@@ -114,25 +127,25 @@ func requestValidators(conn *websocket.Conn) error {
 	return conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
 }
 
-func saveSSV(res *SSVExporterResponse, db db.ConsensusDBI) error {
+func (ssv *ssvExporter) saveSSV(res *SSVExporterResponse) error {
 	// make sure to correct wrongly marked validators
-	if err := db.DeleteInvalidTags(); err != nil {
+	if err := ssv.db.DeleteInvalidTags(); err != nil {
 		return err
 	}
 
-	if err := insertSSVTags(res, db); err != nil {
+	if err := ssv.insertSSVTags(res); err != nil {
 		return err
 	}
 
 	// currently the ssv-exporter also exports publickeys that are not actually part of the network
-	if err := db.DeleteValidatorTags(); err != nil {
+	if err := ssv.db.DeleteValidatorTags(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func insertSSVTags(response *SSVExporterResponse, db db.ConsensusDBI) error {
+func (ssv *ssvExporter) insertSSVTags(response *SSVExporterResponse) error {
 	for b := 0; b < len(response.Data); b += batchSize {
 		start := b
 		end := b + batchSize
@@ -141,7 +154,7 @@ func insertSSVTags(response *SSVExporterResponse, db db.ConsensusDBI) error {
 		}
 		valueStrings, valueArgs := prepareBatchInsert(response.Data[start:end])
 
-		err := db.SaveValidatorTags(valueStrings, valueArgs)
+		err := ssv.db.SaveValidatorTags(valueStrings, valueArgs)
 		if err != nil {
 			return err
 		}

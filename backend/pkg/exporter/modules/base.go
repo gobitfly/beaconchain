@@ -45,7 +45,8 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
-			go ssvExporter(dbs)
+			ssvExporter := newSSVExporter(dbs)
+			go ssvExporter.Export()
 		}
 		if utils.Config.RocketpoolExporter.Enabled {
 			go rocketpoolExporter()
