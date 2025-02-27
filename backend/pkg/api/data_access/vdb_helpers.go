@@ -66,21 +66,21 @@ func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSumm
 		efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 	case enums.VDBSummaryChartAttestation:
 		if row.AttestationIdealReward > 0 {
-			efficiency = (row.AttestationReward / row.AttestationIdealReward) * 100
+			efficiency = (row.AttestationReward / row.AttestationIdealReward)
 		} else {
-			efficiency = 100
+			efficiency = 1
 		}
 	case enums.VDBSummaryChartProposal:
 		if row.BlocksScheduled > 0 {
-			efficiency = (row.BlocksProposed / row.BlocksScheduled) * 100
+			efficiency = (row.BlocksProposed / row.BlocksScheduled)
 		} else {
-			efficiency = 100
+			efficiency = 1
 		}
 	case enums.VDBSummaryChartSync:
 		if row.SyncScheduled > 0 {
-			efficiency = (row.SyncExecuted / row.SyncScheduled) * 100
+			efficiency = (row.SyncExecuted / row.SyncScheduled)
 		} else {
-			efficiency = 100
+			efficiency = 1
 		}
 	default:
 		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)

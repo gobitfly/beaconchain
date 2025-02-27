@@ -807,7 +807,7 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 					syncEfficiency.Valid = true
 				}
 
-				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency) / 100
+				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 				log.Infof("efficiency: %v, threshold: %v", efficiency*100, groupDetails.Subscription.EventThreshold*100)
 

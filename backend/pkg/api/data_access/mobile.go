@@ -255,8 +255,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 			data.RplApr = rpNetworkStats.NodeOperatorRewards.
 				Mul(share).
 				Div(queryResult.RPLStake).
-				Mul(periodsPerYear).
-				Mul(decimal.NewFromInt(100)).InexactFloat64()
+				Mul(periodsPerYear).InexactFloat64()
 		}
 		return nil
 	})
