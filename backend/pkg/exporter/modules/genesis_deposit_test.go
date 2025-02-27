@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
-	rpcmocks "github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/exporter/modules/mocks"
 	"github.com/pkg/errors"
 )
 
@@ -34,13 +34,13 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 		},
 	}
 
-	mockConsDBClient := new(mocks.ConsensusDBI)
-	mockRPCClient := new(rpcmocks.ValidatorClient)
+	mockConsDBClient := new(dbmocks.ConsensusDBI)
+	mockClient := new(mocks.ValidatorClient)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
 	exporter := genesisDepositsExporter{
-		client: mockRPCClient,
+		client: mockClient,
 		db:     mockConsDBClient,
 		offset: 0,
 		ctx:    ctx,
@@ -51,7 +51,7 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 			// mock expected calls
 			mockConsDBClient.On("GetLatestEpoch").Return(tt.mockEpochResponse, nil)
 			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(tt.mockDepositCountResponse, nil)
-			mockRPCClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, nil)
+			mockClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, nil)
 			mockConsDBClient.On("SaveBlockDeposits",
 				genesisValidators.Data[0].Index,
 				[]byte(genesisValidators.Data[0].Validator.Pubkey),
@@ -65,7 +65,7 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 
 			mockConsDBClient.AssertCalled(t, "GetLatestEpoch")
 			mockConsDBClient.AssertCalled(t, "GetDepositsCountForBlockSlot")
-			mockRPCClient.AssertCalled(t, "GetValidatorState", uint64(0))
+			mockClient.AssertCalled(t, "GetValidatorState", uint64(0))
 			mockConsDBClient.AssertCalled(t, "SaveBlockDeposits",
 				genesisValidators.Data[0].Index,
 				[]byte(genesisValidators.Data[0].Validator.Pubkey),
