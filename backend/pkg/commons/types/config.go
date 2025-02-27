@@ -190,10 +190,7 @@ type Config struct {
 		MachineEventFirstRatioThreshold               float64 `yaml:"machineEventFirstRatioThreshold" env:"MACHINE_EVENT_FIRST_RATIO_THRESHOLD"`
 		MachineEventSecondRatioThreshold              float64 `yaml:"machineEventSecondRatioThreshold" env:"MACHINE_EVENT_SECOND_RATIO_THRESHOLD"`
 	} `yaml:"notifications"`
-	SSVExporter struct {
-		Enabled bool   `yaml:"enabled" env:"ENABLED"`
-		Address string `yaml:"address" env:"ADDRESS"`
-	} `yaml:"SSVExporter" env:", prefix=SSV_EXPORTER_"`
+	SSVExporter        SSVExporterConfig `yaml:"SSVExporter" env:", prefix=SSV_EXPORTER_"`
 	RocketpoolExporter struct {
 		Enabled bool `yaml:"enabled" env:"ENABLED"`
 	} `yaml:"rocketpoolExporter" env:", prefix=ROCKETPOOL_EXPORTER_"`
@@ -304,4 +301,9 @@ type NodeConfig struct {
 	Host     string `yaml:"host" env:"HOST"`
 	Type     string `yaml:"type" env:"TYPE"`
 	PageSize int32  `yaml:"pageSize" env:"PAGE_SIZE"`
+}
+
+type SSVExporterConfig struct {
+	Enabled bool   `yaml:"enabled" env:"ENABLED"`
+	Address string `yaml:"address" env:"ADDRESS"`
 }
