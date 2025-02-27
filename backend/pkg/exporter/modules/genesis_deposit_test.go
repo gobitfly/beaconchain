@@ -78,7 +78,6 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 			mockConsDBClient.AssertCalled(t, "UpdateBlockDepositCount", tt.mockBlockDepositCountUpdate)
 		})
 	}
-
 }
 
 var genesisValidators = &types.StandardValidatorsResponse{
