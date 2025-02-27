@@ -41,7 +41,8 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
 		dbs := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
 		go networkLivenessUpdater(context.ConsClient)
-		go newGenesisDepositsExporter(context.ConsClient, dbs).Export()
+		genesisExporter := newGenesisDepositsExporter(context.ConsClient, dbs)
+		go genesisExporter.Export()
 		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
