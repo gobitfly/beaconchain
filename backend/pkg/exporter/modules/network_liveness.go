@@ -26,13 +26,19 @@ type networkLivenessUpdater struct {
 	client EpochClient
 	db     db.ConsensusDBI
 	ctx    context.Context
+	cache  cache.TieredCacheBase
 }
 
 func newNetworkLivenessUpdater(client rpc.Client, db db.ConsensusDBI) networkLivenessUpdater {
+	if cache.TieredCache == nil {
+		log.Fatal(nil, "TieredCache is not initialised", 0)
+	}
+
 	return networkLivenessUpdater{
 		client: client,
 		db:     db,
 		ctx:    context.Background(),
+		cache:  *cache.TieredCache,
 	}
 }
 
@@ -85,7 +91,7 @@ func (n networkLivenessUpdater) Export() {
 				prevHeadEpoch = head.HeadEpoch
 			}
 
-			err = updateCache(head)
+			err = n.updateCache(head)
 			if err != nil {
 				log.Error(err, "error updating cache", 0)
 				statusReport(constants.Failure, map[string]string{"error": err.Error()})
@@ -102,12 +108,16 @@ func nodeNotSynced(headEpoch uint64, epochDuration time.Duration) bool {
 	return time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
 }
 
-func updateCache(head *types.ChainHead) error {
-	if err := cache.LatestNodeEpoch.Set(head.HeadEpoch); err != nil {
-		return fmt.Errorf("error setting latestNodeEpoch in cache")
+func (n networkLivenessUpdater) updateCache(head *types.ChainHead) error {
+	latestNodeEpochKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+	latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+
+	if err := n.cache.SetUint64(latestNodeEpochKey, head.HeadEpoch, utils.Day); err != nil {
+		return fmt.Errorf("error setting latestNodeEpoch in cache: %w", err)
 	}
-	if err := cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch); err != nil {
-		return fmt.Errorf("error setting latestNodeFinalizedEpoch in cache")
+	if err := n.cache.SetUint64(latestNodeFinalizedEpochKey, head.FinalizedEpoch, utils.Day); err != nil {
+		return fmt.Errorf("error setting latestNodeFinalizedEpoch in cache: %w", err)
 	}
+
 	return nil
 }
