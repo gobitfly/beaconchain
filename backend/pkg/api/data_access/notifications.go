@@ -1541,10 +1541,22 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Threshold float64         `db:"event_threshold"`
 	}{}
 
-	networkName := "mainnet"
-	if utils.Config.Chain.ClConfig.DepositChainID == 17000 {
-		networkName = "holesky"
+	networks, err := d.GetAllNetworks()
+	if err != nil {
+		return nil, nil, err
 	}
+
+	var networkName string
+	for _, network := range networks {
+		if network.ChainId == utils.Config.Chain.ClConfig.DepositChainID {
+			networkName = network.NotificationsName
+			break
+		}
+	}
+	if networkName == "" {
+		return nil, nil, fmt.Errorf("network with chain id %d to update general notification settings not found", utils.Config.Chain.ClConfig.DepositChainID)
+	}
+
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &events, `
 			SELECT
