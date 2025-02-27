@@ -21,7 +21,7 @@ func TestProcessGenesisDeposits(t *testing.T) {
 		{
 			name:                     "valid export",
 			mockEpochResponse:        1,
-			mockDepositCountResponse: 10,
+			mockDepositCountResponse: 0,
 			expectedShouldSleep:      false,
 		},
 		{
@@ -34,7 +34,7 @@ func TestProcessGenesisDeposits(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRPCClient := new(rpcmocks.Client)
+			mockRPCClient := new(rpcmocks.ValidatorClient)
 			mockRPCClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, tt.mockValidatorStateError)
 
 			mockConsDBClient := new(mocks.ConsensusDBI)
@@ -47,7 +47,7 @@ func TestProcessGenesisDeposits(t *testing.T) {
 				genesisValidators.Data[0].Balance,
 			).Return(nil)
 			mockConsDBClient.On("UpdateBlockDepositsSignature").Return(nil)
-			mockConsDBClient.On("UpdateBlockDepositCount", tt.mockDepositCountResponse).Return(nil)
+			mockConsDBClient.On("UpdateBlockDepositCount", int(1)).Return(nil)
 
 			shouldSleep, err := processGenesisDeposits(mockRPCClient, mockConsDBClient)
 
