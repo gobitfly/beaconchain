@@ -23,12 +23,12 @@ type genesisDepositsExporter struct {
 	ctx    context.Context
 }
 
-func newGenesisDepositsExporter(client rpc.Client, db db.ConsensusDBI) genesisDepositsExporter {
+func newGenesisDepositsExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) genesisDepositsExporter {
 	return genesisDepositsExporter{
 		client: client,
 		db:     db,
 		offset: time.Minute,
-		ctx:    context.Background(),
+		ctx:    ctx,
 	}
 }
 
