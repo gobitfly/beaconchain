@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -20,19 +21,23 @@ type SSVExporterResponse struct {
 		From int `json:"from"`
 		To   int `json:"to"`
 	} `json:"filter"`
-	Data []struct {
-		Index     int    `json:"index"`
-		Publickey string `json:"publicKey"`
-		Operators []struct {
-			Nodeid    int    `json:"nodeId"`
-			Publickey string `json:"publicKey"`
-		} `json:"operators"`
-	} `json:"data"`
+	Data []SSVExporterData `json:"data"`
 }
 
-func ssvExporter() {
+type SSVExporterData struct {
+	Index     int    `json:"index"`
+	Publickey string `json:"publicKey"`
+	Operators []struct {
+		Nodeid    int    `json:"nodeId"`
+		Publickey string `json:"publicKey"`
+	} `json:"operators"`
+}
+
+var batchSize = 5000
+
+func ssvExporter(db *db.ConsensusDB) {
 	for {
-		err := exportSSV()
+		err := exportSSV(db)
 		if err != nil {
 			log.Error(err, "error exporting ssv validators", 0)
 		}
@@ -41,50 +46,25 @@ func ssvExporter() {
 	}
 }
 
-func exportSSV() error {
-	c, r, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
+func exportSSV(db db.ConsensusDBI) error {
+	conn, r, err := connectToWebSocket()
 	if err != nil {
 		return err
 	}
-	defer c.Close()
+	defer conn.Close()
 	defer r.Body.Close()
 
 	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Error(err, "error reading message from ssv-exporter", 0)
-				return
-			}
-
-			t0 := time.Now()
-			res := SSVExporterResponse{}
-			err = json.Unmarshal(message, &res)
-			if err != nil {
-				log.Error(err, "error unmarshaling json from ssv-exporter", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
-			err = saveSSV(&res)
-			if err != nil {
-				log.Error(err, "error tagging ssv validators", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(t0)}, "tagged ssv validators")
-		}
-	}()
+	go handleWebSocketMessages(conn, done, db)
 
 	qryValidatorsTicker := time.NewTicker(time.Minute * 10)
 	defer qryValidatorsTicker.Stop()
 
 	for {
-		err := c.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
-		if err != nil {
+		if err := requestValidators(conn); err != nil {
 			return err
 		}
+
 		select {
 		case <-qryValidatorsTicker.C:
 			continue
@@ -94,73 +74,95 @@ func exportSSV() error {
 	}
 }
 
-func saveSSV(res *SSVExporterResponse) error {
-	tx, err := db.WriterDb.Beginx()
+func connectToWebSocket() (*websocket.Conn, *http.Response, error) {
+	conn, r, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
 	if err != nil {
+		return nil, nil, err
+	}
+
+	return conn, r, nil
+}
+
+func handleWebSocketMessages(conn *websocket.Conn, done chan struct{}, db db.ConsensusDBI) {
+	defer close(done)
+	for {
+		_, message, err := conn.ReadMessage()
+		if err != nil {
+			log.Error(err, "error reading message from ssv-exporter", 0)
+			return
+		}
+
+		timeStart := time.Now()
+		res := SSVExporterResponse{}
+		err = json.Unmarshal(message, &res)
+		if err != nil {
+			log.Error(err, "error unmarshaling json from ssv-exporter", 0)
+			continue
+		}
+
+		log.InfoWithFields(log.Fields{"number": len(res.Data)}, "exporting ssv validators")
+		err = saveSSV(&res, db)
+		if err != nil {
+			log.Error(err, "error tagging ssv validators", 0)
+			continue
+		}
+		log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(timeStart)}, "tagged ssv validators")
+	}
+}
+
+func requestValidators(conn *websocket.Conn) error {
+	return conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
+}
+
+func saveSSV(res *SSVExporterResponse, db db.ConsensusDBI) error {
+	// make sure to correct wrongly marked validators
+	if err := db.DeleteInvalidTags(); err != nil {
 		return err
 	}
-	defer utils.Rollback(tx)
 
-	// for now make sure to correct wrongly marked validators
-	for {
-		res, err := tx.Exec(`delete from validator_tags where publickey in (select publickey from validator_tags where tag = 'ssv' limit 1000)`)
-		if err != nil {
-			return err
-		}
-		rows, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			break
-		}
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	batchSize := 5000
-	for b := 0; b < len(res.Data); b += batchSize {
-		start := b
-		end := b + batchSize
-		if len(res.Data) < end {
-			end = len(res.Data)
-		}
-		n := 1
-		valueStrings := make([]string, 0, batchSize)
-		valueArgs := make([]interface{}, 0, batchSize*n)
-		for i, d := range res.Data[start:end] {
-			valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*n+1))
-			pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))
-			if err != nil {
-				return err
-			}
-			valueArgs = append(valueArgs, pubkey)
-		}
-		_, err := tx.Exec(fmt.Sprintf(`insert into validator_tags (publickey, tag) values %s on conflict (publickey, tag) do nothing`, strings.Join(valueStrings, ",")), valueArgs...)
-		if err != nil {
-			return err
-		}
+	if err := insertSSVTags(res, db); err != nil {
+		return err
 	}
 
 	// currently the ssv-exporter also exports publickeys that are not actually part of the network
-	for {
-		res, err := tx.Exec(`delete from validator_tags where publickey in (select publickey from validator_tags where publickey not in (select pubkey from validators) limit 1000)`)
-		if err != nil {
-			return err
-		}
-		rows, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			break
-		}
-		time.Sleep(time.Millisecond * 100)
-	}
-
-	err = tx.Commit()
-	if err != nil {
+	if err := db.DeleteValidatorTags(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func insertSSVTags(response *SSVExporterResponse, db db.ConsensusDBI) error {
+	for b := 0; b < len(response.Data); b += batchSize {
+		start := b
+		end := b + batchSize
+		if len(response.Data) < end {
+			end = len(response.Data)
+		}
+		valueStrings, valueArgs := prepareBatchInsert(response.Data[start:end])
+
+		err := db.SaveValidatorTags(valueStrings, valueArgs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func prepareBatchInsert(data []SSVExporterData) ([]string, []interface{}) {
+	index := 1
+	valueStrings := make([]string, 0, len(data))
+	valueArgs := make([]interface{}, 0, len(data)*index)
+
+	for i, d := range data {
+		pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))
+		if err != nil {
+			log.Error(err, "error decoding public key", 0)
+			continue
+		}
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*index+1))
+		valueArgs = append(valueArgs, pubkey)
+	}
+
+	return valueStrings, valueArgs
 }

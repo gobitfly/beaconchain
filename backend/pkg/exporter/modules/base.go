@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -38,12 +39,13 @@ var Client *rpc.Client
 // Start will start the export of data from rpc into the database
 func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
+		dbs := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
 		go networkLivenessUpdater(context.ConsClient)
 		go genesisDepositsExporter(context.ConsClient)
 		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
-			go ssvExporter()
+			go ssvExporter(dbs)
 		}
 		if utils.Config.RocketpoolExporter.Enabled {
 			go rocketpoolExporter()

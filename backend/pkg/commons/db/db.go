@@ -64,6 +64,17 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
+type ConsensusDB struct {
+	WriterDb *sqlx.DB
+	ReaderDb *sqlx.DB
+}
+
+type ConsensusDBI interface {
+	SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error
+	DeleteValidatorTags() error
+	DeleteInvalidTags() error
+}
+
 func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
@@ -2420,6 +2431,91 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	}
 
 	return epochParticipation, nil
+}
+
+func (d *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO validator_tags (publickey, tag)
+			VALUES %s
+			ON CONFLICT (publickey, tag) DO NOTHING`,
+			strings.Join(valueStrings, ",")), valueArgs...)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (d *ConsensusDB) DeleteValidatorTags() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	for {
+		res, err := tx.Exec(`DELETE FROM validator_tags WHERE publickey IN (SELECT publickey FROM validator_tags WHERE publickey NOT IN (SELECT pubkey FROM validators) LIMIT 1000)`)
+		if err != nil {
+			return err
+		}
+
+		rows, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if rows == 0 {
+			break
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *ConsensusDB) DeleteInvalidTags() error {
+	tx, err := WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	for {
+		res, err := tx.Exec(`DELETE FROM validator_tags WHERE publickey IN (SELECT publickey FROM validator_tags WHERE tag = 'ssv' LIMIT 1000)`)
+		if err != nil {
+			return err
+		}
+
+		rows, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+
+		if rows == 0 {
+			break
+		}
+
+		time.Sleep(time.Millisecond * 100)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
