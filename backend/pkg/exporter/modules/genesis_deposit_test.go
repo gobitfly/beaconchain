@@ -6,31 +6,25 @@ import (
 	"time"
 
 	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
-	"github.com/gobitfly/beaconchain/pkg/exporter/modules/mocks"
-	"github.com/pkg/errors"
 )
 
 func TestGenesisDepositsExporter_Export(t *testing.T) {
 	tests := []struct {
-		name                        string
-		mockEpochResponse           uint64
-		mockDepositCountResponse    uint64
-		mockBlockDepositCountUpdate int
-		mockValidatorStateError     error
+		name                     string
+		mockEpochResponse        uint64
+		mockDepositCountResponse uint64
 	}{
 		{
-			name:                        "valid export",
-			mockEpochResponse:           1,
-			mockDepositCountResponse:    0,
-			mockBlockDepositCountUpdate: 1,
+			name:                     "no records in db",
+			mockEpochResponse:        1,
+			mockDepositCountResponse: 0,
 		},
 		{
-			name:                        "GetValidatorState error",
-			mockEpochResponse:           1,
-			mockDepositCountResponse:    1,
-			mockBlockDepositCountUpdate: 1,
-			mockValidatorStateError:     errors.New("error"),
+			name:                     "records exist in db",
+			mockEpochResponse:        1,
+			mockDepositCountResponse: 1,
 		},
 	}
 
@@ -48,32 +42,39 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// mock expected calls
 			mockConsDBClient.On("GetLatestEpoch").Return(tt.mockEpochResponse, nil)
 			mockConsDBClient.On("GetDepositsCountForBlockSlot").Return(tt.mockDepositCountResponse, nil)
-			mockClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, nil)
-			mockConsDBClient.On("SaveBlockDeposits",
-				genesisValidators.Data[0].Index,
-				[]byte(genesisValidators.Data[0].Validator.Pubkey),
-				[]byte(genesisValidators.Data[0].Validator.WithdrawalCredentials),
-				genesisValidators.Data[0].Balance,
-			).Return(nil)
-			mockConsDBClient.On("UpdateBlockDepositsSignature").Return(nil)
-			mockConsDBClient.On("UpdateBlockDepositCount", tt.mockBlockDepositCountUpdate).Return(nil)
+
+			if tt.mockDepositCountResponse == 0 {
+				// mock if no records in db
+				mockClient.On("GetValidatorState", uint64(0)).Return(genesisValidators, nil)
+				mockConsDBClient.On("SaveBlockDeposits",
+					genesisValidators.Data[0].Index,
+					[]byte(genesisValidators.Data[0].Validator.Pubkey),
+					[]byte(genesisValidators.Data[0].Validator.WithdrawalCredentials),
+					genesisValidators.Data[0].Balance,
+				).Return(nil)
+				mockConsDBClient.On("UpdateBlockDepositsSignature").Return(nil)
+				mockConsDBClient.On("UpdateBlockDepositCount", 1).Return(nil)
+			}
 
 			exporter.Export()
 
 			mockConsDBClient.AssertCalled(t, "GetLatestEpoch")
 			mockConsDBClient.AssertCalled(t, "GetDepositsCountForBlockSlot")
-			mockClient.AssertCalled(t, "GetValidatorState", uint64(0))
-			mockConsDBClient.AssertCalled(t, "SaveBlockDeposits",
-				genesisValidators.Data[0].Index,
-				[]byte(genesisValidators.Data[0].Validator.Pubkey),
-				[]byte(genesisValidators.Data[0].Validator.WithdrawalCredentials),
-				genesisValidators.Data[0].Balance,
-			)
-			mockConsDBClient.AssertCalled(t, "UpdateBlockDepositsSignature")
-			mockConsDBClient.AssertCalled(t, "UpdateBlockDepositCount", tt.mockBlockDepositCountUpdate)
+
+			if tt.mockDepositCountResponse == 0 {
+				// assert mock calls if no records in db
+				mockClient.AssertCalled(t, "GetValidatorState", uint64(0))
+				mockConsDBClient.AssertCalled(t, "SaveBlockDeposits",
+					genesisValidators.Data[0].Index,
+					[]byte(genesisValidators.Data[0].Validator.Pubkey),
+					[]byte(genesisValidators.Data[0].Validator.WithdrawalCredentials),
+					genesisValidators.Data[0].Balance,
+				)
+				mockConsDBClient.AssertCalled(t, "UpdateBlockDepositsSignature")
+				mockConsDBClient.AssertCalled(t, "UpdateBlockDepositCount", 1)
+			}
 		})
 	}
 }
