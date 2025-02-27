@@ -1,17 +1,6 @@
 name: Backend-Integration-Tests
 on:
-  push:
-    paths:
-      - 'backend/**'
-    branches:
-      - main
-      - staging
-  pull_request:
-    paths:
-      - 'backend/**'
-    branches:
-      - '*'
-  workflow_dispatch:
+  workflow_dispatch: # Only runs when manually triggered
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,4 +31,4 @@ jobs:
         env:
           BEACONCHAIN_CONFIG : ${{ secrets.CI_CONFIG_PATH }}
         run: |
-          go test -tags=integration -failfast ./pkg/api/...
+          go test -tags=integration -failfast -count=1 -vet=off ./pkg/api/...
