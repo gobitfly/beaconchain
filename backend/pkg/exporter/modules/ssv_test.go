@@ -58,7 +58,6 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			if tt.mockWebsocketError {
 				exporter.dialer = &StubDialerWebsocketError{}
 				exporter.Export()
@@ -76,7 +75,6 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 				mockConsDBClient.AssertCalled(t, "SaveValidatorTags", valueStrings, valueArgs)
 				mockConsDBClient.AssertCalled(t, "DeleteValidatorTags")
 			}
-
 		})
 	}
 }
@@ -110,7 +108,10 @@ func (m *MockWebSocketConn) ReadMessage() (int, []byte, error) {
 			},
 		},
 	}
-	jsonData, _ := json.Marshal(mockResponse)
+	jsonData, err := json.Marshal(mockResponse)
+	if err != nil {
+		return websocket.TextMessage, nil, err
+	}
 	return websocket.TextMessage, jsonData, nil
 }
 
