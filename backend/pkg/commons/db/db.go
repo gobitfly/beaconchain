@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
@@ -72,7 +74,7 @@ type ConsensusDB struct {
 type ConsensusDBI interface {
 	GetLatestEpoch() (uint64, error)
 	GetDepositsCountForBlockSlot() (uint64, error)
-	SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error
+	SaveBlockDeposits(validator constypes.StandardValidator) error
 	UpdateBlockDepositsSignature() error
 	UpdateBlockDepositCount(count int) error
 }
@@ -1425,7 +1427,7 @@ func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
 	return count, nil
 }
 
-func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
+func (d *ConsensusDB) SaveBlockDeposits(validator constypes.StandardValidator) error {
 	tx, err := d.WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -1434,7 +1436,7 @@ func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCrede
 
 	_, err = tx.Exec(`INSERT INTO blocks_deposits (block_slot, block_root, block_index, publickey, withdrawalcredentials, amount, signature)
 	VALUES (0, '\x01', $1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
-		vIndex, vPubkey, vWithdrawalCredentials, vBalance, []byte{0x0},
+		validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance, []byte{0x0},
 	)
 
 	if err != nil {

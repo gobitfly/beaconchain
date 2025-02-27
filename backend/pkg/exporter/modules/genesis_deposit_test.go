@@ -35,7 +35,7 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 
 	exporter := genesisDepositsExporter{
 		client: mockClient,
-		db:     mockConsDBClient,
+		//db:     mockConsDBClient,
 		offset: 0,
 		ctx:    ctx,
 	}

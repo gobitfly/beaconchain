@@ -92,7 +92,7 @@ func (e genesisDepositsExporter) exportGenesisDeposits(genesisValidators *types.
 		if i%1000 == 0 {
 			log.Infof("exporting deposit data for genesis validator %v (%v/%v)", validator.Index, i, len(genesisValidators.Data))
 		}
-		err := e.db.SaveBlockDeposits(validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance)
+		err := e.db.SaveBlockDeposits(validator)
 		if err != nil {
 			return fmt.Errorf("error exporting genesis-deposits: %v", err)
 		}
