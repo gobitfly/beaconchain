@@ -15,8 +15,15 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
+type EpochClient interface {
+	GetChainHead() (*types.ChainHead, error)
+	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
+	GetEpochData(epoch uint64, skipHistoricBalances bool) (*types.EpochData, error)
+	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+}
+
 type networkLivenessUpdater struct {
-	client rpc.EpochClient
+	client EpochClient
 	db     db.ConsensusDBI
 	ctx    context.Context
 }
@@ -30,20 +37,20 @@ func newNetworkLivenessUpdater(client rpc.Client, db db.ConsensusDBI) networkLiv
 }
 
 func (n networkLivenessUpdater) Export() {
-	select {
-	case <-n.ctx.Done():
-		log.Info("export loop cancelled", 0)
-		return
-	default:
-		prevHeadEpoch, err := n.db.GetNetworkLivenessPreviousHeadEpoch()
-		if err != nil {
-			log.Fatal(err, "getting previous head epoch from db error", 0)
-		}
+	prevHeadEpoch, err := n.db.GetNetworkLivenessPreviousHeadEpoch()
+	if err != nil {
+		log.Fatal(err, "getting previous head epoch from db error", 0)
+	}
 
-		epochDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot*utils.Config.Chain.ClConfig.SlotsPerEpoch)
-		slotDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
+	epochDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot*utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	slotDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
 
-		for {
+	for {
+		select {
+		case <-n.ctx.Done():
+			log.Info("export loop cancelled", 0)
+			return
+		default:
 			deployment := utils.Config.DeploymentType
 			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration, deployment)
 			statusReport(constants.Running, nil)
