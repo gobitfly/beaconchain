@@ -390,7 +390,10 @@ const openValidatorModal = () => {
         {{
           $t(`dashboard.validator.summary.tooltip.${compare}`, {
             name: groupName,
-            average: formatToPercent(row.average_network_efficiency),
+            average: formatPercent(row.average_network_efficiency, {
+              isFraction: false,
+              maximumFractionDigits: 2,
+            }),
           })
         }}
       </span>
