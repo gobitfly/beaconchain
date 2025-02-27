@@ -309,7 +309,9 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
             {{ details?.dashboard_name }}
           </BcLink>)
           {{ $t('notifications.dashboards.dialog.entity.group_efficiency_text', {
-            percentage: formatFractionToPercent(groupEfficiencyBelow),
+            percentage: formatPercent(groupEfficiencyBelow, {
+              maximumFractionDigits: 0,
+            }),
           }) }}
         </template>
       </BcAccordion>

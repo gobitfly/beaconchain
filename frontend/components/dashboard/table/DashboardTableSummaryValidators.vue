@@ -5,25 +5,22 @@ import type {
   DashboardValidatorContext,
   SummaryTimeFrame,
 } from '~/types/dashboard/summary'
-import { DashboardValidatorSubsetModal } from '#components'
+import { LazyDashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
-import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
-  SummaryValidatorsIconRowInfo,
-  ValidatorSummaryIconRowKey,
-} from '~/types/validator'
+  VDBSummaryTableRow, VDBSummaryValidators,
+} from '~/types/api/validator_dashboard'
 
-interface Props {
-  absolute: boolean,
+const props = defineProps<{
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
   groupId?: number,
-  isTooltip?: boolean,
+  isAbsolute: boolean,
   row: VDBSummaryTableRow,
   timeFrame?: SummaryTimeFrame,
-}
-const props = defineProps<Props>()
+  validators: VDBSummaryValidators,
+}>()
 
 const { t: $t } = useTranslation()
 const { groups } = useValidatorDashboardGroups()
@@ -31,7 +28,7 @@ const { groups } = useValidatorDashboardGroups()
 const dialog = useDialog()
 
 const openValidatorModal = () => {
-  dialog.open(DashboardValidatorSubsetModal, {
+  dialog.open(LazyDashboardValidatorSubsetModal, {
     data: {
       context: props.context,
       dashboardKey: props.dashboardKey,
@@ -47,62 +44,109 @@ const groupName = computed(() => {
   return getGroupLabel($t, props.groupId, groups.value, $t('common.total'))
 })
 
-const mapped = computed(() => {
-  const list: SummaryValidatorsIconRowInfo[] = []
-  const validatorIcons: SummaryValidatorsIconRowInfo[] = []
-  const addCount = (key: ValidatorSummaryIconRowKey, count?: number) => {
-    if (count) {
-      list.push({
-        count,
-        key,
-      })
-    }
-  }
-
-  addCount('online', props.row?.validators.online)
-  if (props.absolute || props.isTooltip || !props.row?.validators.online) {
-    addCount('offline', props.row?.validators.offline)
-    addCount('exited', props.row?.validators.exited)
-  }
-  // for the total percentage we ignore the exited validators
-  const total = props.row?.validators.offline + props.row?.validators.online
-
-  return {
-    list,
-    total,
-    validatorIcons,
-  }
-})
+const hasValidators = computed(
+  () => props.validators.online || props.validators.offline || props.validators.exited,
+)
 </script>
 
 <template>
   <div
-    v-if="mapped.list.length"
+    v-if="hasValidators"
     class="validator-status-column"
   >
-    <BcTooltip class="status-list">
-      <template
-        v-if="!isTooltip"
-        #tooltip
-      >
-        <DashboardTableSummaryValidators
-          v-bind="props"
-          :absolute="!props.absolute"
-          :is-tooltip="true"
-        />
+    <BcTooltip fit-content>
+      <section class="validator-status-container">
+        <template
+          v-if="!isAbsolute"
+        >
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.online"
+            color="green"
+            :value="validators.online"
+            :base="validators.online + validators.offline"
+          />
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.offline"
+            color="red"
+            :value="validators.offline"
+            :base="validators.online + validators.offline"
+          />
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.exited"
+            color="gray"
+            :value="validators.exited"
+            :base="validators.online + validators.offline + validators.exited"
+          />
+        </template>
+        <template v-else>
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.online"
+            color="green"
+            :value="validators.online"
+          />
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.offline"
+            color="red"
+            :value="validators.offline"
+          />
+          <DashboardTableSummaryValidatorsStatus
+            v-if="validators.exited"
+            color="gray"
+            :value="validators.exited"
+          />
+        </template>
+      </section>
+      <template #tooltip>
+        <div class="validator-tooltip">
+          <template v-if="!isAbsolute">
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.online"
+              color="green"
+              :value="validators.online"
+            />
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.offline"
+              color="red"
+              :value="validators.offline"
+            />
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.exited"
+              color="gray"
+              :value="validators.exited"
+            />
+          </template>
+          <template v-else>
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.online"
+              color="green"
+              :value="validators.online"
+              :base="validators.online + validators.offline"
+            />
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.offline"
+              color="red"
+              :value="validators.offline"
+              :base="validators.online + validators.offline"
+            />
+            <DashboardTableSummaryValidatorsStatus
+              v-if="validators.exited"
+              color="gray"
+              :value="validators.exited"
+              :base="validators.online + validators.offline + validators.exited"
+            />
+          </template>
+        </div>
       </template>
-      <DashboardTableSummaryValidatorsIconRow
-        :icons="mapped.list"
-        :total="mapped.total"
-        :absolute
-      />
     </BcTooltip>
-    <FontAwesomeIcon
-      v-if="!isTooltip"
-      class="link popout"
-      :icon="faArrowUpRightFromSquare"
-      @click="openValidatorModal"
-    />
+    <BcButtonIcon
+      :screenreader-text="$t('dashboard.validator.summary.validator_status_popout')"
+    >
+      <FontAwesomeIcon
+        class="link popout"
+        :icon="faArrowUpRightFromSquare"
+        @click="openValidatorModal"
+      />
+    </BcButtonIcon>
   </div>
   <div v-else>
     -
@@ -110,25 +154,10 @@ const mapped = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-@use "~/assets/css/utils.scss";
-
 .validator-status-column {
   display: flex;
   align-items: center;
   flex-wrap: nowrap;
-  gap: var(--padding);
-
-  @media (max-width: 729px) {
-    justify-content: space-between;
-    padding-right: 13px;
-  }
-
-  .status-list {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--padding-small);
-  }
 
   .popout {
     width: 14px;
@@ -136,5 +165,16 @@ const mapped = computed(() => {
     margin-left: var(--padding-small);
     flex-shrink: 0;
   }
+}
+.validator-status-container {
+  display: flex;
+  justify-content: left;
+  flex-wrap: wrap;
+  gap: var(--padding-small)
+}
+.validator-tooltip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--padding-small)
 }
 </style>

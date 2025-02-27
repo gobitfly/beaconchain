@@ -8,6 +8,9 @@ import {
 } from '@fortawesome/pro-solid-svg-icons'
 import type { CompareResult } from '~/types/value'
 
+/**
+* @deprecated This component is outdated. Use BaseFormatPercent instead.
+*/
 const {
   addPositiveSign,
   base,
