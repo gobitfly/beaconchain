@@ -8,7 +8,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -41,13 +40,11 @@ var Client *rpc.Client
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
-		ctx := context.Background()
-		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
-
-		go networkLivenessUpdater(moduleCtx.ConsClient)
-		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
-		go genesisExporter.Export()
-		go syncCommitteesExporter(moduleCtx.ConsClient)
+		dbs := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
+		networkLivenessUpdater := newNetworkLivenessUpdater(context.ConsClient, dbs)
+		go networkLivenessUpdater.Export()
+		go genesisDepositsExporter(context.ConsClient)
+		go syncCommitteesExporter(context.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
 			go ssvExporter()

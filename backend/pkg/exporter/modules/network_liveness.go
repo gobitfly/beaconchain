@@ -42,7 +42,7 @@ func newNetworkLivenessUpdater(client rpc.Client, db db.ConsensusDBI) networkLiv
 	}
 }
 
-func (n networkLivenessUpdater) Export() {
+func (n *networkLivenessUpdater) Export() {
 	prevHeadEpoch, err := n.db.GetNetworkLivenessPreviousHeadEpoch()
 	if err != nil {
 		log.Fatal(err, "getting previous head epoch from db error", 0)
@@ -108,7 +108,7 @@ func nodeNotSynced(headEpoch uint64, epochDuration time.Duration) bool {
 	return time.Now().Add(-epochDuration).After(utils.EpochToTime(headEpoch))
 }
 
-func (n networkLivenessUpdater) updateCache(head *types.ChainHead) error {
+func (n *networkLivenessUpdater) updateCache(head *types.ChainHead) error {
 	latestNodeEpochKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)
 	latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
 
