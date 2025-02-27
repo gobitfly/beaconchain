@@ -240,11 +240,12 @@ watch(
                   </BcTooltip>
                 </div>
               </template>
-              <template #body="slotProps">
+              <template #body="{ data }">
                 <DashboardTableSummaryValidators
-                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :row="slotProps.data"
-                  :group-id="slotProps.data.group_id"
+                  :validators="data.validators"
+                  :is-absolute="showAbsoluteValuesPersisted[storageDashboardKey]"
+                  :row="data"
+                  :group-id="data.group_id"
                   :dashboard-key
                   :time-frame="selectedTimeFrame"
                   context="group"
