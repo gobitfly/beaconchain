@@ -10,18 +10,35 @@ import (
 
 // Client provides an interface for RPC clients
 type Client interface {
+	BlockClient
+	EpochClient
+	SyncCommittee
+	ValidatorClient
+}
+
+type BlockClient interface {
+	GetNewBlockChan() chan *types.Block
+	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+	GetBlockBySlot(slot uint64) (*types.Block, error)
+}
+
+type EpochClient interface {
 	GetChainHead() (*types.ChainHead, error)
 	GetEpochData(epoch uint64, skipHistoricBalances bool) (*types.EpochData, error)
-	GetValidatorQueue() (*types.ValidatorQueue, error)
-	GetStandardBeaconState(stateID any) (*constypes.StandardBeaconStateResponse, error)
 	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
-	GetBlockBySlot(slot uint64) (*types.Block, error)
-	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
-	GetNewBlockChan() chan *types.Block
-	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
 	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+}
+
+type SyncCommittee interface {
+	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
+}
+
+type ValidatorClient interface {
+	GetValidatorQueue() (*types.ValidatorQueue, error)
 	GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error)
 	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+	GetStandardBeaconState(stateID any) (*constypes.StandardBeaconStateResponse, error)
+	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
 }
 
 type Eth1Client interface {
