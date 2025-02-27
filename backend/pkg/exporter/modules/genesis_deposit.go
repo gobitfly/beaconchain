@@ -11,8 +11,12 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
+type ValidatorClient interface {
+	GetValidatorState(epoch uint64) (*types.StandardValidatorsResponse, error)
+}
+
 type genesisDepositsExporter struct {
-	client rpc.ValidatorClient
+	client ValidatorClient
 	db     db.ConsensusDBI
 
 	offset time.Duration
