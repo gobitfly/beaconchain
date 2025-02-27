@@ -291,7 +291,7 @@ func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor int, validatorC
 	if rewards.IsZero() || investedAmount.IsZero() || validatorCount == 0 {
 		return 0
 	}
-	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount.Mul(decimal.NewFromInt(int64(validatorCount)))).Mul(decimal.NewFromInt(24 * 365 * 100))).InexactFloat64()
+	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount.Mul(decimal.NewFromInt(int64(validatorCount)))).Mul(decimal.NewFromInt(24 * 365))).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
