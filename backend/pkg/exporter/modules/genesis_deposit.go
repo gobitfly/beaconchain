@@ -35,8 +35,11 @@ func (e genesisDepositsExporter) Export() {
 			log.Info("export loop cancelled", 0)
 			return
 		default:
-			latestEpoch, err := e.getLatestEpoch(e.db)
+			// check if the beaconchain has started
+			latestEpoch, err := e.db.GetLatestEpoch()
 			if err != nil {
+				log.Error(err, "error retrieving latest epoch from the database", 0)
+				time.Sleep(time.Second * 10)
 				continue
 			}
 
@@ -45,11 +48,15 @@ func (e genesisDepositsExporter) Export() {
 				continue
 			}
 
-			genesisDepositCount, err := e.getGenesisDepositCount(e.db)
+			// check if genesis-deposits have already been exported
+			genesisDepositCount, err := e.db.GetDepositsCountForBlockSlot()
 			if err != nil {
+				log.Error(err, "error retrieving genesis-deposits-count when exporting genesis-deposits", 0)
+				time.Sleep(e.offset)
 				continue
 			}
 
+			// if genesis-deposits have already been exported exit this go-routine
 			if genesisDepositCount > 0 {
 				return
 			}
@@ -61,7 +68,7 @@ func (e genesisDepositsExporter) Export() {
 				continue
 			}
 
-			err = e.exportGenesisDeposits(genesisValidators, e.db)
+			err = e.exportGenesisDeposits(genesisValidators)
 			if err != nil {
 				log.Error(err, "error exporting genesis-deposits: %v", 0)
 				time.Sleep(e.offset)
@@ -74,45 +81,25 @@ func (e genesisDepositsExporter) Export() {
 	}
 }
 
-func (e genesisDepositsExporter) getLatestEpoch(db db.ConsensusDBI) (uint64, error) {
-	latestEpoch, err := db.GetLatestEpoch()
-	if err != nil {
-		log.Error(err, "error retrieving latest epoch from the database", 0)
-		time.Sleep(time.Second * 10)
-		return 0, err
-	}
-
-	return latestEpoch, nil
-}
-func (e genesisDepositsExporter) getGenesisDepositCount(db db.ConsensusDBI) (uint64, error) {
-	genesisDepositsCount, err := db.GetDepositsCountForBlockSlot()
-	if err != nil {
-		log.Error(err, "error retrieving genesis-deposits-count when exporting genesis-deposits", 0)
-		time.Sleep(e.offset)
-		return 0, err
-	}
-	return genesisDepositsCount, nil
-}
-
-func (e genesisDepositsExporter) exportGenesisDeposits(genesisValidators *types.StandardValidatorsResponse, db db.ConsensusDBI) error {
+func (e genesisDepositsExporter) exportGenesisDeposits(genesisValidators *types.StandardValidatorsResponse) error {
 	log.Infof("exporting deposit data for %v genesis validators", len(genesisValidators.Data))
 
 	for i, validator := range genesisValidators.Data {
 		if i%1000 == 0 {
 			log.Infof("exporting deposit data for genesis validator %v (%v/%v)", validator.Index, i, len(genesisValidators.Data))
 		}
-		err := db.SaveBlockDeposits(validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance)
+		err := e.db.SaveBlockDeposits(validator.Index, validator.Validator.Pubkey, validator.Validator.WithdrawalCredentials, validator.Balance)
 		if err != nil {
 			return fmt.Errorf("error exporting genesis-deposits: %v", err)
 		}
 	}
 
-	err := db.UpdateBlockDepositsSignature()
+	err := e.db.UpdateBlockDepositsSignature()
 	if err != nil {
 		return fmt.Errorf("error hydrating eth1 data into genesis-deposits: %v", err)
 	}
 
-	err = db.UpdateBlockDepositCount(len(genesisValidators.Data))
+	err = e.db.UpdateBlockDepositCount(len(genesisValidators.Data))
 	if err != nil {
 		return fmt.Errorf("error updating deposit count for the genesis slot: %v", err)
 	}
