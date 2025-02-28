@@ -27,18 +27,25 @@ type BidTrace struct {
 	Value                types.WeiString `json:"value"`
 }
 
-type relaysExporter struct {
-	db db.ConsensusDBI
+type RelayClient interface {
+	fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error)
+}
 
-	delay time.Duration
-	ctx   context.Context
+type relayClient struct{}
+
+type relaysExporter struct {
+	db          db.ConsensusDBI
+	relayClient RelayClient
+	delay       time.Duration
+	ctx         context.Context
 }
 
 func newRelaysExporter(ctx context.Context, db db.ConsensusDBI) relaysExporter {
 	return relaysExporter{
-		db:    db,
-		delay: time.Minute,
-		ctx:   ctx,
+		db:          db,
+		relayClient: relayClient{},
+		delay:       time.Minute,
+		ctx:         ctx,
 	}
 }
 
@@ -107,8 +114,8 @@ func (rs *relaysExporter) singleRelayExport(r types.Relay) {
 	log.Infof("finished syncing payloads from relay %v", r.ID)
 }
 
-func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
-	url := fmt.Sprintf("%s/relay/v1/data/bidtraces/proposer_payload_delivered?limit=100", r.Endpoint)
+func (relayClient) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error) {
+	url := fmt.Sprintf("%s/relay/v1/data/bidtraces/proposer_payload_delivered?limit=100", endpoint)
 	if offset != 0 {
 		url += fmt.Sprintf("&cursor=%v", offset)
 	}
@@ -119,8 +126,8 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 
 	resp, err := client.Get(url)
 	if err != nil {
-		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": r.ID, "offset": offset, "url": url})
-		return nil, fmt.Errorf("error retrieving delivered payloads for relay: %v, offset: %v, url: %v: %w", r.ID, offset, url, err)
+		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": id, "offset": offset, "url": url})
+		return nil, fmt.Errorf("error retrieving delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
 	}
 
 	defer resp.Body.Close()
@@ -128,7 +135,7 @@ func fetchDeliveredPayloads(r types.Relay, offset uint64) ([]BidTrace, error) {
 	var payloads []BidTrace
 	err = json.NewDecoder(resp.Body).Decode(&payloads)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding json for delivered payloads for relay: %v, offset: %v, url: %v: %w", r.ID, offset, url, err)
+		return nil, fmt.Errorf("error decoding json for delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
 	}
 
 	return payloads, nil
@@ -175,7 +182,7 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 			log.Info("fetch delivered payloads loop cancelled")
 			return nil
 		default:
-			payloads, err := fetchDeliveredPayloads(r, offset)
+			payloads, err := rs.relayClient.fetchDeliveredPayloads(r.Endpoint, r.ID, offset)
 			if err != nil {
 				return fmt.Errorf("error calling fetchDeliveredPayloads with offset: %v for relay: %v: %w", offset, r.ID, err)
 			}
