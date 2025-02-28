@@ -56,7 +56,7 @@ func (ssv *ssvExporter) Export() {
 	for {
 		select {
 		case <-ssv.ctx.Done():
-			log.Info("export process cancelled", 0)
+			log.Info("ssv export process cancelled")
 			return
 		default:
 			err := ssv.exportSSV()

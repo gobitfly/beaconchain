@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestGenesisDepositsExporter_Export(t *testing.T) {
+func TestSSVExport(t *testing.T) {
 	tests := []struct {
 		name                 string
 		mockExporterResponse *SSVExporterResponse
@@ -26,7 +26,9 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 			name: "websocket works, data is saved and deleted from db",
 			mockExporterResponse: &SSVExporterResponse{
 				Data: []SSVExporterData{
-					{Publickey: "0xabcd"},
+					{
+						Publickey: "0xabcd",
+					},
 				},
 			},
 		},
@@ -34,7 +36,9 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 			name: "websocket empty response",
 			mockExporterResponse: &SSVExporterResponse{
 				Data: []SSVExporterData{
-					{Publickey: "0xabcd"},
+					{
+						Publickey: "0xabcd",
+					},
 				},
 			},
 			mockWebsocketError: true,
@@ -71,6 +75,7 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 				mockConsDBClient.On("DeleteValidatorTags").Return(nil)
 
 				exporter.Export()
+
 				mockConsDBClient.AssertCalled(t, "DeleteInvalidTags")
 				mockConsDBClient.AssertCalled(t, "SaveValidatorTags", valueStrings, valueArgs)
 				mockConsDBClient.AssertCalled(t, "DeleteValidatorTags")
