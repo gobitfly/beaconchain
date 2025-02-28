@@ -29,22 +29,28 @@ func newSyncCommitteesCountExporter(ctx context.Context, db db.ConsensusDBI) syn
 
 func (sc syncCommitteesCountExporter) Export() {
 	for {
-		startTime := time.Now()
-		statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
-		statusReport(constants.Running, nil)
+		select {
+		case <-sc.ctx.Done():
+			log.Info("sync committees count export loop cancelled")
+			return
+		default:
+			startTime := time.Now()
+			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
+			statusReport(constants.Running, nil)
 
-		err := sc.processSyncCommitteesCount()
-		if err != nil {
-			log.Error(err, "error exporting sync_committees_count_per_validator", 0)
-			statusReport(constants.Failure, map[string]string{"error": err.Error()})
-		} else {
-			statusReport(constants.Success, map[string]string{
-				"took":     time.Since(startTime).String(),
-				"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
-			})
+			err := sc.processSyncCommitteesCount()
+			if err != nil {
+				log.Error(err, "error exporting sync_committees_count_per_validator", 0)
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+			} else {
+				statusReport(constants.Success, map[string]string{
+					"took":     time.Since(startTime).String(),
+					"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
+				})
+			}
+
+			time.Sleep(sc.delay)
 		}
-
-		time.Sleep(sc.delay)
 	}
 }
 
@@ -54,7 +60,7 @@ func (sc *syncCommitteesCountExporter) processSyncCommitteesCount() error {
 		return err
 	}
 
-	latestFinalizedEpoch, err := db.GetLatestFinalizedEpoch()
+	latestFinalizedEpoch, err := sc.db.GetLatestFinalizedEpoch()
 	if err != nil {
 		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
 	}
