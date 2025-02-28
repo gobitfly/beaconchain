@@ -10,7 +10,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
-func TestGenesisDepositsExporter_Export(t *testing.T) {
+func TestExport(t *testing.T) {
 	tests := []struct {
 		name                     string
 		mockEpochResponse        uint64
@@ -36,7 +36,7 @@ func TestGenesisDepositsExporter_Export(t *testing.T) {
 	exporter := genesisDepositsExporter{
 		client: mockClient,
 		db:     mockConsDBClient,
-		offset: 0,
+		delay:  0,
 		ctx:    ctx,
 	}
 

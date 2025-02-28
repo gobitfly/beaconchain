@@ -19,15 +19,15 @@ type genesisDepositsExporter struct {
 	client ValidatorClient
 	db     db.ConsensusDBI
 
-	offset time.Duration
-	ctx    context.Context
+	delay time.Duration
+	ctx   context.Context
 }
 
 func newGenesisDepositsExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) genesisDepositsExporter {
 	return genesisDepositsExporter{
 		client: client,
 		db:     db,
-		offset: time.Minute,
+		delay:  time.Minute,
 		ctx:    ctx,
 	}
 }
@@ -36,7 +36,7 @@ func (e *genesisDepositsExporter) Export() {
 	for {
 		select {
 		case <-e.ctx.Done():
-			log.Info("export loop cancelled", 0)
+			log.Info("genesis deposit export loop cancelled")
 			return
 		default:
 			// check if the beaconchain has started
@@ -48,7 +48,7 @@ func (e *genesisDepositsExporter) Export() {
 			}
 
 			if latestEpoch == 0 {
-				time.Sleep(e.offset)
+				time.Sleep(e.delay)
 				continue
 			}
 
@@ -56,7 +56,7 @@ func (e *genesisDepositsExporter) Export() {
 			genesisDepositCount, err := e.db.GetDepositsCountForBlockSlot()
 			if err != nil {
 				log.Error(err, "error retrieving genesis-deposits-count when exporting genesis-deposits", 0)
-				time.Sleep(e.offset)
+				time.Sleep(e.delay)
 				continue
 			}
 
@@ -68,14 +68,14 @@ func (e *genesisDepositsExporter) Export() {
 			genesisValidators, err := e.client.GetValidatorState(0)
 			if err != nil {
 				log.Error(err, "error retrieving genesis validator data for genesis-epoch when exporting genesis-deposits: %v", 0)
-				time.Sleep(e.offset)
+				time.Sleep(e.delay)
 				continue
 			}
 
 			err = e.exportGenesisDeposits(genesisValidators)
 			if err != nil {
 				log.Error(err, "error exporting genesis-deposits: %v", 0)
-				time.Sleep(e.offset)
+				time.Sleep(e.delay)
 				continue
 			}
 
