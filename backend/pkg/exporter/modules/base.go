@@ -65,7 +65,8 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		}
 
 		if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
-			go UpdatePubkeyTag()
+			pubkeyUpdater := newPubkeyUpdater(ctx, consDB)
+			go pubkeyUpdater.Update()
 		}
 
 		if utils.Config.MevBoostRelayExporter.Enabled {

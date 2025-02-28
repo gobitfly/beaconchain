@@ -63,6 +63,15 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
+type ConsensusDB struct {
+	WriterDb *sqlx.DB
+	ReaderDb *sqlx.DB
+}
+
+type ConsensusDBI interface {
+	UpdatePubkeyTags() error
+}
+
 func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
@@ -2407,6 +2416,27 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	}
 
 	return epochParticipation, nil
+}
+
+func (d *ConsensusDB) UpdatePubkeyTags() error {
+	tx, err := d.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
+		SELECT publickey, FORMAT('pool:%s', sps.name) tag
+		FROM eth1_deposits
+		inner join stake_pools_stats as sps on ENCODE(from_address::bytea, 'hex')=sps.address
+		WHERE sps.name NOT LIKE '%Rocketpool -%'
+		ON CONFLICT (publickey, tag) DO NOTHING`)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
