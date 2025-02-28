@@ -34,3 +34,7 @@ func GWeiBytesToWei(gwei []byte) decimal.Decimal {
 func EtherToGwei(ether *big.Int) decimal.Decimal {
 	return decimal.NewFromBigInt(ether, 0).Mul(decimal.NewFromInt(params.GWei))
 }
+
+func EtherToWei(ether *big.Int) decimal.Decimal {
+	return decimal.NewFromBigInt(ether, 0).Mul(decimal.NewFromInt(params.Ether))
+}
