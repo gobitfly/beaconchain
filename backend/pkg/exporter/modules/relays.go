@@ -44,26 +44,32 @@ func newRelaysExporter(ctx context.Context, db db.ConsensusDBI) relaysExporter {
 
 func (rs *relaysExporter) MEVBoostRelaysExporter() {
 	for {
-		// we retrieve the relays from the db each loop to prevent having to restart the exporter for changes
-		relays, err := rs.db.GetRelays()
-		var wg sync.WaitGroup
-		if err == nil {
-			for _, relay := range relays {
-				if !shouldTryToExportRelay(relay) {
-					continue
+		select {
+		case <-rs.ctx.Done():
+			log.Info("MEV boost relays export loop cancelled")
+			return
+		default:
+			// we retrieve the relays from the db each loop to prevent having to restart the exporter for changes
+			relays, err := rs.db.GetRelays()
+			var wg sync.WaitGroup
+			if err == nil {
+				for _, relay := range relays {
+					if !shouldTryToExportRelay(relay) {
+						continue
+					}
+					wg.Add(1)
+					go func(r types.Relay) {
+						defer wg.Done()
+						rs.singleRelayExport(r)
+					}(relay)
 				}
-				wg.Add(1)
-				go func(r types.Relay) {
-					defer wg.Done()
-					rs.singleRelayExport(r)
-				}(relay)
+			} else {
+				log.Error(err, "failed to retrieve relays from db", 0)
 			}
-		} else {
-			log.Error(err, "failed to retrieve relays from db", 0)
-		}
 
-		wg.Wait()
-		time.Sleep(rs.delay)
+			wg.Wait()
+			time.Sleep(rs.delay)
+		}
 	}
 }
 
@@ -146,12 +152,14 @@ func (rs *relaysExporter) exportRelayBlocks(r types.Relay) error {
 		log.Error(err, "failed to retrieve first relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
 	}
 
-	if firstUsage.BlockSlot != 0 {
-		err = rs.retrieveAndInsertPayloadsFromRelay(r, 0, firstUsage.BlockSlot)
-		if err != nil {
-			log.Error(err, "failed to retrieve and insert possibly missing payloads", 0, map[string]interface{}{"relay": r.ID})
-			return err
-		}
+	if firstUsage.BlockSlot == 0 {
+		return nil
+	}
+
+	err = rs.retrieveAndInsertPayloadsFromRelay(r, 0, firstUsage.BlockSlot)
+	if err != nil {
+		log.Error(err, "failed to retrieve and insert possibly missing payloads", 0, map[string]interface{}{"relay": r.ID})
+		return err
 	}
 
 	return nil
@@ -162,60 +170,64 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 	offset := highBound
 
 	for {
-		payloads, err := fetchDeliveredPayloads(r, offset)
-		if err != nil {
-			return fmt.Errorf("error calling fetchDeliveredPayloads with offset: %v for relay: %v: %w", offset, r.ID, err)
-		}
-
-		if len(payloads) == 0 {
-			log.Error(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
-			break
-		}
-
-		for _, payload := range payloads {
-			// first insert the tag into the blocks_tags table
-			err := rs.db.SaveBlocksTags(r.ID,
-				payload.Slot,
-				utils.MustParseHex(payload.BlockHash))
+		select {
+		case <-rs.ctx.Done():
+			log.Info("fetch delivered payloads loop cancelled")
+			return nil
+		default:
+			payloads, err := fetchDeliveredPayloads(r, offset)
 			if err != nil {
-				log.Error(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": r.ID})
-				return err
+				return fmt.Errorf("error calling fetchDeliveredPayloads with offset: %v for relay: %v: %w", offset, r.ID, err)
 			}
 
-			err = rs.db.SaveBlocksRelays(r.ID,
-				payload.Slot,
-				payload.Value,
-				utils.MustParseHex(payload.BlockHash),
-				utils.MustParseHex(payload.BuilderPubkey),
-				utils.MustParseHex(payload.ProposerPubkey),
-				utils.MustParseHex(payload.ProposerFeeRecipient))
-			if err != nil {
-				log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
-				return err
+			if len(payloads) == 0 {
+				log.Error(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
+				break
 			}
 
-		}
+			for _, payload := range payloads {
+				// first insert the tag into the blocks_tags table
+				err := rs.db.SaveBlocksTags(r.ID,
+					payload.Slot,
+					utils.MustParseHex(payload.BlockHash))
+				if err != nil {
+					log.Error(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": r.ID})
+					return err
+				}
 
-		if payloads[len(payloads)-1].Slot < minSlot {
-			// last payload we received is bellow than our calculated min_slot
-			break
-		}
+				err = rs.db.SaveBlocksRelays(r.ID,
+					payload.Slot,
+					payload.Value,
+					utils.MustParseHex(payload.BlockHash),
+					utils.MustParseHex(payload.BuilderPubkey),
+					utils.MustParseHex(payload.ProposerPubkey),
+					utils.MustParseHex(payload.ProposerFeeRecipient))
+				if err != nil {
+					log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
+					return err
+				}
 
-		if len(payloads) < 100 {
-			// if the response is less than 100 payloads, we assume that we have reached the end and break
-			break
-		}
+			}
 
-		if payloads[len(payloads)-1].Slot == offset {
-			return fmt.Errorf("relay doesn't follow spec, last returned slot matches offset (sort order ascending instead of descending)")
-		}
+			if payloads[len(payloads)-1].Slot < minSlot {
+				// last payload we received is bellow than our calculated min_slot
+				break
+			}
 
-		// sleep for a bit to not kill the relay
-		offset = payloads[len(payloads)-1].Slot
-		time.Sleep(time.Second)
+			if len(payloads) < 100 {
+				// if the response is less than 100 payloads, we assume that we have reached the end and break
+				break
+			}
+
+			if payloads[len(payloads)-1].Slot == offset {
+				return fmt.Errorf("relay doesn't follow spec, last returned slot matches offset (sort order ascending instead of descending)")
+			}
+
+			// sleep for a bit to not kill the relay
+			offset = payloads[len(payloads)-1].Slot
+			time.Sleep(time.Second)
+		}
 	}
-
-	return nil
 }
 
 func calculateMinSlot(lowBound uint64) uint64 {
