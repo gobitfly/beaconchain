@@ -362,6 +362,36 @@ func (_m *ClientInt) GetSpec() (*types.StandardSpecResponse, error) {
 	return r0, r1
 }
 
+// GetState provides a mock function with given fields: stateID
+func (_m *ClientInt) GetState(stateID interface{}) (*types.StandardBeaconStateResponse, error) {
+	ret := _m.Called(stateID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetState")
+	}
+
+	var r0 *types.StandardBeaconStateResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(interface{}) (*types.StandardBeaconStateResponse, error)); ok {
+		return rf(stateID)
+	}
+	if rf, ok := ret.Get(0).(func(interface{}) *types.StandardBeaconStateResponse); ok {
+		r0 = rf(stateID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*types.StandardBeaconStateResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(interface{}) error); ok {
+		r1 = rf(stateID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetSyncCommitteesAssignments provides a mock function with given fields: epoch, stateID
 func (_m *ClientInt) GetSyncCommitteesAssignments(epoch *uint64, stateID interface{}) (*types.StandardSyncCommitteesResponse, error) {
 	ret := _m.Called(epoch, stateID)
