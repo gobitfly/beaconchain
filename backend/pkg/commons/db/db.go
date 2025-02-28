@@ -64,17 +64,6 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
-type ConsensusDB struct {
-	WriterDb *sqlx.DB
-	ReaderDb *sqlx.DB
-}
-
-type ConsensusDBI interface {
-	SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error
-	DeleteValidatorTags() error
-	DeleteInvalidTags() error
-}
-
 func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
