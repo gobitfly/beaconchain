@@ -213,7 +213,6 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 					log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
 					return err
 				}
-
 			}
 
 			if payloads[len(payloads)-1].Slot < minSlot {

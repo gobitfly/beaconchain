@@ -155,7 +155,6 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 				utils.MustParseHex(payload[0].ProposerFeeRecipient),
 			)
 			mockConsDBClient.AssertCalled(t, "UpdateRelays", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
-
 		})
 	}
 }
