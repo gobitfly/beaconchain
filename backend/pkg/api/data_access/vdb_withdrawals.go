@@ -302,6 +302,10 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	return result, p, nil
 }
 
+// returns information about the next *automatic* withdrawal, if applicable (=skimming)
+// 0x00 creds (genesis): never
+// 0x01 creds (capella): if balance > 32 EB
+// 0x02 creds (electra): if balance > 2048 EB
 func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidator) (*t.VDBWithdrawalsTableRow, error) {
 	if len(queryValidators) == 0 {
 		return nil, nil
@@ -346,7 +350,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 		}
 
 		if (metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)) ||
-			(metadata.EffectiveBalance == utils.Config.Chain.ClConfig.MaxEffectiveBalance && metadata.Balance > utils.Config.Chain.ClConfig.MaxEffectiveBalance) {
+			(metadata.EffectiveBalance == utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials) && metadata.Balance > utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials)) {
 			// this validator is eligible for withdrawal, check if it is the next one
 			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
 				distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
@@ -401,10 +405,10 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 		withdrawalAmount = nextValidatorData.Balance
 	} else {
 		// partial withdrawal
-		withdrawalAmount = nextValidatorData.Balance - utils.Config.Chain.ClConfig.MaxEffectiveBalance
+		withdrawalAmount = nextValidatorData.Balance - utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
 	}
 
-	if lastWithdrawnEpoch == epoch || nextValidatorData.Balance < utils.Config.Chain.ClConfig.MaxEffectiveBalance {
+	if lastWithdrawnEpoch == epoch || nextValidatorData.Balance < utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials) {
 		withdrawalAmount = 0
 	}
 
