@@ -13,21 +13,21 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
-type pubkeyUpdater struct {
+type pubkeyTagsUpdater struct {
 	db    db.ConsensusDBI
 	delay time.Duration
 	ctx   context.Context
 }
 
-func newPubkeyUpdater(ctx context.Context, db db.ConsensusDBI) pubkeyUpdater {
-	return pubkeyUpdater{
+func newPubkeyTagsUpdater(ctx context.Context, db db.ConsensusDBI) pubkeyTagsUpdater {
+	return pubkeyTagsUpdater{
 		db:    db,
 		delay: time.Minute * 10,
 		ctx:   ctx,
 	}
 }
 
-func (p *pubkeyUpdater) Update() {
+func (p *pubkeyTagsUpdater) Update() {
 	log.Infof("Started Pubkey Tags Updater")
 	for {
 		startTime := time.Now()
