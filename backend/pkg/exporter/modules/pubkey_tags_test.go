@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestUpdate(t *testing.T) {
+func TestPubkeyTagsUpdate(t *testing.T) {
 	tests := []struct {
 		name      string
 		mockError error
