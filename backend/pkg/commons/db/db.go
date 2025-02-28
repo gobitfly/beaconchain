@@ -2307,6 +2307,20 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	return validatoridxs, nil
 }
 
+func (c *ConsensusDB) GetLatestFinalizedEpoch() (uint64, error) {
+	var latestFinalized uint64
+	err := c.WriterDb.Get(&latestFinalized, "SELECT epoch FROM epochs WHERE finalized ORDER BY epoch DESC LIMIT 1")
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
+		return 0, err
+	}
+
+	return latestFinalized, nil
+}
+
 func (c *ConsensusDB) GetSyncCommitteesCountPerValidator() (uint64, error) {
 	var rowCount uint64
 	err := c.WriterDb.Get(&rowCount, `SELECT COUNT(*) FROM sync_committees_count_per_validator`)
