@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
@@ -628,7 +629,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				return nil
 			})
 
-			// update cached view of consensus desposits
+			// update cached view of consensus deposits
 			// possible bug: at this point the export tx is not yet committed, so the query will read
 			// stale data
 			g.Go(func() error {
@@ -644,6 +645,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						blocks_deposits bd
 						INNER JOIN validators v ON bd.publickey = v.pubkey
 						INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+						INNER JOIN blocks b ON bd.block_root = b.blockroot and b.status = '1'
 					ORDER BY
 						uvdv.dashboard_id DESC,
 						bd.block_slot DESC,
@@ -658,6 +660,37 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
 				return nil
 			})
+
+			if config.ClConfig.ElectraForkEpoch != nil && *config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+				// update cached view of consensus deposit requests
+				g.Go(func() error {
+					start := time.Now()
+					err := db.CacheQuery(`
+						SELECT
+							uvdv.dashboard_id,
+							uvdv.group_id,
+							bdr.block_slot,
+							bdr.request_index,
+							bdr.amount
+						FROM
+							blocks_deposit_requests bdr
+							INNER JOIN validators v ON bdr.pubkey = v.pubkey
+							INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+							INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
+						ORDER BY
+							uvdv.dashboard_id DESC,
+							bdr.block_slot DESC,
+							bdr.request_index DESC;
+						`, "cached_blocks_deposit_requests_lookup",
+						[]string{"dashboard_id", "block_slot", "request_index"},
+						[]string{"dashboard_id", "amount"})
+					if err != nil {
+						return fmt.Errorf("error updating cached view of consensus deposit requests: %w", err)
+					}
+					log.Infof("updating cached view of consensus deposit requests took %s", time.Since(start))
+					return nil
+				})
+			}
 		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {
