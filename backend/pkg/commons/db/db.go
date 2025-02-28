@@ -805,6 +805,130 @@ func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.
 	return relaysDataMap, nil
 }
 
+func (c *ConsensusDB) GetRelays() ([]types.Relay, error) {
+	var relays []types.Relay
+	err := c.ReaderDb.Select(&relays, `
+		SELECT tag_id, endpoint, public_link, is_censoring, is_ethical, export_failure_count, last_export_try_ts, last_export_success_ts 
+		FROM relays`)
+
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	return relays, nil
+}
+
+func (c *ConsensusDB) UpdateRelays(tagID, endpoint string) error {
+	_, err := c.WriterDb.Exec(`
+		UPDATE relays SET
+			export_failure_count = 0,
+			last_export_try_ts = NOW() AT TIME ZONE 'utc',
+			last_export_success_ts = NOW() AT TIME ZONE 'utc'
+		WHERE tag_id = $1 AND endpoint = $2`, tagID, endpoint)
+
+	return err
+}
+
+func (c *ConsensusDB) UpdateRelayLastExportTry(tagID, endpoint string) error {
+	_, err := c.WriterDb.Exec(`
+			UPDATE relays SET
+				last_export_try_ts = (NOW() AT TIME ZONE 'utc')
+			WHERE tag_id = $1 AND endpoint = $2`, tagID, endpoint)
+
+	return err
+}
+
+func (c *ConsensusDB) UpdateRelayExportFailureCount(exportFailureCount uint64, tagID, endpoint string) error {
+	_, err := c.WriterDb.Exec(`
+	UPDATE relays SET
+		export_failure_count = $1,
+		last_export_try_ts = (NOW() AT TIME ZONE 'utc')
+	WHERE tag_id = $2 AND endpoint = $3`, exportFailureCount+1, tagID, endpoint)
+
+	return err
+}
+
+func (c *ConsensusDB) GetFirstRelayBlock(tagID string) (types.RelayBlock, error) {
+	var block types.RelayBlock
+	err := c.ReaderDb.Get(&block, `
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
+		FROM relays_blocks 
+		WHERE tag_id=$1 
+		ORDER BY block_slot ASC 
+		LIMIT 1`, tagID)
+
+	return block, err
+}
+
+func (c *ConsensusDB) GetLastRelayBlock(tagID string) (types.RelayBlock, error) {
+	var block types.RelayBlock
+	err := c.ReaderDb.Get(&block, `
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
+		FROM relays_blocks 
+		WHERE tag_id=$1 
+		ORDER BY block_slot DESC 
+		LIMIT 1`, tagID)
+
+	return block, err
+}
+
+func (c *ConsensusDB) SaveBlocksTags(tagID string, slot uint64, blockHash []byte) error {
+	tx, err := c.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+	INSERT INTO blocks_tags
+	SELECT blocks.slot, blocks.blockroot, $1
+	FROM blocks
+	WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
+	ON CONFLICT DO NOTHING`, tagID, slot, blockHash)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (c *ConsensusDB) SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient []byte) error {
+	tx, err := c.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`
+		INSERT INTO relays_blocks
+		(
+			tag_id,
+			block_slot,
+			block_root,
+			exec_block_hash,
+			value,
+			builder_pubkey,
+			proposer_pubkey,
+			proposer_fee_recipient
+		)
+		SELECT
+			$1,	blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
+		FROM blocks
+		WHERE
+			blocks.slot = $2 and
+			blocks.exec_block_hash = $3
+		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
+		tagID, slot, blockHash,
+		payloadValue, builderPubkey,
+		proposerPubkey, proposerFeeRecipient)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 // GetValidatorIndices will return the total-validator-indices
 func GetValidatorIndices() ([]uint64, error) {
 	indices := []uint64{}
