@@ -2433,8 +2433,8 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
-func (d *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
-	tx, err := WriterDb.Beginx()
+func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -2454,8 +2454,8 @@ func (d *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []inter
 	return tx.Commit()
 }
 
-func (d *ConsensusDB) DeleteValidatorTags() error {
-	tx, err := WriterDb.Beginx()
+func (c *ConsensusDB) DeleteValidatorTags() error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -2486,8 +2486,8 @@ func (d *ConsensusDB) DeleteValidatorTags() error {
 	return nil
 }
 
-func (d *ConsensusDB) DeleteInvalidTags() error {
-	tx, err := WriterDb.Beginx()
+func (c *ConsensusDB) DeleteInvalidTags() error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
