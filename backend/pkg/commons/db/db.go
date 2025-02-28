@@ -64,19 +64,6 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
-type ConsensusDB struct {
-	WriterDb *sqlx.DB
-	ReaderDb *sqlx.DB
-}
-
-type ConsensusDBI interface {
-	GetLatestEpoch() (uint64, error)
-	GetDepositsCountForBlockSlot() (uint64, error)
-	SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error
-	UpdateBlockDepositsSignature() error
-	UpdateBlockDepositCount(count int) error
-}
-
 func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
@@ -1415,9 +1402,9 @@ func GetTotalAmountDeposited() (uint64, error) {
 	return total, err
 }
 
-func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
+func (c *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
 	var count uint64
-	err := d.WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
+	err := c.WriterDb.Get(&count, "SELECT COUNT(*) FROM blocks_deposits WHERE block_slot=0")
 	if err != nil {
 		return 0, err
 	}
@@ -1425,8 +1412,8 @@ func (d *ConsensusDB) GetDepositsCountForBlockSlot() (uint64, error) {
 	return count, nil
 }
 
-func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
-	tx, err := d.WriterDb.Beginx()
+func (c *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCredentials []byte, vBalance uint64) error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1444,8 +1431,8 @@ func (d *ConsensusDB) SaveBlockDeposits(vIndex uint64, vPubkey, vWithdrawalCrede
 	return tx.Commit()
 }
 
-func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
-	tx, err := d.WriterDb.Beginx()
+func (c *ConsensusDB) UpdateBlockDepositsSignature() error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1468,8 +1455,8 @@ func (d *ConsensusDB) UpdateBlockDepositsSignature() error {
 	return tx.Commit()
 }
 
-func (d *ConsensusDB) UpdateBlockDepositCount(count int) error {
-	tx, err := d.WriterDb.Beginx()
+func (c *ConsensusDB) UpdateBlockDepositCount(count int) error {
+	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
@@ -1485,9 +1472,9 @@ func (d *ConsensusDB) UpdateBlockDepositCount(count int) error {
 }
 
 // GetLatestEpoch will return the latest epoch from the database
-func (d *ConsensusDB) GetLatestEpoch() (uint64, error) {
+func (c *ConsensusDB) GetLatestEpoch() (uint64, error) {
 	var epoch uint64
-	err := d.WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
+	err := c.WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
 
 	if err != nil {
 		return 0, fmt.Errorf("error retrieving latest epoch from DB: %w", err)
