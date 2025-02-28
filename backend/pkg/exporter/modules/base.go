@@ -64,7 +64,8 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		}
 
 		if utils.Config.MevBoostRelayExporter.Enabled {
-			go mevBoostRelaysExporter()
+			relaysExporter := newRelaysExporter(ctx, consDB)
+			go relaysExporter.MEVBoostRelaysExporter()
 		}
 	}
 	// wait until the beacon-node is available
