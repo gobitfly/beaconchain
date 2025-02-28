@@ -1,0 +1,54 @@
+package modules
+
+import (
+	"context"
+	"testing"
+	"time"
+
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/pkg/errors"
+)
+
+func TestUpdate(t *testing.T) {
+	tests := []struct {
+		name      string
+		mockError error
+	}{
+		{
+			name:      "successful db update",
+			mockError: nil,
+		},
+		{
+			name:      "db update error",
+			mockError: errors.New("error"),
+		},
+	}
+
+	mockConsDBClient := new(dbmocks.ConsensusDBI)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+
+	exporter := pubkeyTagsUpdater{
+		db:    mockConsDBClient,
+		delay: 0,
+		ctx:   ctx,
+	}
+
+	utils.Config = &types.Config{
+		DeploymentType: "develorment",
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockConsDBClient.On("UpdatePubkeyTags").Return(tt.mockError)
+
+			exporter.Update()
+
+			mockConsDBClient.AssertCalled(t, "UpdatePubkeyTags")
+
+		})
+	}
+
+}
