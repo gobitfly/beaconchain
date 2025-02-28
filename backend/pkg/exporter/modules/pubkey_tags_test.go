@@ -47,8 +47,6 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 			exporter.Update()
 
 			mockConsDBClient.AssertCalled(t, "UpdatePubkeyTags")
-
 		})
 	}
-
 }
