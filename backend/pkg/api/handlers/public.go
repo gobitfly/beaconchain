@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"math"
 	"net/http"
 	"regexp"
-	"slices"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -551,31 +549,34 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
-	dashboardLimit := userInfo.PremiumPerks.ValidatorsPerDashboard
-	existingValidatorCount, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsCount(ctx, dashboardId)
+	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
+	limitEB := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
+	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId})
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	var limit uint64
-	if dashboardLimit > existingValidatorCount {
-		limit = dashboardLimit - existingValidatorCount
+	var spaceLeftEB uint64
+	if isUserAdmin(userInfo) {
+		spaceLeftEB = math.MaxUint64 // no limit for admins
+	} else if limitEB > existingEB {
+		spaceLeftEB = limitEB - existingEB
 	}
 
 	var data []types.VDBPostValidatorsData
 	var dataErr error
 	switch {
 	case req.Validators != nil:
-		data, dataErr = h.addValidatorDashboardValidatorsBySlice(r, dashboardId, groupId, limit, req.Validators)
+		data, dataErr = h.addValidatorDashboardValidatorsBySlice(r, dashboardId, groupId, spaceLeftEB, req.Validators)
 
 	case req.DepositAddress != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByDepositAddress)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByDepositAddress)
 
 	case req.WithdrawalCredential != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByWithdrawalCredential)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByWithdrawalCredential)
 
 	case req.Graffiti != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, limit, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByGraffiti)
+		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByGraffiti)
 	}
 
 	if dataErr != nil {
@@ -589,7 +590,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	returnCreated(w, r, response)
 }
 
-func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request, dashboardId types.VDBIdPrimary, groupId uint64, limit uint64, validatorsParam []intOrString) ([]types.VDBPostValidatorsData, error) {
+func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request, dashboardId types.VDBIdPrimary, groupId uint64, spaceLeftEB uint64, validatorsParam []intOrString) ([]types.VDBPostValidatorsData, error) {
 	var v validationError
 	indices, pubkeys := v.checkValidators(validatorsParam, forbidEmpty)
 	if v.hasErrors() {
@@ -600,24 +601,8 @@ func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request,
 	if err != nil {
 		return nil, err
 	}
-	// get validators that are already in the dashboard
-	existingValidatorsInDashboard, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
-	if err != nil {
-		return nil, err
-	}
-	// add up to `limit` validators that are not already in the dashboard to the list
-	validatorMap := utils.SliceToMap(existingValidatorsInDashboard)
-	slices.Sort(validators)
-	for i := 0; i < len(validators) && limit > 0; i++ {
-		validator := validators[i]
-		if _, ok := validatorMap[validator]; ok {
-			continue
-		}
-		validatorMap[validator] = struct{}{}
-		limit--
-	}
 	// add validators to dashboard
-	return h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, slices.Collect(maps.Keys(validatorMap)))
+	return h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators, spaceLeftEB)
 }
 
 func (h *HandlerService) addValidatorDashboardValidators(
@@ -974,7 +959,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
 			return
 		}
-		if dashboardInfo.ValidatorCount >= userInfo.PremiumPerks.ValidatorsPerDashboard {
+		if dashboardInfo.EffectiveBalance.GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
 			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
 			return
 		}
