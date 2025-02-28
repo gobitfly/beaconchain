@@ -14,26 +14,28 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func TestNetworkLivenessUpdater_Export(t *testing.T) {
+func TestNetworkLivenessExport(t *testing.T) {
 	tests := []struct {
 		name                  string
 		mockChainHeadResponse *types.ChainHead
 		prevHeadEpoch         uint64
+		depositChainID        uint64
 		sameHeadEpoch         bool
 		nodeIsSynced          bool
 		mockChainHeadError    error
 	}{
 		{
-			name: "different Head Epoch and node is synced",
+			name: "different head epoch and node is synced",
 			mockChainHeadResponse: &types.ChainHead{
 				HeadEpoch:      12345678,
 				FinalizedEpoch: 12345678,
 			},
-			prevHeadEpoch: 12345677,
-			nodeIsSynced:  true,
+			prevHeadEpoch:  12345677,
+			depositChainID: 1,
+			nodeIsSynced:   true,
 		},
 		{
-			name: "same Head Epoch",
+			name: "same head epoch",
 			mockChainHeadResponse: &types.ChainHead{
 				HeadEpoch:      12345678,
 				FinalizedEpoch: 12345678,
@@ -76,24 +78,23 @@ func TestNetworkLivenessUpdater_Export(t *testing.T) {
 		cache:  tieredCache,
 	}
 
-	latestNodeEpochKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", utils.Config.Chain.ClConfig.DepositChainID)
-	latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			latestNodeEpochKey := fmt.Sprintf("%d:frontend:latestNodeFinalizedEpoch", tt.depositChainID)
+			latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", tt.depositChainID)
+
 			mockConsDBClient.On("GetNetworkLivenessPreviousHeadEpoch").Return(tt.prevHeadEpoch, nil)
 			mockRPCClient.On("GetChainHead").Return(tt.mockChainHeadResponse, tt.mockChainHeadError)
-
 			if !tt.sameHeadEpoch && tt.nodeIsSynced {
 				mockConsDBClient.On("SaveNetworkLivenessData", tt.mockChainHeadResponse).Return(nil)
 				cachemocks.On("SetUint64", "mock.Anything", latestNodeEpochKey, tt.mockChainHeadResponse.HeadEpoch, time.Hour*24).Return(nil)
 				cachemocks.On("SetUint64", "mock.Anything", latestNodeFinalizedEpochKey, tt.mockChainHeadResponse.FinalizedEpoch, time.Hour*24).Return(nil)
 			}
+
 			updater.Export()
 
 			mockConsDBClient.AssertCalled(t, "GetNetworkLivenessPreviousHeadEpoch")
 			mockRPCClient.AssertCalled(t, "GetChainHead")
-
 			if !tt.sameHeadEpoch && tt.nodeIsSynced {
 				mockConsDBClient.AssertCalled(t, "SaveNetworkLivenessData", tt.mockChainHeadResponse)
 				cachemocks.AssertCalled(t, "SetUint64", "mock.Anything", latestNodeEpochKey, tt.mockChainHeadResponse.HeadEpoch, time.Hour*24)

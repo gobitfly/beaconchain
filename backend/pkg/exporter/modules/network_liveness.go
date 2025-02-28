@@ -54,7 +54,7 @@ func (n *networkLivenessUpdater) Export() {
 	for {
 		select {
 		case <-n.ctx.Done():
-			log.Info("export loop cancelled", 0)
+			log.Info("network liveness export loop cancelled")
 			return
 		default:
 			deployment := utils.Config.DeploymentType
