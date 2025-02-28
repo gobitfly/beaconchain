@@ -11,6 +11,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"github.com/shopspring/decimal"
 )
@@ -548,17 +549,16 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
-	limitEB := userInfo.PremiumPerks.EffectiveBalancePerDashboard
+	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
+	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
 	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId}, false)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	var spaceLeftEB uint64
-	if isUserAdmin(userInfo) {
-		spaceLeftEB = math.MaxUint64 // no limit for admins
-	} else if limitEB > existingEB {
-		spaceLeftEB = limitEB - existingEB
+	if ebLimit > existingEB {
+		spaceLeftEB = ebLimit - existingEB
 	}
 
 	var data []types.VDBPostValidatorsData
@@ -957,7 +957,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
 			return
 		}
-		if dashboardInfo.EffectiveBalance >= userInfo.PremiumPerks.EffectiveBalancePerDashboard {
+		if dashboardInfo.EffectiveBalance.GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
 			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
 			return
 		}

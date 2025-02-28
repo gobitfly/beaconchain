@@ -16,7 +16,7 @@ export interface ValidatorDashboard {
   public_ids?: VDBPublicId[];
   is_archived: boolean;
   archived_reason?: 'user' | 'dashboard_limit' | 'validator_limit' | 'group_limit';
-  effective_balance: number /* uint64 */;
+  effective_balance: string /* decimal.Decimal */;
   validator_count: number /* uint64 */;
   group_count: number /* uint64 */;
 }

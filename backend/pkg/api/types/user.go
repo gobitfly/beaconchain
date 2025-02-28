@@ -1,5 +1,7 @@
 package types
 
+import "github.com/shopspring/decimal"
+
 const UserGroupAdmin = "ADMIN"
 const UserGroupDev = "DEV"
 
@@ -62,8 +64,7 @@ const ProductStoreEthpool ProductStore = "ethpool"
 const ProductStoreCustom ProductStore = "custom"
 
 type ProductSummary struct {
-	ValidatorsPerDashboardLimit          uint64                                 `json:"validators_per_dashboard_limit"` // remove after Pectra
-	EffectiveBalancePerDashboardLimit    uint64                                 `json:"effective_balance_per_dashboard_limit"`
+	EffectiveBalancePerDashboardLimit    decimal.Decimal                        `json:"effective_balance_per_dashboard_limit"`
 	StripePublicKey                      string                                 `json:"stripe_public_key"`
 	ApiProducts                          []ApiProduct                           `json:"api_products"`
 	PremiumProducts                      []PremiumProduct                       `json:"premium_products"`
@@ -107,22 +108,20 @@ type PremiumProduct struct {
 }
 
 type ExtraDashboardValidatorsPremiumAddon struct {
-	ProductName                    string  `json:"product_name"`
-	ExtraDashboardValidators       uint64  `json:"extra_dashboard_validators"` // remove after Pectra
-	ExtraDashboardEffectiveBalance uint64  `json:"extra_dashboard_effective_balance"`
-	PricePerYearEur                float64 `json:"price_per_year_eur"`
-	PricePerMonthEur               float64 `json:"price_per_month_eur"`
-	ProductIdMonthly               string  `json:"product_id_monthly"`
-	ProductIdYearly                string  `json:"product_id_yearly"`
-	StripePriceIdMonthly           string  `json:"stripe_price_id_monthly"`
-	StripePriceIdYearly            string  `json:"stripe_price_id_yearly"`
+	ProductName                    string          `json:"product_name"`
+	ExtraDashboardEffectiveBalance decimal.Decimal `json:"extra_dashboard_effective_balance"`
+	PricePerYearEur                float64         `json:"price_per_year_eur"`
+	PricePerMonthEur               float64         `json:"price_per_month_eur"`
+	ProductIdMonthly               string          `json:"product_id_monthly"`
+	ProductIdYearly                string          `json:"product_id_yearly"`
+	StripePriceIdMonthly           string          `json:"stripe_price_id_monthly"`
+	StripePriceIdYearly            string          `json:"stripe_price_id_yearly"`
 }
 
 type PremiumPerks struct {
 	AdFree                                         bool                `json:"ad_free"` // note that this is somhow redunant, since there is already ApiPerks.NoAds
 	ValidatorDashboards                            uint64              `json:"validator_dashboards"`
-	ValidatorsPerDashboard                         uint64              `json:"validators_per_dashboard"` // remove after Pectra
-	EffectiveBalancePerDashboard                   uint64              `json:"effective_balance_per_dashboard"`
+	EffectiveBalancePerDashboard                   decimal.Decimal     `json:"effective_balance_per_dashboard"`
 	ValidatorGroupsPerDashboard                    uint64              `json:"validator_groups_per_dashboard"`
 	ShareCustomDashboards                          bool                `json:"share_custom_dashboards"`
 	ManageDashboardViaApi                          bool                `json:"manage_dashboard_via_api"`
