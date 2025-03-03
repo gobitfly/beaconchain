@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
@@ -338,6 +337,38 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 	}
 
 	// for the slot itself start by preparing the duties for export to bigtable
+	if err := exportDuties(block); err != nil {
+		return err
+	}
+
+	// save the block data to the db
+	if err := edb.SaveBlock(block, false, tx); err != nil {
+		return fmt.Errorf("error saving slot to the db: %w", err)
+	}
+
+	if block.Status == 1 {
+		if latestProposed < block.Slot {
+			latestProposed = block.Slot
+		}
+	}
+
+	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
+		if err := exportEpochAssignments(client, block, isHeadEpoch, tx); err != nil {
+			return err
+		}
+	}
+
+	log.InfoWithFields(
+		log.Fields{
+			"slot":      block.Slot,
+			"blockRoot": fmt.Sprintf("%x", block.BlockRoot),
+			"duration":  time.Since(start),
+		}, "! export of slot completed")
+
+	return nil
+}
+
+func exportDuties(block *types.Block) error {
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
@@ -359,7 +390,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 	}
 
 	// save sync & attestation duties to bigtable
-	err = db.BigtableClient.SaveAttestationDuties(attDuties)
+	err := db.BigtableClient.SaveAttestationDuties(attDuties)
 	if err != nil {
 		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
 	}
@@ -368,408 +399,309 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
 	}
 
-	// save the block data to the db
-	err = edb.SaveBlock(block, false, tx)
+	return nil
+}
+
+func exportEpochAssignments(client rpc.Client, block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
+	epoch := utils.EpochOfSlot(block.Slot)
+
+	log.Infof("exporting duties & balances for epoch %v", epoch)
+
+	// prepare the duties for export to bigtable
+	syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
+	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
+		if syncDutiesEpoch[types.Slot(slot)] == nil {
+			syncDutiesEpoch[types.Slot(slot)] = make(map[types.ValidatorIndex]bool)
+		}
+		for _, validatorIndex := range block.EpochAssignments.SyncAssignments {
+			syncDutiesEpoch[types.Slot(slot)][types.ValidatorIndex(validatorIndex)] = false
+		}
+	}
+
+	attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
+	for key, validatorIndex := range block.EpochAssignments.AttestorAssignments {
+		keySplit := strings.Split(key, "-")
+		attestedSlot, err := strconv.ParseUint(keySplit[0], 10, 64)
+		if err != nil {
+			return fmt.Errorf("error parsing attested slot from attestation key: %w", err)
+		}
+
+		if attDutiesEpoch[types.Slot(attestedSlot)] == nil {
+			attDutiesEpoch[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
+		}
+
+		attDutiesEpoch[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
+	}
+
+	g := errgroup.Group{}
+
+	// store epoch assignments in redis
+	g.Go(func() error {
+		return saveEpochAssignmentsToRedis(client, block, epoch, isHeadEpoch)
+	})
+
+	// save attestation duties to bigtable
+	g.Go(func() error {
+		err := db.BigtableClient.SaveAttestationDuties(attDutiesEpoch)
+		if err != nil {
+			return fmt.Errorf("error exporting attestation assignments to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+
+	// save sync committee duties to bigtable
+	g.Go(func() error {
+		err := db.BigtableClient.SaveSyncComitteeDuties(syncDutiesEpoch)
+		if err != nil {
+			return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+
+	// save the validator balances to bigtable
+	g.Go(func() error {
+		return db.BigtableClient.SaveValidatorBalances(epoch, block.Validators)
+	})
+
+	// if we are exporting the head epoch, update the validator db table
+	if isHeadEpoch {
+		if err := exportValidatorData(client, block, epoch, tx); err != nil {
+			return err
+		}
+	}
+
+	var epochParticipationStats *types.ValidatorParticipation
+	if epoch > 0 {
+		g.Go(func() error {
+			// retrieve the epoch participation stats
+			var err error
+			epochParticipationStats, err = client.GetValidatorParticipation(epoch - 1)
+			if err != nil {
+				return fmt.Errorf("error retrieving epoch participation statistics: %w", err)
+			}
+			return nil
+		})
+	}
+	err := g.Wait()
 	if err != nil {
-		return fmt.Errorf("error saving slot to the db: %w", err)
+		return err
 	}
 
-	if block.Status == 1 {
-		if latestProposed < block.Slot {
-			latestProposed = block.Slot
-		}
+	// save the epoch metadata to the database
+	err = edb.SaveEpoch(epoch, block.Validators, client, tx)
+	if err != nil {
+		return fmt.Errorf("error saving epoch data: %w", err)
 	}
 
-	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
-		epoch := utils.EpochOfSlot(block.Slot)
-		if epoch > utils.Config.ClConfig.ElectraForkEpoch {
-			log.Infof("checking that events have been loaded for epoch %v", epoch)
-			exported, err := db.HasEventsForEpoch(epoch)
-			if err != nil {
-				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
-			}
-			if !exported {
-				return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
-				// log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
-			} else {
-				log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
+	if epoch > 0 && epochParticipationStats != nil {
+		log.Infof("updating epoch %v with participation rate %v", epoch, epochParticipationStats.GlobalParticipationRate)
+		err := db.UpdateEpochStatus(epochParticipationStats, tx)
 
-				firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-				lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
-
-				switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
-				if err != nil {
-					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-				}
-				log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
-
-				consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
-				if err != nil {
-					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-				}
-				log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
-
-				depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
-				if err != nil {
-					return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
-				}
-				log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
-
-				removedExcessBalanceProcessed, err := db.TransformRemovedExcessBalanceEvents(firstSlot, lastSlot, tx)
-				if err != nil {
-					return fmt.Errorf("error transforming removed excess balance events for epoch %v: %w", epoch, err)
-				}
-				log.Infof("transformed removed excess balance events for epoch %v, processed %d events", epoch, removedExcessBalanceProcessed)
-			}
-		}
-
-		log.Infof("exporting duties & balances for epoch %v", epoch)
-		// prepare the duties for export to bigtable
-		syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
-		attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
-		for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
-			if syncDutiesEpoch[types.Slot(slot)] == nil {
-				syncDutiesEpoch[types.Slot(slot)] = make(map[types.ValidatorIndex]bool)
-			}
-			for _, validatorIndex := range block.EpochAssignments.SyncAssignments {
-				syncDutiesEpoch[types.Slot(slot)][types.ValidatorIndex(validatorIndex)] = false
-			}
-		}
-
-		for key, validatorIndex := range block.EpochAssignments.AttestorAssignments {
-			keySplit := strings.Split(key, "-")
-			attestedSlot, err := strconv.ParseUint(keySplit[0], 10, 64)
-
-			if err != nil {
-				return fmt.Errorf("error parsing attested slot from attestation key: %w", err)
-			}
-
-			if attDutiesEpoch[types.Slot(attestedSlot)] == nil {
-				attDutiesEpoch[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
-			}
-
-			attDutiesEpoch[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
-		}
-
-		g := errgroup.Group{}
-
-		// store epoch assignments in redis
-		g.Go(func() error {
-			redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
-				Epoch:       types.Epoch(epoch),
-				Assignments: block.EpochAssignments,
-			}
-
-			var serializedAssignmentsData bytes.Buffer
-			enc := gob.NewEncoder(&serializedAssignmentsData)
-			err := enc.Encode(redisCachedEpochAssignments)
-			if err != nil {
-				return fmt.Errorf("error serializing assignments to gob for slot %v: %w", block.Slot, err)
-			}
-
-			key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
-
-			expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
-			expirationDuration := time.Until(expirationTime)
-			if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
-				log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
-			} else {
-				log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
-				if err != nil {
-					return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
-				}
-				// publish the event to inform the api about the new data (todo)
-				// db.PersistentRedisDbClient.Publish(context.Background(), fmt.Sprintf("%d:slotViz", utils.Config.Chain.ClConfig.DepositChainID), fmt.Sprintf("%s:%d", "ea", epoch)).Err()
-				log.Infof("writing current epoch assignments to redis completed")
-			}
-
-			if isHeadEpoch {
-				nextEpoch := epoch + 1
-				nextEpochAssignments, err := client.GetEpochAssignments(nextEpoch)
-
-				if err != nil {
-					return fmt.Errorf("error retrieving epoch assignments for head+1 epoch: %v", err)
-				}
-
-				redisCachedNextEpochAssignments := &types.RedisCachedEpochAssignments{
-					Epoch:       types.Epoch(nextEpoch),
-					Assignments: nextEpochAssignments,
-				}
-
-				var serializedAssignmentsData bytes.Buffer
-				enc := gob.NewEncoder(&serializedAssignmentsData)
-				err = enc.Encode(redisCachedNextEpochAssignments)
-				if err != nil {
-					return fmt.Errorf("error serializing assignments to gob for head+1 epoch %v: %w", block.Slot, err)
-				}
-
-				key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", nextEpoch)
-
-				expirationTime := utils.EpochToTime(nextEpoch + 7) // keep it for at least 7 epochs in the cache
-				expirationDuration := time.Until(expirationTime)
-				if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
-					log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
-				} else {
-					log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
-					err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
-					if err != nil {
-						return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
-					}
-				}
-			}
-
-			return nil
-		})
-
-		// save all duties to bigtable
-		g.Go(func() error {
-			err := db.BigtableClient.SaveAttestationDuties(attDutiesEpoch)
-			if err != nil {
-				return fmt.Errorf("error exporting attestation assignments to bigtable for slot %v: %w", block.Slot, err)
-			}
-			return nil
-		})
-		g.Go(func() error {
-			err := db.BigtableClient.SaveSyncComitteeDuties(syncDutiesEpoch)
-			if err != nil {
-				return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
-			}
-			return nil
-		})
-
-		// save the validator balances to bigtable
-		g.Go(func() error {
-			err := db.BigtableClient.SaveValidatorBalances(epoch, block.Validators)
-			if err != nil {
-				return fmt.Errorf("error exporting validator balances to bigtable for slot %v: %w", block.Slot, err)
-			}
-			return nil
-		})
-
-		// if we are exporting the head epoch, update the validator db table
-		if isHeadEpoch {
-			// this function sets exports the validator status into the db
-			// and also updates the status field in the validators array
-			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
-			if err != nil {
-				return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
-			}
-
-			// also update the queue deposit table once every epoch
-			g.Go(func() error {
-				err = db.UpdateQueueDeposits(tx)
-				if err != nil {
-					return fmt.Errorf("error updating queue deposits cache: %w", err)
-				}
-				return nil
-			})
-
-			// store validator mapping in redis
-			g.Go(func() error {
-				// generate mapping
-				RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
-					Epoch:   types.Epoch(epoch),
-					Mapping: make([]*types.CachedValidator, len(block.Validators)),
-				}
-
-				activationMapping := make(map[int][]uint64)
-				start := time.Now()
-
-				for _, v := range block.Validators {
-					r := types.CachedValidator{
-						PublicKey:             v.PublicKey,
-						Status:                v.Status,
-						WithdrawalCredentials: v.WithdrawalCredentials,
-						Balance:               v.Balance,
-						EffectiveBalance:      v.EffectiveBalance,
-						Slashed:               v.Slashed,
-					}
-					if v.ActivationEpoch != db.MaxSqlNumber {
-						r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
-					}
-					if v.ActivationEligibilityEpoch != db.MaxSqlNumber {
-						r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
-					}
-					if v.ExitEpoch != db.MaxSqlNumber {
-						r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
-					}
-					if v.WithdrawableEpoch != db.MaxSqlNumber {
-						r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
-					}
-					RedisCachedValidatorsMapping.Mapping[v.Index] = &r
-					if v.Status == "pending" {
-						a := int(v.ActivationEligibilityEpoch)
-						activationMapping[a] = append(activationMapping[a], v.Index)
-					}
-				}
-				log.Debugf("filled validator mapping, took: %s", time.Since(start))
-
-				start = time.Now()
-				// need to sort as activations don't necessarily have to be in order
-				keys := maps.Keys(activationMapping)
-				sort.Ints(keys)
-				var i int64
-				for _, a := range keys {
-					// don't need to sort as we our validator array is indeed in order
-					for _, vi := range activationMapping[a] {
-						RedisCachedValidatorsMapping.Mapping[vi].Queues.ActivationIndex = sql.NullInt64{Int64: i, Valid: true}
-						i++
-					}
-				}
-				log.Debugf("calculated activation queue indexes, took: %s", time.Since(start))
-
-				// gob struct
-				start = time.Now()
-				var serializedValidatorMapping bytes.Buffer
-				enc := gob.NewEncoder(&serializedValidatorMapping)
-				err := enc.Encode(RedisCachedValidatorsMapping)
-				if err != nil {
-					return fmt.Errorf("error serializing validator mapping to gob for epoch %v: %w", epoch, err)
-				}
-				log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
-
-				// compress using pgzip
-				start = time.Now()
-				var compressedValidatorMapping bytes.Buffer
-				w, err := pgzip.NewWriterLevel(&compressedValidatorMapping, pgzip.BestCompression)
-				if err != nil {
-					return fmt.Errorf("failed to create pgzip writer for epoch %v: %w", epoch, err)
-				}
-				err = w.SetConcurrency(500_000, 10)
-				if err != nil {
-					return fmt.Errorf("failed to set concurrency for pgzip writer for epoch %v: %w", epoch, err)
-				}
-				_, err = w.Write(serializedValidatorMapping.Bytes())
-				if err != nil {
-					return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
-				}
-				err = w.Close()
-				if err != nil {
-					return fmt.Errorf("error closing pgzip writer for epoch %v: %w", epoch, err)
-				}
-				log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
-
-				// load into redis
-				start = time.Now()
-				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
-				log.Infof("writing validator mappping to redis with no TTL")
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
-				if err != nil {
-					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
-				}
-				log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
-				return nil
-			})
-
-			// update cached view of consensus deposits
-			// possible bug: at this point the export tx is not yet committed, so the query will read
-			// stale data
-			g.Go(func() error {
-				start := time.Now()
-				err := db.CacheQuery(`
-					SELECT
-						uvdv.dashboard_id,
-						uvdv.group_id,
-						bd.block_slot,
-						bd.block_index,
-						bd.amount
-					FROM
-						blocks_deposits bd
-						INNER JOIN validators v ON bd.publickey = v.pubkey
-						INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-						INNER JOIN blocks b ON bd.block_root = b.blockroot and b.status = '1'
-					ORDER BY
-						uvdv.dashboard_id DESC,
-						bd.block_slot DESC,
-						bd.block_index DESC;
-					
-					`, "cached_blocks_deposits_lookup",
-					[]string{"dashboard_id", "block_slot", "block_index"},
-					[]string{"dashboard_id", "amount"})
-				if err != nil {
-					return fmt.Errorf("error updating cached view of consensus deposits: %w", err)
-				}
-				log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
-				return nil
-			})
-
-			if config.ClConfig.ElectraForkEpoch != nil && *config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
-				// update cached view of consensus deposit requests
-				g.Go(func() error {
-					start := time.Now()
-					err := db.CacheQuery(`
-						SELECT
-							uvdv.dashboard_id,
-							uvdv.group_id,
-							bdr.block_slot,
-							bdr.request_index,
-							bdr.amount
-						FROM
-							blocks_deposit_requests bdr
-							INNER JOIN validators v ON bdr.pubkey = v.pubkey
-							INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-							INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
-						ORDER BY
-							uvdv.dashboard_id DESC,
-							bdr.block_slot DESC,
-							bdr.request_index DESC;
-						`, "cached_blocks_deposit_requests_lookup",
-						[]string{"dashboard_id", "block_slot", "request_index"},
-						[]string{"dashboard_id", "amount"})
-					if err != nil {
-						return fmt.Errorf("error updating cached view of consensus deposit requests: %w", err)
-					}
-					log.Infof("updating cached view of consensus deposit requests took %s", time.Since(start))
-					return nil
-				})
-			}
-		}
-		var epochParticipationStats *types.ValidatorParticipation
-		if epoch > 0 {
-			g.Go(func() error {
-				// retrieve the epoch participation stats
-				var err error
-				epochParticipationStats, err = client.GetValidatorParticipation(epoch - 1)
-				if err != nil {
-					return fmt.Errorf("error retrieving epoch participation statistics: %w", err)
-				}
-				return nil
-			})
-		}
-		err = g.Wait()
 		if err != nil {
 			return err
 		}
-
-		// save the epoch metadata to the database
-		err = edb.SaveEpoch(epoch, block.Validators, client, tx)
-		if err != nil {
-			return fmt.Errorf("error saving epoch data: %w", err)
-		}
-
-		if epoch > 0 && epochParticipationStats != nil {
-			log.Infof("updating epoch %v with participation rate %v", epoch, epochParticipationStats.GlobalParticipationRate)
-			err := db.UpdateEpochStatus(epochParticipationStats, tx)
-
-			if err != nil {
-				return err
-			}
-		}
-
-		// time.Sleep(time.Minute)
 	}
 
-	// time.Sleep(time.Second)
+	return nil
+}
 
-	log.InfoWithFields(
-		log.Fields{
-			"slot":      block.Slot,
-			"blockRoot": fmt.Sprintf("%x", block.BlockRoot),
-			"duration":  time.Since(start),
-		}, "! export of slot completed")
+func saveEpochAssignmentsToRedis(client rpc.Client, block *types.Block, epoch uint64, isHeadEpoch bool) error {
+	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
+		Epoch:       types.Epoch(epoch),
+		Assignments: block.EpochAssignments,
+	}
+
+	var serializedAssignmentsData bytes.Buffer
+	enc := gob.NewEncoder(&serializedAssignmentsData)
+	err := enc.Encode(redisCachedEpochAssignments)
+	if err != nil {
+		return fmt.Errorf("error serializing assignments to gob for slot %v: %w", block.Slot, err)
+	}
+
+	key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
+	expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
+	expirationDuration := time.Until(expirationTime)
+
+	if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
+		log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
+	} else {
+		log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
+		err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+		if err != nil {
+			return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
+		}
+		// publish the event to inform the api about the new data (todo)
+		// db.PersistentRedisDbClient.Publish(context.Background(), fmt.Sprintf("%d:slotViz", utils.Config.Chain.ClConfig.DepositChainID), fmt.Sprintf("%s:%d", "ea", epoch)).Err()
+		log.Infof("writing current epoch assignments to redis completed")
+	}
+
+	if isHeadEpoch {
+		nextEpoch := epoch + 1
+		nextEpochAssignments, err := client.GetEpochAssignments(nextEpoch)
+		if err != nil {
+			return fmt.Errorf("error retrieving epoch assignments for head+1 epoch: %v", err)
+		}
+
+		redisCachedNextEpochAssignments := &types.RedisCachedEpochAssignments{
+			Epoch:       types.Epoch(nextEpoch),
+			Assignments: nextEpochAssignments,
+		}
+
+		var serializedAssignmentsData bytes.Buffer
+		enc := gob.NewEncoder(&serializedAssignmentsData)
+		err = enc.Encode(redisCachedNextEpochAssignments)
+		if err != nil {
+			return fmt.Errorf("error serializing assignments to gob for head+1 epoch %v: %w", block.Slot, err)
+		}
+
+		key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", nextEpoch)
+		expirationTime := utils.EpochToTime(nextEpoch + 7) // keep it for at least 7 epochs in the cache
+		expirationDuration := time.Until(expirationTime)
+
+		if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
+			log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
+		} else {
+			log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
+			err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+			if err != nil {
+				return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
+			}
+		}
+	}
 
 	return nil
+}
+
+func exportValidatorData(client rpc.Client, block *types.Block, epoch uint64, tx *sqlx.Tx) error {
+	g := errgroup.Group{}
+
+	// this function sets exports the validator status into the db
+	// and also updates the status field in the validators array
+	err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
+	if err != nil {
+		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
+	}
+
+	// also update the queue deposit table once every epoch
+	g.Go(func() error {
+		err = db.UpdateQueueDeposits(tx)
+		if err != nil {
+			return fmt.Errorf("error updating queue deposits cache: %w", err)
+		}
+		return nil
+	})
+
+	// store validator mapping in redis
+	g.Go(func() error {
+		// generate mapping
+		RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
+			Epoch:   types.Epoch(epoch),
+			Mapping: make([]*types.CachedValidator, len(block.Validators)),
+		}
+
+		activationMapping := make(map[int][]uint64)
+		start := time.Now()
+
+		for _, v := range block.Validators {
+			r := types.CachedValidator{
+				PublicKey:             v.PublicKey,
+				Status:                v.Status,
+				WithdrawalCredentials: v.WithdrawalCredentials,
+				Balance:               v.Balance,
+				EffectiveBalance:      v.EffectiveBalance,
+				Slashed:               v.Slashed,
+			}
+			if v.ActivationEpoch != db.MaxSqlNumber {
+				r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
+			}
+			if v.ActivationEligibilityEpoch != db.MaxSqlNumber {
+				r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
+			}
+			if v.ExitEpoch != db.MaxSqlNumber {
+				r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
+			}
+			if v.WithdrawableEpoch != db.MaxSqlNumber {
+				r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
+			}
+			RedisCachedValidatorsMapping.Mapping[v.Index] = &r
+			if v.Status == "pending" {
+				a := int(v.ActivationEligibilityEpoch)
+				activationMapping[a] = append(activationMapping[a], v.Index)
+			}
+		}
+		log.Debugf("filled validator mapping, took: %s", time.Since(start))
+
+		start = time.Now()
+		// need to sort as activations don't necessarily have to be in order
+		keys := maps.Keys(activationMapping)
+		sort.Ints(keys)
+		var i int64
+		for _, a := range keys {
+			// don't need to sort as we our validator array is indeed in order
+			for _, vi := range activationMapping[a] {
+				RedisCachedValidatorsMapping.Mapping[vi].Queues.ActivationIndex = sql.NullInt64{Int64: i, Valid: true}
+				i++
+			}
+		}
+		log.Debugf("calculated activation queue indexes, took: %s", time.Since(start))
+
+		// gob struct
+		start = time.Now()
+		var serializedValidatorMapping bytes.Buffer
+		enc := gob.NewEncoder(&serializedValidatorMapping)
+		err := enc.Encode(RedisCachedValidatorsMapping)
+		if err != nil {
+			return fmt.Errorf("error serializing validator mapping to gob for epoch %v: %w", epoch, err)
+		}
+		log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
+
+		// compress using pgzip
+		start = time.Now()
+		var compressedValidatorMapping bytes.Buffer
+		w, err := pgzip.NewWriterLevel(&compressedValidatorMapping, pgzip.BestCompression)
+		if err != nil {
+			return fmt.Errorf("failed to create pgzip writer for epoch %v: %w", epoch, err)
+		}
+		err = w.SetConcurrency(500_000, 10)
+		if err != nil {
+			return fmt.Errorf("failed to set concurrency for pgzip writer for epoch %v: %w", epoch, err)
+		}
+		_, err = w.Write(serializedValidatorMapping.Bytes())
+		if err != nil {
+			return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
+		}
+		err = w.Close()
+		if err != nil {
+			return fmt.Errorf("error closing pgzip writer for epoch %v: %w", epoch, err)
+		}
+		log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
+
+		// load into redis
+		start = time.Now()
+		key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
+		log.Infof("writing validator mappping to redis with no TTL")
+		err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
+		if err != nil {
+			return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
+		}
+		log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
+		return nil
+	})
+
+	// update cached view of consensus desposits
+	// possible bug: at this point the export tx is not yet committed, so the query will read
+	// stale data
+	g.Go(func() error {
+		start := time.Now()
+		err := db.CacheBlockDepositLookup()
+		if err != nil {
+			return fmt.Errorf("error updating cached view of consensus deposits: %w", err)
+		}
+		log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
+		return nil
+	})
+
+	return g.Wait()
 }
 
 func (d *slotExporterData) Init() error {

@@ -2431,6 +2431,33 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
+func CacheBlockDepositLookup() error {
+	err := CacheQuery(`
+			SELECT
+				uvdv.dashboard_id,
+				uvdv.group_id,
+				bd.block_slot,
+				bd.block_index,
+				bd.amount
+			FROM
+				blocks_deposits bd
+				INNER JOIN validators v ON bd.publickey = v.pubkey
+				INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+			ORDER BY
+				uvdv.dashboard_id DESC,
+				bd.block_slot DESC,
+				bd.block_index DESC;
+			
+			`, "cached_blocks_deposits_lookup",
+		[]string{"dashboard_id", "block_slot", "block_index"},
+		[]string{"dashboard_id", "amount"})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	tmpViewName := "_tmp_" + viewName
 	trashViewName := "_trash_" + viewName
