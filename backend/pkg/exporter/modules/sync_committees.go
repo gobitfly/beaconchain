@@ -29,7 +29,7 @@ type syncCommitteesExporter struct {
 	cache *cache.TieredCacheBase
 }
 
-func newSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) syncCommitteesExporter {
+func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) syncCommitteesExporter {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}
