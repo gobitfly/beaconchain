@@ -1,6 +1,7 @@
 package db2
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"slices"
@@ -427,6 +428,50 @@ func (store StoreV1) GetLastBlockInBlocksTable(chainID string) (uint64, error) {
 	return lastBlock, nil
 }
 
+func (store StoreV1) GetENSUpdate(chainID string, batchSize int64) ([]ENSLog, error) {
+	key := fmt.Sprintf("%s:ENS:V", chainID)
+	rows, err := store.data.Read(key, database.WithoutValue(), database.WithLimit(batchSize))
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	var ensLogs []ENSLog
+	for _, row := range rows {
+		split := strings.Split(row.Key, ":")
+		ensType := split[3]
+		value := split[4]
+
+		var log ENSLog
+		switch ensType {
+		case "H":
+			nameHash, err := hex.DecodeString(value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decode name hash for row %s: %w", row.Key, err)
+			}
+			log.Node = toPointer(toByte32(nameHash))
+		case "A":
+			ownerHash, err := hex.DecodeString(value)
+			if err != nil {
+				return nil, fmt.Errorf("cannot decode address hash for row %s: %w", row.Key, err)
+			}
+			log.Owner = toPointer(common.BytesToAddress(ownerHash))
+		case "N":
+			log.Name = toPointer(value)
+		default:
+			return nil, fmt.Errorf("unknown ens type for row %s", row.Key)
+		}
+		ensLogs = append(ensLogs, log)
+	}
+	return ensLogs, nil
+}
+
+func (store StoreV1) DeleteENSUpdate(chainID string, logs []ENSLog) error {
+	keys := maps.Keys(ensToItems(chainID, logs))
+	return store.data.DeleteRowsWithKeys(keys)
+}
+
 func blockKey(chainID string, number uint64) string {
 	return fmt.Sprintf("%s:%s", chainID, reversedPaddedBlockNumber(number))
 }
@@ -439,4 +484,14 @@ func mergeItems(dest map[string][]database.Item, source map[string][]database.It
 		}
 		dest[key] = append(dest[key], items...)
 	}
+}
+
+func toByte32(source []byte) [32]byte {
+	var dest [32]byte
+	copy(dest[:], source)
+	return dest
+}
+
+func toPointer[T any](i T) *T {
+	return &i
 }
