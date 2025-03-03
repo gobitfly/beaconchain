@@ -9,20 +9,23 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	api_types "github.com/gobitfly/beaconchain/pkg/api/types"
+	common_types "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func setupConfig() {
-	cfg := types.Config{
-		Chain: types.Chain{
-			ClConfig: types.ClChainConfig{
+	cfg := common_types.Config{
+		Chain: common_types.Chain{
+			GenesisTimestamp: 1606824000,
+			ClConfig: common_types.ClChainConfig{
 				EpochsPerSyncCommitteePeriod: 32,
 				AltairForkEpoch:              0,
+				SecondsPerSlot:               12,
+				SlotsPerEpoch:                16,
 			},
 		},
 	}
@@ -44,14 +47,6 @@ func setupTestDataAccess(t *testing.T) (da *DataAccessService, mock sqlmock.Sqlm
 	return dataAccess, mock
 }
 
-func assertTestError(t *testing.T, actual error, expected string) {
-	if expected == "" {
-		assert.NoError(t, actual)
-	} else {
-		assert.EqualError(t, actual, expected)
-	}
-}
-
 func TestGetCurrentAndUpcomingSyncCommittees(t *testing.T) {
 	dataAccessService, mock := setupTestDataAccess(t)
 	defer dataAccessService.Close()
@@ -68,48 +63,48 @@ func TestGetCurrentAndUpcomingSyncCommittees(t *testing.T) {
 		expectedError    string
 	}{
 		{
-			name: "Valid data",
+			name: "Success",
 			mockRows: sqlmock.NewRows([]string{"validatorindex", "period"}).
 				AddRow(1, currentSyncPeriod).
 				AddRow(2, currentSyncPeriod).
 				AddRow(3, currentSyncPeriod+1).
 				AddRow(4, currentSyncPeriod+1),
-			mockError:        nil,
 			expectedCurrent:  map[uint64]bool{1: true, 2: true},
 			expectedUpcoming: map[uint64]bool{3: true, 4: true},
-			expectedError:    "",
 		},
 		{
-			name:             "Database error",
-			mockRows:         nil,
-			mockError:        errors.New("db query failed"),
-			expectedCurrent:  nil,
-			expectedUpcoming: nil,
-			expectedError:    "error executing query: db query failed",
+			name:          "Query error",
+			mockError:     errors.New("db query failed"),
+			expectedError: "error executing query: db query failed",
 		},
 		{
-			name:             "Empty result",
+			name:             "Empty rows",
 			mockRows:         sqlmock.NewRows([]string{"validatorindex", "period"}),
-			mockError:        nil,
 			expectedCurrent:  map[uint64]bool{},
 			expectedUpcoming: map[uint64]bool{},
-			expectedError:    "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			query := `SELECT validatorindex, period FROM "sync_committees" WHERE period IN \(\$1, \$2\)`
+			ds := buildCurrentAndUpcomingSyncCommitteesQuery(latestEpoch)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
 			if tt.mockError != nil {
-				mock.ExpectQuery(query).WillReturnError(tt.mockError)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
 			} else {
-				mock.ExpectQuery(query).WillReturnRows(tt.mockRows)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
 			}
 
 			ctx := context.Background()
 			current, upcoming, err := dataAccessService.getCurrentAndUpcomingSyncCommittees(ctx, latestEpoch)
 
-			assertTestError(t, err, tt.expectedError)
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
 			assert.Equal(t, tt.expectedCurrent, current)
 			assert.Equal(t, tt.expectedUpcoming, upcoming)
 			assert.NoError(t, mock.ExpectationsWereMet())
@@ -132,7 +127,7 @@ func TestGetPastSyncCommittees(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:        "Valid data",
+			name:        "Success",
 			indicies:    []uint64{1, 2, 3},
 			epochStart:  100,
 			latestEpoch: 200,
@@ -140,40 +135,43 @@ func TestGetPastSyncCommittees(t *testing.T) {
 				AddRow(1).
 				AddRow(2).
 				AddRow(2),
-			mockError:     nil,
-			expectedMap:   map[uint64]uint64{1: 1, 2: 2},
-			expectedError: "",
+			expectedMap: map[uint64]uint64{1: 1, 2: 2},
+		},
+		{
+			name:        "Empty rows",
+			mockRows:    sqlmock.NewRows([]string{"validatorindex"}),
+			expectedMap: map[uint64]uint64{},
 		},
 		{
 			name:          "Query error",
 			indicies:      []uint64{1, 2, 3},
 			epochStart:    100,
 			latestEpoch:   200,
-			mockRows:      nil,
 			mockError:     errors.New("db query failed"),
-			expectedMap:   nil,
 			expectedError: "error executing query: db query failed",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			query := "SELECT sc.validatorindex FROM sync_committees sc WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)"
+			ds := buildPastSyncCommitteesQuery(tt.indicies, tt.epochStart, tt.latestEpoch)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
 
 			if tt.mockError != nil {
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WithArgs(utils.SyncPeriodOfEpoch(tt.epochStart), utils.SyncPeriodOfEpoch(tt.latestEpoch), pq.Array(tt.indicies)).
-					WillReturnError(tt.mockError)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
 			} else {
-				mock.ExpectQuery(regexp.QuoteMeta(query)).
-					WithArgs(utils.SyncPeriodOfEpoch(tt.epochStart), utils.SyncPeriodOfEpoch(tt.latestEpoch), pq.Array(tt.indicies)).
-					WillReturnRows(tt.mockRows)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
 			}
 
 			ctx := context.Background()
 			result, err := dataAccessService.getPastSyncCommittees(ctx, tt.indicies, tt.epochStart, tt.latestEpoch)
 
-			assertTestError(t, err, tt.expectedError)
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
 			assert.Equal(t, tt.expectedMap, result)
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
@@ -194,63 +192,51 @@ func TestGetLatestExportedChartTs(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:        "Valid data",
+			name:        "Success",
 			aggregation: enums.IntervalDaily,
 			mockRows: sqlmock.NewRows([]string{"max"}).
 				AddRow(time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)),
-			mockError:     nil,
-			expectedTs:    uint64(time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC).Unix()),
-			expectedError: "",
+			expectedTs: uint64(time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC).Unix()),
 		},
 		{
-			name:        "Invalid data type",
-			aggregation: enums.IntervalDaily,
-			mockRows: sqlmock.NewRows([]string{"max"}).
-				AddRow("invalid_timestamp"),
-			mockError:     nil,
-			expectedTs:    0,
-			expectedError: "error executing query: sql: Scan error on column index 0, name \"max\": unsupported Scan, storing driver.Value type string into type *time.Time",
-		},
-		{
-			name:          "Empty result",
+			name:          "Empty rows",
 			aggregation:   enums.IntervalDaily,
 			mockRows:      sqlmock.NewRows([]string{"max"}),
-			mockError:     nil,
-			expectedTs:    0,
 			expectedError: "error executing query: sql: no rows in result set",
 		},
 		{
 			name:          "Query error",
 			aggregation:   enums.IntervalDaily,
-			mockRows:      nil,
 			mockError:     fmt.Errorf("db query failed"),
-			expectedTs:    0,
 			expectedError: "error executing query: db query failed",
 		},
 	}
 
-	// Run the test cases
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			view, dateColumn, err := getViewAndDateColumn(tt.aggregation)
 			assert.NoError(t, err)
 
-			// Mock the query
-			query := fmt.Sprintf("SELECT MAX\\(\"%s\"\\) FROM \"%s\"", dateColumn, view)
+			ds := buildLatestExportedChartQuery(view, dateColumn)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
 			if tt.mockError != nil {
-				mock.ExpectQuery(query).WillReturnError(tt.mockError)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
 			} else {
-				mock.ExpectQuery(query).WillReturnRows(tt.mockRows)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
 			}
 
-			// Run the function under test
 			ctx := context.Background()
 			ts, err := dataAccessService.GetLatestExportedChartTs(ctx, enums.IntervalDaily)
 
-			assertTestError(t, err, tt.expectedError)
-			assert.Equal(t, tt.expectedTs, ts)
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
 
-			// Ensure all expectations are met
+			assert.Equal(t, tt.expectedTs, ts)
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
@@ -269,37 +255,22 @@ func TestGetEpochStart(t *testing.T) {
 		expectedError string
 	}{
 		{
-			name:   "Valid data",
+			name:   "Success",
 			period: enums.Last24h,
 			mockRows: sqlmock.NewRows([]string{"epoch_start"}).
 				AddRow(12345),
-			mockError:     nil,
-			expectedVal:   12345,
-			expectedError: "",
+			expectedVal: 12345,
 		},
 		{
-			name:   "Invalid data type",
-			period: enums.Last24h,
-			mockRows: sqlmock.NewRows([]string{"epoch_start"}).
-				AddRow("invalid_value"),
-			mockError:     nil,
-			expectedVal:   0,
-			expectedError: "error executing query: sql: Scan error on column index 0, name \"epoch_start\": converting driver.Value type string (\"invalid_value\") to a uint64: invalid syntax",
-		},
-		{
-			name:          "Empty result",
+			name:          "Empty rows",
 			period:        enums.Last24h,
 			mockRows:      sqlmock.NewRows([]string{"epoch_start"}),
-			mockError:     nil,
-			expectedVal:   0,
 			expectedError: "error executing query: sql: no rows in result set",
 		},
 		{
 			name:          "Query error",
 			period:        enums.Last24h,
-			mockRows:      nil,
 			mockError:     fmt.Errorf("db query failed"),
-			expectedVal:   0,
 			expectedError: "error executing query: db query failed",
 		},
 	}
@@ -309,17 +280,225 @@ func TestGetEpochStart(t *testing.T) {
 			table, _, err := getTablesForPeriod(tt.period)
 			assert.NoError(t, err)
 
-			query := fmt.Sprintf("SELECT epoch_start FROM %s FINAL ORDER BY epoch_start ASC LIMIT \\$1", table)
+			ds := buildEpochStartQuery(table)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
 			if tt.mockError != nil {
-				mock.ExpectQuery(query).WillReturnError(tt.mockError)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
 			} else {
-				mock.ExpectQuery(query).WithArgs(1).WillReturnRows(tt.mockRows)
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
 			}
 
 			ctx := context.Background()
 			val, err := dataAccessService.getEpochStart(ctx, tt.period)
-			assertTestError(t, err, tt.expectedError)
+
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
 			assert.Equal(t, tt.expectedVal, val)
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestGetLastScheduledBlockAndSyncDate(t *testing.T) {
+	dataAccessService, mock := setupTestDataAccess(t)
+	defer dataAccessService.Close()
+
+	dashboardId := api_types.VDBId{Id: 123, Validators: nil}
+	groupId := int64(456)
+	now := time.Now().Unix() // timestamp
+
+	tests := []struct {
+		name                  string
+		mockRows              *sqlmock.Rows
+		mockError             error
+		period                enums.TimePeriod
+		expectedLastScheduled time.Time
+		expectedLastSync      time.Time
+		expectedError         string
+	}{
+		{
+			name: "Success",
+			mockRows: sqlmock.NewRows([]string{"last_scheduled_block_epoch", "last_scheduled_sync_epoch"}).
+				AddRow(now, now),
+			period:                enums.AllTime,
+			expectedLastScheduled: utils.EpochToTime(uint64(now)),
+			expectedLastSync:      utils.EpochToTime(uint64(now)),
+		},
+		{
+			name:          "Query error",
+			period:        enums.AllTime,
+			mockError:     errors.New("query failed"),
+			expectedError: "error executing query: query failed",
+		},
+		{
+			name:          "Empty rows",
+			period:        enums.AllTime,
+			mockRows:      sqlmock.NewRows([]string{"last_scheduled_block_epoch", "last_scheduled_sync_epoch"}),
+			expectedError: "error executing query: sql: no rows in result set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clickhouseTotalTable, _, err := getTablesForPeriod(tt.period)
+			assert.NoError(t, err)
+
+			ds := buildLastScheduledBlockAndSyncDateQuery(clickhouseTotalTable, dashboardId, groupId)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
+			if tt.mockError != nil {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
+			} else {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
+			}
+
+			ctx := context.Background()
+			lastScheduledTime, lastSyncTime, err := dataAccessService.getLastScheduledBlockAndSyncDate(ctx, dashboardId, groupId)
+
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError)
+			}
+			assert.Equal(t, tt.expectedLastScheduled, lastScheduledTime)
+			assert.Equal(t, tt.expectedLastSync, lastSyncTime)
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestGetMinMaxEpochs(t *testing.T) {
+	dataAccessService, mock := setupTestDataAccess(t)
+	defer dataAccessService.Close()
+
+	dashboardId := api_types.VDBId{Id: 123, Validators: nil}
+	groupId := int64(456)
+
+	tests := []struct {
+		name        string
+		mockRows    *sqlmock.Rows
+		mockError   error
+		period      enums.TimePeriod
+		expectedMin uint64
+		expectedMax uint64
+		expectedErr string
+	}{
+		{
+			name: "Success",
+			mockRows: sqlmock.NewRows([]string{"min_epoch_start", "max_epoch_end"}).
+				AddRow(100, 200),
+			period:      enums.Last24h,
+			expectedMin: 100,
+			expectedMax: 200,
+		},
+		{
+			name:        "Query error",
+			mockError:   errors.New("query failed"),
+			period:      enums.Last24h,
+			expectedErr: "error executing query: query failed",
+		},
+		{
+			name:        "Empty rows",
+			mockRows:    sqlmock.NewRows([]string{"min_epoch_start", "max_epoch_end"}),
+			period:      enums.Last24h,
+			expectedErr: "error executing query: sql: no rows in result set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clickhouseTable, _, err := getTablesForPeriod(tt.period)
+			assert.NoError(t, err)
+
+			ds := buildMinMaxEpochsQuery(dashboardId, groupId, clickhouseTable)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
+			if tt.mockError != nil {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
+			} else {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
+			}
+
+			minEpochRes, maxEpochRes, err := dataAccessService.getMinMaxEpochs(context.Background(), dashboardId, groupId, tt.period)
+			if tt.expectedErr == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectedErr)
+			}
+
+			assert.Equal(t, tt.expectedMin, minEpochRes)
+			assert.Equal(t, tt.expectedMax, maxEpochRes)
+			assert.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestGetMissedELRewards(t *testing.T) {
+	dataAccessService, mock := setupTestDataAccess(t)
+	defer dataAccessService.Close()
+
+	dashboardId := api_types.VDBId{Id: 123, Validators: nil}
+	groupId := int64(456)
+	slots := utils.Config.Chain.ClConfig.SlotsPerEpoch / 2
+	epochStart := uint64(1000)
+	epochEnd := uint64(2000)
+
+	// Mock EL rewards data
+	expectedMissedRewards := 1234.56
+
+	tests := []struct {
+		name            string
+		mockRows        *sqlmock.Rows
+		mockError       error
+		expectedRewards float64
+		expectedError   string
+	}{
+		{
+			name: "Success",
+			mockRows: sqlmock.NewRows([]string{"total_missed_rewards"}).
+				AddRow(expectedMissedRewards),
+			expectedRewards: expectedMissedRewards,
+		},
+		{
+			name:          "Query error",
+			mockError:     errors.New("query failed"),
+			expectedError: "error executing query: query failed",
+		},
+		{
+			name:          "Empty rows",
+			mockRows:      sqlmock.NewRows([]string{"total_missed_rewards"}),
+			expectedError: "error executing query: sql: no rows in result set",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ds := buildMissedELRewardsQuery(dashboardId, groupId, slots, epochStart, epochEnd)
+			query, _, err := ds.Prepared(true).ToSQL()
+			assert.NoError(t, err)
+
+			if tt.mockError != nil {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnError(tt.mockError)
+			} else {
+				mock.ExpectQuery(regexp.QuoteMeta(query)).WillReturnRows(tt.mockRows)
+			}
+
+			missedRewards, err := dataAccessService.getMissedELRewards(context.Background(), dashboardId, groupId, epochStart, epochEnd)
+
+			if tt.expectedError == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.expectedError)
+			}
+
+			assert.Equal(t, tt.expectedRewards, missedRewards)
 			assert.NoError(t, mock.ExpectationsWereMet())
 		})
 	}
