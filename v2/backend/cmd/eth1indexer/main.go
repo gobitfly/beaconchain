@@ -198,7 +198,8 @@ func Run() {
 	}
 
 	if *enableEnsUpdater {
-		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
+		importer := executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
+		go ImportEnsUpdatesLoop(chainId, importer, *ensBatchSize)
 	}
 
 	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
@@ -377,16 +378,14 @@ func Run() {
 	// utils.WaitForCtrlC()
 }
 
-func ImportEnsUpdatesLoop(bt *db.Bigtable, client *rpc.ErigonClient, batchSize int64) {
-	time.Sleep(time.Second * 5)
+func ImportEnsUpdatesLoop(chainID string, importer executionlayer.ENSImporter, batchSize int64) {
 	for {
-		err := bt.ImportEnsUpdates(client.GetNativeClient(), batchSize)
-		if err != nil {
-			log.Error(err, "error importing ens updates", 0, nil)
-		} else {
-			services.ReportStatus("ensIndexer", "Running", nil)
-		}
 		time.Sleep(time.Second * 5)
+		if err := importer.Import(chainID, batchSize); err != nil {
+			log.Error(err, "error importing ens updates", 0, nil)
+			continue
+		}
+		services.ReportStatus("ensIndexer", "Running", nil)
 	}
 }
 

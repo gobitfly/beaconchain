@@ -337,7 +337,7 @@ func Run() {
 	case "clear-bigtable":
 		clearBigtable(opts.Table, opts.Family, opts.Columns, opts.Key, opts.DryRun, bt)
 	case "index-old-eth1-blocks":
-		indexOldEth1Blocks(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, bt, erigonClient)
+		indexOldEth1Blocks(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, erigonClient)
 	case "update-aggregation-bits":
 		updateAggreationBits(rpcClient, opts.StartEpoch, opts.EndEpoch, opts.DataConcurrency)
 	case "update-block-finalization-sequentially":
@@ -1594,22 +1594,18 @@ func indexMissingBlocks(start uint64, end uint64, bt *db.Bigtable, client *rpc.E
 				}
 			}
 
-			indexOldEth1Blocks(block, block, 1, 1, "all", bt, client)
+			indexOldEth1Blocks(block, block, 1, 1, "all", client)
 		}
 	}
 }
 
-func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, bt *db.Bigtable, client *rpc.ErigonClient) {
+func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) {
 	if endBlock > 0 && endBlock < startBlock {
 		log.Error(nil, fmt.Sprintf("endBlock [%v] < startBlock [%v]", endBlock, startBlock), 0)
 		return
 	}
 	if concurrency == 0 {
 		log.Error(nil, "concurrency must be greater than 0", 0)
-		return
-	}
-	if bt == nil {
-		log.Error(nil, "no bigtable provided", 0)
 		return
 	}
 
@@ -1671,7 +1667,8 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 	}
 
 	if importENSChanges {
-		if err := bt.ImportEnsUpdates(client.GetNativeClient(), math.MaxInt64); err != nil {
+		importer := executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
+		if err := importer.Import(chainID, math.MaxInt64); err != nil {
 			log.Error(err, "error importing ens from events", 0)
 			return
 		}
