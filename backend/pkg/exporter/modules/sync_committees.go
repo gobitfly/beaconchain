@@ -26,14 +26,20 @@ type syncCommitteesExporter struct {
 
 	delay time.Duration
 	ctx   context.Context
+	cache *cache.TieredCacheBase
 }
 
 func newSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) syncCommitteesExporter {
+	if cache.TieredCache == nil {
+		log.Fatal(nil, "TieredCache is not initialised", 0)
+	}
+
 	return syncCommitteesExporter{
 		client: client,
 		db:     db,
 		delay:  time.Second * 12,
 		ctx:    ctx,
+		cache:  cache.TieredCache,
 	}
 }
 
@@ -74,7 +80,11 @@ func (s *syncCommitteesExporter) exportSyncCommittees() error {
 		dbPeriodsMap[period] = true
 	}
 
-	currEpoch := cache.LatestFinalizedEpoch.Get()
+	latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+	currEpoch, err := s.cache.GetUint64WithLocalTimeout(latestNodeFinalizedEpochKey, time.Second*5)
+	if err != nil {
+		return fmt.Errorf("error getting latestNodeEpoch from cache: %w", err)
+	}
 	if currEpoch > 0 { // guard against underflows
 		currEpoch = currEpoch - 1
 	}
