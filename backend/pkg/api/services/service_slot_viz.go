@@ -29,11 +29,10 @@ var currentDutiesInfo atomic.Pointer[SyncData]
 
 func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 	o := sync.Once{}
-	deployment := utils.Config.DeploymentType
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.NewStatusReport(constants.Event_ApiServiceSlotViz, constants.Default, delay, deployment)
+		r := services.NewStatusReport(constants.Event_ApiServiceSlotViz, constants.Default, delay)
 		r(constants.Running, nil)
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {

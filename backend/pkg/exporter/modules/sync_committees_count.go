@@ -12,10 +12,9 @@ import (
 )
 
 func syncCommitteesCountExporter() {
-	deployment := utils.Config.DeploymentType
 	for {
 		t0 := time.Now()
-		r := services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12, deployment)
+		r := services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
 		r(constants.Running, nil)
 		err := exportSyncCommitteesCount()
 		if err != nil {

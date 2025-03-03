@@ -55,9 +55,8 @@ func Stop() {
 	for _, service := range monitoredServices {
 		service.Stop()
 	}
-	deployment := utils.Config.DeploymentType
 	// this prevents status reports that werent shut down cleanly from triggering alerts
-	services.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default, deployment)(constants.Success, nil)
+	services.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
 	if startedClickhouse.Load() {
 		db.ClickHouseNativeWriter.Close()
 	}

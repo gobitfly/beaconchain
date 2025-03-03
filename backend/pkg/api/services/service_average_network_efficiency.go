@@ -23,11 +23,10 @@ var currentEfficiencyInfo atomic.Pointer[EfficiencyData]
 
 func (s *Services) startEfficiencyDataService(wg *sync.WaitGroup) {
 	o := sync.Once{}
-	deployment := utils.Config.DeploymentType
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.NewStatusReport(constants.Event_ApiServiceAvgEfficiency, constants.Default, delay, deployment)
+		r := services.NewStatusReport(constants.Event_ApiServiceAvgEfficiency, constants.Default, delay)
 		r(constants.Running, nil)
 		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
 		if err != nil {

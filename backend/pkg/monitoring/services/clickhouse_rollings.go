@@ -50,14 +50,13 @@ func (s *ServiceClickhouseRollings) runChecks() {
 		"90d":   constants.Event_ClickhouseRolling_90d,
 		"total": constants.Event_ClickhouseRolling_total,
 	}
-	deployment := utils.Config.DeploymentType
 	wg := sync.WaitGroup{}
 	for rolling := range maps.Keys(rollings) {
 		rolling := rolling
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r := NewStatusReport(rollings[rolling], constants.Default, 30*time.Second, deployment)
+			r := NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
 			r(constants.Running, nil)
 			if db.ClickHouseReader == nil {
 				r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
