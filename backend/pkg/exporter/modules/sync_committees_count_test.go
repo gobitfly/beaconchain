@@ -20,12 +20,12 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 		mockTotalValidatorsCount uint64
 		mockNoRecordsInDB        bool
 	}{
-		// {
-		// 	name:                     "no records in db",
-		// 	mockRowCountResponse:     0,
-		// 	mockLatestFinalizedEpoch: 0,
-		// 	mockNoRecordsInDB:        true,
-		// },
+		{
+			name:                     "no records in db",
+			mockRowCountResponse:     0,
+			mockLatestFinalizedEpoch: 0,
+			mockNoRecordsInDB:        true,
+		},
 		{
 			name:                     "records exist in db",
 			mockRowCountResponse:     1,
@@ -61,11 +61,14 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 			if tt.mockNoRecordsInDB {
 				mockConsDBClient.On("GetSyncCommitteesCountPerValidator").Return(tt.mockRowCountResponse, nil)
 				mockConsDBClient.On("GetLatestFinalizedEpoch").Return(tt.mockLatestFinalizedEpoch, nil)
+				mockConsDBClient.On("SaveSyncCommitteesCount", tt.mockDBPeriod, tt.mockCountSoFar).Return(nil)
 
 				exporter.Export()
 
 				mockConsDBClient.AssertCalled(t, "GetSyncCommitteesCountPerValidator")
 				mockConsDBClient.AssertCalled(t, "GetLatestFinalizedEpoch")
+				mockConsDBClient.AssertCalled(t, "SaveSyncCommitteesCount", tt.mockDBPeriod, tt.mockCountSoFar)
+
 				return
 			}
 
