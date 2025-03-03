@@ -268,7 +268,8 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(rpcClient, slot, false, tx)
+				slotExporter := modules.NewSlotExport(rpcClient, slot, 0, false, tx)
+				err = slotExporter.ExportSlot()
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -317,8 +318,8 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(rpcClient, slot, false, tx)
-
+				slotExporter := modules.NewSlotExport(rpcClient, slot, 0, false, tx)
+				err = slotExporter.ExportSlot()
 				if err != nil {
 					_ = tx.Rollback()
 					log.Fatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})
