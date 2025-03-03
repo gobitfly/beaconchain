@@ -51,7 +51,8 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
 		go genesisExporter.Export()
 
-		go syncCommitteesExporter(moduleCtx.ConsClient)
+		syncCommitteesExporter := newSyncCommitteesExporter(ctx, moduleCtx.ConsClient, consDB)
+		go syncCommitteesExporter.Export()
 
 		syncCommitteesCountExporter := newSyncCommitteesCountExporter(ctx, consDB)
 		go syncCommitteesCountExporter.Export()
