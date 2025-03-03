@@ -526,7 +526,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		return fmt.Errorf("error preparing insert validator statement: %w", err)
 	}
 
-	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = $2;`)
+	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = ANY($2);`)
 	if err != nil {
 		return fmt.Errorf("error preparing update validator status statement: %w", err)
 	}
@@ -535,6 +535,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	valiudatorUpdateTs := time.Now()
 
 	validatorStatusCounts := make(map[string]int)
+	validatorStatusUpdateMap := make(map[string][]uint64)
 
 	updates := 0
 	for _, v := range validators {
@@ -628,10 +629,15 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
 				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 				//queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
-				_, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
-				if err != nil {
-					return fmt.Errorf("error updating validator status: %w", err)
+				if validatorStatusUpdateMap[c.Status] == nil {
+					validatorStatusUpdateMap[c.Status] = make([]uint64, 0)
 				}
+				validatorStatusUpdateMap[c.Status] = append(validatorStatusUpdateMap[c.Status], c.Index)
+
+				// _, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
+				// if err != nil {
+				// 	return fmt.Errorf("error updating validator status: %w", err)
+				// }
 				//updates++
 			}
 			// if c.Balance != v.Balance {
@@ -674,6 +680,15 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawalcredentials = '\\x%x' WHERE validatorindex = %d;\n", v.WithdrawalCredentials, c.Index))
 				updates++
 			}
+		}
+	}
+
+	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
+	for status, validators := range validatorStatusUpdateMap {
+		log.Infof("updating validator status to %s for %d validators", status, len(validators))
+		_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(validators))
+		if err != nil {
+			return fmt.Errorf("error updating validator status: %w", err)
 		}
 	}
 
@@ -1415,7 +1430,7 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
 	}
 	return epochs, nil
-}	
+}
 
 func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	var epochs []EpochMetadata
