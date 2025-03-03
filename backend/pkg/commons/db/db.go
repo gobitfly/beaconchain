@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -2313,19 +2312,29 @@ func (c *ConsensusDB) GetSyncCommitteesPeriods() ([]uint64, error) {
 	return periods, err
 }
 
-func (c *ConsensusDB) SaveSyncCommitteeData(args []interface{}, ids []string) error {
+func (c *ConsensusDB) SaveSyncCommitteeData(data []types.SyncCommittee) error {
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
 	defer utils.Rollback(tx)
 
+	nArgs := 3
+	ids := make([]string, len(data))
+	queryArgs := make([]interface{}, len(data)*nArgs)
+	for i, entry := range data {
+		ids[i] = fmt.Sprintf("($%d,$%d,$%d)", i*nArgs+1, i*nArgs+2, i*nArgs+3)
+		queryArgs[i*nArgs] = entry.Period
+		queryArgs[i*nArgs+1] = entry.ValidatorIndex
+		queryArgs[i*nArgs+2] = entry.CommitteeIndex
+	}
+
 	_, err = tx.Exec(
 		fmt.Sprintf(`
 			INSERT INTO sync_committees (period, validatorindex, committeeindex)
 			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
 			strings.Join(ids, ",")),
-		args...)
+		queryArgs...)
 
 	if err != nil {
 		return err

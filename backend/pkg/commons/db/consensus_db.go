@@ -1,6 +1,9 @@
 package db
 
-import "github.com/jmoiron/sqlx"
+import (
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/jmoiron/sqlx"
+)
 
 type ConsensusDB struct {
 	WriterDb *sqlx.DB
@@ -8,6 +11,6 @@ type ConsensusDB struct {
 }
 
 type ConsensusDBI interface {
-	SaveSyncCommitteeData(args []interface{}, ids []string) error
+	SaveSyncCommitteeData(data []types.SyncCommittee) error
 	GetSyncCommitteesPeriods() ([]uint64, error)
 }
