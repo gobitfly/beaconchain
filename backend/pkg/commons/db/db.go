@@ -2630,12 +2630,13 @@ func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, e
 }
 
 func TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
 	res, err := tx.Exec(`
-	INSERT INTO RemovedExcessBalance (block_slot, block_root, withdrawalindex, validator_index, address, amount)
+	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validator_index, address, amount)
 		SELECT
 				slot AS block_slot,
 				block_root AS block_root,
-				event_index AS request_index,
+				-20000 + event_index AS request_index,
 				(data->>'validator_index')::int AS validator_index,
 				''::bytea as address,
 				(data->>'amount')::bigint AS amount,
