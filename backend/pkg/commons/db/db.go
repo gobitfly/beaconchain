@@ -621,14 +621,23 @@ func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	return slots, nil
 }
 
-func SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
-	_, err := tx.Exec("UPDATE blocks SET finalized = $1, status = $2 WHERE slot = $3", finalized, status, slot)
-
+func GetLastSlot(tx *sqlx.Tx) (uint64, error) {
+	var slot uint64
+	err := tx.Get(&slot, "SELECT slot FROM blocks ORDER BY slot DESC LIMIT 1")
 	if err != nil {
-		return fmt.Errorf("error setting slot finalization and status: %w", err)
+		return 0, err
 	}
+	return slot, nil
+}
 
-	return nil
+func SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		UPDATE blocks
+		SET finalized = $1, status = $2
+		WHERE slot = $3
+	`, finalized, status, slot)
+
+	return err
 }
 
 type GetAllNonFinalizedSlotsRow struct {

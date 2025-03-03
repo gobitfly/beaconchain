@@ -90,7 +90,6 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 
 	// get the current chain head
 	head, err := d.Client.GetChainHead()
-
 	if err != nil {
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
@@ -102,54 +101,79 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	defer utils.Rollback(tx)
 
 	if d.FirstRun {
-		log.Infof("performing first run consistency checks")
-		// get all slots we currently have in the database
-		dbSlots, err := db.GetAllSlots(tx)
-		if err != nil {
-			return fmt.Errorf("error retrieving all db slots: %w", err)
+		if err := d.handleFirstRun(head, tx); err != nil {
+			return err
 		}
-		log.Info("retrieved all exported slots from the database")
+		d.FirstRun = false
+	}
 
-		if len(dbSlots) > 0 {
-			if dbSlots[0] != 0 {
-				log.Infof("exporting genesis slot as it is missing in the database")
-				err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
-				if err != nil {
-					return fmt.Errorf("error exporting slot %v: %w", 0, err)
-				}
-				dbSlots, err = db.GetAllSlots(tx)
-				if err != nil {
-					return fmt.Errorf("error retrieving all db slots: %w", err)
-				}
+	// at this point we know that we have a coherent list of slots in the database without any gaps
+
+	if err := d.exportNewSlots(head, tx); err != nil {
+		return err
+	}
+
+	// at this point we have all data up to the current chain head in the database
+
+	if err := d.handleFinalizedSlots(head, tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("error committing tx: %w", err)
+	}
+
+	latestEpoch = utils.EpochOfSlot(head.HeadSlot)
+	latestSlot = head.HeadSlot
+
+	services.ReportStatus("slotExporter", "Running", nil)
+
+	return nil
+}
+
+func (d *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
+	// get all slots we currently have in the database
+	dbSlots, err := db.GetAllSlots(tx)
+	if err != nil {
+		return fmt.Errorf("error retrieving all db slots: %w", err)
+	}
+
+	if len(dbSlots) > 0 {
+		if dbSlots[0] != 0 {
+			log.Infof("exporting genesis slot as it is missing in the database")
+			err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
+			if err != nil {
+				return fmt.Errorf("error exporting slot %v: %w", 0, err)
+			}
+			dbSlots, err = db.GetAllSlots(tx)
+			if err != nil {
+				return fmt.Errorf("error retrieving all db slots: %w", err)
 			}
 		}
+	}
 
-		if len(dbSlots) > 1 {
-			log.Info("performing gap checks")
-			// export any gaps we might have (for whatever reason)
-			for slotIndex := 1; slotIndex < len(dbSlots); slotIndex++ {
-				previousSlot := dbSlots[slotIndex-1]
-				currentSlot := dbSlots[slotIndex]
+	if len(dbSlots) > 1 {
+		// export any gaps we might have (for whatever reason)
+		for slotIndex := 1; slotIndex < len(dbSlots); slotIndex++ {
+			previousSlot := dbSlots[slotIndex-1]
+			currentSlot := dbSlots[slotIndex]
 
-				if previousSlot != currentSlot-1 {
-					log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
-					for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
-						err := ExportSlot(d.Client, slot, false, tx)
-
-						if err != nil {
-							return fmt.Errorf("error exporting slot %v: %w", slot, err)
-						}
+			if previousSlot != currentSlot-1 {
+				log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
+				for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
+					err := ExportSlot(d.Client, slot, false, tx)
+					if err != nil {
+						return fmt.Errorf("error exporting slot %v: %w", slot, err)
 					}
 				}
 			}
 		}
 	}
-	d.FirstRun = false
+	return nil
+}
 
-	// at this point we know that we have a coherent list of slots in the database without any gaps
-	lastDbSlot := uint64(0)
-	err = tx.Get(&lastDbSlot, "SELECT slot FROM blocks ORDER BY slot DESC limit 1")
-
+func (d *slotExporterData) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
+	lastDbSlot, err := db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("db is empty, export genesis slot")
@@ -167,8 +191,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	if lastDbSlot != head.HeadSlot {
 		slotsExported := 0
 		for slot := lastDbSlot + 1; slot <= head.HeadSlot; slot++ { // export any new slots
-			err := ExportSlot(d.Client, slot, utils.EpochOfSlot(slot) == head.HeadEpoch, tx)
-			if err != nil {
+			if err := ExportSlot(d.Client, slot, utils.EpochOfSlot(slot) == head.HeadEpoch, tx); err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", slot, err)
 			}
 			slotsExported++
@@ -176,7 +199,6 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 			// in case of large export runs, export at most 10 epochs per tx
 			if slotsExported == int(utils.Config.Chain.ClConfig.SlotsPerEpoch)*10 {
 				err := tx.Commit()
-
 				if err != nil {
 					return fmt.Errorf("error committing tx: %w", err)
 				}
@@ -189,17 +211,23 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 		}
 	}
 
-	// at this point we have all data up to the current chain head in the database
+	return nil
+}
 
+func (d *slotExporterData) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := db.GetAllNonFinalizedSlots()
 	if err != nil {
 		return fmt.Errorf("error retrieving all non finalized slots from the db: %w", err)
 	}
-	for _, dbSlot := range dbNonFinalSlots {
-		nodeSlotFinalized := dbSlot.Slot <= head.FinalizedSlot
 
-		var header *constypes.StandardBeaconHeaderResponse
+	for _, dbSlot := range dbNonFinalSlots {
+		header, err := d.Client.GetBlockHeader(dbSlot.Slot)
+		if err != nil {
+			return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
+		}
+
+		nodeSlotFinalized := dbSlot.Slot <= head.FinalizedSlot
 
 		if nodeSlotFinalized != dbSlot.Finalized {
 			log.Infof("checking slot %d for finalization / reorgs", dbSlot.Slot)
@@ -287,16 +315,6 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 			}
 		}
 	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx: %w", err)
-	}
-
-	latestEpoch = utils.EpochOfSlot(head.HeadSlot)
-	latestSlot = head.HeadSlot
-
-	services.ReportStatus("slotExporter", "Running", nil)
 
 	return nil
 }
