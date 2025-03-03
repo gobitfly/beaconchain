@@ -522,163 +522,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, err
 	}
 
-	getMinMaxEpochs := func() (uint64, uint64, error) {
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("MIN(epoch_start) as min_epoch_start"),
-				goqu.L("MAX(epoch_end) as max_epoch_end")).
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
-
-		if dashboardId.Validators == nil {
-			ds = ds.
-				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
-		} else {
-			ds = ds.
-				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		var epoch_row struct {
-			MinEpochStart *uint64 `db:"min_epoch_start"`
-			MaxEpochEnd   *uint64 `db:"max_epoch_end"`
-		}
-		err = d.clickhouseReader.GetContext(ctx, &epoch_row, query, args...)
-		if err != nil {
-			return 0, 0, err
-		}
-		return *epoch_row.MinEpochStart, *epoch_row.MaxEpochEnd, nil
-	}
-
-	getMissedELRewards := func(epochStart, epochEnd uint64) (float64, error) {
-		// Initialize the result variable
-		var totalMissedRewardsEl float64
-
-		// Define the `targets` CTE
-		targets := goqu.Dialect("postgres").
-			From("blocks").
-			Select(goqu.I("blocks.slot").As("slot")).
-			Where(
-				goqu.I("blocks.status").Neq("1"),
-				goqu.I("epoch").Gte(epochStart),
-				goqu.I("epoch").Lte(epochEnd),
-			)
-
-		if dashboardId.Validators == nil {
-			targets = targets.
-				Join(
-					goqu.T("users_val_dashboards_validators").As("uvdv"),
-					goqu.On(goqu.I("blocks.proposer").Eq(goqu.I("uvdv.validator_index"))),
-				).
-				Where(
-					goqu.And(
-						goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id),
-						goqu.Or(
-							goqu.I("uvdv.group_id").Eq(groupId),
-							goqu.L("?::smallint = -1", groupId),
-						),
-					),
-				)
-		} else {
-			targets = targets.
-				Where(
-					goqu.I("blocks.proposer").In(dashboardId.Validators),
-				)
-		}
-
-		slots := utils.Config.Chain.ClConfig.SlotsPerEpoch / 2
-
-		// Define the `res` CTE
-		res := goqu.
-			From("targets").
-			LeftJoin(
-				goqu.T("execution_rewards_finalized").As("b"),
-				goqu.On(
-					goqu.L(fmt.Sprintf(
-						`"b"."slot" >= "targets"."slot" - %d AND "b"."slot" < "targets"."slot" + %d`,
-						slots, slots,
-					)),
-				),
-			).
-			Select(
-				goqu.I("targets.slot"),
-				goqu.L("percentile_cont(0.5) WITHIN GROUP (ORDER BY b.value)::numeric(76,0)").As("v"),
-			).
-			GroupBy(goqu.I("targets.slot"))
-
-		// Build the final query
-		query := goqu.From("res").
-			With("targets", targets).
-			With("res", res).
-			Select(goqu.L("COALESCE(SUM(v), 0)"))
-
-		// Generate SQL and arguments
-		sql, args, err := query.Prepared(true).ToSQL()
-		if err != nil {
-			return 0, fmt.Errorf("failed to generate SQL: %w", err)
-		}
-
-		// Execute the query with the generated SQL and arguments
-		err = d.readerDb.GetContext(ctx, &totalMissedRewardsEl, sql, args...)
-		if err != nil {
-			return 0, fmt.Errorf("failed to execute query: %w", err)
-		}
-
-		// Return the computed total median rewards
-		return totalMissedRewardsEl, nil
-	}
-
-	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
-		// we need to go to the all time table for last scheduled block/sync committee epoch
-		clickhouseTotalTable, _, err := getTablesForPeriod(enums.AllTime)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
-				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
-
-		if dashboardId.Validators == nil {
-			ds = ds.
-				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
-		} else {
-			ds = ds.
-				Where(goqu.L("validator_index IN ?", dashboardId.Validators))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		var row struct {
-			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
-			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
-		}
-		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
-			return time.Time{}, time.Time{}, nil
-		}
-
-		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)),
-			utils.EpochToTime(uint64(*row.LastSyncEpoch)),
-			nil
-	}
-
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
@@ -769,14 +612,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var lastBlockTs, lastSyncTs time.Time
 	errGroup.Go(func() error {
 		var err error
-		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		lastBlockTs, lastSyncTs, err = d.getLastScheduledBlockAndSyncDate(ctx, dashboardId, groupId)
 		return err
 	})
 
 	var minEpochStart, maxEpochEnd uint64
 	errGroup.Go(func() error {
 		var err error
-		minEpochStart, maxEpochEnd, err = getMinMaxEpochs()
+		minEpochStart, maxEpochEnd, err = d.getMinMaxEpochs(ctx, dashboardId, groupId, period)
 		return err
 	})
 
@@ -875,7 +718,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	totalMissedRewardsEl, err := getMissedELRewards(minEpochStart, maxEpochEnd)
+	totalMissedRewardsEl, err := d.getMissedELRewards(ctx, dashboardId, groupId, minEpochStart, maxEpochEnd)
 	if err != nil {
 		return nil, err
 	}
