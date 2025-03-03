@@ -122,7 +122,6 @@ func TestSyncCommitteesExport(t *testing.T) {
 			}
 			mockClient.AssertCalled(t, "GetSyncCommittee", tt.mockStateID, tt.mockEpoch)
 			cachemocks.AssertCalled(t, "GetUint64", "mock.Anything", latestNodeFinalizedEpochKey)
-
 		})
 	}
 }
