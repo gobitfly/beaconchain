@@ -908,6 +908,8 @@
     "pricing": {
         "addons": {
             "button": {
+                "decrease_quantity": "Decrease quantity",
+                "increase_quantity": "Increase quantity",
                 "manage_addon": "Manage Add-On",
                 "select_addon": "Select Add-On"
             },
@@ -916,7 +918,9 @@
                 "template": "Contact our {_link} for a higher limit"
             },
             "currently_active": "Currently active: {amount}",
-            "per_dashboard": "per Dashboard",
+            "effective_balance": "+{amount} Max Stake per Dashboard",
+            "select_quantity": "Select quantity",
+            "selected_quantity": "Selected quantity",
             "subtitle": "Go even further with beaconcha.in Premium custom Add-Ons.",
             "title": "Premium Add-Ons",
             "validator_amount": "+{amount} Validators"
@@ -936,9 +940,8 @@
         },
         "hide_feature": "Hide Features",
         "monthly": "Monthly",
-        "pectra_tooltip": "After Pectra hardfork: {effectiveBalance} ETH maximum effective balance",
+        "per_min_validator_deposit": "{amount} per {old_validator_max_effective_balance} Max Stake",
         "per_month": "per month",
-        "per_validator": "{amount} per validator",
         "percs": {
             "ad_free": "Ad free",
             "bulk_adding": "Bulk adding",
@@ -946,10 +949,12 @@
             "configure_notifications_via_api": "Configure notifications via API",
             "custom_machine_alerts": "Custom machine alerts",
             "custom_machine_alerts_subtext": "(CPU, RAM,...)",
+            "effective_balance_per_dashboard": "Max Stake per dashboard",
             "email_notifications_per_day": "Email notifications per day",
             "heatmap_history": "Heatmap history",
             "machine_monitoring_history_seconds": "Machine monitoring history",
             "manage_dashboard_via_api": "Manage dashboard via API",
+            "max_effective_balance_per_dashboard": "Max Stake per dashboard",
             "mobile_app_custom_themes": "Custom themes",
             "mobile_app_widget": "App widget",
             "monitor_machines": "Monitor machines",
@@ -959,7 +964,6 @@
             "validator_dashboards": "Validator dashboards",
             "validator_group_notifications": "Validator group notifications",
             "validator_groups_per_dashboard": "Validator groups per dashboard",
-            "validators_per_dashboard": "Validators per dashboard",
             "webhook_endpoints": "Webhook endpoints"
         },
         "premium": "beaconcha.in Premium",
@@ -972,6 +976,8 @@
             },
             "coming_soon": "(coming soon)",
             "manage_dashboard_via_api": "Manage Dashboard via API",
+            "max_effective_balance": "{amount} Max Stake",
+            "max_effective_balance_tooltip": "Alternative term: {amount} maximum effective balance",
             "mobile_app_widget": "Mobile App Widget",
             "no_ads": "No Ads",
             "popular": "Popular!",
@@ -981,8 +987,7 @@
             "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
             "timeframe_heatmap_chart_no_timeframe": "Heatmap chart history",
             "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
-            "validators": "{amount} Validators",
-            "validators_per_dashboard": "{amount} Validators per Dashboard"
+            "validators": "{amount} Validators"
         },
         "premium_via_app_banner": "You have an active premium subscription from the App Store / Play Store. You can manage your active subscriptions from there.",
         "promo_code": "Promocode {_code} will be applied during checkout",
