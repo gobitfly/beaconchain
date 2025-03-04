@@ -29,7 +29,6 @@ export interface SearchValidatorsByGraffiti {
 export interface SearchResult {
   type: string;
   chain_id: number /* uint64 */;
-  total_effective_balance: number /* uint64 */;
   value: any;
 }
 export interface InternalPostSearchResponse {
