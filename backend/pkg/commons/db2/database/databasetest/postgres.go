@@ -3,6 +3,7 @@ package databasetest
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -22,9 +23,12 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 
 	var err error
 	var container testcontainers.Container
+	// increase the container life, this way it can be reused
+	_ = os.Setenv("RYUK_RECONNECTION_TIMEOUT", "1m0s")
 	skipIfNoDocker(t, func() {
 		container, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
+				Name:         "postgres",
 				Image:        "postgres:12",
 				ExposedPorts: []string{"5432/tcp"},
 				Env: map[string]string{
@@ -35,12 +39,12 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 				WaitingFor: wait.ForListeningPort("5432/tcp"),
 			},
 			Started: true,
+			Reuse:   true,
 		})
 	})
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
 	}
-	testcontainers.CleanupContainer(t, container)
 
 	url, err := container.Endpoint(ctx, "")
 	if err != nil {
@@ -52,21 +56,47 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 		t.Fatal(err)
 	}
 
-	// run migrations
-	// for now migration path is not configurable
-	if _, err := db.Exec("CREATE EXTENSION IF NOT EXISTS pgcrypto CASCADE;"); err != nil {
-		t.Fatal(err)
-	}
 	_, path, _, _ := runtime.Caller(0)
+	// for now migration path is not configurable
 	migrationPath := strings.ReplaceAll(filepath.Dir(path), "db2/database/databasetest", "db/migrations/postgres")
+	if err := runMigrations(db, migrationPath); err != nil {
+		if !strings.Contains(err.Error(), "no next version found") {
+			t.Fatal(err)
+		}
+	}
+
+	t.Cleanup(func() {
+		if err := truncate(db); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	return db
+}
+
+func runMigrations(db *sqlx.DB, path string) error {
+	if _, err := db.Exec("CREATE EXTENSION IF NOT EXISTS pgcrypto CASCADE;"); err != nil {
+		return err
+	}
 
 	goose.SetLogger(goose.NopLogger())
 	if err := goose.SetDialect("postgres"); err != nil {
-		t.Fatal(err)
+		return err
 	}
-	if err := goose.Up(db.DB, migrationPath); err != nil {
-		t.Fatal(err)
+	return goose.Up(db.DB, path)
+}
+
+func truncate(db *sqlx.DB) error {
+	var tables []string
+	query := `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';`
+	err := db.Select(&tables, query)
+	if err != nil {
+		return err
 	}
 
-	return db
+	_, err = db.DB.Exec(fmt.Sprintf("TRUNCATE TABLE %s", strings.Join(tables, ", ")))
+	if err != nil {
+		return err
+	}
+	return nil
 }
