@@ -41,21 +41,29 @@ export function commmifyLeft(value: string): string {
   return formatted
 }
 
-export function formatFiat(
+export function formatFiatCurrency(
   value: number,
-  currency: string,
-  locales: string,
-  minimumFractionDigits?: number,
-  maximumFractionDigits?: number,
+  options: {
+    currency?: CurrencyCodeFiat,
+    locales?: string,
+    maximumFractionDigits?: number,
+    minimumFractionDigits?: number,
+  } = {},
 ) {
-  const formatter = new Intl.NumberFormat(locales, {
+  const { $i18n } = useNuxtApp()
+  const {
+    currency = 'EUR',
+    locales = $i18n.t('locales.currency'),
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = options
+
+  return new Intl.NumberFormat(locales, {
     currency,
     maximumFractionDigits,
     minimumFractionDigits,
     style: 'currency',
-  })
-
-  return formatter.format(value)
+  }).format(value)
 }
 
 export function formatGoTimestamp(
@@ -259,20 +267,6 @@ function formatTsToRelative(
       base: date,
       style,
     })
-}
-
-export const formatPremiumProductPrice = (
-  t: ComposerTranslation,
-  price: number,
-  digits?: number,
-) => {
-  return formatFiat(
-    price,
-    'EUR',
-    t('locales.currency'),
-    digits ?? 2,
-    digits ?? 2,
-  )
 }
 
 /**
