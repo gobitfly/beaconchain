@@ -16,13 +16,13 @@ import (
 )
 
 type relaysExporter struct {
-	db          db.ConsensusDBI
+	db          db.ConsensusRepository
 	relayClient relayClient
 	delay       time.Duration
 	ctx         context.Context
 }
 
-func newRelaysExporter(ctx context.Context, db db.ConsensusDBI) relaysExporter {
+func newRelaysExporter(ctx context.Context, db db.ConsensusRepository) relaysExporter {
 	return relaysExporter{
 		db:          db,
 		relayClient: nodeClient{},

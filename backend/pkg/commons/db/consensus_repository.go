@@ -2,15 +2,9 @@ package db
 
 import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/jmoiron/sqlx"
 )
 
-type ConsensusDB struct {
-	WriterDb *sqlx.DB
-	ReaderDb *sqlx.DB
-}
-
-type ConsensusDBI interface {
+type ConsensusRepository interface {
 	GetRelays() ([]types.Relay, error)
 	UpdateRelay(tagID, endpoint string) error
 	UpdateRelayLastExportTry(tagID, endpoint string) error
