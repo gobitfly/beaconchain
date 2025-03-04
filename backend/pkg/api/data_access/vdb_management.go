@@ -797,13 +797,15 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 		}
 	}
 
-	if len(newValidators) > 0 && limitEB > 0 {
-		// only insert new validators until the eb limit is reached
+	if len(newValidators) > 0 {
 		newValidatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, newValidators, false)
 		if err != nil {
 			return nil, err
 		}
-		newValidators = d.applyEBFiler(newValidatorEbs, limitEB)
+		newValidators, err = d.applyEBFiler(newValidatorEbs, limitEB)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// keep existing validators so we can update their group
@@ -1095,35 +1097,43 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 	return result, nil
 }
 
-func (d *DataAccessService) applyEBFiler(validatorEbs map[t.VDBValidator]uint64, ebLimit uint64) []t.VDBValidator {
-	// Decide which new validators to add:
-	// a) insert by lowest index until ebLimit reached
-	// b) insert by lowest effective balance until ebLimit reached
-	// c) insert the combination of validators which gets closest to the ebLimit (knapsack problem)
-	// TODO prefer active validators & insert exited last in all 3 cases
+func (d *DataAccessService) applyEBFiler(validatorEbs map[t.VDBValidator]uint64, ebLimit uint64) ([]t.VDBValidator, error) {
+	// if shrink is true, new validators will be added until the ebLimit is reached; otherwise an error is returned
+	shrink := false
 	newValidatorsList := maps.Keys(validatorEbs)
 
-	sort.Slice(newValidatorsList, func(i, j int) bool {
-		// use a) as sec. sort
-		if validatorEbs[newValidatorsList[i]] == validatorEbs[newValidatorsList[j]] {
-			return newValidatorsList[i] < newValidatorsList[j] // a)
-		}
-		return validatorEbs[newValidatorsList[i]] < validatorEbs[newValidatorsList[j]] // b)
-	})
+	if shrink {
+		// Decide which new validators to add:
+		// a) insert by lowest index until ebLimit reached
+		// b) insert by lowest effective balance until ebLimit reached
+		// c) insert the combination of validators which gets closest to the ebLimit (knapsack problem)
+		// TODO prefer active validators & insert exited last in all 3 cases
+		sort.Slice(newValidatorsList, func(i, j int) bool {
+			// use a) as sec. sort
+			if validatorEbs[newValidatorsList[i]] == validatorEbs[newValidatorsList[j]] {
+				return newValidatorsList[i] < newValidatorsList[j] // a)
+			}
+			return validatorEbs[newValidatorsList[i]] < validatorEbs[newValidatorsList[j]] // b)
+		})
+	}
 
 	var newEbAccumulator uint64
 	for i, validator := range newValidatorsList {
 		if newEbAccumulator+validatorEbs[validator] > ebLimit {
-			newValidatorsList = newValidatorsList[:i]
-			break
+			if shrink {
+				newValidatorsList = newValidatorsList[:i]
+				break
+			} else {
+				return nil, fmt.Errorf("effective balance limit exceeded")
+			}
 		}
 		newEbAccumulator += validatorEbs[validator]
 	}
-	return newValidatorsList
+	return newValidatorsList, nil
 }
 
 // takes a goqu ds of new validators to add to a vdb,
-// determines whether they fit in the ebLimit and shrinks selection if not
+// determines whether they fit in the ebLimit and returns an error if not
 func (d *DataAccessService) applyNewValidatorsDSEBFilter(ctx context.Context, newValidatorsDs *goqu.SelectDataset, ebLimit uint64) error {
 	var newValidators []uint64
 	newValidatorsQuery, args, err := newValidatorsDs.Prepared(true).ToSQL()
@@ -1140,7 +1150,10 @@ func (d *DataAccessService) applyNewValidatorsDSEBFilter(ctx context.Context, ne
 		return err
 	}
 
-	filteredValidators := d.applyEBFiler(validatorEbs, ebLimit)
+	filteredValidators, err := d.applyEBFiler(validatorEbs, ebLimit)
+	if err != nil {
+		return err
+	}
 	if len(filteredValidators) < len(newValidators) {
 		//nolint:staticcheck
 		newValidatorsDs = goqu.Dialect("postgres").
