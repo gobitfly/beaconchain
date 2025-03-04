@@ -30,10 +30,9 @@ type SearchValidatorsByGraffiti struct {
 }
 
 type SearchResult struct {
-	Type                  string      `json:"type"`
-	ChainId               uint64      `json:"chain_id"`
-	TotalEffectiveBalance uint64      `json:"total_effective_balance"`
-	Value                 interface{} `json:"value"`
+	Type    string      `json:"type"`
+	ChainId uint64      `json:"chain_id"`
+	Value   interface{} `json:"value"`
 }
 
 type InternalPostSearchResponse struct {
