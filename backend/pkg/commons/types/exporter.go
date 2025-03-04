@@ -575,6 +575,18 @@ type RelayBlock struct {
 	ProposerFeeRecipient string `db:"proposer_fee_recipient" json:"proposer_fee_recipient"`
 }
 
+type BidTrace struct {
+	Slot                 uint64    `json:"slot,string"`
+	ParentHash           string    `json:"parent_hash"`
+	BlockHash            string    `json:"block_hash"`
+	BuilderPubkey        string    `json:"builder_pubkey"`
+	ProposerPubkey       string    `json:"proposer_pubkey"`
+	ProposerFeeRecipient string    `json:"proposer_fee_recipient"`
+	GasLimit             uint64    `json:"gas_limit,string"`
+	GasUsed              uint64    `json:"gas_used,string"`
+	Value                WeiString `json:"value"`
+}
+
 type BlockTag struct {
 	ID        string `db:"tag_id"`
 	BlockSlot uint64 `db:"slot"`

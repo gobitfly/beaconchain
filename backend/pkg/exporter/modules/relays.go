@@ -15,27 +15,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-type BidTrace struct {
-	Slot                 uint64          `json:"slot,string"`
-	ParentHash           string          `json:"parent_hash"`
-	BlockHash            string          `json:"block_hash"`
-	BuilderPubkey        string          `json:"builder_pubkey"`
-	ProposerPubkey       string          `json:"proposer_pubkey"`
-	ProposerFeeRecipient string          `json:"proposer_fee_recipient"`
-	GasLimit             uint64          `json:"gas_limit,string"`
-	GasUsed              uint64          `json:"gas_used,string"`
-	Value                types.WeiString `json:"value"`
-}
-
-type RelayClient interface {
-	fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error)
-}
-
-type relayClient struct{}
-
 type relaysExporter struct {
 	db          db.ConsensusDBI
-	relayClient RelayClient
+	relayClient relayClient
 	delay       time.Duration
 	ctx         context.Context
 }
@@ -43,7 +25,7 @@ type relaysExporter struct {
 func newRelaysExporter(ctx context.Context, db db.ConsensusDBI) relaysExporter {
 	return relaysExporter{
 		db:          db,
-		relayClient: relayClient{},
+		relayClient: nodeClient{},
 		delay:       time.Minute,
 		ctx:         ctx,
 	}
@@ -58,22 +40,22 @@ func (rs *relaysExporter) MEVBoostRelaysExporter() {
 		default:
 			// we retrieve the relays from the db each loop to prevent having to restart the exporter for changes
 			relays, err := rs.db.GetRelays()
-			var wg sync.WaitGroup
-			if err == nil {
-				for _, relay := range relays {
-					if !shouldTryToExportRelay(relay) {
-						continue
-					}
-					wg.Add(1)
-					go func(r types.Relay) {
-						defer wg.Done()
-						rs.singleRelayExport(r)
-					}(relay)
-				}
-			} else {
+			if err != nil {
 				log.Error(err, "failed to retrieve relays from db", 0)
+				time.Sleep(rs.delay)
+				continue
 			}
-
+			var wg sync.WaitGroup
+			for _, relay := range relays {
+				if !shouldTryToExportRelay(relay) {
+					continue
+				}
+				wg.Add(1)
+				go func(r types.Relay) {
+					defer wg.Done()
+					rs.singleRelayExport(r)
+				}(relay)
+			}
 			wg.Wait()
 			time.Sleep(rs.delay)
 		}
@@ -106,39 +88,12 @@ func (rs *relaysExporter) singleRelayExport(r types.Relay) {
 		return
 	}
 
-	err = rs.db.UpdateRelays(r.ID, r.Endpoint)
+	err = rs.db.UpdateRelay(r.ID, r.Endpoint)
 	if err != nil {
 		log.Error(err, "could not update successful relay export", 0, map[string]interface{}{"relay": r.ID})
 	}
 
 	log.Infof("finished syncing payloads from relay %v", r.ID)
-}
-
-func (relayClient) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error) {
-	url := fmt.Sprintf("%s/relay/v1/data/bidtraces/proposer_payload_delivered?limit=100", endpoint)
-	if offset != 0 {
-		url += fmt.Sprintf("&cursor=%v", offset)
-	}
-
-	client := &http.Client{
-		Timeout: time.Second * 30,
-	}
-
-	resp, err := client.Get(url)
-	if err != nil {
-		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": id, "offset": offset, "url": url})
-		return nil, fmt.Errorf("error retrieving delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
-	}
-
-	defer resp.Body.Close()
-
-	var payloads []BidTrace
-	err = json.NewDecoder(resp.Body).Decode(&payloads)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding json for delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
-	}
-
-	return payloads, nil
 }
 
 func (rs *relaysExporter) exportRelayBlocks(r types.Relay) error {
@@ -193,26 +148,12 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 			}
 
 			for _, payload := range payloads {
-				// first insert the tag into the blocks_tags table
-				err := rs.db.SaveBlocksTags(r.ID,
-					payload.Slot,
-					utils.MustParseHex(payload.BlockHash))
+
+				err := rs.db.SaveBlockTagsAndRelays(r.ID, payload)
 				if err != nil {
-					log.Error(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": r.ID})
 					return err
 				}
 
-				err = rs.db.SaveBlocksRelays(r.ID,
-					payload.Slot,
-					payload.Value,
-					utils.MustParseHex(payload.BlockHash),
-					utils.MustParseHex(payload.BuilderPubkey),
-					utils.MustParseHex(payload.ProposerPubkey),
-					utils.MustParseHex(payload.ProposerFeeRecipient))
-				if err != nil {
-					log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": r.ID})
-					return err
-				}
 			}
 
 			if payloads[len(payloads)-1].Slot < minSlot {
@@ -265,4 +206,37 @@ func waitTimeToExportRelay(r types.Relay) (waitTime time.Duration, isMaxWaitTime
 func shouldLogExportAsError(r types.Relay) bool {
 	maxWaitTimeForRelayExportError := utils.Month
 	return time.Since(r.LastExportSuccessTs) >= maxWaitTimeForRelayExportError
+}
+
+type relayClient interface {
+	fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]types.BidTrace, error)
+}
+
+type nodeClient struct{}
+
+func (nodeClient) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]types.BidTrace, error) {
+	url := fmt.Sprintf("%s/relay/v1/data/bidtraces/proposer_payload_delivered?limit=100", endpoint)
+	if offset != 0 {
+		url += fmt.Sprintf("&cursor=%v", offset)
+	}
+
+	client := &http.Client{
+		Timeout: time.Second * 30,
+	}
+
+	resp, err := client.Get(url)
+	if err != nil {
+		log.Error(err, "error retrieving delivered payloads", 0, map[string]interface{}{"relay": id, "offset": offset, "url": url})
+		return nil, fmt.Errorf("error retrieving delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
+	}
+
+	defer resp.Body.Close()
+
+	var payloads []types.BidTrace
+	err = json.NewDecoder(resp.Body).Decode(&payloads)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding json for delivered payloads for relay: %v, offset: %v, url: %v: %w", id, offset, url, err)
+	}
+
+	return payloads, nil
 }

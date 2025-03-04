@@ -7,7 +7,6 @@ import (
 
 	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 func TestMEVBoostRelaysExporter(t *testing.T) {
@@ -92,14 +91,14 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 			if tt.mockEmptyPayload {
 				exporter.relayClient = new(mockRelayClientWithEmptyPayload)
 				mockConsDBClient.On("GetRelays").Return(tt.mockRelays, nil)
-				mockConsDBClient.On("UpdateRelays", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint).Return(nil)
+				mockConsDBClient.On("UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint).Return(nil)
 				mockConsDBClient.On("GetLastRelayBlock", tt.mockRelays[0].ID).Return(tt.mockLastRelayBlock, nil)
 				mockConsDBClient.On("GetFirstRelayBlock", tt.mockRelays[0].ID).Return(tt.mockFirstRelayBlock, nil)
 
 				exporter.MEVBoostRelaysExporter()
 
 				mockConsDBClient.AssertCalled(t, "GetRelays")
-				mockConsDBClient.AssertCalled(t, "UpdateRelays", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
+				mockConsDBClient.AssertCalled(t, "UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
 				mockConsDBClient.AssertCalled(t, "GetLastRelayBlock", tt.mockRelays[0].ID)
 				mockConsDBClient.AssertCalled(t, "GetFirstRelayBlock", tt.mockRelays[0].ID)
 				return
@@ -118,48 +117,22 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 			exporter.relayClient = new(mockRelayClient)
 			mockConsDBClient.On("GetRelays").Return(tt.mockRelays, nil)
 			mockConsDBClient.On("GetLastRelayBlock", tt.mockRelays[0].ID).Return(tt.mockLastRelayBlock, nil)
-			mockConsDBClient.On("SaveBlocksTags",
-				tt.mockRelays[0].ID,
-				payload[0].Slot,
-				utils.MustParseHex(payload[0].BlockHash),
-			).Return(nil)
+			mockConsDBClient.On("SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload[0]).Return(nil)
 			mockConsDBClient.On("GetFirstRelayBlock", tt.mockRelays[0].ID).Return(tt.mockFirstRelayBlock, nil)
-			mockConsDBClient.On("SaveBlocksRelays",
-				tt.mockRelays[0].ID,
-				payload[0].Slot,
-				payload[0].Value,
-				utils.MustParseHex(payload[0].BlockHash),
-				utils.MustParseHex(payload[0].BuilderPubkey),
-				utils.MustParseHex(payload[0].ProposerPubkey),
-				utils.MustParseHex(payload[0].ProposerFeeRecipient),
-			).Return(nil)
-			mockConsDBClient.On("UpdateRelays", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint).Return(nil)
+			mockConsDBClient.On("UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint).Return(nil)
 
 			exporter.MEVBoostRelaysExporter()
 
 			mockConsDBClient.AssertCalled(t, "GetRelays")
 			mockConsDBClient.AssertCalled(t, "GetLastRelayBlock", tt.mockRelays[0].ID)
-			mockConsDBClient.AssertCalled(t, "SaveBlocksTags",
-				tt.mockRelays[0].ID,
-				payload[0].Slot,
-				utils.MustParseHex(payload[0].BlockHash),
-			)
+			mockConsDBClient.AssertCalled(t, "SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload[0])
 			mockConsDBClient.AssertCalled(t, "GetFirstRelayBlock", tt.mockRelays[0].ID)
-			mockConsDBClient.AssertCalled(t, "SaveBlocksRelays",
-				tt.mockRelays[0].ID,
-				payload[0].Slot,
-				payload[0].Value,
-				utils.MustParseHex(payload[0].BlockHash),
-				utils.MustParseHex(payload[0].BuilderPubkey),
-				utils.MustParseHex(payload[0].ProposerPubkey),
-				utils.MustParseHex(payload[0].ProposerFeeRecipient),
-			)
-			mockConsDBClient.AssertCalled(t, "UpdateRelays", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
+			mockConsDBClient.AssertCalled(t, "UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
 		})
 	}
 }
 
-var payload = []BidTrace{
+var payload = []types.BidTrace{
 	{
 		Slot:                 12345,
 		ParentHash:           "0xaaabbb",
@@ -184,12 +157,12 @@ func toWeiString(value string) types.WeiString {
 
 type mockRelayClient struct{}
 
-func (m mockRelayClient) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error) {
+func (m mockRelayClient) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]types.BidTrace, error) {
 	return payload, nil
 }
 
 type mockRelayClientWithEmptyPayload struct{}
 
-func (m mockRelayClientWithEmptyPayload) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]BidTrace, error) {
+func (m mockRelayClientWithEmptyPayload) fetchDeliveredPayloads(endpoint string, id string, offset uint64) ([]types.BidTrace, error) {
 	return nil, nil
 }

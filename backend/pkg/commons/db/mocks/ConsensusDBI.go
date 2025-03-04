@@ -98,17 +98,17 @@ func (_m *ConsensusDBI) GetRelays() ([]types.Relay, error) {
 	return r0, r1
 }
 
-// SaveBlocksRelays provides a mock function with given fields: tagID, slot, payloadValue, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient
-func (_m *ConsensusDBI) SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, blockHash []byte, builderPubkey []byte, proposerPubkey []byte, proposerFeeRecipient []byte) error {
-	ret := _m.Called(tagID, slot, payloadValue, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient)
+// SaveBlockTagsAndRelays provides a mock function with given fields: tagID, payload
+func (_m *ConsensusDBI) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
+	ret := _m.Called(tagID, payload)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SaveBlocksRelays")
+		panic("no return value specified for SaveBlockTagsAndRelays")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, uint64, types.WeiString, []byte, []byte, []byte, []byte) error); ok {
-		r0 = rf(tagID, slot, payloadValue, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient)
+	if rf, ok := ret.Get(0).(func(string, types.BidTrace) error); ok {
+		r0 = rf(tagID, payload)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -116,17 +116,17 @@ func (_m *ConsensusDBI) SaveBlocksRelays(tagID string, slot uint64, payloadValue
 	return r0
 }
 
-// SaveBlocksTags provides a mock function with given fields: tagID, slot, blockHash
-func (_m *ConsensusDBI) SaveBlocksTags(tagID string, slot uint64, blockHash []byte) error {
-	ret := _m.Called(tagID, slot, blockHash)
+// UpdateRelay provides a mock function with given fields: tagID, endpoint
+func (_m *ConsensusDBI) UpdateRelay(tagID string, endpoint string) error {
+	ret := _m.Called(tagID, endpoint)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SaveBlocksTags")
+		panic("no return value specified for UpdateRelay")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, uint64, []byte) error); ok {
-		r0 = rf(tagID, slot, blockHash)
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(tagID, endpoint)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -158,24 +158,6 @@ func (_m *ConsensusDBI) UpdateRelayLastExportTry(tagID string, endpoint string) 
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateRelayLastExportTry")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, string) error); ok {
-		r0 = rf(tagID, endpoint)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UpdateRelays provides a mock function with given fields: tagID, endpoint
-func (_m *ConsensusDBI) UpdateRelays(tagID string, endpoint string) error {
-	ret := _m.Called(tagID, endpoint)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateRelays")
 	}
 
 	var r0 error

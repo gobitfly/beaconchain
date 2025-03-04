@@ -817,7 +817,7 @@ func (c *ConsensusDB) GetRelays() ([]types.Relay, error) {
 	return relays, nil
 }
 
-func (c *ConsensusDB) UpdateRelays(tagID, endpoint string) error {
+func (c *ConsensusDB) UpdateRelay(tagID, endpoint string) error {
 	_, err := c.WriterDb.Exec(`
 		UPDATE relays SET
 			export_failure_count = 0,
@@ -871,34 +871,28 @@ func (c *ConsensusDB) GetLastRelayBlock(tagID string) (types.RelayBlock, error) 
 	return block, err
 }
 
-func (c *ConsensusDB) SaveBlocksTags(tagID string, slot uint64, blockHash []byte) error {
+func (c *ConsensusDB) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
 	defer utils.Rollback(tx)
 
+	// first insert the tag into the blocks_tags table
 	_, err = tx.Exec(`
 	INSERT INTO blocks_tags
 	SELECT blocks.slot, blocks.blockroot, $1
 	FROM blocks
 	WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
-	ON CONFLICT DO NOTHING`, tagID, slot, blockHash)
+	ON CONFLICT DO NOTHING`, tagID, payload.Slot,
+		utils.MustParseHex(payload.BlockHash))
 
 	if err != nil {
+		log.Error(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": tagID})
 		return err
 	}
 
-	return tx.Commit()
-}
-
-func (c *ConsensusDB) SaveBlocksRelays(tagID string, slot uint64, payloadValue types.WeiString, blockHash, builderPubkey, proposerPubkey, proposerFeeRecipient []byte) error {
-	tx, err := c.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
+	// save relays
 	_, err = tx.Exec(`
 		INSERT INTO relays_blocks
 		(
@@ -918,11 +912,14 @@ func (c *ConsensusDB) SaveBlocksRelays(tagID string, slot uint64, payloadValue t
 			blocks.slot = $2 and
 			blocks.exec_block_hash = $3
 		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
-		tagID, slot, blockHash,
-		payloadValue, builderPubkey,
-		proposerPubkey, proposerFeeRecipient)
+		tagID, payload.Slot, payload.Value,
+		utils.MustParseHex(payload.BlockHash),
+		utils.MustParseHex(payload.BuilderPubkey),
+		utils.MustParseHex(payload.ProposerPubkey),
+		utils.MustParseHex(payload.ProposerFeeRecipient))
 
 	if err != nil {
+		log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": tagID})
 		return err
 	}
 
