@@ -122,8 +122,8 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		returnBadRequest(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -152,8 +152,8 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 	}
 
 	keys := v.checkAdConfigurationKeys(r.URL.Query().Get("keys"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -198,8 +198,8 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		returnConflict(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -228,8 +228,8 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 	}
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -384,8 +384,8 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.daService.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, groupId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -504,8 +504,8 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 	var v validationError
 	ctx := r.Context()
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	userId, err := GetUserIdByContext(ctx)
@@ -542,8 +542,8 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 	force := v.checkBool(q.Get("force"), "force")
 	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
 	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	stats, err := h.daService.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
@@ -567,8 +567,8 @@ func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWrite
 	var v validationError
 	vars := mux.Vars(r)
 	bundleVersion := v.checkUint(vars["bundle_version"], "bundle_version")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err := h.daService.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
@@ -682,8 +682,8 @@ func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string)
 	default:
 		value = v.checkUint(paramValue, paramName)
 	}
-	if v.hasErrors() {
-		return 0, 0, v
+	if err := v.AsError(); err != nil {
+		return 0, 0, err
 	}
 	return chainId, value, nil
 }

@@ -17,7 +17,9 @@ const { promoCode } = usePromoCode()
 useBcSeo('login_and_register.title_register')
 
 const {
-  defineField, errors, handleSubmit,
+  defineField,
+  errors,
+  handleSubmit,
 } = useForm({
   validationSchema: yupObject({
     agreement: checkboxValidation(''),

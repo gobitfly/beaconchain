@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+#chore(eslint): add `newline` rule for `destructured object properties`
+00f3ddc552d796c72860a4892f5084aa54dc396d
 # chore(eslint): add rule to enforce indentation of 4 spaces for json
 5020dfb235f57e3cf91fa65d3b2812dbb969353c
 # chore(eslint): reenabled rule to have only `one attribute` per line in `vue files`

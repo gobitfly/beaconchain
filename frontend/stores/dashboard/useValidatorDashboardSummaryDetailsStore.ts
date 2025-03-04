@@ -25,7 +25,8 @@ export function useValidatorDashboardSummaryDetailsStore(
 ) {
   const { fetch } = useCustomFetch()
   const {
-    data, timeFrame: storeTimeFrame,
+    data,
+    timeFrame: storeTimeFrame,
   } = storeToRefs(
     validatorDashboardSummaryDetailsStore(),
   )

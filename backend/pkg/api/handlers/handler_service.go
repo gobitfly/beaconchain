@@ -219,14 +219,14 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 	if id.Validators != nil {
 		perk, err := h.daService.GetFreeTierPerks(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting free tier perks: %w", err)
 		}
 		return perk, nil
 	}
 	// could be made into a single query if needed
 	dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, id.Id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting dashboard owner: %w", err)
 	}
 	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
 	if err != nil {
@@ -234,11 +234,11 @@ func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.
 			log.Warn("user not found for dashboard owner, returning free tier perks", log.Fields{"dashboard_id": id.Id, "user_id_of_dashboard": dashboardUser.UserId})
 			perk, err := h.daService.GetFreeTierPerks(ctx)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("error getting free tier perks after user not found: %w", err)
 			}
 			return perk, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("error getting user info for dashboard owner: %w", err)
 	}
 
 	return &userInfo.PremiumPerks, nil
@@ -368,9 +368,8 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 }
 
 func handleErr(w http.ResponseWriter, r *http.Request, err error) {
-	_, isValidationError := err.(validationError)
 	switch {
-	case isValidationError, errors.Is(err, errBadRequest):
+	case errors.Is(err, errBadRequest):
 		returnBadRequest(w, r, err)
 	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, r, err)

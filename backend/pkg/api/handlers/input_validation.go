@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -67,13 +69,13 @@ const (
 // It is used to collect multiple validation errors before returning them to the user.
 type validationError map[string]string
 
-func (v validationError) Error() string {
+func (v validationError) ErrorString() string {
 	//iterate over map and create a string
 	var sb strings.Builder
-	for k, v := range v {
-		sb.WriteString(k)
+	for _, key := range slices.Sorted(maps.Keys(v)) {
+		sb.WriteString(key)
 		sb.WriteString(": ")
-		sb.WriteString(v)
+		sb.WriteString(v[key])
 		sb.WriteString("\n")
 	}
 	return sb.String()[:sb.Len()-1]
@@ -96,7 +98,7 @@ func (v *validationError) hasErrors() bool {
 
 func (v *validationError) AsError() error {
 	if v.hasErrors() {
-		return newBadRequestErr("%s", v.Error())
+		return newBadRequestErr("%s", v.ErrorString())
 	}
 	return nil
 }

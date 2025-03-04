@@ -9,7 +9,9 @@ interface Props {
   totalValidators?: number,
 }
 const {
-  dialogRef, props, setHeader,
+  dialogRef,
+  props,
+  setHeader,
 } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 

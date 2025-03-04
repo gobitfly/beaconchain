@@ -16,11 +16,13 @@ type SlotVizCategoriesStorage = {
 
 const { t: $t } = useTranslation()
 const {
-  dashboardKey, isSharedDashboard,
+  dashboardKey,
+  isSharedDashboard,
 } = useDashboardKey()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  isLargeDashboard, overview,
+  isLargeDashboard,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 
 const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-dashboard-slot-viz-visibile-categories', {})

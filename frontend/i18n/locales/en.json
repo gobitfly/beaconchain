@@ -404,7 +404,8 @@
                     "live": "Validators missing two consecutive attestations are considered offline.",
                     "lower": "{name}'s efficiency is below the network average of {average}"
                 },
-                "total_group_name": "Total Efficiency"
+                "total_group_name": "Total Efficiency",
+                "validator_status_popout": "Open validator status details"
             },
             "tabs": {
                 "blocks": "Blocks",

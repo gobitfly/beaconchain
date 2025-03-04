@@ -12,7 +12,8 @@ import {
 const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const {
-  doLogout, isLoggedIn,
+  doLogout,
+  isLoggedIn,
 } = useUserStore()
 const route = useRoute()
 const megaMenu = ref<null | {

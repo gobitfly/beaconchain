@@ -63,7 +63,8 @@ const tabs: HashTabs = [
 ]
 
 const {
-  dashboardKey, setDashboardKey,
+  dashboardKey,
+  setDashboardKey,
 } = useDashboardKeyProvider('validator')
 
 const userDashboardStore = useUserDashboardStore()

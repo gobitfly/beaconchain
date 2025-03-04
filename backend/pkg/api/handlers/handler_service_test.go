@@ -18,9 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func handlerTestSetup() (context.Context, *HandlerService) {
+func handlerTestSetup(da dataaccess.DataAccessor) (context.Context, *HandlerService) {
 	ctx := context.WithValue(context.Background(), types.CtxUserIdKey, uint64(1))
-	da := &dataAccessStub{}
 	return ctx, NewHandlerService(da, da, nil, false)
 }
 
@@ -410,4 +409,158 @@ func TestIntOrStringUnmarshalJSON_ErrorCases(t *testing.T) {
 			assert.ErrorContains(t, err, test.expectedError)
 		})
 	}
+}
+
+// ------------------------------------------------------------
+
+type dashboardPremiumPerksDataAccessStub struct {
+	dataaccess.DummyService
+	shouldNotFindUser       bool
+	shouldFailFreeTier      bool
+	shouldFailUserInfo      bool
+	shouldFailDashboardUser bool
+}
+
+func (d *dashboardPremiumPerksDataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
+	if d.shouldFailUserInfo {
+		return nil, errors.New("test error")
+	}
+	if d.shouldNotFindUser {
+		return nil, dataaccess.ErrNotFound
+	}
+	return &types.UserInfo{
+		Id: id,
+		PremiumPerks: types.PremiumPerks{
+			AdFree: true, // do not remove, used for testing
+		},
+	}, nil
+}
+
+func (d *dashboardPremiumPerksDataAccessStub) GetFreeTierPerks(ctx context.Context) (*types.PremiumPerks, error) {
+	if d.shouldFailFreeTier {
+		return nil, errors.New("test error")
+	}
+	return &types.PremiumPerks{
+		AdFree: false, // do not remove, used for testing
+	}, nil
+}
+
+func (d *dashboardPremiumPerksDataAccessStub) GetValidatorDashboardUser(ctx context.Context, id types.VDBIdPrimary) (*types.DashboardUser, error) {
+	if d.shouldFailDashboardUser {
+		return nil, errors.New("test error")
+	}
+	return &types.DashboardUser{
+		Id:     id,
+		UserId: uint64(id),
+	}, nil
+}
+
+func TestGetDashboardPremiumPerks(t *testing.T) {
+	t.Run("guest dashboard returns free tier", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{})
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		// validator set should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		// in testify
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("normal id returns perks", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{})
+		id := types.VDBId{
+			Id: 1,
+		}
+		// normal id should return ad free perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.True(t, perks.AdFree)
+	})
+
+	t.Run("shouldNotFindUser returns free tier", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldNotFindUser: true,
+		})
+		id := types.VDBId{
+			Id: 1,
+		}
+		// non existing user id should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("shouldFailUserInfo returns error for normal id", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldFailUserInfo: true,
+		})
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorContains(t, err, "user info")
+	})
+
+	t.Run("shouldFailFreeTier returns error for guest dashboard", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldFailFreeTier: true,
+		})
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorContains(t, err, "free tier perks")
+	})
+
+	t.Run("shouldFailDashboardUser returns error for normal id", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldFailDashboardUser: true,
+		})
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorContains(t, err, "dashboard owner")
+	})
+
+	t.Run("shouldFailUserInfo and shouldFailDashboardUser return no error for guest dashboard", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldFailDashboardUser: true,
+			shouldFailUserInfo:      true,
+		})
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("shouldFailFreeTier returns no error for normal id", func(t *testing.T) {
+		ctx, h := handlerTestSetup(&dashboardPremiumPerksDataAccessStub{
+			shouldFailFreeTier: true,
+		})
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.True(t, perks.AdFree)
+	})
 }

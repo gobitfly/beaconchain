@@ -14,7 +14,9 @@ interface Props {
   dashboardType: DashboardType,
 }
 const {
-  dialogRef, props, setHeader,
+  dialogRef,
+  props,
+  setHeader,
 } = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
 
 watch(props, (p) => {

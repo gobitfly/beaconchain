@@ -177,8 +177,8 @@ func (h *HandlerService) StoreIsMockedFlagMiddleware(next http.Handler) http.Han
 		if mockSeedStr := q.Get("mock_seed"); mockSeedStr != "" {
 			mockSeed = v.checkInt(mockSeedStr, "mock_seed")
 		}
-		if v.hasErrors() {
-			handleErr(w, r, v)
+		if err := v.AsError(); err != nil {
+			handleErr(w, r, err)
 			return
 		}
 		if !isMocked {

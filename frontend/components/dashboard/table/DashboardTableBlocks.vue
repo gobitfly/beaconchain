@@ -32,7 +32,8 @@ const {
 const { groups } = useValidatorDashboardGroups()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
+  hasValidators,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 
 const { width } = useWindowSize()

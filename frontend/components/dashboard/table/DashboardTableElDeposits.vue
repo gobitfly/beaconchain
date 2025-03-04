@@ -24,14 +24,16 @@ const {
   totalAmount,
 } = useValidatorDashboardElDepositsStore()
 const {
-  bounce: setQuery, value: query,
+  bounce: setQuery,
+  value: query,
 } = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
+  hasValidators,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
@@ -295,7 +297,7 @@ const {
                     :value="slotProps.data.amount"
                     source-currency="elCurrency"
                     target-currency="elDisplayCurrency"
-                    :fraction-digits="0"
+                    :maximum-fraction-digits="0"
                   />
                   <template
                     v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
