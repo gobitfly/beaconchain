@@ -3,11 +3,13 @@ import type { AdConfiguration } from '~/types/adConfiguration'
 
 export function useCurrentAds() {
   const {
-    adConfigs, refreshAdConfigs,
+    adConfigs,
+    refreshAdConfigs,
   } = useAdConfigurationStore()
   const { user } = useUserStore()
   const {
-    name, path,
+    name,
+    path,
   } = useRoute()
 
   const pathName = computed(() => name?.toString?.() || path)

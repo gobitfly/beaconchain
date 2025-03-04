@@ -7,7 +7,9 @@ const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
 const {
-  defineField, errors, handleSubmit,
+  defineField,
+  errors,
+  handleSubmit,
 } = useForm({
   validationSchema: yupObject({
     confirmPassword: confirmPasswordValidation($t, 'newPassword'),

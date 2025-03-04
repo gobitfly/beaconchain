@@ -4,7 +4,8 @@ const { isLoggedIn } = useUserStore()
 useBcSeo('user_settings.title')
 const { stripeInit } = useStripeProvider()
 const {
-  getProducts, products,
+  getProducts,
+  products,
 } = useProductsStore()
 
 const buttonsDisabled = ref(false)

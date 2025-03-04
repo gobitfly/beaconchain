@@ -9,7 +9,8 @@ const { promoCode } = usePromoCode()
 const { stripeInit } = useStripeProvider()
 
 const {
-  getProducts, products,
+  getProducts,
+  products,
 } = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())

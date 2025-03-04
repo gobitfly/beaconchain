@@ -40,6 +40,7 @@
         "@vee-validate/yup": "^4.14.7",
         "autoprefixer": "^10.4.20",
         "eslint-plugin-jsonc": "^2.18.2",
+        "eslint-plugin-newline-destructuring": "^1.2.2",
         "eslint-plugin-perfectionist": "^4.2.0",
         "nuxt": "^3.14.1592",
         "postcss": "^8.4.49",

@@ -85,7 +85,8 @@ const currentZoom = {
 const MAX_DATA_POINTS = 199
 
 const {
-  bounce: bounceFilter, value: filter,
+  bounce: bounceFilter,
+  value: filter,
 } = useDebounceValue(
   props.filter,
   1000,

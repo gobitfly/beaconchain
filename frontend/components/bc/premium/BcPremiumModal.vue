@@ -7,7 +7,9 @@ interface Props {
 }
 
 const {
-  dialogRef, props, setHeader,
+  dialogRef,
+  props,
+  setHeader,
 } = useBcDialog<Props>({ contentClass: 'premium-modal' })
 const { t: $t } = useTranslation()
 

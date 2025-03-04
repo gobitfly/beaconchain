@@ -19,7 +19,8 @@ const validatorDashboardBlocksStore = defineStore(
 export function useValidatorDashboardBlocksStore() {
   const { fetch } = useCustomFetch()
   const {
-    data, query: storedQuery,
+    data,
+    query: storedQuery,
   } = storeToRefs(
     validatorDashboardBlocksStore(),
   )
