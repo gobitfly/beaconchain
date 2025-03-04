@@ -610,7 +610,7 @@ func GetLatestEpoch() (uint64, error) {
 	return epoch, nil
 }
 
-func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
+func (c *ConsensusDB) GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	var slots []uint64
 	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
 
@@ -621,7 +621,7 @@ func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	return slots, nil
 }
 
-func GetLastSlot(tx *sqlx.Tx) (uint64, error) {
+func (c *ConsensusDB) GetLastSlot(tx *sqlx.Tx) (uint64, error) {
 	var slot uint64
 	err := tx.Get(&slot, "SELECT slot FROM blocks ORDER BY slot DESC LIMIT 1")
 	if err != nil {
@@ -630,7 +630,7 @@ func GetLastSlot(tx *sqlx.Tx) (uint64, error) {
 	return slot, nil
 }
 
-func SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
+func (c *ConsensusDB) SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
 	_, err := tx.Exec(`
 		UPDATE blocks
 		SET finalized = $1, status = $2

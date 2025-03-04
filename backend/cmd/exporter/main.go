@@ -174,12 +174,13 @@ func Run() {
 	}
 
 	usedModules := []modules.ModuleInterface{}
+	consDB := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
 
 	if cfg.JustV2 {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context),
+			modules.NewSlotExporter(context, consDB),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),

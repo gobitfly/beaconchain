@@ -33,19 +33,21 @@ import (
 
 type slotExporterData struct {
 	ModuleContext
-	Client   rpc.Client
-	FirstRun bool
+	Client rpc.Client
+	db     *db.ConsensusDB
 
+	FirstRun       bool
 	latestEpoch    uint64
 	latestSlot     uint64
 	finalizedEpoch uint64
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, db *db.ConsensusDB) ModuleInterface {
 	return &slotExporterData{
 		ModuleContext:  moduleContext,
 		Client:         moduleContext.ConsClient,
+		db:             db,
 		FirstRun:       true,
 		latestEpoch:    0,
 		latestSlot:     0,
@@ -118,7 +120,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
 
-	tx, err := db.WriterDb.Beginx()
+	tx, err := d.db.WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
@@ -157,7 +159,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 
 func (d *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
 	// get all slots we currently have in the database
-	dbSlots, err := db.GetAllSlots(tx)
+	dbSlots, err := d.db.GetAllSlots(tx)
 	if err != nil {
 		return fmt.Errorf("error retrieving all db slots: %w", err)
 	}
@@ -170,7 +172,7 @@ func (d *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) er
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
-			dbSlots, err = db.GetAllSlots(tx)
+			dbSlots, err = d.db.GetAllSlots(tx)
 			if err != nil {
 				return fmt.Errorf("error retrieving all db slots: %w", err)
 			}
@@ -199,7 +201,7 @@ func (d *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) er
 }
 
 func (d *slotExporterData) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	lastDbSlot, err := db.GetLastSlot(tx)
+	lastDbSlot, err := d.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("db is empty, export genesis slot")
@@ -270,28 +272,28 @@ func (d *slotExporterData) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.
 			if header != nil && bytes.Equal(dbSlot.BlockRoot, header.Data.Root) {
 				// no reorg happened, simply mark the slot as final
 				log.Infof("setting slot %v as finalized (proposed)", dbSlot.Slot)
-				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, dbSlot.Status, tx)
+				err := d.db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, dbSlot.Status, tx)
 				if err != nil {
 					return fmt.Errorf("error setting slot %v as finalized (proposed): %w", dbSlot.Slot, err)
 				}
 			} else if header == nil && len(dbSlot.BlockRoot) < 32 {
 				// no reorg happened, mark the slot as missed
 				log.Infof("setting slot %v as finalized (missed)", dbSlot.Slot)
-				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "2", tx)
+				err := d.db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "2", tx)
 				if err != nil {
 					return fmt.Errorf("error setting slot %v as finalized (missed): %w", dbSlot.Slot, err)
 				}
 			} else if header == nil && len(dbSlot.BlockRoot) == 32 {
 				// slot has been orphaned, mark the slot as orphaned
 				log.Infof("setting slot %v as finalized (orphaned)", dbSlot.Slot)
-				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "3", tx)
+				err := d.db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "3", tx)
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
 			} else if header != nil && !bytes.Equal(header.Data.Root, dbSlot.BlockRoot) {
 				// we have a different block root for the slot in the db, mark the currently present one as orphaned and write the new one
 				log.Infof("setting slot %v as orphaned and exporting new slot", dbSlot.Slot)
-				err := db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "3", tx)
+				err := d.db.SetSlotFinalizationAndStatus(dbSlot.Slot, nodeSlotFinalized, "3", tx)
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
