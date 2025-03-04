@@ -34,6 +34,8 @@ type UserRepository interface {
 	 */
 	GetUserById(ctx context.Context, userId uint64) (*User, error)
 
+	GetUserByApiKey(ctx context.Context, apikey string) (*User, error)
+
 	// Returns nothing on success, or error if successfully deleted. Idempotent, if deleted when it DNE, no error should be returned.
 	DeleteUser(ctx context.Context, userId uint64) error
 }

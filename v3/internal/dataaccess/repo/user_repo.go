@@ -27,9 +27,9 @@ func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*User, e
 	return &user, err
 }
 
-func (r *DBUserRepository) GetUserByApiKey(ctx context.Context, apiKey string) (*User, error) {
+func (r *DBUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
 	user := User{}
-	err := r.roConnectionAdminDb.GetContext(ctx, &user, `SELECT * FROM users WHERE id IN (SELECT user_id FROM api_keys WHERE api_key = $1) LIMIT 1`, apiKey)
+	err := r.roConnectionAdminDb.GetContext(ctx, &user, `SELECT * FROM users WHERE id IN (SELECT user_id FROM api_keys WHERE api_key = $1) LIMIT 1`, apikey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // No error and nothing returned means the User was not found
 	}

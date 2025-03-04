@@ -7,9 +7,9 @@ import (
 
 // This should be kept as simple and high-level as possible.
 type Chain struct {
-	Name      ChainName
-	NetworkId uint64
-	ChainId   uint64
+	Name    ChainName
+	ChainId uint64
+	config  ChainConfig
 }
 
 // Config for defining various chain names
@@ -21,7 +21,10 @@ const (
 	Optimism ChainName = "optimism"
 )
 
-func LoadChainConfig(chain ChainName) {
+type ChainConfig struct {
+}
+
+func (chain Chain) LoadChainConfig() {
 	// "configs/chain/default.yaml"
 	viper.AddConfigPath("configs/chain")
 	viper.SetConfigName("default")
@@ -34,7 +37,7 @@ func LoadChainConfig(chain ChainName) {
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
-	viper.SetConfigName(string(chain))
+	viper.SetConfigName(string(chain.Name))
 	err = viper.MergeInConfig()
 	if err != nil {
 		log.Fatalf("Error reading config file, %s", err)
@@ -42,6 +45,8 @@ func LoadChainConfig(chain ChainName) {
 
 	// Optionally read from environment variables (e.g., override with ENV vars)
 	viper.AutomaticEnv()
+
+	chain.ChainId = viper.GetUint64("ChainSpec.CHAIN_ID")
 
 	logDebugConfigKeys()
 }

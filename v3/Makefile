@@ -19,6 +19,6 @@ lint:
 	golangci-lint run --timeout 5m
 	buf lint
 run:
-	chmod +x beaconchain-api-service
-	./beaconchain-api-service
+	chmod +x bin/beaconchain-api-service
+	bin/beaconchain-api-service
 

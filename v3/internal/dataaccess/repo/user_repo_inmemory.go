@@ -35,6 +35,10 @@ func (r *InMemoryUserRepository) GetUserById(ctx context.Context, userId uint64)
 	return user, nil
 }
 
+func (r *InMemoryUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
+	return nil, errors.New("Unimplemented")
+}
+
 /**
  * Modifies the attributes of a dashboard.
  * If an attribute is not included or is nil in the model, it should not be updated.

@@ -56,6 +56,7 @@ type ServiceConfig struct {
 // 3. Service Config, which is used to define the parameters that the service itself runs with.
 
 func LoadServiceConfig(env Environment) *ServiceConfig {
+	log.Info("Got this far")
 	// "configs/service/default.yaml"
 	viper.AddConfigPath("configs/service")    // Typical "Run from cmd-line path"
 	viper.AddConfigPath("../configs/service") // Typical "Run debug from vs-code path"
@@ -90,6 +91,6 @@ func LoadServiceConfig(env Environment) *ServiceConfig {
 }
 
 func logDebugConfigKeys() {
-	log.Debugf("The following config variables (including Env variables) were loaded: %s",
+	log.Infof("The following config variables (including Env variables) were loaded: %s",
 		viper.AllKeys())
 }

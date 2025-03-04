@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	model "github.com/gobitfly/beaconchain-api/api/gen"
+	"github.com/gobitfly/beaconchain-api/internal/auth"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-api/internal/log"
@@ -26,7 +27,7 @@ type ApiService struct {
  */
 func InitWithInMemory() (*ApiService, error) {
 	return &ApiService{
-		userRepository:      dataaccess.NewInMemoryUserRepository(),
+		//		userRepository:      dataaccess.NewInMemoryUserRepository(),
 		dashboardRepository: dataaccess.NewInMemoryValidatorDashboardRepository(),
 	}, nil
 }
@@ -81,7 +82,7 @@ func Run(
 
 	// create an HTTP router which sends proxies HTTP requests to the gRPC server.
 	// Register both the API and APIv1 Service. We can serve requests for both services from the same endpoint this way
-	rmux := runtime.NewServeMux()
+	rmux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(HeaderMatcher))
 
 	client := model.NewBeaconchainApiV1ServiceClient(conn)
 	err = model.RegisterBeaconchainApiV1ServiceHandlerClient(ctx, rmux, client)
@@ -105,6 +106,19 @@ func Run(
 	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
 	fmt.Println("To close connection CTRL+C :-)")
+}
+
+/**
+ * GRPC expects headers in a different format. This function simply passes along all HTTP-specified headers to GRPC.
+ * Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
+ */
+func HeaderMatcher(key string) (string, bool) {
+	switch key {
+	case string(auth.ApiKeyHeader):
+		return key, true
+	default:
+		return runtime.DefaultHeaderMatcher(key)
+	}
 }
 
 /**
