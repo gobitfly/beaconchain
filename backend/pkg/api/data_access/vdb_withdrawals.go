@@ -349,28 +349,28 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 			continue
 		}
 
-		if (metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)) ||
-			(metadata.EffectiveBalance == utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials) && metadata.Balance > utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials)) {
-			// this validator is eligible for withdrawal, check if it is the next one
-			if nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex {
-				distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
-				if err != nil {
-					return nil, err
-				}
+		withdrawable := metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)
+		skimmable := (metadata.EffectiveBalance == utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials) && metadata.Balance > utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials))
+		latestUpdate := nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex
+		if (withdrawable || skimmable) && latestUpdate {
+			distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
+			if err != nil {
+				return nil, err
+			}
+			// TODO this is a wrong estimate post-pectra
 
-				timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
+			timeToWithdrawal := d.getTimeToNextWithdrawal(distance)
 
-				// it normally takes two epochs to finalize
-				if !timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
-					// this validator has a next withdrawal
-					nextValidatorInt := validator
-					nextValidator = &nextValidatorInt
-				}
+			// it normally takes two epochs to finalize
+			if !timeToWithdrawal.Before(utils.EpochToTime(epoch + (epoch - latestFinalized))) {
+				// this validator has a next withdrawal
+				nextValidatorInt := validator
+				nextValidator = &nextValidatorInt
+			}
 
-				if nextValidator != nil && *nextValidator > *stats.LatestValidatorWithdrawalIndex {
-					// the first validator after the cursor has to be the next validator
-					break
-				}
+			if nextValidator != nil && *nextValidator > *stats.LatestValidatorWithdrawalIndex {
+				// the first validator after the cursor has to be the next validator
+				break
 			}
 		}
 	}
@@ -400,16 +400,12 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	}
 
 	var withdrawalAmount uint64
-	if nextValidatorData.WithdrawableEpoch.Valid && nextValidatorData.WithdrawableEpoch.Int64 <= int64(epoch) {
-		// full withdrawal
+	if lastWithdrawnEpoch != epoch && nextValidatorData.Balance > utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials) {
 		withdrawalAmount = nextValidatorData.Balance
-	} else {
-		// partial withdrawal
-		withdrawalAmount = nextValidatorData.Balance - utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
-	}
-
-	if lastWithdrawnEpoch == epoch || nextValidatorData.Balance < utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials) {
-		withdrawalAmount = 0
+		if !(nextValidatorData.WithdrawableEpoch.Valid && nextValidatorData.WithdrawableEpoch.Int64 <= int64(epoch)) {
+			// partial withdrawal
+			withdrawalAmount -= utils.GetMaxEffectiveBalanceByWithdrawalCredentials(nextValidatorData.WithdrawalCredentials)
+		}
 	}
 
 	ens_name, err := db.GetEnsNameForAddress(*address, utils.SlotToTime(nextWithdrawalSlot))
