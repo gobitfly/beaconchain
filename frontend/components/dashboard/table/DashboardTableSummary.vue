@@ -38,7 +38,9 @@ const {
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, isLargeDashboard, overview,
+  hasValidators,
+  isLargeDashboard,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()

@@ -18,7 +18,9 @@ const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const { promoCode } = usePromoCode()
 const {
-  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+  isStripeDisabled,
+  stripeCustomerPortal,
+  stripePurchase,
 } = useStripe()
 
 interface Props {

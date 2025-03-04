@@ -16,7 +16,9 @@ const { promoCode } = usePromoCode()
 useBcSeo('login_and_register.title_login')
 
 const {
-  defineField, errors, handleSubmit,
+  defineField,
+  errors,
+  handleSubmit,
 } = useForm({
   validationSchema: yupObject({
     email: emailValidation($t),

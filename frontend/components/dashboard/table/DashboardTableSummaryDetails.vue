@@ -19,7 +19,8 @@ const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
 const {
-  details: summary, getDetails,
+  details: summary,
+  getDetails,
 }
   = useValidatorDashboardSummaryDetailsStore(
     dashboardKey.value,

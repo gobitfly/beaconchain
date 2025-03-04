@@ -10,7 +10,10 @@ export function useBcToastProvider() {
   const { t: $t } = useTranslation()
 
   const {
-    bounce, instant, temp, value,
+    bounce,
+    instant,
+    temp,
+    value,
   } = useDebounceValue<ToastData[]>(
     [],
     TOAST_TIME,
