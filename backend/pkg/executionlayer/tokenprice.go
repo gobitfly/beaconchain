@@ -42,6 +42,7 @@ func NewTokenPricer(store TokenStore, chainID string, external ExternalPricer, t
 	}
 }
 
+// UpdateTokens retrieve the prices from an external source and the total supply from the chain
 func (t *TokenPricer) UpdateTokens() error {
 	var tokens []common.Address
 	for _, token := range t.tokens.Tokens {
@@ -56,6 +57,8 @@ func (t *TokenPricer) UpdateTokens() error {
 	if err != nil {
 		return fmt.Errorf("cannot get token supplies: %w", err)
 	}
+
+	// for each token set the supply to the onchain response
 	for i := 0; i < len(prices); i++ {
 		prices[i].TotalSupply = supplies[i].Bytes()
 	}

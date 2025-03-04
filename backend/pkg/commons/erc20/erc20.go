@@ -59,7 +59,6 @@ type ERC20TokenList struct {
 type ERC20TokenDetail struct {
 	Address  string `json:"address"`
 	Owner    string `json:"-"`
-	ChainID  int64  `json:"chainId"` // not used
 	Decimals int64  `json:"decimals"`
 	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
