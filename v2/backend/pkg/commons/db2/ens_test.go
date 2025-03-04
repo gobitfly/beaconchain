@@ -2,7 +2,6 @@ package db2
 
 import (
 	"crypto/sha256"
-	"reflect"
 	"testing"
 	"time"
 
@@ -13,7 +12,6 @@ import (
 
 func TestENSStore(t *testing.T) {
 	store := NewENSStore(databasetest.NewPostgres(t))
-
 	if err := store.SetENS(validEns); err != nil {
 		t.Fatal(err)
 	}
@@ -23,7 +21,22 @@ func TestENSStore(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := list, []ENS{validEns}; reflect.DeepEqual(got, want) {
+		if len(list) != 1 {
+			t.Fatalf("got %d, want %d", len(list), 1)
+		}
+		if got, want := list[0].Expires.UTC().Unix(), validEns.Expires.UTC().Unix(); got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := list[0].NameHash, validEns.NameHash; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := list[0].Name, validEns.Name; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := list[0].IsPrimary, validEns.IsPrimary; got != want {
+			t.Errorf("got %v, want %v", got, want)
+		}
+		if got, want := list[0].Address, validEns.Address; got != want {
 			t.Errorf("got %v, want %v", got, want)
 		}
 	})
@@ -70,5 +83,5 @@ var validEns = ENS{
 	Name:      "testEns",
 	Address:   common.HexToAddress("0x000000000000000000000000000000000000abba"),
 	IsPrimary: true,
-	Expires:   time.Now().Add(time.Hour),
+	Expires:   time.Now().Add(time.Minute).UTC(),
 }
