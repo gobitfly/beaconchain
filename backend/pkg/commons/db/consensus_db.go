@@ -8,9 +8,7 @@ type ConsensusDB struct {
 }
 
 type ConsensusDBI interface {
-	GetLatestEpoch() (uint64, error)
-	GetDepositsCountForBlockSlot() (uint64, error)
-	SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error
-	UpdateBlockDepositsSignature() error
-	UpdateBlockDepositCount(count int) error
+	GetAllSlots(tx *sqlx.Tx) ([]uint64, error)
+	GetLastSlot(tx *sqlx.Tx) (uint64, error)
+	SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error
 }
