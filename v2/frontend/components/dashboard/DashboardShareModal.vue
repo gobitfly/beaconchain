@@ -7,7 +7,8 @@ interface Props {
   dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
 }
 const {
-  dialogRef, props,
+  dialogRef,
+  props,
 } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const { refreshDashboards } = useUserDashboardStore()

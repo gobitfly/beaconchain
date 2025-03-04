@@ -1,3 +1,4 @@
+import eslintPluginNewlineDestructuring from 'eslint-plugin-newline-destructuring'
 // @ts-check
 import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
@@ -106,6 +107,17 @@ export default withNuxt({
       // disable the rules as there are conflicts
         'perfectionist/sort-imports': 'off',
         'perfectionist/sort-vue-attributes': 'off',
+      },
+    },
+  )
+  .append(
+    {
+      plugins: { 'newline-destructuring': eslintPluginNewlineDestructuring },
+      rules: {
+        'newline-destructuring/newline': [
+          'error',
+          { items: 1 },
+        ],
       },
     },
   )

@@ -21,7 +21,8 @@ const {
   networkInfo,
 } = useNetworkStore()
 const {
-  doLogout, isLoggedIn,
+  doLogout,
+  isLoggedIn,
 } = useUserStore()
 const {
   displayCurrencyDefault,
