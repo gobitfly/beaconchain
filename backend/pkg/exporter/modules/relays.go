@@ -148,12 +148,10 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 			}
 
 			for _, payload := range payloads {
-
 				err := rs.db.SaveBlockTagsAndRelays(r.ID, payload)
 				if err != nil {
 					return err
 				}
-
 			}
 
 			if payloads[len(payloads)-1].Slot < minSlot {

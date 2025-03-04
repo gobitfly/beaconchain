@@ -70,7 +70,7 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockConsDBClient := new(dbmocks.ConsensusDBI)
+			mockConsDBClient := new(dbmocks.ConsensusRepository)
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 			defer cancel()
 
