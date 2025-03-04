@@ -9,16 +9,20 @@ const {
 } = useDashboardKey()
 const { networkInfo } = useNetworkStore()
 const {
-  loading: loadingSlotViz, refreshSlotViz, slotViz,
+  loading: loadingSlotViz,
+  refreshSlotViz,
+  slotViz,
 } = useValidatorSlotVizStore()
 const { secondsPerSlot = 12 } = networkInfo.value
 const {
-  resetTick, tick,
+  resetTick,
+  tick,
 } = useInterval(secondsPerSlot)
 const { getSlotFromTimestamp } = useNetworkStore()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  loading: loadingOverview, overview,
+  loading: loadingOverview,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 
 const selectedCategories = ref<SlotVizCategories[]>([])

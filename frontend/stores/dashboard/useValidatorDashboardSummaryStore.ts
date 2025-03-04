@@ -22,7 +22,8 @@ export function useValidatorDashboardSummaryStore() {
   const { fetch } = useCustomFetch()
 
   const {
-    data, query: storedQuery,
+    data,
+    query: storedQuery,
   } = storeToRefs(
     validatorDashboardSummaryStore(),
   )

@@ -16,7 +16,8 @@ const {
 } = storeToRefs(userDashboardStore)
 
 const {
-  isLoggedIn, user,
+  isLoggedIn,
+  user,
 } = useUserStore()
 const { currentNetwork } = useNetworkStore()
 
@@ -33,7 +34,8 @@ const name = ref<string>('')
 const network = ref<ChainId>(0)
 const forcedDashboardType = ref<'' | DashboardType>('')
 const {
-  dashboardKey, publicEntities,
+  dashboardKey,
+  publicEntities,
 } = useDashboardKey()
 const { fetch } = useCustomFetch()
 

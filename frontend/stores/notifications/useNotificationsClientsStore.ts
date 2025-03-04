@@ -14,7 +14,16 @@ export function useNotificationsClientStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsClientStore())
   const {
-    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
+    cursor,
+    isStoredQuery,
+    onSort,
+    pageSize,
+    pendingQuery,
+    query,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
   } = useTableQuery({
     limit: 10, sort: 'timestamp:desc',
   }, 10)

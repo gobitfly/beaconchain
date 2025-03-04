@@ -42,7 +42,8 @@ const totalIdentifier = 'total'
 
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
+  hasValidators,
+  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 

@@ -13,10 +13,13 @@ import { formatPremiumProductPrice } from '~/utils/format'
 
 const { t: $t } = useTranslation()
 const {
-  isLoggedIn, user,
+  isLoggedIn,
+  user,
 } = useUserStore()
 const {
-  isStripeDisabled, stripeCustomerPortal, stripePurchase,
+  isStripeDisabled,
+  stripeCustomerPortal,
+  stripePurchase,
 } = useStripe()
 const { promoCode } = usePromoCode()
 

@@ -15,7 +15,10 @@ const { has } = useFeatureFlag()
 const { isLoggedIn } = useUserStore()
 const { dashboards } = storeToRefs(useUserDashboardStore())
 const {
-  dashboardKey, dashboardType, isSharedDashboard, setDashboardKey,
+  dashboardKey,
+  dashboardType,
+  isSharedDashboard,
+  setDashboardKey,
 } = useDashboardKey()
 
 const emit = defineEmits<{ (e: 'showCreation'): void }>()

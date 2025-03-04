@@ -8,7 +8,8 @@ import type { NotificationSettingsValidatorDashboard } from '~/types/api/notific
 
 type WebhookForm = Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>
 const {
-  close, props,
+  close,
+  props,
 } = useBcDialog<WebhookForm>()
 
 const { t: $t } = useTranslation()
@@ -19,7 +20,12 @@ const validationSchema = createSchemaObject({
 })
 
 const {
-  defineField, errors, handleSubmit, meta, setFieldError, values,
+  defineField,
+  errors,
+  handleSubmit,
+  meta,
+  setFieldError,
+  values,
 }
   = useForm({
     initialValues: {

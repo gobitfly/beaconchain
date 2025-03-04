@@ -37,7 +37,8 @@ interface Props {
   timeFrame?: SummaryTimeFrame,
 }
 const {
-  props, setHeader,
+  props,
+  setHeader,
 } = useBcDialog<Props>(undefined)
 
 const isLoading = ref(false)

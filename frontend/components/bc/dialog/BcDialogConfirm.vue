@@ -7,7 +7,8 @@ interface Props {
   yesLabel?: string, // defaults to "Yes"
 }
 const {
-  dialogRef, props,
+  dialogRef,
+  props,
 } = useBcDialog<Props>({ showHeader: false })
 const { t: $t } = useTranslation()
 

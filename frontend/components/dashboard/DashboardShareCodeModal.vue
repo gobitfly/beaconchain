@@ -10,7 +10,8 @@ interface Props {
   dashboardKey: string,
 }
 const {
-  dialogRef, props,
+  dialogRef,
+  props,
 } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const router = useRouter()

@@ -27,10 +27,12 @@ const bcTooltip = ref<HTMLElement | null>(null)
 let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
 const {
-  doSelect, selected,
+  doSelect,
+  selected,
 } = useTooltipStore()
 const {
-  height, width,
+  height,
+  width,
 } = useWindowSize()
 
 // this const will be avaiable on template

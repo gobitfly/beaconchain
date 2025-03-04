@@ -23,7 +23,8 @@ interface Props {
 }
 
 const {
-  props, setHeader,
+  props,
+  setHeader,
 } = useBcDialog<Props>({
   contentClass: 'epoch-duties-modal',
   showHeader: size.value.expandable,

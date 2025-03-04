@@ -43,7 +43,9 @@ const {
 const { refreshOverview } = useValidatorDashboardOverviewStore()
 const userDashboardStore = useUserDashboardStore()
 const {
-  getDashboardLabel, refreshDashboards, updateGuestDashboardKey,
+  getDashboardLabel,
+  refreshDashboards,
+  updateGuestDashboardKey,
 } = userDashboardStore
 
 const { dashboards } = storeToRefs(userDashboardStore)
