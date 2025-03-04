@@ -388,6 +388,9 @@ func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
 	return result
 }
 func GetMaxEffectiveBalanceByWithdrawalCredentials(withCred []byte) uint64 {
+	if len(withCred) == 0 {
+		return 0
+	}
 	switch withCred[0] {
 	case 0x00, 0x01:
 		// phase0, capella
