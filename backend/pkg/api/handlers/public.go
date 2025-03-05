@@ -551,7 +551,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	}
 	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
 	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
-	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId})
+	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId}, false)
 	if err != nil {
 		handleErr(w, r, err)
 		return

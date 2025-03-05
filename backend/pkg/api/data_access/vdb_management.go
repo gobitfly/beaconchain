@@ -1151,7 +1151,7 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Conte
 	return err
 }
 
-func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId) (uint64, error) {
+func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
 	var validators []t.VDBValidator
 
 	if dashboardId.Validators == nil {
@@ -1167,7 +1167,7 @@ func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx conte
 		validators = dashboardId.Validators
 	}
 
-	return d.GetValidatorsEffectiveBalanceTotal(ctx, validators)
+	return d.GetValidatorsEffectiveBalanceTotal(ctx, validators, onlyActive)
 }
 
 func (d *DataAccessService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {

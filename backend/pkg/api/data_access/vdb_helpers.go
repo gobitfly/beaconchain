@@ -221,10 +221,15 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		aprDivisor = 90 * 24
 	}
 
-	// invested amount is not post-pectra safe
-	investedAmount := d.convertClToMain(decimal.NewFromUint64(d.config.ClConfig.MaxEffectiveBalance))
+	investedAmountUInt, err := d.GetValidatorDashboardEffectiveBalanceTotal(ctx, dashboardId, true)
+	if err != nil {
+		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error retrieving total effective balance: %w", err)
+	}
+	// invested amount is wrong if the effective balance changed during the period (because of auto compound, consolidation, partial withdrawal etc.)
+	// would need to split at eb changes and weigh results
+	investedAmount := d.convertClToMain(decimal.NewFromUint64(investedAmountUInt))
 
-	clAPR = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor, rewardsResultTable.ValidatorCount)
+	clAPR = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor)
 
 	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 
@@ -276,7 +281,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return decimal.Zero, 0, decimal.Zero, 0, err
 	}
 
-	elAPR = calcAPR(d.convertElToMain(elIncome), investedAmount, aprDivisor, rewardsResultTable.ValidatorCount)
+	elAPR = calcAPR(d.convertElToMain(elIncome), investedAmount, aprDivisor)
 
 	if hours == -1 {
 		elTotalDs := elDs.
@@ -297,11 +302,11 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 }
 
 // precondition: invested amount and rewards are in the same currency
-func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor int, validatorCount uint64) float64 {
-	if rewards.IsZero() || investedAmount.IsZero() || validatorCount == 0 {
+func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor int) float64 {
+	if rewards.IsZero() || investedAmount.IsZero() {
 		return 0
 	}
-	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount.Mul(decimal.NewFromInt(int64(validatorCount)))).Mul(decimal.NewFromInt(24 * 365 * 100))).InexactFloat64()
+	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount).Mul(decimal.NewFromInt(24 * 365 * 100))).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
