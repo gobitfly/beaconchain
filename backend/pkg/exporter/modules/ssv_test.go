@@ -78,7 +78,10 @@ func NewMockWebSocketConn(response *types.SSVExporterResponse) *MockWebSocketCon
 }
 
 func (m *MockWebSocketConn) ReadMessage() (int, []byte, error) {
-	jsonData, _ := json.Marshal(m.response)
+	jsonData, err := json.Marshal(m.response)
+	if err != nil {
+		return 0, nil, err
+	}
 	return websocket.TextMessage, jsonData, nil
 }
 

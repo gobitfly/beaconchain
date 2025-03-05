@@ -75,7 +75,6 @@ func (ssv *ssvExporter) exportSSV(ctx context.Context) error {
 				continue
 			}
 			log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(timeStart)}, "tagged ssv validators")
-
 		}
 	}()
 
@@ -142,9 +141,10 @@ type Dialer interface {
 type WebSocketDialer struct{}
 
 func (d *WebSocketDialer) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
-	conn, _, err := websocket.DefaultDialer.Dial(url, requestHeader)
+	conn, resp, err := websocket.DefaultDialer.Dial(url, requestHeader)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close() // close resp body even thoguh we don't use it to satisfy linter
 	return conn, nil
 }
