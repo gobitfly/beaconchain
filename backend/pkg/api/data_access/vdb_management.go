@@ -1054,34 +1054,12 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 
 // TODO move into handler layer
 func (d *DataAccessService) applyEBFiler(validatorEbs map[t.VDBValidator]uint64, ebLimit uint64) ([]t.VDBValidator, error) {
-	// if shrink is true, new validators will be added until the ebLimit is reached; otherwise an error is returned
-	shrink := false
 	newValidatorsList := maps.Keys(validatorEbs)
 
-	if shrink {
-		// Decide which new validators to add:
-		// a) insert by lowest index until ebLimit reached
-		// b) insert by lowest effective balance until ebLimit reached
-		// c) insert the combination of validators which gets closest to the ebLimit (knapsack problem)
-		// TODO prefer active validators & insert exited last in all 3 cases
-		sort.Slice(newValidatorsList, func(i, j int) bool {
-			// use a) as sec. sort
-			if validatorEbs[newValidatorsList[i]] == validatorEbs[newValidatorsList[j]] {
-				return newValidatorsList[i] < newValidatorsList[j] // a)
-			}
-			return validatorEbs[newValidatorsList[i]] < validatorEbs[newValidatorsList[j]] // b)
-		})
-	}
-
 	var newEbAccumulator uint64
-	for i, validator := range newValidatorsList {
+	for _, validator := range newValidatorsList {
 		if newEbAccumulator+validatorEbs[validator] > ebLimit {
-			if shrink {
-				newValidatorsList = newValidatorsList[:i]
-				break
-			} else {
-				return nil, fmt.Errorf("effective balance limit exceeded")
-			}
+			return nil, fmt.Errorf("effective balance limit exceeded")
 		}
 		newEbAccumulator += validatorEbs[validator]
 	}
