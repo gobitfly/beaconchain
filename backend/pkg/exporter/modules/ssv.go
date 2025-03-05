@@ -2,41 +2,17 @@ package modules
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
 	"github.com/gorilla/websocket"
 )
-
-type SSVExporterResponse struct {
-	Type   string            `json:"type"`
-	Filter SSVExporterFilter `json:"filter"`
-	Data   []SSVExporterData `json:"data"`
-}
-
-type SSVExporterFilter struct {
-	From int `json:"from"`
-	To   int `json:"to"`
-}
-
-type SSVExporterData struct {
-	Index     int                    `json:"index"`
-	Publickey string                 `json:"publicKey"`
-	Operators []SSVExporterOperators `json:"operators"`
-}
-
-type SSVExporterOperators struct {
-	Nodeid    int    `json:"nodeId"`
-	Publickey string `json:"publicKey"`
-}
 
 type ssvExporter struct {
 	db     db.ConsensusDBI
@@ -128,7 +104,7 @@ func (ssv *ssvExporter) handleWebSocketMessages(conn WebSocketConn, done chan st
 			}
 
 			timeStart := time.Now()
-			res := SSVExporterResponse{}
+			res := types.SSVExporterResponse{}
 			err = json.Unmarshal(message, &res)
 			if err != nil {
 				log.Error(err, "error unmarshaling json from ssv-exporter", 0)
@@ -150,7 +126,7 @@ func requestValidators(conn WebSocketConn) error {
 	return conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
 }
 
-func (ssv *ssvExporter) saveSSV(res *SSVExporterResponse) error {
+func (ssv *ssvExporter) saveSSV(res *types.SSVExporterResponse) error {
 	// make sure to correct wrongly marked validators
 	if err := ssv.db.DeleteInvalidTags(); err != nil {
 		return err
@@ -168,7 +144,7 @@ func (ssv *ssvExporter) saveSSV(res *SSVExporterResponse) error {
 	return nil
 }
 
-func (ssv *ssvExporter) insertSSVTags(response *SSVExporterResponse) error {
+func (ssv *ssvExporter) insertSSVTags(response *types.SSVExporterResponse) error {
 	var batchSize = 5000
 	for b := 0; b < len(response.Data); b += batchSize {
 		start := b
@@ -176,32 +152,13 @@ func (ssv *ssvExporter) insertSSVTags(response *SSVExporterResponse) error {
 		if len(response.Data) < end {
 			end = len(response.Data)
 		}
-		valueStrings, valueArgs := prepareBatchInsert(response.Data[start:end])
 
-		err := ssv.db.SaveValidatorTags(valueStrings, valueArgs)
+		err := ssv.db.SaveValidatorTags(response.Data[start:end])
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func prepareBatchInsert(data []SSVExporterData) ([]string, [][]byte) {
-	index := 1
-	valueStrings := make([]string, 0, len(data))
-	valueArgs := make([][]byte, 0, len(data)*index)
-
-	for i, d := range data {
-		pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))
-		if err != nil {
-			log.Error(err, "error decoding public key", 0)
-			continue
-		}
-		valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*index+1))
-		valueArgs = append(valueArgs, pubkey)
-	}
-
-	return valueStrings, valueArgs
 }
 
 type Dialer interface {

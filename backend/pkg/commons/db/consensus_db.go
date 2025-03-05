@@ -1,6 +1,9 @@
 package db
 
-import "github.com/jmoiron/sqlx"
+import (
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/jmoiron/sqlx"
+)
 
 type ConsensusDB struct {
 	WriterDb *sqlx.DB
@@ -8,7 +11,7 @@ type ConsensusDB struct {
 }
 
 type ConsensusDBI interface {
-	SaveValidatorTags(valueStrings []string, valueArgs [][]byte) error
+	SaveValidatorTags(data []types.SSVExporterData) error
 	DeleteValidatorTags() error
 	DeleteInvalidTags() error
 }

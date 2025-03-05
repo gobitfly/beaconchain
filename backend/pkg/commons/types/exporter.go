@@ -756,3 +756,25 @@ type SlashingInfo struct {
 	SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
 	Reason                 string `db:"reason"`
 }
+
+type SSVExporterResponse struct {
+	Type   string            `json:"type"`
+	Filter SSVExporterFilter `json:"filter"`
+	Data   []SSVExporterData `json:"data"`
+}
+
+type SSVExporterFilter struct {
+	From int `json:"from"`
+	To   int `json:"to"`
+}
+
+type SSVExporterData struct {
+	Index     int                    `json:"index"`
+	Publickey string                 `json:"publicKey"`
+	Operators []SSVExporterOperators `json:"operators"`
+}
+
+type SSVExporterOperators struct {
+	Nodeid    int    `json:"nodeId"`
+	Publickey string `json:"publicKey"`
+}

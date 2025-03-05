@@ -2422,7 +2422,21 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
-func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs [][]byte) error {
+func (c *ConsensusDB) SaveValidatorTags(data []types.SSVExporterData) error {
+	index := 1
+	valueStrings := make([]string, 0, len(data))
+	valueArgs := make([][]byte, 0, len(data)*index)
+
+	for i, d := range data {
+		pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))
+		if err != nil {
+			log.Error(err, "error decoding public key", 0)
+			continue
+		}
+		valueStrings = append(valueStrings, fmt.Sprintf("($%d, 'ssv')", i*index+1))
+		valueArgs = append(valueArgs, pubkey)
+	}
+
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -2431,9 +2445,9 @@ func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs [][]byt
 
 	_, err = tx.Exec(
 		fmt.Sprintf(`
-			INSERT INTO validator_tags (publickey, tag)
-			VALUES %s
-			ON CONFLICT (publickey, tag) DO NOTHING`,
+            INSERT INTO validator_tags (publickey, tag)
+            VALUES %s
+            ON CONFLICT (publickey, tag) DO NOTHING`,
 			strings.Join(valueStrings, ",")), pq.ByteaArray(valueArgs))
 
 	if err != nil {
