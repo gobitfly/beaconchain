@@ -599,6 +599,34 @@ func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request,
 	if err != nil {
 		return nil, err
 	}
+
+	// determine new validators and check for their EBs
+	existingValidators, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
+	if err != nil {
+		return nil, err
+	}
+	existingValidatorsMap := utils.SliceToMap(existingValidators)
+
+	newValidators := make([]uint64, 0, len(validators))
+	for _, validator := range validators {
+		if _, ok := existingValidatorsMap[validator]; !ok {
+			newValidators = append(newValidators, validator)
+		}
+	}
+
+	if len(newValidators) > 0 {
+		newValidatorEbs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, newValidators, false)
+		if err != nil {
+			return nil, err
+		}
+		newValidators, err = h.applyEBFiler(newValidatorEbs, spaceLeftEB)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// keep existing validators so we can update their group
+	validators = append(existingValidators, newValidators...)
+
 	// add validators to dashboard
 	return h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators, spaceLeftEB)
 }

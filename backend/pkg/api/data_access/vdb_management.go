@@ -758,58 +758,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupExists(ctx context.Context
 	return groupExists, err
 }
 
-func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator, limitEB uint64) ([]t.VDBPostValidatorsData, error) {
+func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator, ebLimit uint64) ([]t.VDBPostValidatorsData, error) {
 	result := []t.VDBPostValidatorsData{}
 
 	if len(validators) == 0 {
 		// No validators to add
 		return nil, nil
 	}
-
-	// determine new validators and check for their EBs
-	var existingValidators []uint64
-	existingValidatorsDs := goqu.Dialect("postgres").
-		From(goqu.Dialect("postgres").
-			From(goqu.L("unnest(?::int[])", pq.Array(validators)).As("validator_index")).
-			Select("*").As("req")).
-		SelectDistinct(goqu.I("uvdv.validator_index")).
-		InnerJoin(
-			goqu.T("users_val_dashboards_validators").As("uvdv"),
-			goqu.On(goqu.I("req.validator_index").Eq(goqu.I("uvdv.validator_index"))),
-		).
-		Where(
-			goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-		)
-	existingValidatorsQuery, args, err := existingValidatorsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-	err = d.alloyReader.SelectContext(ctx, &existingValidators, existingValidatorsQuery, args...)
-	if err != nil {
-		return nil, err
-	}
-	existingValidatorsMap := utils.SliceToMap(existingValidators)
-
-	newValidators := make([]uint64, 0, len(validators))
-	for _, validator := range validators {
-		if _, ok := existingValidatorsMap[validator]; !ok {
-			newValidators = append(newValidators, validator)
-		}
-	}
-
-	if len(newValidators) > 0 {
-		newValidatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, newValidators, false)
-		if err != nil {
-			return nil, err
-		}
-		newValidators, err = d.applyEBFiler(newValidatorEbs, limitEB)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// keep existing validators so we can update their group
-	validators = append(existingValidators, newValidators...)
 
 	tx, err := d.writerDb.BeginTxx(ctx, nil)
 	if err != nil {
@@ -1097,6 +1052,7 @@ func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx contex
 	return result, nil
 }
 
+// TODO move into handler layer
 func (d *DataAccessService) applyEBFiler(validatorEbs map[t.VDBValidator]uint64, ebLimit uint64) ([]t.VDBValidator, error) {
 	// if shrink is true, new validators will be added until the ebLimit is reached; otherwise an error is returned
 	shrink := false
@@ -1145,6 +1101,8 @@ func (d *DataAccessService) applyNewValidatorsDSEBFilter(ctx context.Context, ne
 	if err != nil {
 		return err
 	}
+
+	// TODO into handler layer
 	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, newValidators, false)
 	if err != nil {
 		return err
@@ -1157,7 +1115,7 @@ func (d *DataAccessService) applyNewValidatorsDSEBFilter(ctx context.Context, ne
 	if len(filteredValidators) < len(newValidators) {
 		//nolint:staticcheck
 		newValidatorsDs = goqu.Dialect("postgres").
-			From(goqu.L("unnest(?::int[])", pq.Array(filteredValidators)).As("validator_index")).
+			From(goqu.L("unnest(?::int[])", pq.Array(newValidators)).As("validator_index")).
 			Select("*")
 	}
 	return nil
