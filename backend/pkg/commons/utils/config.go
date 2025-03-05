@@ -438,10 +438,6 @@ func setCLConfig(cfg *types.Config) error {
 			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
 			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
-		if jr.Data.ElectraForkEpoch == nil {
-			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.ElectraForkEpoch = &MaxForkEpoch
-		}
 
 		chainCfg := types.ClChainConfig{
 			PresetBase:                              jr.Data.PresetBase,
