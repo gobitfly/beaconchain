@@ -66,9 +66,14 @@ func notificationSender() {
 		// Record metrics related to Notification Queue like size of queue and duration of pending notifications
 		collectNotificationQueueMetrics()
 
-		err = garbageCollectNotificationQueue()
+		err = garbageCollectSentEvents()
 		if err != nil {
-			log.Error(err, "error garbage collecting notification queue", 0)
+			log.Error(err, "error garbage collecting sent notifications", 0)
+		}
+
+		err = garbageCollectOldPendingEvents()
+		if err != nil {
+			log.Error(err, "error garbage collecting old pending notifications", 0)
 		}
 
 		log.InfoWithFields(log.Fields{"duration": time.Since(start)}, "notifications dispatched and garbage collected")
@@ -109,16 +114,32 @@ func notificationSender() {
 	}
 }
 
-// garbageCollectNotificationQueue deletes entries from the notification queue that have been processed
-func garbageCollectNotificationQueue() error {
-	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE (sent < now() - INTERVAL '30 minutes') OR (created < now() - INTERVAL '1 hour')`)
+func garbageCollectSentEvents() error {
+	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE sent < now() - INTERVAL '30 minutes'`)
 	if err != nil {
-		return fmt.Errorf("error deleting from notification_queue %w", err)
+		return fmt.Errorf("error deleting sent events from notification_queue %w", err)
 	}
 
 	rowsAffected, _ := rows.RowsAffected()
 
-	log.Infof("deleted %v rows from the notification_queue", rowsAffected)
+	log.Infof("deleted %v sent events from the notification_queue", rowsAffected)
+
+	metrics.NotificationsDropped.WithLabelValues(string(Sent)).Add(float64(rowsAffected))
+
+	return nil
+}
+
+func garbageCollectOldPendingEvents() error {
+	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE created < now() - INTERVAL '1 hour'`)
+	if err != nil {
+		return fmt.Errorf("error deleting pending events from notification_queue %w", err)
+	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	log.Infof("deleted %v old pending events from the notification_queue", rowsAffected)
+
+	metrics.NotificationsDropped.WithLabelValues(string(Pending)).Add(float64(rowsAffected))
 
 	return nil
 }
