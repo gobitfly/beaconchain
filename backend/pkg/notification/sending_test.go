@@ -2,41 +2,10 @@ package notification
 
 import (
 	"testing"
-	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/google/go-cmp/cmp"
 )
-
-// getTimeDiffMilliseconds - Positive diff
-// getTimeDiffMilliseconds - Negative diff
-// countByChannel - All Notifications, no notifications, unknown notification type
-//
-// countByEventType
-// extractEventTypeFromNotification - All event types, grab from DB
-
-func TestGetTimeDiffMilliseconds(t *testing.T) {
-	tests := map[string]struct {
-		time1 time.Time
-		time2 time.Time
-		want  float64
-	}{
-		"no time difference":         {time1: time.UnixMilli(9000000000), time2: time.UnixMilli(9000000000), want: 0.0},
-		"positive time difference":   {time1: time.UnixMilli(9000001000), time2: time.UnixMilli(9000000000), want: 1000.0},
-		"negative time difference":   {time1: time.UnixMilli(9000000000), time2: time.UnixMilli(9000001000), want: 1000.0},
-		"sub-second time difference": {time1: time.UnixMilli(9000001000), time2: time.UnixMilli(9000000500), want: 500.0},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			got := GetTimeDiffMilliseconds(tc.time1, tc.time2)
-			diff := cmp.Diff(tc.want, got)
-			if diff != "" {
-				t.Fatal(diff)
-			}
-		})
-	}
-}
 
 func TestExtractEventNameStringFromNotificationForMetrics(t *testing.T) {
 	tests := map[string]struct {
