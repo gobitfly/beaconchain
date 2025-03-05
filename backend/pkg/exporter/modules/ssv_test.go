@@ -1,10 +1,8 @@
 package modules
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -17,42 +15,9 @@ import (
 )
 
 func TestSSVExport(t *testing.T) {
-	tests := []struct {
-		name                 string
-		mockExporterResponse *SSVExporterResponse
-		mockWebsocketError   bool
-	}{
-		{
-			name: "websocket works, data is saved and deleted from db",
-			mockExporterResponse: &SSVExporterResponse{
-				Data: []SSVExporterData{
-					{
-						Publickey: "0xabcd",
-					},
-				},
-			},
-		},
-		{
-			name: "websocket empty response",
-			mockExporterResponse: &SSVExporterResponse{
-				Data: []SSVExporterData{
-					{
-						Publickey: "0xabcd",
-					},
-				},
-			},
-			mockWebsocketError: true,
-		},
-	}
-
 	mockConsDBClient := new(mocks.ConsensusDBI)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
-
-	exporter := ssvExporter{
-		db:  mockConsDBClient,
-		ctx: ctx,
-	}
 
 	utils.Config = &types.Config{
 		SSVExporter: types.SSVExporterConfig{
@@ -60,81 +25,81 @@ func TestSSVExport(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.mockWebsocketError {
-				exporter.dialer = &StubDialerWebsocketError{}
-				exporter.Export()
-			} else {
-				exporter.dialer = &StubDialer{}
+	t.Run("websocket works, data is saved and deleted from db", func(t *testing.T) {
+		mockExporterResponse := &types.SSVExporterResponse{
+			Data: []types.SSVExporterData{
+				{
+					Publickey: "0xabcd",
+				},
+			},
+		}
 
-				valueStrings, valueArgs := prepareBatchInsert(tt.mockExporterResponse.Data)
+		mockConn := NewMockWebSocketConn(mockExporterResponse)
+		exporter := ssvExporter{
+			db:     mockConsDBClient,
+			dialer: &StubDialer{MockConn: mockConn},
+		}
 
-				mockConsDBClient.On("DeleteInvalidTags").Return(nil)
-				mockConsDBClient.On("SaveValidatorTags", valueStrings, valueArgs).Return(nil)
-				mockConsDBClient.On("DeleteValidatorTags").Return(nil)
+		mockConsDBClient.On("DeleteInvalidTags").Return(nil)
+		mockConsDBClient.On("SaveValidatorTags", mockExporterResponse.Data).Return(nil)
+		mockConsDBClient.On("DeleteValidatorTags").Return(nil)
 
-				exporter.Export()
+		err := exporter.exportSSV(ctx)
+		if err != nil {
+			t.Errorf("expected no error, got: %v", err)
+		}
 
-				mockConsDBClient.AssertCalled(t, "DeleteInvalidTags")
-				mockConsDBClient.AssertCalled(t, "SaveValidatorTags", valueStrings, valueArgs)
-				mockConsDBClient.AssertCalled(t, "DeleteValidatorTags")
-			}
-		})
-	}
+		mockConsDBClient.AssertCalled(t, "DeleteInvalidTags")
+		mockConsDBClient.AssertCalled(t, "SaveValidatorTags", mockExporterResponse.Data)
+		mockConsDBClient.AssertCalled(t, "DeleteValidatorTags")
+	})
+
+	t.Run("websocket error", func(t *testing.T) {
+		exporter := ssvExporter{
+			db:     mockConsDBClient,
+			dialer: &StubDialerWebsocketError{},
+		}
+
+		err := exporter.exportSSV(ctx)
+		if err == nil {
+			t.Error("expected error, got nil")
+		}
+	})
 }
 
-type MockWebSocketConn struct{}
+type MockWebSocketConn struct {
+	response *types.SSVExporterResponse
+}
 
-func (m *MockWebSocketConn) WriteMessage(messageType int, data []byte) error {
-	if messageType != websocket.TextMessage {
-		return errors.New("invalid message type")
+func NewMockWebSocketConn(response *types.SSVExporterResponse) *MockWebSocketConn {
+	return &MockWebSocketConn{
+		response: response,
 	}
-	return nil
 }
 
 func (m *MockWebSocketConn) ReadMessage() (int, []byte, error) {
-	mockResponse := SSVExporterResponse{
-		Type: "validator",
-		Filter: SSVExporterFilter{
-			From: 0,
-			To:   10,
-		},
-		Data: []SSVExporterData{
-			{
-				Index:     1,
-				Publickey: "0xabcd",
-				Operators: []SSVExporterOperators{
-					{
-						Nodeid:    101,
-						Publickey: "0x1234",
-					},
-				},
-			},
-		},
-	}
-	jsonData, err := json.Marshal(mockResponse)
-	if err != nil {
-		return websocket.TextMessage, nil, err
-	}
+	jsonData, _ := json.Marshal(m.response)
 	return websocket.TextMessage, jsonData, nil
+}
+
+func (m *MockWebSocketConn) WriteMessage(messageType int, data []byte) error {
+	return nil
 }
 
 func (m *MockWebSocketConn) Close() error {
 	return nil
 }
 
-type StubDialer struct{}
+type StubDialer struct {
+	MockConn WebSocketConnInterface
+}
 
-func (s *StubDialer) Dial(url string, requestHeader http.Header) (WebSocketConn, *http.Response, error) {
-	return &MockWebSocketConn{}, &http.Response{
-		StatusCode: http.StatusSwitchingProtocols,
-		Body:       io.NopCloser(bytes.NewReader([]byte{})),
-	}, nil
+func (s *StubDialer) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
+	return s.MockConn, nil
 }
 
 type StubDialerWebsocketError struct{}
 
-func (s *StubDialerWebsocketError) Dial(url string, requestHeader http.Header) (WebSocketConn, *http.Response, error) {
-	return nil, nil, errors.New("empty response")
+func (s *StubDialerWebsocketError) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
+	return nil, errors.New("error")
 }
