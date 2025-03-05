@@ -164,7 +164,7 @@ const handleSubmitPurchase = async () => {
       <span class="premium-addon-box__title-detail">
         {{ $t('pricing.per_min_validator_deposit', {
           amount: formatFiatCurrency(pricePerValidator, {
-            minimumFractionDigits: 4,
+            minimumFractionDigits: 5,
           }),
           old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
         }) }}

@@ -196,7 +196,7 @@ const mainFeatures = computed<Feature[]>(() => {
       percentage: percentages.value.effectiveBalancePerDashboard,
       subtext: $t('pricing.per_min_validator_deposit', {
         amount: formatFiatCurrency(pricePerValidator.value, {
-          minimumFractionDigits: 4,
+          minimumFractionDigits: 6,
         }),
         old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
       }),
