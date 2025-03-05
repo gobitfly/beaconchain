@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -61,16 +62,20 @@ func TestSSVExport(t *testing.T) {
 func startTestWebsocketServer() *http.Server {
 	upgrader := &websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 	return &http.Server{
-		Addr: "localhost:8080",
+		Addr:              "localhost:8080",
+		ReadHeaderTimeout: 5 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			conn, err := upgrader.Upgrade(w, r, nil)
 			if err != nil {
 				return
 			}
 			defer conn.Close()
-			conn.WriteJSON(&types.SSVExporterResponse{
+
+			if err := conn.WriteJSON(&types.SSVExporterResponse{
 				Data: []types.SSVExporterData{{Publickey: "0xabcd"}},
-			})
+			}); err != nil {
+				log.Printf("Error writing JSON: %v", err)
+			}
 		}),
 	}
 }
