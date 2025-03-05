@@ -16,87 +16,44 @@ import (
 
 type ssvExporter struct {
 	db     db.ConsensusDBI
-	ctx    context.Context
 	dialer Dialer
 }
 
-func newSSVExporter(db db.ConsensusDBI) ssvExporter {
-	return ssvExporter{
+func newSSVExporter(db db.ConsensusDBI) *ssvExporter {
+	return &ssvExporter{
 		db:     db,
-		ctx:    context.Background(),
-		dialer: &realDialer{},
+		dialer: &WebSocketDialer{},
 	}
 }
 
-func (ssv *ssvExporter) Export() {
+func (ssv *ssvExporter) Export(ctx context.Context) {
 	for {
 		select {
-		case <-ssv.ctx.Done():
+		case <-ctx.Done():
 			log.Info("ssv export process cancelled")
 			return
 		default:
-			err := ssv.exportSSV()
+			err := ssv.exportSSV(ctx)
 			if err != nil {
 				log.Error(err, "error exporting ssv validators", 0)
 			}
 			log.Warnf("connection to ssv-exporter closed, reconnecting")
-
-			// ensure it exits early if context is cancelled
-			select {
-			case <-time.After(time.Second * 10):
-				// wait for 10s before reconnecting
-			case <-ssv.ctx.Done():
-				return
-			}
+			time.Sleep(time.Second * 10)
 		}
 	}
 }
 
-func (ssv *ssvExporter) exportSSV() error {
-	conn, resp, err := ssv.connectToWebSocket()
+func (ssv *ssvExporter) exportSSV(ctx context.Context) error {
+	conn, err := ssv.dialer.Dial(utils.Config.SSVExporter.Address, nil)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
-	defer resp.Body.Close()
+
 	done := make(chan struct{})
-	go ssv.handleWebSocketMessages(conn, done)
-
-	qryValidatorsTicker := time.NewTicker(time.Minute * 10)
-	defer qryValidatorsTicker.Stop()
-
-	for {
-		select {
-		case <-ssv.ctx.Done():
-			log.Info("export loop cancelled", 0)
-			return nil
-		case <-done:
-			return nil
-		case <-qryValidatorsTicker.C:
-			if err := requestValidators(conn); err != nil {
-				return err
-			}
-		}
-	}
-}
-
-func (ssv *ssvExporter) connectToWebSocket() (WebSocketConn, *http.Response, error) {
-	conn, resp, err := ssv.dialer.Dial(utils.Config.SSVExporter.Address, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return conn, resp, nil
-}
-
-func (ssv *ssvExporter) handleWebSocketMessages(conn WebSocketConn, done chan struct{}) {
-	defer close(done)
-	for {
-		select {
-		case <-ssv.ctx.Done():
-			log.Info("message handling cancelled", 0)
-			return
-		default:
+	go func() {
+		defer close(done)
+		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
 				log.Error(err, "error reading message from ssv-exporter", 0)
@@ -104,7 +61,7 @@ func (ssv *ssvExporter) handleWebSocketMessages(conn WebSocketConn, done chan st
 			}
 
 			timeStart := time.Now()
-			res := types.SSVExporterResponse{}
+			var res types.SSVExporterResponse
 			err = json.Unmarshal(message, &res)
 			if err != nil {
 				log.Error(err, "error unmarshaling json from ssv-exporter", 0)
@@ -118,65 +75,78 @@ func (ssv *ssvExporter) handleWebSocketMessages(conn WebSocketConn, done chan st
 				continue
 			}
 			log.InfoWithFields(log.Fields{"number": len(res.Data), "duration": time.Since(timeStart)}, "tagged ssv validators")
+
+		}
+	}()
+
+	// query validators periodically
+	ticker := time.NewTicker(time.Minute * 10)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("export loop cancelled")
+			return nil
+		case <-done:
+			log.Info("websocket connection closed")
+			return nil
+		case <-ticker.C:
+			err := conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
+			if err != nil {
+				return err
+			}
 		}
 	}
-}
-
-func requestValidators(conn WebSocketConn) error {
-	return conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"validator","filter":{"from":0}}`))
 }
 
 func (ssv *ssvExporter) saveSSV(res *types.SSVExporterResponse) error {
 	// make sure to correct wrongly marked validators
-	if err := ssv.db.DeleteInvalidTags(); err != nil {
+	err := ssv.db.DeleteInvalidTags()
+	if err != nil {
 		return err
 	}
+	time.Sleep(time.Millisecond * 100)
 
-	if err := ssv.insertSSVTags(res); err != nil {
-		return err
-	}
-
-	// currently the ssv-exporter also exports publickeys that are not actually part of the network
-	if err := ssv.db.DeleteValidatorTags(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ssv *ssvExporter) insertSSVTags(response *types.SSVExporterResponse) error {
-	var batchSize = 5000
-	for b := 0; b < len(response.Data); b += batchSize {
-		start := b
-		end := b + batchSize
-		if len(response.Data) < end {
-			end = len(response.Data)
+	batchSize := 5000
+	for start := 0; start < len(res.Data); start += batchSize {
+		end := start + batchSize
+		if end > len(res.Data) {
+			end = len(res.Data)
 		}
 
-		err := ssv.db.SaveValidatorTags(response.Data[start:end])
+		err := ssv.db.SaveValidatorTags(res.Data[start:end])
 		if err != nil {
 			return err
 		}
 	}
+
+	// currently the ssv-exporter also exports publickeys that are not actually part of the network
+	err = ssv.db.DeleteValidatorTags()
+	if err != nil {
+		return err
+	}
+	time.Sleep(time.Millisecond * 100)
+
 	return nil
 }
 
-type Dialer interface {
-	Dial(url string, requestHeader http.Header) (WebSocketConn, *http.Response, error)
-}
-
-type WebSocketConn interface {
+type WebSocketConnInterface interface {
+	ReadMessage() (int, []byte, error)
 	WriteMessage(messageType int, data []byte) error
-	ReadMessage() (messageType int, p []byte, err error)
 	Close() error
 }
 
-type realDialer struct{}
+type Dialer interface {
+	Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error)
+}
 
-func (d *realDialer) Dial(url string, requestHeader http.Header) (WebSocketConn, *http.Response, error) {
-	conn, resp, err := websocket.DefaultDialer.Dial(url, requestHeader)
+type WebSocketDialer struct{}
+
+func (d *WebSocketDialer) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
+	conn, _, err := websocket.DefaultDialer.Dial(url, requestHeader)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return conn, resp, nil
+	return conn, nil
 }
