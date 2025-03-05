@@ -66,6 +66,19 @@ export function formatFiatCurrency(
   }).format(value)
 }
 
+/**
+ * This should convert 0.2069 to 20
+ */
+export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(number * 100)
+}
 export function formatGoTimestamp(
   timestamp: number | string,
   compareTimestamp?: number,
@@ -87,6 +100,7 @@ export function formatGoTimestamp(
     withTime,
   )
 }
+
 export function formatNumber(value: number | string, {
   locale = 'en-US',
   maximumFractionDigits,
@@ -113,6 +127,34 @@ export function formatNumber(value: number | string, {
     signDisplay,
     useGrouping,
   }).format(numberInScientificNotation as `${number}`)
+}
+
+/**
+ * Format number | string (fraction or number) to percent.
+ *
+ * @example 0.12346 to 12.346%
+ * @example (isFraction: false) 98 to 98%
+ *
+ */
+export function formatPercent(value: NumberOrString, option?: {
+  isFraction?: boolean,
+  locale?: string,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+}) {
+  const {
+    isFraction = true,
+    locale = 'en-US',
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = option ?? {}
+  const number = isFraction ? Number(value) * 100 : Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'unit',
+    unit: 'percent',
+  }).format(number)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {
@@ -150,6 +192,20 @@ export function formatTimeDuration(
   const amount = Math.floor(seconds / divider)
 
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
+}
+
+/**
+ * This should convert 20 to 0.2
+ */
+export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value ?? 0)
+  return new Intl.NumberFormat(locale, {
+    // maximumFractionDigits: 0,
+    // minimumFractionDigits: 0,
+  }).format(number / 100)
 }
 
 export function formatTs(
@@ -267,62 +323,6 @@ function formatTsToRelative(
       base: date,
       style,
     })
-}
-
-/**
- * This should convert 0.2069 to 20
- */
-export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  }).format(number * 100)
-}
-
-/**
- * Format number | string (fraction or number) to percent.
- *
- * @example 0.12346 to 12.346%
- * @example (isFraction: false) 98 to 98%
- *
- */
-export function formatPercent(value: NumberOrString, option?: {
-  isFraction?: boolean,
-  locale?: string,
-  maximumFractionDigits?: number,
-  minimumFractionDigits?: number,
-}) {
-  const {
-    isFraction = true,
-    locale = 'en-US',
-    maximumFractionDigits,
-    minimumFractionDigits,
-  } = option ?? {}
-  const number = isFraction ? Number(value) * 100 : Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits,
-    minimumFractionDigits,
-    style: 'unit',
-    unit: 'percent',
-  }).format(number)
-}
-
-/**
- * This should convert 20 to 0.2
- */
-export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value ?? 0)
-  return new Intl.NumberFormat(locale, {
-    // maximumFractionDigits: 0,
-    // minimumFractionDigits: 0,
-  }).format(number / 100)
 }
 
 export const formatValue = (value: string, {
