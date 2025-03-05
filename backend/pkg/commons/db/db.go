@@ -150,14 +150,14 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 
 	if driverName == "clickhouse" {
 		extraParams = "secure=false"
-		if writer.SSL {
+		if reader.SSL {
 			extraParams = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
 		extraParams = "sslmode=disable"
-		if writer.SSL {
+		if reader.SSL {
 			extraParams = "sslmode=require"
 		}
 	}
