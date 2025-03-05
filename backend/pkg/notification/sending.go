@@ -630,7 +630,8 @@ func collectNotificationQueueMetrics() {
 		eventType := GetEventLabelForNotification(notification)
 
 		// Record the amount of time records that were sent (and that still exist in the queue) took to sent
-		metrics.NotificationsQueueSentTime.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Sent, *notification.Created))
+		duration := notification.Created.Sub(*notification.Sent).Abs()
+		metrics.NotificationsQueueSentTime.WithLabelValues(notification.Channel, eventType).Observe(duration.Seconds())
 	}
 
 	// Record for each pending notification how long it has been in the queue
@@ -638,7 +639,8 @@ func collectNotificationQueueMetrics() {
 		eventType := GetEventLabelForNotification(notification)
 
 		// Record the amount of time these records have been waiting to been sent
-		metrics.NotificationsQueuePendingTime.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Created, now))
+		duration := notification.Created.Sub(now).Abs()
+		metrics.NotificationsQueuePendingTime.WithLabelValues(notification.Channel, eventType).Observe(duration.Seconds())
 	}
 
 	// Count number of pending notifications in the queue by event type
@@ -741,7 +743,8 @@ func CountByChannel(notifications []Notification) map[string]int {
  * Returns the amount of milliseconds between two timestamps. Always returns a positive
  * duration, so you don't have to worry about date ordering
  */
-func GetTimeDiffMilliseconds(time1 time.Time, time2 time.Time) float64 {
+func GetTimeDiffSeconds(time1 time.Time, time2 time.Time) float64 {
 	duration := time1.Sub(time2)
-	return math.Abs(float64(duration.Milliseconds()))
+	duration.Abs()
+	return math.Abs(float64(duration.Seconds()))
 }
