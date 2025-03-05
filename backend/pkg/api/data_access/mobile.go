@@ -263,25 +263,22 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveApr := func(hours int, apr *float64) {
 		eg.Go(func() error {
-			_, elApr, _, clApr, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
-			*apr = elApr + clApr
+			*apr = incomeInfo.Apr.El + incomeInfo.Apr.Cl
 			return nil
 		})
 	}
 
 	retrieveRewards := func(hours int, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			elRewards, _, clRewards, _, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
-			*rewards = t.ClElValue[decimal.Decimal]{
-				El: elRewards,
-				Cl: clRewards,
-			}
+			*rewards = incomeInfo.Rewards
 			return nil
 		})
 	}

@@ -381,10 +381,12 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.getElClAPR(ctx, dashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
+			*rewards = incomeInfo.Rewards
+			*apr = incomeInfo.Apr
 			return nil
 		})
 
