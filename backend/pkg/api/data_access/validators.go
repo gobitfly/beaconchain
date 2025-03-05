@@ -49,33 +49,34 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 	}
 
 	// exited
-	if len(validatorExitEpochs) > 0 {
-		ds := goqu.Dialect("postgres").
-			Select(
-				// goqu.SUM(goqu.I("balance_effective_end")).As("balance_effective_end"),
-				goqu.I("validator_index"),
-				goqu.I("balance_effective_end"),
-			).
-			From("validator_dashboard_data_epoch").
-			Where(
-				goqu.L("(epoch_timestamp, validator_index)").In(validatorExitEpochs),
-			)
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return nil, err
-		}
+	if len(validatorExitEpochs) == 0 {
+		return effectiveBalances, nil
+	}
+	ds := goqu.Dialect("postgres").
+		Select(
+			// goqu.SUM(goqu.I("balance_effective_end")).As("balance_effective_end"),
+			goqu.I("validator_index"),
+			goqu.I("balance_effective_end"),
+		).
+		From("validator_dashboard_data_epoch").
+		Where(
+			goqu.L("(epoch_timestamp, validator_index)").In(validatorExitEpochs),
+		)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
 
-		ebsBeforeExit := []struct {
-			ValidatorIndex   uint64 `db:"validator_index"`
-			EffectiveBalance uint64 `db:"balance_effective_end"`
-		}{}
-		err = d.clickhouseReader.SelectContext(ctx, &ebsBeforeExit, query, args...)
-		if err != nil && err != sql.ErrNoRows {
-			return nil, err
-		}
-		for _, eb := range ebsBeforeExit {
-			effectiveBalances[eb.ValidatorIndex] = eb.EffectiveBalance
-		}
+	ebsBeforeExit := []struct {
+		ValidatorIndex   uint64 `db:"validator_index"`
+		EffectiveBalance uint64 `db:"balance_effective_end"`
+	}{}
+	err = d.clickhouseReader.SelectContext(ctx, &ebsBeforeExit, query, args...)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	for _, eb := range ebsBeforeExit {
+		effectiveBalances[eb.ValidatorIndex] = eb.EffectiveBalance
 	}
 	return effectiveBalances, nil
 }

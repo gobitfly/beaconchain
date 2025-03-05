@@ -151,7 +151,14 @@ func (d *DataAccessService) getTotalRewardsColumns() string {
 	return rewardColumns
 }
 
-func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
+type IncomeInfo struct {
+	Rewards t.ClElValue[decimal.Decimal]
+
+	Apr t.ClElValue[float64]
+}
+
+func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (rewardsApr IncomeInfo, err error) {
+	result := IncomeInfo{}
 	table := ""
 
 	switch hours {
@@ -166,7 +173,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	case -1:
 		table = "validator_dashboard_data_rolling_90d"
 	default:
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid hours value: %v", hours)
+		return IncomeInfo{}, fmt.Errorf("invalid hours value: %v", hours)
 	}
 
 	type RewardsResult struct {
@@ -204,16 +211,16 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 	query, args, err := rewardsDs.Prepared(true).ToSQL()
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+		return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
 	}
 
 	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
 	if err != nil || !rewardsResultTable.Reward.Valid {
-		return decimal.Zero, 0, decimal.Zero, 0, err
+		return IncomeInfo{}, err
 	}
 
 	if rewardsResultTable.ValidatorCount == 0 {
-		return decimal.Zero, 0, decimal.Zero, 0, nil
+		return IncomeInfo{}, nil
 	}
 
 	aprDivisor := hours
@@ -223,15 +230,15 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 	investedAmountUInt, err := d.GetValidatorDashboardEffectiveBalanceTotal(ctx, dashboardId, true)
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error retrieving total effective balance: %w", err)
+		return IncomeInfo{}, fmt.Errorf("error retrieving total effective balance: %w", err)
 	}
 	// invested amount is wrong if the effective balance changed during the period (because of auto compound, consolidation, partial withdrawal etc.)
 	// would need to split at eb changes and weigh results
 	investedAmount := d.convertClToMain(decimal.NewFromUint64(investedAmountUInt))
 
-	clAPR = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor)
+	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor)
 
-	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+	result.Rewards.Cl = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 
 	if hours == -1 {
 		rewardsDs = rewardsDs.
@@ -239,15 +246,15 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 		query, args, err = rewardsDs.Prepared(true).ToSQL()
 		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+			return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
 		}
 
 		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
 		if err != nil || !rewardsResultTotal.Reward.Valid {
-			return decimal.Zero, 0, decimal.Zero, 0, err
+			return IncomeInfo{}, err
 		}
 
-		clIncome = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+		result.Rewards.Cl = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 	}
 
 	elDs := goqu.Dialect("postgres").
@@ -273,15 +280,15 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 	query, args, err = elTableDs.Prepared(true).ToSQL()
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+		return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
+	err = d.alloyReader.GetContext(ctx, &result.Rewards.El, query, args...)
 	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, err
+		return IncomeInfo{}, err
 	}
 
-	elAPR = calcAPR(d.convertElToMain(elIncome), investedAmount, aprDivisor)
+	result.Apr.El = calcAPR(d.convertElToMain(result.Rewards.El), investedAmount, aprDivisor)
 
 	if hours == -1 {
 		elTotalDs := elDs.
@@ -289,16 +296,16 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 		query, args, err = elTotalDs.Prepared(true).ToSQL()
 		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
+			return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
 		}
 
-		err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
+		err = d.alloyReader.GetContext(ctx, &result.Rewards.El, query, args...)
 		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, err
+			return IncomeInfo{}, err
 		}
 	}
 
-	return elIncome, elAPR, clIncome, clAPR, nil
+	return result, nil
 }
 
 // precondition: invested amount and rewards are in the same currency

@@ -878,10 +878,12 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsCl))
 	ret.MissedRewards.ProposerRewards.El = decimal.NewFromFloat(totalMissedRewardsEl)
 
-	ret.Rewards.El, ret.Apr.El, ret.Rewards.Cl, ret.Apr.Cl, err = d.getElClAPR(ctx, dashboardId, groupId, hours)
+	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, hours)
 	if err != nil {
 		return nil, err
 	}
+	ret.Rewards = incomeInfo.Rewards
+	ret.Apr = incomeInfo.Apr
 
 	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(rows[0].EpochStart)
 	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
