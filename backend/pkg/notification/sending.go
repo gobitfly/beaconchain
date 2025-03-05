@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"strings"
@@ -737,14 +736,4 @@ func CountByChannel(notifications []Notification) map[string]int {
 		channelCountMap[notification.Channel] = channelCountMap[notification.Channel] + 1
 	}
 	return channelCountMap
-}
-
-/**
- * Returns the amount of milliseconds between two timestamps. Always returns a positive
- * duration, so you don't have to worry about date ordering
- */
-func GetTimeDiffSeconds(time1 time.Time, time2 time.Time) float64 {
-	duration := time1.Sub(time2)
-	duration.Abs()
-	return math.Abs(float64(duration.Seconds()))
 }
