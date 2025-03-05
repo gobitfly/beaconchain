@@ -320,7 +320,7 @@ const option = computed<EChartsOption>(() => {
       },
       end: dataZoomEnd.value,
       labelFormatter: (_value: number, valueStr: string) => {
-        return formatEpochToDate(parseInt(valueStr), $t('locales.date'))
+        return formatEpochToDate(parseInt(valueStr), 'en-US')
       },
       start: dataZoomStart.value,
       type: 'slider',
@@ -420,7 +420,7 @@ const option = computed<EChartsOption>(() => {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
         formatter: (value: number) => {
-          const date = formatEpochToDate(value, $t('locales.date'))
+          const date = formatEpochToDate(value, 'en-US')
           if (date === undefined) {
             return ''
           }

@@ -3,6 +3,7 @@ import {
   DateTime, type StringUnitLength,
 } from 'luxon'
 import type { ComposerTranslation } from 'vue-i18n'
+import type { Locale } from '~/i18n/i18n.config'
 import type { AgeFormat } from '~/types/settings'
 import type { NumberOrString } from '~/types/value'
 
@@ -45,20 +46,19 @@ export function formatFiatCurrency(
   value: number,
   options: {
     currency?: CurrencyCodeFiat,
-    locales?: string,
+    locale?: Locale,
     maximumFractionDigits?: number,
     minimumFractionDigits?: number,
   } = {},
 ) {
-  const { $i18n } = useNuxtApp()
   const {
     currency = 'EUR',
-    locales = $i18n.t('locales.currency'),
+    locale = 'en-US',
     maximumFractionDigits,
     minimumFractionDigits,
   } = options
 
-  return new Intl.NumberFormat(locales, {
+  return new Intl.NumberFormat(locale, {
     currency,
     maximumFractionDigits,
     minimumFractionDigits,
@@ -69,7 +69,7 @@ export function formatFiatCurrency(
 /**
  * This should convert 0.2069 to 20
  */
-export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
+export function formatFraction(value: NumberOrString, option?: { locale?: Locale }) {
   const {
     locale = 'en-US',
   } = option ?? {}
@@ -84,7 +84,7 @@ export function formatGoTimestamp(
   compareTimestamp?: number,
   format?: AgeFormat,
   style?: StringUnitLength,
-  locales?: string,
+  locales?: Locale,
   withTime?: boolean,
 ) {
   if (typeof timestamp === 'number') {
@@ -109,7 +109,7 @@ export function formatNumber(value: number | string, {
   signDisplay,
   useGrouping,
 }: {
-  locale?: string,
+  locale?: Locale,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
   scaleBy?: number,
@@ -138,7 +138,7 @@ export function formatNumber(value: number | string, {
  */
 export function formatPercent(value: NumberOrString, option?: {
   isFraction?: boolean,
-  locale?: string,
+  locale?: Locale,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
 }) {
@@ -197,7 +197,7 @@ export function formatTimeDuration(
 /**
  * This should convert 20 to 0.2
  */
-export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
+export function formatToFraction(value: NumberOrString, option?: { locale?: Locale }) {
   const {
     locale = 'en-US',
   } = option ?? {}
@@ -213,7 +213,7 @@ export function formatTs(
   timestamp?: number,
   format: AgeFormat = 'relative',
   style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
+  locales: Locale = 'en-US',
   withTime = true,
 ) {
   if (ts === undefined) {
@@ -230,7 +230,7 @@ export function formatTs(
 
 export function formatTsToAbsolute(
   ts: number,
-  locales: string,
+  locales: Locale,
   includeTime?: boolean,
 ): string {
   const timeOptions: Intl.DateTimeFormatOptions = includeTime
@@ -251,7 +251,7 @@ export function formatTsToAbsolute(
     : date.toLocaleDateString(locales, options)
 }
 
-export function formatTsToTime(ts: number, locales: string): string {
+export function formatTsToTime(ts: number, locales: Locale): string {
   const options: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: 'numeric',
@@ -308,7 +308,7 @@ function formatTsToRelative(
   targetTimestamp?: number,
   baseTimestamp?: number,
   style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
+  locales: Locale = 'en-US',
 ): null | string | undefined {
   if (!targetTimestamp) {
     return undefined

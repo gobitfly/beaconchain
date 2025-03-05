@@ -17,7 +17,6 @@ interface Props {
   value?: number | string,
 }
 const props = defineProps<Props>()
-const { t: $t } = useTranslation()
 const { timestamp } = useDate()
 const { ageFormat } = storeToRefs(useSettingsStore())
 
@@ -44,7 +43,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
       break
     case 'slot':
@@ -53,7 +52,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
       break
     case 'epoch':
@@ -63,7 +62,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
   }
 

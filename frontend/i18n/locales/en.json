@@ -543,10 +543,6 @@
         "settings": "Account Settings",
         "slot": "Slot"
     },
-    "locales": {
-        "currency": "en-US",
-        "date": "en-US"
-    },
     "login_and_register": {
         "already_have_account": "Already have an account?",
         "choose_password": "Choose a password",
