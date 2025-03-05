@@ -630,7 +630,7 @@ func collectNotificationQueueMetrics() {
 		eventType := GetEventLabelForNotification(notification)
 
 		// Record the amount of time records that were sent (and that still exist in the queue) took to sent
-		metrics.NotificationsQueue_Sent_Time.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Sent, *notification.Created))
+		metrics.NotificationsQueueSentTime.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Sent, *notification.Created))
 	}
 
 	// Record for each pending notification how long it has been in the queue
@@ -638,31 +638,31 @@ func collectNotificationQueueMetrics() {
 		eventType := GetEventLabelForNotification(notification)
 
 		// Record the amount of time these records have been waiting to been sent
-		metrics.NotificationsQueue_Pending_Time.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Created, now))
+		metrics.NotificationsQueuePendingTime.WithLabelValues(notification.Channel, eventType).Observe(GetTimeDiffMilliseconds(*notification.Created, now))
 	}
 
 	// Count number of pending notifications in the queue by event type
 	eventTypeCount := CountByEventType(pendingNotifications)
 	for eventType, numNotifications := range eventTypeCount {
-		metrics.NotificationsQueue_Event_Size.WithLabelValues(eventType, string(Pending)).Set(float64(numNotifications))
+		metrics.NotificationsQueueEventSize.WithLabelValues(eventType, string(Pending)).Set(float64(numNotifications))
 	}
 
 	// Count number of sent notifications in the queue by event type
 	eventTypeCount = CountByEventType(sentNotifications)
 	for eventType, numNotifications := range eventTypeCount {
-		metrics.NotificationsQueue_Event_Size.WithLabelValues(eventType, string(Sent)).Set(float64(numNotifications))
+		metrics.NotificationsQueueEventSize.WithLabelValues(eventType, string(Sent)).Set(float64(numNotifications))
 	}
 
 	// Count number of pending notifications in the queue by channel
 	channelCount := CountByChannel(pendingNotifications)
 	for channelType, numNotifications := range channelCount {
-		metrics.NotificationsQueue_Channel_Size.WithLabelValues(channelType, string(Pending)).Set(float64(numNotifications))
+		metrics.NotificationsQueueChannelSize.WithLabelValues(channelType, string(Pending)).Set(float64(numNotifications))
 	}
 
 	// Count number of sent notifications in the queue by channel
 	channelCount = CountByChannel(sentNotifications)
 	for channelType, numNotifications := range channelCount {
-		metrics.NotificationsQueue_Channel_Size.WithLabelValues(channelType, string(Sent)).Set(float64(numNotifications))
+		metrics.NotificationsQueueChannelSize.WithLabelValues(channelType, string(Sent)).Set(float64(numNotifications))
 	}
 }
 
