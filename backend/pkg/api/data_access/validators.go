@@ -80,8 +80,8 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 	return effectiveBalances, nil
 }
 
-func (d *DataAccessService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, validators []t.VDBValidator) (uint64, error) {
-	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
+func (d *DataAccessService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (uint64, error) {
+	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, onlyActive)
 	if err != nil {
 		return 0, err
 	}
