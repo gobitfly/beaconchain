@@ -106,7 +106,6 @@ func (ssv *ssvExporter) saveSSV(res *types.SSVExporterResponse) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(time.Millisecond * 100)
 
 	batchSize := 5000
 	for start := 0; start < len(res.Data); start += batchSize {
@@ -126,7 +125,6 @@ func (ssv *ssvExporter) saveSSV(res *types.SSVExporterResponse) error {
 	if err != nil {
 		return err
 	}
-	time.Sleep(time.Millisecond * 100)
 
 	return nil
 }

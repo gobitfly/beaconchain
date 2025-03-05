@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
@@ -37,16 +38,16 @@ type ModuleInterface interface {
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
-func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
+func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
 		dbs := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
-		go networkLivenessUpdater(context.ConsClient)
-		go genesisDepositsExporter(context.ConsClient)
-		go syncCommitteesExporter(context.ConsClient)
+		go networkLivenessUpdater(moduleCtx.ConsClient)
+		go genesisDepositsExporter(moduleCtx.ConsClient)
+		go syncCommitteesExporter(moduleCtx.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
 			ssvExporter := newSSVExporter(dbs)
-			go ssvExporter.Export()
+			go ssvExporter.Export(context.Background())
 		}
 		if utils.Config.RocketpoolExporter.Enabled {
 			go rocketpoolExporter()
@@ -62,7 +63,7 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 	}
 	// wait until the beacon-node is available
 	for {
-		head, err := context.ConsClient.GetChainHead()
+		head, err := moduleCtx.ConsClient.GetChainHead()
 		if err == nil {
 			log.Infof("beacon node is available with head slot: %v", head.HeadSlot)
 			break
@@ -71,10 +72,10 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		time.Sleep(time.Second * 10)
 	}
 	// start subscription modules
-	startSubscriptionModules(&context, modules)
+	startSubscriptionModules(&moduleCtx, modules)
 }
 
-func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
+func startSubscriptionModules(moduleCtx *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
 	log.Infof("initialising exporter modules")
 
@@ -95,7 +96,7 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
-	events := context.CL.GetEvents([]types.EventTopic{
+	events := moduleCtx.CL.GetEvents([]types.EventTopic{
 		types.EventHead,
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
