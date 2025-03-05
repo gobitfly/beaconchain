@@ -2632,14 +2632,14 @@ func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, e
 func TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
 	res, err := tx.Exec(`
-	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validator_index, address, amount)
+	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validatorindex, address, amount)
 		SELECT
 				slot AS block_slot,
 				block_root AS block_root,
-				-20000 + event_index AS request_index,
-				(data->>'validator_index')::int AS validator_index,
+				-20000 + event_index AS withdrawalindex,
+				(data->>'validator_index')::int AS validatorindex,
 				''::bytea as address,
-				(data->>'amount')::bigint AS amount,
+				(data->>'amount')::bigint AS amount
 		FROM consensus_layer_events WHERE event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
 `, firstSlot, lastSlot)
 	if err != nil {
