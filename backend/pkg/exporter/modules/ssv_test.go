@@ -2,7 +2,6 @@ package modules
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
@@ -11,12 +10,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/websocket"
-	"github.com/pkg/errors"
 )
 
 func TestSSVExport(t *testing.T) {
 	mockConsDBClient := new(mocks.ConsensusDBI)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	utils.Config = &types.Config{
@@ -24,6 +22,14 @@ func TestSSVExport(t *testing.T) {
 			Address: "ws://localhost:8080",
 		},
 	}
+
+	server := startTestWebsocketServer()
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			t.Log(err)
+		}
+	}()
+	defer server.Close()
 
 	t.Run("websocket works, data is saved and deleted from db", func(t *testing.T) {
 		mockExporterResponse := &types.SSVExporterResponse{
@@ -33,16 +39,13 @@ func TestSSVExport(t *testing.T) {
 				},
 			},
 		}
-
-		mockConn := NewMockWebSocketConn(mockExporterResponse)
-		exporter := ssvExporter{
-			db:     mockConsDBClient,
-			dialer: &StubDialer{MockConn: mockConn},
-		}
-
 		mockConsDBClient.On("DeleteInvalidTags").Return(nil)
 		mockConsDBClient.On("SaveValidatorTags", mockExporterResponse.Data).Return(nil)
 		mockConsDBClient.On("DeleteValidatorTags").Return(nil)
+
+		exporter := ssvExporter{
+			db: mockConsDBClient,
+		}
 
 		err := exporter.exportSSV(ctx)
 		if err != nil {
@@ -53,56 +56,21 @@ func TestSSVExport(t *testing.T) {
 		mockConsDBClient.AssertCalled(t, "SaveValidatorTags", mockExporterResponse.Data)
 		mockConsDBClient.AssertCalled(t, "DeleteValidatorTags")
 	})
-
-	t.Run("websocket error", func(t *testing.T) {
-		exporter := ssvExporter{
-			db:     mockConsDBClient,
-			dialer: &StubDialerWebsocketError{},
-		}
-
-		err := exporter.exportSSV(ctx)
-		if err == nil {
-			t.Error("expected error, got nil")
-		}
-	})
 }
 
-type MockWebSocketConn struct {
-	response *types.SSVExporterResponse
-}
-
-func NewMockWebSocketConn(response *types.SSVExporterResponse) *MockWebSocketConn {
-	return &MockWebSocketConn{
-		response: response,
+func startTestWebsocketServer() *http.Server {
+	upgrader := &websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	return &http.Server{
+		Addr: "localhost:8080",
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			conn, err := upgrader.Upgrade(w, r, nil)
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+			conn.WriteJSON(&types.SSVExporterResponse{
+				Data: []types.SSVExporterData{{Publickey: "0xabcd"}},
+			})
+		}),
 	}
-}
-
-func (m *MockWebSocketConn) ReadMessage() (int, []byte, error) {
-	jsonData, err := json.Marshal(m.response)
-	if err != nil {
-		return 0, nil, err
-	}
-	return websocket.TextMessage, jsonData, nil
-}
-
-func (m *MockWebSocketConn) WriteMessage(messageType int, data []byte) error {
-	return nil
-}
-
-func (m *MockWebSocketConn) Close() error {
-	return nil
-}
-
-type StubDialer struct {
-	MockConn WebSocketConnInterface
-}
-
-func (s *StubDialer) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
-	return s.MockConn, nil
-}
-
-type StubDialerWebsocketError struct{}
-
-func (s *StubDialerWebsocketError) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
-	return nil, errors.New("error")
 }

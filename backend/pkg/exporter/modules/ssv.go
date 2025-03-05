@@ -3,7 +3,6 @@ package modules
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -15,14 +14,12 @@ import (
 )
 
 type ssvExporter struct {
-	db     db.ConsensusDBI
-	dialer Dialer
+	db db.ConsensusDBI
 }
 
 func newSSVExporter(db db.ConsensusDBI) *ssvExporter {
 	return &ssvExporter{
-		db:     db,
-		dialer: &WebSocketDialer{},
+		db: db,
 	}
 }
 
@@ -44,11 +41,12 @@ func (ssv *ssvExporter) Export(ctx context.Context) {
 }
 
 func (ssv *ssvExporter) exportSSV(ctx context.Context) error {
-	conn, err := ssv.dialer.Dial(utils.Config.SSVExporter.Address, nil)
+	conn, resp, err := websocket.DefaultDialer.Dial(utils.Config.SSVExporter.Address, nil)
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
+	defer resp.Body.Close()
 
 	done := make(chan struct{})
 	go func() {
@@ -126,25 +124,4 @@ func (ssv *ssvExporter) saveSSV(res *types.SSVExporterResponse) error {
 	}
 
 	return nil
-}
-
-type WebSocketConnInterface interface {
-	ReadMessage() (int, []byte, error)
-	WriteMessage(messageType int, data []byte) error
-	Close() error
-}
-
-type Dialer interface {
-	Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error)
-}
-
-type WebSocketDialer struct{}
-
-func (d *WebSocketDialer) Dial(url string, requestHeader http.Header) (WebSocketConnInterface, error) {
-	conn, resp, err := websocket.DefaultDialer.Dial(url, requestHeader)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close() // close resp body even thoguh we don't use it to satisfy linter
-	return conn, nil
 }
