@@ -550,17 +550,15 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		return
 	}
 	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
-	limitEB := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
+	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
 	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId})
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	var spaceLeftEB uint64
-	if isUserAdmin(userInfo) {
-		spaceLeftEB = math.MaxUint64 // no limit for admins
-	} else if limitEB > existingEB {
-		spaceLeftEB = limitEB - existingEB
+	if ebLimit > existingEB {
+		spaceLeftEB = ebLimit - existingEB
 	}
 
 	var data []types.VDBPostValidatorsData
@@ -960,7 +958,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			return
 		}
 		if dashboardInfo.EffectiveBalance.GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
-			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
+			returnConflict(w, r, errors.New("maximum effective balance in dashboards reached"))
 			return
 		}
 	}
