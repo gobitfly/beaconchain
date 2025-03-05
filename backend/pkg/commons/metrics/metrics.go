@@ -86,20 +86,20 @@ var (
 		Name: "counter",
 		Help: "Generic counter of events with name in labels",
 	}, []string{"name"})
-	NotificationsQueue_Event_Size = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	NotificationsQueueEventSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "notifications_queue_event_size",
 		Help: "Number of notifications in the queue by event type and status",
 	}, []string{"event_type", "status"})
-	NotificationsQueue_Channel_Size = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	NotificationsQueueChannelSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "notifications_queue_channel_size",
 		Help: "Number of notifications in the queue by channel and status",
 	}, []string{"channel", "status"})
-	NotificationsQueue_Pending_Time = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "notifications_queue_pending_duration_milliseconds",
+	NotificationsQueuePendingTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_pending_duration_seconds",
 		Help: "How long pending notifications have been in the queue",
 	}, []string{"channel", "event_type"})
-	NotificationsQueue_Sent_Time = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "notifications_queue_sent_duration_milliseconds",
+	NotificationsQueueSentTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_sent_duration_seconds",
 		Help: "Amount of time notification took to be successfully sent",
 	}, []string{"channel", "event_type"})
 )
