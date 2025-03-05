@@ -2422,7 +2422,7 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
-func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
+func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs [][]byte) error {
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
@@ -2434,7 +2434,7 @@ func (c *ConsensusDB) SaveValidatorTags(valueStrings []string, valueArgs []inter
 			INSERT INTO validator_tags (publickey, tag)
 			VALUES %s
 			ON CONFLICT (publickey, tag) DO NOTHING`,
-			strings.Join(valueStrings, ",")), valueArgs...)
+			strings.Join(valueStrings, ",")), pq.ByteaArray(valueArgs))
 
 	if err != nil {
 		return err

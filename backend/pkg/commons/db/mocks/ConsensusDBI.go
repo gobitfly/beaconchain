@@ -46,7 +46,7 @@ func (_m *ConsensusDBI) DeleteValidatorTags() error {
 }
 
 // SaveValidatorTags provides a mock function with given fields: valueStrings, valueArgs
-func (_m *ConsensusDBI) SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error {
+func (_m *ConsensusDBI) SaveValidatorTags(valueStrings []string, valueArgs [][]byte) error {
 	ret := _m.Called(valueStrings, valueArgs)
 
 	if len(ret) == 0 {
@@ -54,7 +54,7 @@ func (_m *ConsensusDBI) SaveValidatorTags(valueStrings []string, valueArgs []int
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]string, []interface{}) error); ok {
+	if rf, ok := ret.Get(0).(func([]string, [][]byte) error); ok {
 		r0 = rf(valueStrings, valueArgs)
 	} else {
 		r0 = ret.Error(0)

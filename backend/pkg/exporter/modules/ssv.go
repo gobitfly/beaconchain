@@ -186,10 +186,10 @@ func (ssv *ssvExporter) insertSSVTags(response *SSVExporterResponse) error {
 	return nil
 }
 
-func prepareBatchInsert(data []SSVExporterData) ([]string, []interface{}) {
+func prepareBatchInsert(data []SSVExporterData) ([]string, [][]byte) {
 	index := 1
 	valueStrings := make([]string, 0, len(data))
-	valueArgs := make([]interface{}, 0, len(data)*index)
+	valueArgs := make([][]byte, 0, len(data)*index)
 
 	for i, d := range data {
 		pubkey, err := hex.DecodeString(strings.Replace(d.Publickey, "0x", "", -1))

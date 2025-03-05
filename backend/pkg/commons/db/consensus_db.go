@@ -8,7 +8,7 @@ type ConsensusDB struct {
 }
 
 type ConsensusDBI interface {
-	SaveValidatorTags(valueStrings []string, valueArgs []interface{}) error
+	SaveValidatorTags(valueStrings []string, valueArgs [][]byte) error
 	DeleteValidatorTags() error
 	DeleteInvalidTags() error
 }
