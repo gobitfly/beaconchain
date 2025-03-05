@@ -537,6 +537,10 @@ func (d *DummyService) GetSearchValidatorsByGraffitiHex(ctx context.Context, cha
 	return getDummyStruct[t.SearchValidatorsByGraffiti](ctx)
 }
 
+func (d *DummyService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
+	return getDummyData[map[t.VDBValidator]uint64](ctx)
+}
+
 func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }

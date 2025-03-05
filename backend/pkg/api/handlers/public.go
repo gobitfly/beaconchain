@@ -958,7 +958,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			return
 		}
 		if dashboardInfo.EffectiveBalance.GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
-			returnConflict(w, r, errors.New("maximum number of validators in dashboards reached"))
+			returnConflict(w, r, errors.New("maximum effective balance in dashboards reached"))
 			return
 		}
 	}
