@@ -151,6 +151,7 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		if err != nil {
 			return nil, err
 		}
+		// TODO check if we also need a count limit because of cf url length limits
 		if validatorEb > maxEBInList {
 			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", maxEBInList/1e9)
 		}
