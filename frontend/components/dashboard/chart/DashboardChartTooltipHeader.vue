@@ -56,7 +56,7 @@ const dateText = computed(() => {
     undefined,
     'absolute',
     'narrow',
-    props.t('locales.date'),
+    'en-US',
     true,
   )
   if (!endTs.value) {
@@ -67,7 +67,7 @@ const dateText = computed(() => {
     undefined,
     'absolute',
     'narrow',
-    props.t('locales.date'),
+    'en-US',
     true,
   )
 
