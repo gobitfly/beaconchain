@@ -689,6 +689,13 @@ func ExtractEventNameFromNotification(notification Notification) (*types.EventNa
 		}
 	}
 
+	// Also grab legacy labels, unfortunately some systems still submit these.
+	for eventName, eventDescription := range types.LegacyEventLabel {
+		if strings.Contains(notification.Content, eventDescription) {
+			return &eventName, nil
+		}
+	}
+
 	return nil, fmt.Errorf("no EventName found for notification %d matching any event descriptions", notification.Id)
 }
 
