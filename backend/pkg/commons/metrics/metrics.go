@@ -91,8 +91,8 @@ var (
 		Help: "Number of notifications in the queue by event type and status",
 	}, []string{"event_type", "status"})
 	NotificationsQueue_Channel_Size = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "notifications_queue_channel_pending_size",
-		Help: "Number of pending notifications in the queue by channel",
+		Name: "notifications_queue_channel_size",
+		Help: "Number of notifications in the queue by channel and status",
 	}, []string{"channel", "status"})
 	NotificationsQueue_Pending_Time = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "notifications_queue_pending_duration_milliseconds",
