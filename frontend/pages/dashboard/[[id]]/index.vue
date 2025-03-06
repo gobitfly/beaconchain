@@ -18,9 +18,14 @@ import {
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
-const { isLoggedIn } = useUserStore()
+const {
+  isLoggedIn,
+  premium_perks,
+} = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
+
+const { hasReachedSubscriptionLimit } = useNotificationSubscriptionLimitReached()
 
 const tabs: HashTabs = [
   {
@@ -85,6 +90,30 @@ const seoTitle = computed(() => {
 })
 
 useBcSeo(seoTitle, true)
+
+function useNotificationSubscriptionLimitReached() {
+  const userDashboardStore = useUserDashboardStore()
+  const {
+    dashboards,
+  } = storeToRefs(userDashboardStore)
+  const { dashboardKey } = useDashboardKeyProvider()
+
+  const currentDashboard = computed(() => {
+    return dashboards.value?.validator_dashboards.find(
+      dashboard => `${dashboard.id}` === dashboardKey.value,
+    )
+  })
+
+  const hasReachedSubscriptionLimit = computed(() => {
+    if (!premium_perks.value?.effective_balance_per_dashboard || !currentDashboard.value) {
+      return false
+    }
+    return premium_perks.value?.effective_balance_per_dashboard
+      <= currentDashboard.value?.effective_balance
+  })
+
+  return { hasReachedSubscriptionLimit }
+}
 
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
@@ -204,6 +233,18 @@ watch(
       :display-mode="'modal'"
     />
     <BcPageWrapper>
+      <template #banner>
+        <BcNotificationBanner
+          v-if="hasReachedSubscriptionLimit"
+          :title="$t('dashboard.subsciprion_limit_reached_title')"
+        >
+          <BcTranslation
+            keypath="dashboard.subsciprion_limit_reached.template"
+            linkpath="dashboard.subsciprion_limit_reached._link"
+            to="/pricing"
+          />
+        </BcNotificationBanner>
+      </template>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardControls :dashboard-title="overview?.name" />
