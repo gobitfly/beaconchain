@@ -906,7 +906,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	if totalBlockChance > 0 {
-		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance * 100
+		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
 		ret.Luck.Proposal.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalBlockChance) * float64(time.Hour)).Seconds())
@@ -922,7 +922,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncSlotDuties := float64(ret.SyncCommittee.StatusCount.Failed) + float64(ret.SyncCommittee.StatusCount.Success)
 		slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
 		syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
-		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
+		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
 		ret.Luck.Sync.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalSyncExpected) * float64(time.Hour)).Seconds())
@@ -962,7 +962,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	if totalIdealAttestationRewards > 0 {
 		attestationEfficiency.Float64 = decimal.NewFromInt(totalAttestationRewards).Div(decimal.NewFromInt(totalIdealAttestationRewards)).InexactFloat64()
 		attestationEfficiency.Valid = true
-		ret.AttestationEfficiency = max(attestationEfficiency.Float64*100, 0)
+		ret.AttestationEfficiency = max(attestationEfficiency.Float64, 0)
 	}
 	if totalBlocksScheduled > 0 {
 		proposerEfficiency.Float64 = float64(totalBlocksProposed) / float64(totalBlocksScheduled)

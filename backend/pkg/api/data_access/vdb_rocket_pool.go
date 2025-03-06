@@ -196,8 +196,7 @@ func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context,
 			return rpNetworkStats.NodeOperatorRewards.
 				Mul(share).
 				Div(node.StakedRPL).
-				Mul(periodsPerYear).
-				Mul(decimal.NewFromInt(100)).InexactFloat64()
+				Mul(periodsPerYear).InexactFloat64()
 		}
 		return 0
 	}
@@ -216,7 +215,7 @@ func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context,
 			currentETH := node.StakedRPL.Mul(rplPrice)
 			minETH := node.RPLStakeMin.Mul(rplPrice).Mul(decimal.NewFromInt(10))
 
-			return currentETH.Div(minETH).Mul(decimal.NewFromInt(100)).InexactFloat64()
+			return currentETH.Div(minETH).InexactFloat64()
 		}
 		return 0
 	}
