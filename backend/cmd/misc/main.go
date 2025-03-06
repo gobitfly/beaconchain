@@ -82,7 +82,9 @@ var opts = struct {
  * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
-	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"app-bundle":         (&commands.AppBundleCommand{}).Requires(),
+	"initBigtableSchema": {Bigtable: true},
+	"applyDbSchema":      {NetworkDBs: true, Clickhouse: true},
 }
 
 func Run() {
@@ -148,6 +150,7 @@ func Run() {
 			ElNode:     true,
 			UserDBs:    true,
 			NetworkDBs: true,
+			Clickhouse: true,
 		}
 	}
 
@@ -198,10 +201,11 @@ func Run() {
 		defer db.FrontendWriterDB.Close()
 	}
 
-	// clickhouse
-	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
-	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	if requires.Clickhouse {
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
+		defer db.ClickHouseReader.Close()
+		defer db.ClickHouseWriter.Close()
+	}
 
 	// Initialize the persistent redis client
 	if requires.Redis {

@@ -15,6 +15,8 @@ const ChainIDs = {
 
   Holesky: 17000,
 
+  LocalDevnet: 3151908,
+
   Sepolia: 11155111,
 } as const
 
@@ -150,6 +152,32 @@ export const ChainInfo: Record<ChainId, ChainInfoFields> = {
     shortName: 'Holesky',
     slotsPerEpoch: 32,
     timeStampSlot0: 1695902400,
+  },
+  [ChainIDs.LocalDevnet]: {
+    clCurrency: 'ETH',
+    description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
+    elCurrency: 'ETH',
+    family: ChainFamily.Ethereum,
+    hasRocketPool: false,
+    mainCurrency: 'ETH',
+    mainNet: ChainIDs.Ethereum,
+    name: 'Ethereum Local Devnet',
+    nameParts: [
+      'Ethereum',
+      'Local',
+      'Devnet',
+    ],
+    priority: 99,
+    secondsPerSlot: 12,
+    shortName: 'Devnet',
+    slotsPerEpoch: 32,
+    timeStampSlot0: Date.now(),
   },
   [ChainIDs.Sepolia]: {
     clCurrency: 'ETH',
