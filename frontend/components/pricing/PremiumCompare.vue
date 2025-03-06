@@ -59,9 +59,8 @@ const rows = computed(() => {
 
     if (property === 'effective_balance_per_dashboard') {
       value = formatAmount(`${perks.effective_balance_per_dashboard}`, {
-        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
         targetCurrency: displayCurrencyDefault.main,
-        targetUnit: 'gwei',
       })
     }
 

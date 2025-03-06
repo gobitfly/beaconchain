@@ -23,7 +23,7 @@ defineProps<({
         :key="addon.product_id_yearly"
         :addon
         :is-payment-yearly
-        :effective-balance-per-dashboard-limit="products?.effective_balance_per_dashboard_limit"
+        :effective-balance-per-dashboard-limit="products?.effective_balance_per_dashboard_limit ?? '0'"
       />
     </div>
   </div>
