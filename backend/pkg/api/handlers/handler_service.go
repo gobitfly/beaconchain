@@ -14,7 +14,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
-	"golang.org/x/exp/maps"
 
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
@@ -158,19 +157,6 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		return &types.VDBId{Validators: validators}, nil
 	}
 	return nil, errMsgParsingId
-}
-
-func (h *HandlerService) applyEBFiler(validatorEbs map[types.VDBValidator]uint64, ebLimit uint64) ([]types.VDBValidator, error) {
-	newValidatorsList := maps.Keys(validatorEbs)
-
-	var newEbAccumulator uint64
-	for _, validator := range newValidatorsList {
-		if newEbAccumulator+validatorEbs[validator] > ebLimit {
-			return nil, fmt.Errorf("effective balance limit exceeded")
-		}
-		newEbAccumulator += validatorEbs[validator]
-	}
-	return newValidatorsList, nil
 }
 
 // handleDashboardId is a helper function to both validate the dashboard id param and convert it to a VDBId.
