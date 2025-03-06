@@ -53,12 +53,18 @@ const getOldMaxEffectiveBalance = (
 const oldMaxEffectiveBalance = Number(getOldMaxEffectiveBalance())
 const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
 
-// we don't charge per Validator anymore, but this is used to show users that the price
-// they used to pay per Validator hasn't changed now that we charge by Effective Balance
-const pricePerValidator = computed(() => {
-  return (productPrice.value * oldMaxEffectiveBalance)
-    / product.premium_perks.effective_balance_per_dashboard
-    / product.premium_perks.validator_dashboards
+// This is used to show users that the price they used to pay per Validator
+// hasn't changed now that we charge by Effective Balance
+const pricePerOldMaxEffectiveBalance = computed(() => {
+  const pricePerDashboard = divideBigNumbers(
+    (productPrice.value * oldMaxEffectiveBalance),
+    product.premium_perks.validator_dashboards,
+  )
+
+  return divideBigNumbers(
+    pricePerDashboard,
+    product.premium_perks.effective_balance_per_dashboard,
+  )
 })
 
 const totalYearlyPricePerMonth = computed(() => {
@@ -88,11 +94,14 @@ const percentages = computed(() => {
         / bestProduct.premium_perks.chart_history_seconds.hourly)
       * 100
   }
+
+  const effectiveBalancePerDashbordRatio = divideBigNumbers(product.premium_perks.effective_balance_per_dashboard,
+    bestProduct.premium_perks.effective_balance_per_dashboard)
+
+  const effectiveBalancePerDashboard = formatNumber(effectiveBalancePerDashbordRatio, { scaleBy: 2 })
+
   return {
-    effectiveBalancePerDashboard:
-      (product.premium_perks.effective_balance_per_dashboard
-        / bestProduct.premium_perks.effective_balance_per_dashboard)
-      * 100,
+    effectiveBalancePerDashboard,
     heatmapChart: chartPercent,
     summaryChart: chartPercent,
     validatorDashboards:
@@ -195,8 +204,8 @@ const mainFeatures = computed<Feature[]>(() => {
       name: $t('pricing.premium_product.max_effective_balance', { amount: maxDashboardEffectiveBalance }),
       percentage: percentages.value.effectiveBalancePerDashboard,
       subtext: $t('pricing.per_min_validator_deposit', {
-        amount: formatFiatCurrency(pricePerValidator.value, {
-          minimumFractionDigits: 4,
+        amount: formatFiatCurrency(Number(pricePerOldMaxEffectiveBalance.value), {
+          minimumFractionDigits: 6,
         }),
         old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
       }),

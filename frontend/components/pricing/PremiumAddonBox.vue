@@ -16,7 +16,7 @@ const {
   isPaymentYearly,
 } = defineProps<({
   addon: ExtraDashboardValidatorsPremiumAddon,
-  effectiveBalancePerDashboardLimit?: number,
+  effectiveBalancePerDashboardLimit: string,
   isPaymentYearly: boolean,
 })>()
 
@@ -68,11 +68,13 @@ const getOldMaxEffectiveBalance = (
 const oldMaxEffectiveBalance = Number(getOldMaxEffectiveBalance())
 const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
 
-// we don't charge per Validator anymore, but this is used to show users that the price
-// they used to pay per Validator hasn't changed now that we charge by Effective Balance
+// This is used to show users that the price they used to pay per Validator
+// hasn't changed now that we charge by Effective Balance
 const pricePerValidator = computed(() => {
-  return (pricePerUnit.value * oldMaxEffectiveBalance)
-    / addon.extra_dashboard_effective_balance
+  return divideBigNumbers(
+    (pricePerUnit.value * oldMaxEffectiveBalance),
+    addon.extra_dashboard_effective_balance,
+  )
 })
 
 const yearlySubscriptionSavings = computed(() => {
@@ -105,10 +107,14 @@ const isQuantityLimitReached = computed(() => {
 })
 
 const maximumQuantity = computed(() => {
+  const unusedDashboardEffectiveBalance = addBigNumbers(
+    effectiveBalancePerDashboardLimit ?? 0,
+    -(premium_perks.value?.effective_balance_per_dashboard ?? 0),
+  )
+  const extraAddonEffectiveBalanacePerDashboard = addon.extra_dashboard_effective_balance
+
   return Math.floor(
-    (effectiveBalancePerDashboardLimit || 0
-    - (premium_perks.value?.effective_balance_per_dashboard || 0))
-  / addon.extra_dashboard_effective_balance,
+    Number(divideBigNumbers(unusedDashboardEffectiveBalance, extraAddonEffectiveBalanacePerDashboard)),
   )
 })
 
@@ -164,7 +170,7 @@ const handleSubmitPurchase = async () => {
       <span class="premium-addon-box__title-detail">
         {{ $t('pricing.per_min_validator_deposit', {
           amount: formatFiatCurrency(pricePerValidator, {
-            minimumFractionDigits: 4,
+            minimumFractionDigits: 5,
           }),
           old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
         }) }}

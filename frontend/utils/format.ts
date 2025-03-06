@@ -43,7 +43,7 @@ export function commmifyLeft(value: string): string {
 }
 
 export function formatFiatCurrency(
-  value: number,
+  value: number | string,
   options: {
     currency?: CurrencyCodeFiat,
     locale?: Locale,
@@ -63,7 +63,7 @@ export function formatFiatCurrency(
     maximumFractionDigits,
     minimumFractionDigits,
     style: 'currency',
-  }).format(value)
+  }).format(value as `${number}`)
 }
 
 /**
