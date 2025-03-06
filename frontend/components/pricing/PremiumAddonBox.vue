@@ -85,7 +85,6 @@ const yearlySubscriptionSavings = computed(() => {
 const extraEffectiveBalance = computed(() =>
   formatAmount(`${addon.extra_dashboard_effective_balance}`, {
     minimumFractionDigits: 0,
-    sourceUnit: 'wei',
     targetCurrency: displayCurrencyDefault.main,
 
   }),
