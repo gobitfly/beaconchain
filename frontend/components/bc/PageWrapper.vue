@@ -13,6 +13,7 @@ defineProps<{
       :minimalist="!!minimalistHeader"
     />
     <BcMaintenanceBanner />
+    <slot name="banner" />
     <div class="content">
       <slot name="top" />
       <!-- <BcAdControl /> -->
