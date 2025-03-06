@@ -181,7 +181,7 @@ func Run() {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context, exporterDb),
+			modules.NewSlotExporter(context, context.ConsClient, exporterDb),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),

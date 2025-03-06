@@ -31,7 +31,7 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 )
 
-type slotExporterData struct {
+type slotExporter struct {
 	ModuleContext
 	Client         rpc.Client
 	db             edb.SlotExporterRepository
@@ -42,10 +42,10 @@ type slotExporterData struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, db edb.SlotExporterRepository) ModuleInterface {
-	return &slotExporterData{
+func NewSlotExporter(moduleContext ModuleContext, client rpc.Client, db edb.SlotExporterRepository) ModuleInterface {
+	return &slotExporter{
 		ModuleContext:  moduleContext,
-		Client:         moduleContext.ConsClient,
+		Client:         client,
 		db:             db,
 		FirstRun:       true,
 		latestEpoch:    0,
@@ -57,7 +57,7 @@ func NewSlotExporter(moduleContext ModuleContext, db edb.SlotExporterRepository)
 
 var processSlotMutex = &sync.Mutex{}
 
-func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err error) {
+func (e *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error) {
 	if !processSlotMutex.TryLock() {
 		log.Infof("slotExporter is still running, skipping this run")
 		return nil
@@ -67,26 +67,26 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	// cache handling
 	defer func() {
 		if err == nil {
-			if d.latestEpoch > 0 && cache.LatestEpoch.Get() < d.latestEpoch {
-				err := cache.LatestEpoch.Set(d.latestEpoch)
+			if e.latestEpoch > 0 && cache.LatestEpoch.Get() < e.latestEpoch {
+				err := cache.LatestEpoch.Set(e.latestEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestEpoch in cache", 0)
 				}
 			}
-			if d.latestSlot > 0 && cache.LatestSlot.Get() < d.latestSlot {
-				err := cache.LatestSlot.Set(d.latestSlot)
+			if e.latestSlot > 0 && cache.LatestSlot.Get() < e.latestSlot {
+				err := cache.LatestSlot.Set(e.latestSlot)
 				if err != nil {
 					log.Error(err, "error setting latestSlot in cache", 0)
 				}
 			}
-			if d.finalizedEpoch > 0 && cache.LatestFinalizedEpoch.Get() < d.finalizedEpoch {
-				err := cache.LatestFinalizedEpoch.Set(d.finalizedEpoch)
+			if e.finalizedEpoch > 0 && cache.LatestFinalizedEpoch.Get() < e.finalizedEpoch {
+				err := cache.LatestFinalizedEpoch.Set(e.finalizedEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestFinalizedEpoch in cache", 0)
 				}
 			}
-			if d.latestProposed > 0 && cache.LatestProposedSlot.Get() < d.latestProposed {
-				err := cache.LatestProposedSlot.Set(d.latestProposed)
+			if e.latestProposed > 0 && cache.LatestProposedSlot.Get() < e.latestProposed {
+				err := cache.LatestProposedSlot.Set(e.latestProposed)
 				if err != nil {
 					log.Error(err, "error setting latestProposedSlot in cache", 0)
 				}
@@ -95,7 +95,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	}()
 
 	// get the current chain head
-	head, err := d.Client.GetChainHead()
+	head, err := e.Client.GetChainHead()
 	if err != nil {
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
@@ -106,22 +106,22 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	}
 	defer utils.Rollback(tx)
 
-	if d.FirstRun {
-		if err := d.handleFirstRun(head, tx); err != nil {
+	if e.FirstRun {
+		if err := e.handleFirstRun(head, tx); err != nil {
 			return err
 		}
-		d.FirstRun = false
+		e.FirstRun = false
 	}
 
 	// at this point we know that we have a coherent list of slots in the database without any gaps
 
-	if err := d.exportNewSlots(head, tx); err != nil {
+	if err := e.exportNewSlots(head, tx); err != nil {
 		return err
 	}
 
 	// at this point we have all data up to the current chain head in the database
 
-	if err := d.handleFinalizedSlots(head, tx); err != nil {
+	if err := e.handleFinalizedSlots(head, tx); err != nil {
 		return err
 	}
 
@@ -129,15 +129,15 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 		return fmt.Errorf("error committing tx: %w", err)
 	}
 
-	d.latestEpoch = utils.EpochOfSlot(head.HeadSlot)
-	d.latestSlot = head.HeadSlot
+	e.latestEpoch = utils.EpochOfSlot(head.HeadSlot)
+	e.latestSlot = head.HeadSlot
 
 	services.ReportStatus("slotExporter", "Running", nil)
 
 	return nil
 }
 
-func (e *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
+func (e *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
 	// get all slots we currently have in the database
 	dbSlots, err := e.db.GetAllSlots(tx)
 	if err != nil {
@@ -180,7 +180,7 @@ func (e *slotExporterData) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) er
 	return nil
 }
 
-func (e *slotExporterData) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
+func (e *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
 	lastDbSlot, err := e.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -225,7 +225,7 @@ func (e *slotExporterData) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) er
 	return nil
 }
 
-func (e *slotExporterData) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
+func (e *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := e.db.GetAllNonFinalizedSlots()
 	if err != nil {
@@ -242,7 +242,7 @@ func (e *slotExporterData) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.
 
 		if nodeSlotFinalized != dbSlot.Finalized {
 			log.Infof("checking slot %d for finalization / reorgs", dbSlot.Slot)
-			header, err = d.Client.GetBlockHeader(dbSlot.Slot)
+			header, err = e.Client.GetBlockHeader(dbSlot.Slot)
 
 			if err != nil {
 				return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
@@ -328,7 +328,7 @@ func (e *slotExporterData) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.
 	return nil
 }
 
-type slotExport struct {
+type exporter struct {
 	Client rpc.Client
 	db     edb.SlotExporterRepository
 	dbTx   *sqlx.Tx
@@ -338,8 +338,8 @@ type slotExport struct {
 	headEpoch      bool
 }
 
-func NewSlotExport(client rpc.Client, slot, latestProposed uint64, headEpoch bool, dbTx *sqlx.Tx) *slotExport {
-	return &slotExport{
+func NewSlotExport(client rpc.Client, slot, latestProposed uint64, headEpoch bool, dbTx *sqlx.Tx) *exporter {
+	return &exporter{
 		Client:         client,
 		dbTx:           dbTx,
 		slot:           slot,
@@ -348,7 +348,7 @@ func NewSlotExport(client rpc.Client, slot, latestProposed uint64, headEpoch boo
 	}
 }
 
-func (s *slotExport) ExportSlot() error {
+func (s *exporter) ExportSlot() error {
 	isFirstSlotOfEpoch := s.slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := s.slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -398,7 +398,7 @@ func (s *slotExport) ExportSlot() error {
 	return nil
 }
 
-func (s *slotExport) exportDuties(block *types.Block) error {
+func (s *exporter) exportDuties(block *types.Block) error {
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
@@ -432,7 +432,7 @@ func (s *slotExport) exportDuties(block *types.Block) error {
 	return nil
 }
 
-func (s *slotExport) exportEpochAssignments(client rpc.Client, block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
+func (s *exporter) exportEpochAssignments(client rpc.Client, block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
 	epoch := utils.EpochOfSlot(block.Slot)
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
@@ -535,7 +535,7 @@ func (s *slotExport) exportEpochAssignments(client rpc.Client, block *types.Bloc
 	return nil
 }
 
-func (s *slotExport) saveEpochAssignmentsToRedis(client rpc.Client, block *types.Block, epoch uint64, isHeadEpoch bool) error {
+func (s *exporter) saveEpochAssignmentsToRedis(client rpc.Client, block *types.Block, epoch uint64, isHeadEpoch bool) error {
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
 		Epoch:       types.Epoch(epoch),
 		Assignments: block.EpochAssignments,
@@ -602,7 +602,7 @@ func (s *slotExport) saveEpochAssignmentsToRedis(client rpc.Client, block *types
 	return nil
 }
 
-func (s *slotExport) exportValidatorData(client rpc.Client, block *types.Block, epoch uint64, tx *sqlx.Tx) error {
+func (s *exporter) exportValidatorData(client rpc.Client, block *types.Block, epoch uint64, tx *sqlx.Tx) error {
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
@@ -734,29 +734,22 @@ func (s *slotExport) exportValidatorData(client rpc.Client, block *types.Block, 
 	return g.Wait()
 }
 
-func (d *slotExporterData) Init() error {
-	// // Initialize the slot exporter by doing 20 sync runs
-	// for i := 0; i < 20; i++ {
-	// 	err := d.OnHead(nil)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+func (d *slotExporter) Init() error {
 	return nil
 }
 
-func (d *slotExporterData) GetName() string {
+func (d *slotExporter) GetName() string {
 	return "Slot-Exporter"
 }
 
-func (d *slotExporterData) GetMonitoringEventId() constants.Event {
+func (d *slotExporter) GetMonitoringEventId() constants.Event {
 	return constants.Event_ExporterModuleSlotExporter
 }
 
-func (d *slotExporterData) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
+func (d *slotExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
 	return nil // nop
 }
 
-func (d *slotExporterData) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
+func (d *slotExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	return nil // nop
 }
