@@ -75,7 +75,7 @@ This will generate a _config.yml_ to be used by the explorer and then create the
 # Start the explorer modules
 ```
 cd ~/eth2-beaconchain-explorer/local_deployment/
-docker compose up -d --pull always
+docker compose up -d --pull always --build
 ```
 You can start / stop the exporter submodules using `docker compose`
 
