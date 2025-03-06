@@ -9,20 +9,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db2/consensus"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type relaysExporter struct {
-	db          consensus.ConsensusRepository
+	db          db2.ConsensusRepository
 	relayClient relayClient
 	delay       time.Duration
 	ctx         context.Context
 }
 
-func newRelaysExporter(ctx context.Context, db consensus.ConsensusRepository) relaysExporter {
+func newRelaysExporter(ctx context.Context, db db2.ConsensusRepository) relaysExporter {
 	return relaysExporter{
 		db:          db,
 		relayClient: nodeClient{},
