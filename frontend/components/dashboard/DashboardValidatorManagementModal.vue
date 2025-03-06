@@ -49,6 +49,7 @@ const {
   removeEntities,
 } = useDashboardKey()
 const {
+  premium_perks,
   user,
 } = useUserStore()
 
@@ -145,8 +146,6 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   loadData()
   refreshOverview(dashboardKey.value)
 }
-
-const { premium_perks } = useUserStore()
 
 const editSelected = () => {
   hasNoOpenDialogs.value = false
