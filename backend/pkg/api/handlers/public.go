@@ -472,13 +472,13 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.Re
 
 // PublicGetValidatorDashboardGroups godoc
 //
-//	@Description	Add new validators to a specified dashboard or update the group of already-added validators. This endpoint will always add as many validators as possible, even if more validators are provided than allowed by the subscription plan. The response will contain a list of added validators.
+//	@Description	Add new validators to a specified dashboard or update the group of already-added validators. This endpoint will add all possible validators or return an error if the subscription plan limits are exceeded. The response will contain a list of added validators.
 //	@Security		ApiKeyInHeader || ApiKeyInQuery
 //	@Tags			Validator Dashboard Management
 //	@Accept			json
 //	@Produce		json
 //	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
-//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which as many validators as possible will be added to the dashboard.</li><li>`withdrawal_credential`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal credential from which as many validators as possible will be added to the dashboard.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which as many validators as possible will be added to the dashboard.</li></ul>"
+//	@Param			request			body		handlers.PublicPostValidatorDashboardValidators.request	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which all validators will be added to the dashboard, if possible.</li><li>`withdrawal_credential`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal credential from which all validators will be added to the dashboard, if possible.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which all validators will be added to the dashboard, if possible.</li></ul>"
 //	@Success		201				{object}	types.ApiDataResponse[[]types.VDBPostValidatorsData]	"Returns a list of added validators."
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/validators [post]
@@ -549,104 +549,93 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		returnForbidden(w, r, errors.New("bulk adding not allowed with current subscription plan"))
 		return
 	}
-	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
-	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
-	existingEB, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId}, false)
+
+	// get requested validators
+	var requestedValidators []types.VDBValidator
+	switch {
+	case req.Validators != nil:
+		requestedValidators, _ = v.checkValidators(req.Validators, forbidEmpty)
+		if err = v.AsError(); err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, requestedValidators, nil)
+
+	case req.DepositAddress != "":
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).GetValidatorsByDepositAddress)
+
+	case req.WithdrawalCredential != "":
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).GetValidatorsByWithdrawalCredentials)
+
+	case req.Graffiti != "":
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).GetValidatorsByGraffiti)
+	}
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	var spaceLeftEB uint64
-	if ebLimit > existingEB {
-		spaceLeftEB = ebLimit - existingEB
+	requestedEbs, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalances(ctx, types.VDBId{Validators: requestedValidators}, false)
+	if err != nil {
+		handleErr(w, r, err)
+		return
 	}
 
-	var data []types.VDBPostValidatorsData
-	var dataErr error
-	switch {
-	case req.Validators != nil:
-		data, dataErr = h.addValidatorDashboardValidatorsBySlice(r, dashboardId, groupId, spaceLeftEB, req.Validators)
+	// get existing validators
+	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
+	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
+	existingEBs, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalances(ctx, types.VDBId{Id: dashboardId}, false)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	var totalExistingEb uint64
+	for _, eb := range existingEBs {
+		totalExistingEb += eb
+	}
+	ebSpaceLeft := ebLimit - totalExistingEb
 
-	case req.DepositAddress != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByDepositAddress)
-
-	case req.WithdrawalCredential != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByWithdrawalCredential)
-
-	case req.Graffiti != "":
-		data, dataErr = h.addValidatorDashboardValidators(r, dashboardId, groupId, spaceLeftEB, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).AddValidatorDashboardValidatorsByGraffiti)
+	// determine if new validators exceed eb limit
+	var totalNewEb uint64
+	for _, validator := range requestedValidators {
+		if _, ok := existingEBs[validator]; !ok {
+			eb, ok := requestedEbs[validator]
+			if !ok {
+				handleErr(w, r, fmt.Errorf("effective balance for validator %d not found", validator))
+				return
+			}
+			if totalNewEb += eb; totalNewEb > ebSpaceLeft {
+				returnForbidden(w, r, errors.New("validator addition exceeds dashboard's effective balance limit of current subscription plan"))
+				return
+			}
+		}
 	}
 
-	if dataErr != nil {
-		handleErr(w, r, dataErr)
+	// insert validators / update groups
+	insertedValidators, err := h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, requestedValidators)
+	if err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	response := types.ApiDataResponse[[]types.VDBPostValidatorsData]{
-		Data: data,
+		Data: insertedValidators,
 	}
 
 	returnCreated(w, r, response)
 }
 
-func (h *HandlerService) addValidatorDashboardValidatorsBySlice(r *http.Request, dashboardId types.VDBIdPrimary, groupId uint64, spaceLeftEB uint64, validatorsParam []intOrString) ([]types.VDBPostValidatorsData, error) {
-	var v validationError
-	indices, pubkeys := v.checkValidators(validatorsParam, forbidEmpty)
-	if err := v.AsError(); err != nil {
-		return nil, err
-	}
-	ctx := r.Context()
-	validators, err := h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, indices, pubkeys)
-	if err != nil {
-		return nil, err
-	}
-
-	// determine new validators and check for their EBs
-	existingValidators, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, validators)
-	if err != nil {
-		return nil, err
-	}
-	existingValidatorsMap := utils.SliceToMap(existingValidators)
-
-	newValidators := make([]uint64, 0, len(validators))
-	for _, validator := range validators {
-		if _, ok := existingValidatorsMap[validator]; !ok {
-			newValidators = append(newValidators, validator)
-		}
-	}
-
-	if len(newValidators) > 0 {
-		newValidatorEbs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, newValidators, false)
-		if err != nil {
-			return nil, err
-		}
-		newValidators, err = h.applyEBFiler(newValidatorEbs, spaceLeftEB)
-		if err != nil {
-			return nil, err
-		}
-	}
-	// keep existing validators so we can update their group
-	validators = append(existingValidators, newValidators...)
-
-	// add validators to dashboard
-	return h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, dashboardId, groupId, validators, spaceLeftEB)
-}
-
-func (h *HandlerService) addValidatorDashboardValidators(
+func (h *HandlerService) getValidatorDashboardValidators(
 	r *http.Request,
-	dashboardId types.VDBIdPrimary,
-	groupId uint64,
-	limit uint64,
 	param string,
 	paramName string,
 	validationRegex *regexp.Regexp,
-	addFunc func(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]types.VDBPostValidatorsData, error),
-) ([]types.VDBPostValidatorsData, error) {
+	getFunc func(ctx context.Context, param string) ([]types.VDBValidator, error),
+) ([]types.VDBValidator, error) {
 	var v validationError
 	validatedParam := v.checkRegex(validationRegex, param, paramName)
 	if err := v.AsError(); err != nil {
 		return nil, err
 	}
-	return addFunc(r.Context(), dashboardId, groupId, validatedParam, limit)
+	return getFunc(r.Context(), validatedParam)
 }
 
 // PublicGetValidatorDashboardValidators godoc

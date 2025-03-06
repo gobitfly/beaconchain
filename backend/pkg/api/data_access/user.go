@@ -439,7 +439,7 @@ func (d *DataAccessService) getUserValidatorDashboardEBs(ctx context.Context, us
 		dashboardValidatorsMap[row.Id] = append(dashboardValidatorsMap[row.Id], row.ValidatorIndex)
 		validators = append(validators, row.ValidatorIndex)
 	}
-	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
+	validatorEbs, err := d.GetValidatorDashboardEffectiveBalances(ctx, t.VDBId{Validators: validators}, false)
 	if err != nil {
 		return nil, err
 	}

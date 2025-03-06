@@ -3,7 +3,6 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sort"
@@ -12,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -760,7 +760,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupExists(ctx context.Context
 	return groupExists, err
 }
 
-func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator, ebLimit uint64) ([]t.VDBPostValidatorsData, error) {
+func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	result := []t.VDBPostValidatorsData{}
 
 	if len(validators) == 0 {
@@ -851,286 +851,6 @@ func (d *DataAccessService) GetValidatorDashboardValidatorsOfList(ctx context.Co
 	return result, nil
 }
 
-// Updates the group for validators already in the dashboard linked to the deposit address.
-// Adds up to limit new validators associated with the deposit address, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, ebLimit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
-
-	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
-	if err != nil {
-		return nil, err
-	}
-
-	baseDs := goqu.Dialect("postgres").
-		From(goqu.T("validators").As("v")).
-		SelectDistinct(goqu.I("v.validatorindex")).
-		InnerJoin(
-			goqu.T("eth1_deposits").As("d"),
-			goqu.On(goqu.I("v.pubkey").Eq(goqu.I("d.publickey"))),
-		).
-		Where(
-			goqu.I("d.from_address").Eq(addressParsed),
-		)
-
-	existingValidatorsDs := baseDs.
-		InnerJoin(
-			goqu.T("users_val_dashboards_validators").As("uvdv"),
-			goqu.On(goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index"))),
-		).
-		Where(
-			goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-		)
-
-	var uniqueValidatorIndexesDs *goqu.SelectDataset
-	if ebLimit > 0 {
-		newValidatorsDs := baseDs.
-			LeftJoin(
-				goqu.T("users_val_dashboards_validators").As("uvdv"),
-				goqu.On(
-					goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
-					goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-				),
-			).
-			Where(
-				goqu.I("uvdv.validator_index").IsNull(),
-			)
-		err := d.applyNewValidatorsDSEBFilter(ctx, newValidatorsDs, ebLimit)
-		if err != nil {
-			return nil, err
-		}
-		uniqueValidatorIndexesDs = existingValidatorsDs.Union(newValidatorsDs)
-	}
-
-	addValidatorsDs := d.getAddValidatorsQuery(uniqueValidatorIndexesDs, uint64(dashboardId), groupId)
-	addValidatorsQuery, args, err := addValidatorsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	var validators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-// Updates the group for validators already in the dashboard linked to the withdrawal address.
-// Adds up to limit new validators associated with the withdrawal address, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, credential string, ebLimit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
-
-	addressParsed, err := hex.DecodeString(strings.TrimPrefix(credential, "0x"))
-	if err != nil {
-		return nil, err
-	}
-
-	baseDs := goqu.Dialect("postgres").
-		From(goqu.T("validators").As("v")).
-		SelectDistinct(goqu.I("v.validatorindex")).
-		Where(
-			goqu.I("v.withdrawalcredentials").Eq(addressParsed),
-		)
-
-	existingValidatorsDs := baseDs.
-		InnerJoin(
-			goqu.T("users_val_dashboards_validators").As("uvdv"),
-			goqu.On(goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index"))),
-		).
-		Where(
-			goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-		)
-
-	var uniqueValidatorIndexesDs *goqu.SelectDataset
-	if ebLimit > 0 {
-		newValidatorsDs := baseDs.
-			LeftJoin(
-				goqu.T("users_val_dashboards_validators").As("uvdv"),
-				goqu.On(
-					goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
-					goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-				),
-			).
-			Where(
-				goqu.I("uvdv.validator_index").IsNull(),
-			)
-		err := d.applyNewValidatorsDSEBFilter(ctx, newValidatorsDs, ebLimit)
-		if err != nil {
-			return nil, err
-		}
-		uniqueValidatorIndexesDs = existingValidatorsDs.Union(newValidatorsDs)
-	}
-
-	addValidatorsDs := d.getAddValidatorsQuery(uniqueValidatorIndexesDs, uint64(dashboardId), groupId)
-	addValidatorsQuery, args, err := addValidatorsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	var validators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-// Update the group for validators already in the dashboard linked to the graffiti (via produced block).
-// Add up to limit new validators associated with the graffiti, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, ebLimit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
-
-	baseDs := goqu.Dialect("postgres").
-		From(goqu.T("blocks").As("b")).
-		SelectDistinct(goqu.I("b.proposer")).
-		Where(
-			goqu.I("b.graffiti_text").Eq(graffiti),
-		)
-
-	existingValidatorsDs := baseDs.
-		InnerJoin(
-			goqu.T("users_val_dashboards_validators").As("uvdv"),
-			goqu.On(goqu.I("b.proposer").Eq(goqu.I("uvdv.validator_index"))),
-		).
-		Where(
-			goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-		)
-
-	var uniqueValidatorIndexesDs *goqu.SelectDataset
-	if ebLimit > 0 {
-		newValidatorsDs := baseDs.
-			LeftJoin(
-				goqu.T("users_val_dashboards_validators").As("uvdv"),
-				goqu.On(
-					goqu.I("b.proposer").Eq(goqu.I("uvdv.validator_index")),
-					goqu.I("uvdv.dashboard_id").Eq(dashboardId),
-				),
-			).
-			Where(
-				goqu.I("uvdv.validator_index").IsNull(),
-			)
-		err := d.applyNewValidatorsDSEBFilter(ctx, newValidatorsDs, ebLimit)
-		if err != nil {
-			return nil, err
-		}
-		uniqueValidatorIndexesDs = existingValidatorsDs.Union(newValidatorsDs)
-	}
-
-	addValidatorsDs := d.getAddValidatorsQuery(uniqueValidatorIndexesDs, uint64(dashboardId), groupId)
-	addValidatorsQuery, args, err := addValidatorsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	var validators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, args...)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-// TODO move into handler layer
-func (d *DataAccessService) applyEBFiler(validatorEbs map[t.VDBValidator]uint64, ebLimit uint64) ([]t.VDBValidator, error) {
-	newValidatorsList := maps.Keys(validatorEbs)
-
-	var newEbAccumulator uint64
-	for _, validator := range newValidatorsList {
-		if newEbAccumulator+validatorEbs[validator] > ebLimit {
-			return nil, fmt.Errorf("effective balance limit exceeded")
-		}
-		newEbAccumulator += validatorEbs[validator]
-	}
-	return newValidatorsList, nil
-}
-
-// takes a goqu ds of new validators to add to a vdb,
-// determines whether they fit in the ebLimit and returns an error if not
-func (d *DataAccessService) applyNewValidatorsDSEBFilter(ctx context.Context, newValidatorsDs *goqu.SelectDataset, ebLimit uint64) error {
-	var newValidators []uint64
-	newValidatorsQuery, args, err := newValidatorsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.alloyReader.SelectContext(ctx, &newValidators, newValidatorsQuery, args...)
-	if err != nil {
-		return err
-	}
-
-	// TODO into handler layer
-	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, newValidators, false)
-	if err != nil {
-		return err
-	}
-
-	filteredValidators, err := d.applyEBFiler(validatorEbs, ebLimit)
-	if err != nil {
-		return err
-	}
-	if len(filteredValidators) < len(newValidators) {
-		//nolint:staticcheck
-		newValidatorsDs = goqu.Dialect("postgres").
-			From(goqu.L("unnest(?::int[])", pq.Array(newValidators)).As("validator_index")).
-			Select("*")
-	}
-	return nil
-}
-
-func (d *DataAccessService) getAddValidatorsQuery(uniqueValidatorIndexesQuery *goqu.SelectDataset, dashboardId, groupId uint64) *goqu.InsertDataset {
-	// 0. update group for existing ones
-	// 1. get all that would be an option (latest EB only > 0, not present in dashboard yet) up to max available limit
-	// 2. add non-exited first
-	// 3. if max eb not reached yet and empty ones available: get exit epoch from vm
-	// 4. get EB at exit epoch and add until full
-
-	return goqu.Dialect("postgres").
-		Insert("users_val_dashboards_validators").Cols("dashboard_id", "group_id", "validator_index").
-		With("unique_validator_indexes", uniqueValidatorIndexesQuery).
-		FromQuery(
-			goqu.Dialect("postgres").
-				From(goqu.I("unique_validator_indexes")).
-				Select(
-					goqu.V(dashboardId).As("dashboard_id"),
-					goqu.V(groupId).As("group_id"),
-					goqu.L("validatorindex"),
-				),
-		).
-		OnConflict(goqu.DoUpdate(
-			"dashboard_id, validator_index",
-			goqu.Record{
-				"dashboard_id":    goqu.L("EXCLUDED.dashboard_id"),
-				"group_id":        goqu.L("EXCLUDED.group_id"),
-				"validator_index": goqu.L("EXCLUDED.validator_index"),
-			},
-		)).
-		Returning("validator_index")
-}
-
 func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
 		// Remove all validators for the dashboard
@@ -1153,7 +873,9 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Conte
 	return err
 }
 
-func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
+// returns the effective balances of the provided validators
+// if onlyActive = true: executed from the vdb premium limits pov, i.e. exited validators account for the EB at exit time
+func (d *DataAccessService) GetValidatorDashboardEffectiveBalances(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (map[t.VDBValidator]uint64, error) {
 	var validators []t.VDBValidator
 
 	if dashboardId.Validators == nil {
@@ -1163,13 +885,85 @@ func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx conte
 			WHERE dashboard_id = $1
 		`, dashboardId.Id)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 	} else {
 		validators = dashboardId.Validators
 	}
 
-	return d.GetValidatorsEffectiveBalanceTotal(ctx, validators, onlyActive)
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, err
+	}
+
+	// active
+	effectiveBalances := make(map[t.VDBValidator]uint64)
+	var validatorExitEpochs []exp.Expression
+	for _, validator := range validators {
+		if len(validatorMapping.ValidatorMetadata) <= int(validator) {
+			return nil, fmt.Errorf("validator index %d not found in validator mapping", validator)
+		}
+		status := constypes.ValidatorDbStatus(validatorMapping.ValidatorMetadata[validator].Status)
+		balanceWithdrawn := !onlyActive &&
+			(status == constypes.DbSlashed || status == constypes.DbExited) &&
+			validatorMapping.ValidatorMetadata[validator].EffectiveBalance == 0
+		if !balanceWithdrawn {
+			effectiveBalances[validator] = validatorMapping.ValidatorMetadata[validator].EffectiveBalance
+			continue
+		}
+		// exited & balance withdrawn, need to query latest EB before exit
+		if !validatorMapping.ValidatorMetadata[validator].ExitEpoch.Valid {
+			return nil, fmt.Errorf("validator %d has no exit epoch", validator)
+		}
+		// goqu can't pass tuples directly
+		epochTs := utils.EpochToTime(uint64(validatorMapping.ValidatorMetadata[validator].ExitEpoch.Int64)).Unix()
+		validatorExitEpochs = append(validatorExitEpochs, goqu.L("(fromUnixTimestamp(?), ?)", epochTs, validator))
+	}
+
+	// exited
+	if len(validatorExitEpochs) == 0 {
+		return effectiveBalances, nil
+	}
+	ds := goqu.Dialect("postgres").
+		Select(
+			// goqu.SUM(goqu.I("balance_effective_end")).As("balance_effective_end"),
+			goqu.I("validator_index"),
+			goqu.I("balance_effective_end"),
+		).
+		From("validator_dashboard_data_epoch").
+		Where(
+			goqu.L("(epoch_timestamp, validator_index)").In(validatorExitEpochs),
+		)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	ebsBeforeExit := []struct {
+		ValidatorIndex   uint64 `db:"validator_index"`
+		EffectiveBalance uint64 `db:"balance_effective_end"`
+	}{}
+	err = d.clickhouseReader.SelectContext(ctx, &ebsBeforeExit, query, args...)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	for _, eb := range ebsBeforeExit {
+		effectiveBalances[eb.ValidatorIndex] = eb.EffectiveBalance
+	}
+	return effectiveBalances, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
+	validatorEbs, err := d.GetValidatorDashboardEffectiveBalances(ctx, dashboardId, onlyActive)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalEb uint64
+	for _, eb := range validatorEbs {
+		totalEb += eb
+	}
+	return totalEb, nil
 }
 
 func (d *DataAccessService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
