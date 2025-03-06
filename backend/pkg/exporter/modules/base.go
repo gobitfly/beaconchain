@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
