@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
 	"github.com/gobitfly/beaconchain/pkg/monitoring"
@@ -174,13 +175,13 @@ func Run() {
 	}
 
 	usedModules := []modules.ModuleInterface{}
-	consDB := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
+	exporterDb := edb.NewSlotExporterRepository()
 
 	if cfg.JustV2 {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context, consDB),
+			modules.NewSlotExporter(context, exporterDb),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),

@@ -31,6 +31,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -674,7 +675,7 @@ func (d *executionDepositsExporter) getDepositTraces(txsToTrace []string) (filte
 }
 
 func (d *executionDepositsExporter) updateCachedView() error {
-	err := db.CacheQuery(`
+	err := edb.CacheQuery(`
 		SELECT
 			uvdv.dashboard_id,
 			uvdv.group_id,

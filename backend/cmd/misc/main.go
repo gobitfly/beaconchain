@@ -387,6 +387,8 @@ func Run() {
 			}
 		}()
 
+		exporterDb := edb.NewSlotExporterRepository()
+
 		batchSize := 10000
 		for i := 0; i < len(validatorsArr); i += batchSize {
 			data := &types.EpochData{
@@ -414,7 +416,7 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 
-			err = edb.SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
+			err = exporterDb.SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}
@@ -1261,6 +1263,8 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 			return
 		}
 
+		exporterDb := edb.NewSlotExporterRepository()
+
 		ctx := context.Background()
 		g, gCtx := errgroup.WithContext(ctx)
 		g.SetLimit(int(concurency))
@@ -1350,7 +1354,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 				}
 
 				if importWholeBlock {
-					err := edb.SaveBlock(block, true, tx)
+					err := exporterDb.SaveBlock(block, true, tx)
 					if err != nil {
 						log.Error(err, fmt.Errorf("error saving Slot [%v]", block.Slot), 0)
 						return
