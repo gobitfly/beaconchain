@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db2/consensus/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 

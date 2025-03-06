@@ -1,4 +1,4 @@
-package db
+package consensus
 
 import (
 	"database/sql"
@@ -7,25 +7,12 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/jmoiron/sqlx"
 )
 
-type DBConsensusRepository struct {
-	WriterDb *sqlx.DB
-	ReaderDb *sqlx.DB
-}
-
-func NewDBConsensusRepository(writerDb, readerDb *sqlx.DB) *DBConsensusRepository {
-	return &DBConsensusRepository{
-		WriterDb: writerDb,
-		ReaderDb: readerDb,
-	}
-}
-
-func (c *DBConsensusRepository) GetRelays() ([]types.Relay, error) {
+func (c *consensusRepository) GetRelays() ([]types.Relay, error) {
 	var relays []types.Relay
 	err := c.ReaderDb.Select(&relays, `
-		SELECT tag_id, endpoint, public_link, is_censoring, is_ethical, export_failure_count, last_export_try_ts, last_export_success_ts 
+		SELECT tag_id, endpoint, public_link, is_censoring, is_ethical, export_failure_count, last_export_try_ts, last_export_success_ts
 		FROM relays`)
 
 	if err != nil && err != sql.ErrNoRows {
@@ -34,7 +21,7 @@ func (c *DBConsensusRepository) GetRelays() ([]types.Relay, error) {
 	return relays, nil
 }
 
-func (c *DBConsensusRepository) UpdateRelay(tagID, endpoint string) error {
+func (c *consensusRepository) UpdateRelay(tagID, endpoint string) error {
 	_, err := c.WriterDb.Exec(`
 		UPDATE relays SET
 			export_failure_count = 0,
@@ -45,7 +32,7 @@ func (c *DBConsensusRepository) UpdateRelay(tagID, endpoint string) error {
 	return err
 }
 
-func (c *DBConsensusRepository) UpdateRelayLastExportTry(tagID, endpoint string) error {
+func (c *consensusRepository) UpdateRelayLastExportTry(tagID, endpoint string) error {
 	_, err := c.WriterDb.Exec(`
 			UPDATE relays SET
 				last_export_try_ts = (NOW() AT TIME ZONE 'utc')
@@ -54,7 +41,7 @@ func (c *DBConsensusRepository) UpdateRelayLastExportTry(tagID, endpoint string)
 	return err
 }
 
-func (c *DBConsensusRepository) UpdateRelayExportFailureCount(exportFailureCount uint64, tagID, endpoint string) error {
+func (c *consensusRepository) UpdateRelayExportFailureCount(exportFailureCount uint64, tagID, endpoint string) error {
 	_, err := c.WriterDb.Exec(`
 	UPDATE relays SET
 		export_failure_count = $1,
@@ -64,31 +51,31 @@ func (c *DBConsensusRepository) UpdateRelayExportFailureCount(exportFailureCount
 	return err
 }
 
-func (c *DBConsensusRepository) GetFirstRelayBlock(tagID string) (types.RelayBlock, error) {
+func (c *consensusRepository) GetFirstRelayBlock(tagID string) (types.RelayBlock, error) {
 	var block types.RelayBlock
 	err := c.ReaderDb.Get(&block, `
-		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
-		FROM relays_blocks 
-		WHERE tag_id=$1 
-		ORDER BY block_slot ASC 
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient
+		FROM relays_blocks
+		WHERE tag_id=$1
+		ORDER BY block_slot ASC
 		LIMIT 1`, tagID)
 
 	return block, err
 }
 
-func (c *DBConsensusRepository) GetLastRelayBlock(tagID string) (types.RelayBlock, error) {
+func (c *consensusRepository) GetLastRelayBlock(tagID string) (types.RelayBlock, error) {
 	var block types.RelayBlock
 	err := c.ReaderDb.Get(&block, `
-		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient 
-		FROM relays_blocks 
-		WHERE tag_id=$1 
-		ORDER BY block_slot DESC 
+		SELECT tag_id, block_slot, block_root, exec_block_hash, value, builder_pubkey, proposer_pubkey, proposer_fee_recipient
+		FROM relays_blocks
+		WHERE tag_id=$1
+		ORDER BY block_slot DESC
 		LIMIT 1`, tagID)
 
 	return block, err
 }
 
-func (c *DBConsensusRepository) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
+func (c *consensusRepository) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
