@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
@@ -35,6 +34,7 @@ type slotExporter struct {
 	ModuleContext
 	Client         rpc.Client
 	db             edb.SlotExporterRepository
+	cache          edb.ExporterCache
 	FirstRun       bool
 	latestEpoch    uint64
 	latestSlot     uint64
@@ -42,11 +42,12 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, client rpc.Client, db edb.SlotExporterRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, client rpc.Client, cache edb.ExporterCache, db edb.SlotExporterRepository) ModuleInterface {
 	return &slotExporter{
 		ModuleContext:  moduleContext,
 		Client:         client,
 		db:             db,
+		cache:          cache,
 		FirstRun:       true,
 		latestEpoch:    0,
 		latestSlot:     0,
@@ -67,26 +68,46 @@ func (e *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	// cache handling
 	defer func() {
 		if err == nil {
-			if e.latestEpoch > 0 && cache.LatestEpoch.Get() < e.latestEpoch {
-				err := cache.LatestEpoch.Set(e.latestEpoch)
+			latestEpoch, err := e.cache.GetLatestEpoch()
+			if err != nil {
+				log.Error(err, "error retrieving latestEpoch from cache", 0)
+			}
+
+			if e.latestEpoch > 0 && latestEpoch < e.latestEpoch {
+				err := e.cache.SetLatestEpoch(e.latestEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestEpoch in cache", 0)
 				}
 			}
-			if e.latestSlot > 0 && cache.LatestSlot.Get() < e.latestSlot {
-				err := cache.LatestSlot.Set(e.latestSlot)
+
+			latestSlot, err := e.cache.GetLatestSlot()
+			if err != nil {
+				log.Error(err, "error retrieving latestSlot from cache", 0)
+			}
+			if e.latestSlot > 0 && latestSlot < e.latestSlot {
+				err := e.cache.SetLatestSlot(e.latestSlot)
 				if err != nil {
 					log.Error(err, "error setting latestSlot in cache", 0)
 				}
 			}
-			if e.finalizedEpoch > 0 && cache.LatestFinalizedEpoch.Get() < e.finalizedEpoch {
-				err := cache.LatestFinalizedEpoch.Set(e.finalizedEpoch)
+
+			latestFinalizedEpoch, err := e.cache.GetLatestFinalizedEpoch()
+			if err != nil {
+				log.Error(err, "error retrieving latestFinalizedEpoch from cache", 0)
+			}
+			if e.finalizedEpoch > 0 && latestFinalizedEpoch < e.finalizedEpoch {
+				err := e.cache.SetLatestFinalizedEpoch(e.finalizedEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestFinalizedEpoch in cache", 0)
 				}
 			}
-			if e.latestProposed > 0 && cache.LatestProposedSlot.Get() < e.latestProposed {
-				err := cache.LatestProposedSlot.Set(e.latestProposed)
+
+			latestProposedSlot, err := e.cache.GetLatestProposedSlot()
+			if err != nil {
+				log.Error(err, "error retrieving latestProposedSlot from cache", 0)
+			}
+			if e.latestProposed > 0 && latestProposedSlot < e.latestProposed {
+				err := e.cache.SetLatestProposedSlot(e.latestProposed)
 				if err != nil {
 					log.Error(err, "error setting latestProposedSlot in cache", 0)
 				}
