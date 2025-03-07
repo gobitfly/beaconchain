@@ -59,6 +59,7 @@
         "nuxt.config",
         "qrCode",
         "useCustomFetch",
+        "useFeatureFlag",
         "useNotificationsOverviewStore",
         "useWindowSize",
         "vscode"
