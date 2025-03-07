@@ -549,7 +549,7 @@ func (d *DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Co
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardEffectiveBalances(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (map[t.VDBValidator]uint64, error) {
+func (d *DummyService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
 	return map[t.VDBValidator]uint64{}, nil
 }
 
