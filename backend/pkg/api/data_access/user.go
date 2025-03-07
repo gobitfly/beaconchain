@@ -444,7 +444,7 @@ func (d *DataAccessService) getUserValidatorDashboardEBs(ctx context.Context, us
 			validators = append(validators, uint64(row.ValidatorIndex.Int64))
 		}
 	}
-	validatorEbs, err := d.GetValidatorDashboardEffectiveBalances(ctx, t.VDBId{Validators: validators}, false)
+	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, false)
 	if err != nil {
 		return nil, err
 	}

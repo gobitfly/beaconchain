@@ -574,7 +574,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		handleErr(w, r, err)
 		return
 	}
-	requestedEbs, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalances(ctx, types.VDBId{Validators: requestedValidators}, false)
+	requestedEbs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, requestedValidators, false)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -583,7 +583,12 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	// get existing validators
 	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
 	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
-	existingEBs, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalances(ctx, types.VDBId{Id: dashboardId}, false)
+	validators, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, dashboardId, nil)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	existingEBs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, validators, false)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -592,7 +597,10 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	for _, eb := range existingEBs {
 		totalExistingEb += eb
 	}
-	ebSpaceLeft := ebLimit - totalExistingEb
+	var ebSpaceLeft uint64
+	if ebLimit > totalExistingEb {
+		ebSpaceLeft = ebLimit - totalExistingEb
+	}
 
 	// determine if new validators exceed eb limit
 	var totalNewEb uint64
