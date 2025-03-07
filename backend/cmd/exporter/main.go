@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -175,13 +176,15 @@ func Run() {
 	}
 
 	usedModules := []modules.ModuleInterface{}
-	exporterDb := edb.NewSlotExporterRepository()
 
 	if cfg.JustV2 {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context, context.ConsClient, exporterDb),
+			modules.NewSlotExporter(context, context.ConsClient,
+				edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+				edb.NewSlotExporterRepository(),
+			),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),

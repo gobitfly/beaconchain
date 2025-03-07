@@ -268,8 +268,8 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewSlotExport(rpcClient, slot, 0, false, tx)
-				err = slotExporter.ExportSlot()
+				slotExporter := modules.NewExporter(rpcClient, edb.NewSlotExporterRepository(), tx)
+				err = slotExporter.Export(slot, 0, false)
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -318,8 +318,8 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewSlotExport(rpcClient, slot, 0, false, tx)
-				err = slotExporter.ExportSlot()
+				slotExporter := modules.NewExporter(rpcClient, edb.NewSlotExporterRepository(), tx)
+				err = slotExporter.Export(slot, 0, false)
 				if err != nil {
 					_ = tx.Rollback()
 					log.Fatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})
@@ -416,7 +416,7 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 
-			err = exporterDb.SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
+			err = exporterDb.SaveValidators(0, data.Validators, len(data.Validators), tx)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}
