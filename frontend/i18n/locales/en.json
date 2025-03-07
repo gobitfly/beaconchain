@@ -717,6 +717,10 @@
             "do_not_disturb": "Do not disturb",
             "download_app": ["Download the", "mobile app", "to activate"],
             "email_notifications": "Email Notifications",
+            "info": {
+                "global_settings": "Global Settings.",
+                "global_settings_subtext": "Adjusting your notification preferences here will update them across all networks."
+            },
             "mute": {
                 "all": "Mutes all notifications",
                 "hours": "{count} hour|{count} hours",
