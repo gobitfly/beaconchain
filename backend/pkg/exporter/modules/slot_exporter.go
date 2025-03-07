@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -53,10 +52,10 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, client rpc.Client, cache edb.ExporterCache, db edb.SlotExporterRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterRepository) ModuleInterface {
 	return &slotExporter{
 		ModuleContext:  moduleContext,
-		Client:         client,
+		Client:         moduleContext.ConsClient,
 		db:             db,
 		cache:          cache,
 		firstRun:       true,
@@ -179,7 +178,8 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 	if len(dbSlots) > 0 {
 		if dbSlots[0] != 0 {
 			log.Infof("exporting genesis slot as it is missing in the database")
-			err := s.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
+			exporter := NewExporter(s.Client, s.db, tx, s)
+			err := exporter.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
@@ -199,7 +199,8 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 			if previousSlot != currentSlot-1 {
 				log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
 				for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
-					err := s.ExportSlot(slot, false, tx)
+					exporter := NewExporter(s.Client, s.db, tx, s)
+					err := exporter.ExportSlot(slot, false, tx)
 					if err != nil {
 						return fmt.Errorf("error exporting slot %v: %w", slot, err)
 					}
@@ -211,11 +212,12 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
+	exporter := NewExporter(s.Client, s.db, tx, s)
 	lastDbSlot, err := s.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("db is empty, export genesis slot")
-			err := s.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
+			err := exporter.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
@@ -229,7 +231,7 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 	if lastDbSlot != head.HeadSlot {
 		slotsExported := 0
 		for slot := lastDbSlot + 1; slot <= head.HeadSlot; slot++ { // export any new slots
-			err = s.ExportSlot(slot, utils.EpochOfSlot(slot) == head.HeadEpoch, tx)
+			err = exporter.ExportSlot(slot, utils.EpochOfSlot(slot) == head.HeadEpoch, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", slot, err)
 			}
@@ -254,6 +256,8 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
+	exporter := NewExporter(s.Client, s.db, tx, s)
+
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := s.db.GetAllNonFinalizedSlots()
 	if err != nil {
@@ -305,7 +309,7 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
-				err = s.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+				err = exporter.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 				}
@@ -343,7 +347,7 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 		} else { // check if a late slot has been proposed in the meantime
 			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
 				log.Infof("exporting new slot %v", dbSlot.Slot)
-				err := s.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+				err := exporter.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 				}
@@ -354,7 +358,24 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 	return nil
 }
 
-func (s *slotExporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) error {
+type exporter struct {
+	Client ExporterClient
+	db     edb.SlotExporterRepository
+	dbTx   *sqlx.Tx
+
+	slotExporter *slotExporter
+}
+
+func NewExporter(client ExporterClient, db edb.SlotExporterRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+	return &exporter{
+		Client:       client,
+		db:           db,
+		dbTx:         dbTx,
+		slotExporter: slotExporter,
+	}
+}
+
+func (s *exporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) error {
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -383,8 +404,10 @@ func (s *slotExporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) erro
 	}
 
 	if block.Status == 1 {
-		if s.latestProposed < block.Slot {
-			s.latestProposed = block.Slot
+		if s.slotExporter != nil {
+			if s.slotExporter.latestProposed < block.Slot {
+				s.slotExporter.latestProposed = block.Slot
+			}
 		}
 	}
 
@@ -404,7 +427,7 @@ func (s *slotExporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) erro
 	return nil
 }
 
-func (s *slotExporter) exportDuties(block *types.Block) error {
+func (s *exporter) exportDuties(block *types.Block) error {
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
@@ -438,7 +461,7 @@ func (s *slotExporter) exportDuties(block *types.Block) error {
 	return nil
 }
 
-func (s *slotExporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
+func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
 	epoch := utils.EpochOfSlot(block.Slot)
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
@@ -541,7 +564,7 @@ func (s *slotExporter) exportEpochAssignments(block *types.Block, isHeadEpoch bo
 	return nil
 }
 
-func (s *slotExporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64, isHeadEpoch bool) error {
+func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64, isHeadEpoch bool) error {
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
 		Epoch:       types.Epoch(epoch),
 		Assignments: block.EpochAssignments,
@@ -608,7 +631,7 @@ func (s *slotExporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uin
 	return nil
 }
 
-func (s *slotExporter) exportValidatorData(block *types.Block, epoch uint64, tx *sqlx.Tx) error {
+func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sqlx.Tx) error {
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db

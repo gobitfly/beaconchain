@@ -181,7 +181,7 @@ func Run() {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context, context.ConsClient,
+			modules.NewSlotExporter(context,
 				edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterRepository(),
 			),
