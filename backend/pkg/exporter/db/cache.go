@@ -2,54 +2,56 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-type ExporterCacher struct {
+type ExporterCache struct {
 	cache database.RemoteCache
 }
 
-func NewCachedLastBlocks(cache database.RemoteCache) ExporterCacher {
-	return ExporterCacher{
+func NewExporterCache(cache database.RemoteCache) ExporterCache {
+	return ExporterCache{
 		cache: cache,
 	}
 }
 
-func (c *ExporterCacher) SetLatestEpoch(chainID string, epoch uint64) error {
+func (c *ExporterCache) SetLatestEpoch(epoch uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestEpoch"
+	key := fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
 	return c.cache.Set(ctx, key, new(big.Int).SetUint64(epoch).Bytes(), 0)
 }
 
-func (c *ExporterCacher) SetLatestFinalizedEpoch(chainID string, epoch uint64) error {
+func (c *ExporterCache) SetLatestFinalizedEpoch(epoch uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestFinalized"
+	key := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
 	return c.cache.Set(ctx, key, new(big.Int).SetUint64(epoch).Bytes(), 0)
 }
 
-func (c *ExporterCacher) SetLatestSlot(chainID string, slot uint64) error {
+func (c *ExporterCache) SetLatestSlot(slot uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:slot"
+	key := fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
 	return c.cache.Set(ctx, key, new(big.Int).SetUint64(slot).Bytes(), 0)
 }
 
-func (c *ExporterCacher) SetLatestProposedSlot(chainID string, slot uint64) error {
+func (c *ExporterCache) SetLatestProposedSlot(slot uint64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestProposedSlot"
+	key := fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
 	return c.cache.Set(ctx, key, new(big.Int).SetUint64(slot).Bytes(), 0)
 }
 
-func (c *ExporterCacher) GetLatestEpoch(chainID string) (uint64, error) {
+func (c *ExporterCache) GetLatestEpoch() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestEpoch"
+	key := fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
 
 	res, err := c.cache.Get(ctx, key)
 	if err != nil {
@@ -60,10 +62,10 @@ func (c *ExporterCacher) GetLatestEpoch(chainID string) (uint64, error) {
 	return lastEpoch.Uint64(), nil
 }
 
-func (c *ExporterCacher) GetLatestFinalizedEpoch(chainID string) (uint64, error) {
+func (c *ExporterCache) GetLatestFinalizedEpoch() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestFinalized"
+	key := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
 
 	res, err := c.cache.Get(ctx, key)
 	if err != nil {
@@ -74,10 +76,10 @@ func (c *ExporterCacher) GetLatestFinalizedEpoch(chainID string) (uint64, error)
 	return lastEpoch.Uint64(), nil
 }
 
-func (c *ExporterCacher) GetLatestSlot(chainID string) (uint64, error) {
+func (c *ExporterCache) GetLatestSlot() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:slot"
+	key := fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
 
 	res, err := c.cache.Get(ctx, key)
 	if err != nil {
@@ -88,10 +90,10 @@ func (c *ExporterCacher) GetLatestSlot(chainID string) (uint64, error) {
 	return lastEpoch.Uint64(), nil
 }
 
-func (c *ExporterCacher) GetLatestProposedSlot(chainID string) (uint64, error) {
+func (c *ExporterCache) GetLatestProposedSlot() (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-	key := chainID + ":frontend:latestProposedSlot"
+	key := fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
 
 	res, err := c.cache.Get(ctx, key)
 	if err != nil {
