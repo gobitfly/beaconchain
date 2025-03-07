@@ -148,6 +148,14 @@ watchDebounced(() => store.settings.general_settings, async () => {
         loading
       />
     </div>
+    <div class="row">
+      <span>
+        {{ $t('notifications.general.info.global_settings') }}
+        <span class="font-default">
+          {{ $t('notifications.general.info.global_settings_subtext') }}
+        </span>
+      </span>
+    </div>
     <div class="row divider do-not-disturb">
       <div>
         <span>{{ $t("notifications.general.do_not_disturb") }}</span>
@@ -306,6 +314,10 @@ watchDebounced(() => store.settings.general_settings, async () => {
         @include fonts.tiny_text;
         color: var(--text-color-discreet);
       }
+    }
+
+    .font-default {
+      font-weight: 300;
     }
 
     .popout {
