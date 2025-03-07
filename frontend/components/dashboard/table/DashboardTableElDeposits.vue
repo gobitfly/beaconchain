@@ -295,8 +295,7 @@ const {
                 >
                   <BcFormatAmount
                     :value="slotProps.data.amount"
-                    source-currency="elCurrency"
-                    target-currency="elDisplayCurrency"
+                    target-currency="clDisplayCurrency"
                     :maximum-fraction-digits="0"
                   />
                   <template
@@ -305,7 +304,6 @@ const {
                   >
                     <BcFormatAmount
                       :value="slotProps.data.amount"
-                      source-currency="elCurrency"
                       has-higher-precision
                     />
                   </template>
