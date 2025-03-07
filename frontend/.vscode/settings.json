@@ -52,6 +52,7 @@
         "git-blame-ignore",
         "healthz",
         "i18n",
+        "logger",
         "mainHeader",
         "middleware",
         "notifications",
