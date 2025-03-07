@@ -613,9 +613,83 @@ func (s *slotExporter) exportValidatorData(block *types.Block, epoch uint64, tx 
 
 	// this function sets exports the validator status into the db
 	// and also updates the status field in the validators array
-	err := s.db.SaveValidators(epoch, block.Validators, 10000, tx)
+	err := s.db.SaveValidators(block.Validators, tx)
 	if err != nil {
 		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
+	}
+
+	var genesisBalances map[uint64][]*types.ValidatorBalance
+	if epoch == 0 {
+		var err error
+		indices := make([]uint64, 0, len(block.Validators))
+
+		for _, validator := range block.Validators {
+			indices = append(indices, validator.Index)
+		}
+		genesisBalances, err = db.BigtableClient.GetValidatorBalanceHistory(indices, 0, 0)
+		if err != nil {
+			return fmt.Errorf("error retrieving genesis validator balances: %w", err)
+		}
+	}
+
+	validators, err := s.db.GetValidatorsWithMissingBalances(10000, tx)
+	if err != nil {
+		return fmt.Errorf("error retrieving validators with missing balances: %w", err)
+	}
+
+	balanceCache := make(map[uint64]map[uint64]uint64) // cache balances by epoch
+	currentActivationEpoch := uint64(0)
+
+	timeStart := time.Now()
+	for _, validator := range validators {
+		if validator.ActivationEpoch > epoch {
+			continue
+		}
+
+		if validator.ActivationEpoch != currentActivationEpoch {
+			log.Infof("removing epoch %v from the activation epoch balance cache", currentActivationEpoch)
+			delete(balanceCache, currentActivationEpoch) // remove old items from the map
+			currentActivationEpoch = validator.ActivationEpoch
+		}
+
+		var balance map[uint64][]*types.ValidatorBalance
+		if validator.ActivationEpoch == 0 {
+			balance = genesisBalances
+		} else {
+			balance, err = db.BigtableClient.GetValidatorBalanceHistory([]uint64{validator.ValidatorIndex}, validator.ActivationEpoch, validator.ActivationEpoch)
+			if err != nil {
+				return fmt.Errorf("error retrieving validator balance history: %w", err)
+			}
+		}
+
+		foundBalance := uint64(0)
+		if balance[validator.ValidatorIndex] == nil || len(balance[validator.ValidatorIndex]) == 0 {
+			log.Warnf("no activation epoch balance found for validator %v for epoch %v in bigtable, trying node", validator.ValidatorIndex, validator.ActivationEpoch)
+
+			if balanceCache[validator.ActivationEpoch] == nil {
+				balances, err := s.Client.GetBalancesForEpoch(int64(validator.ActivationEpoch))
+				if err != nil {
+					return fmt.Errorf("error retrieving balances for epoch %d: %v", validator.ActivationEpoch, err)
+				}
+				balanceCache[validator.ActivationEpoch] = balances
+			}
+			foundBalance = balanceCache[validator.ActivationEpoch][validator.ValidatorIndex]
+		} else {
+			foundBalance = balance[validator.ValidatorIndex][0].Balance
+		}
+
+		log.Infof("retrieved activation epoch balance of %v for validator %v", foundBalance, validator.ValidatorIndex)
+
+		err = s.db.UpdateActivationEpochBalance(validator.ValidatorIndex, foundBalance, tx)
+		if err != nil {
+			return fmt.Errorf("error saving activation epoch balance for validator %v: %w", validator.ValidatorIndex, err)
+		}
+	}
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
+
+	err = s.db.AnalyzeValidatorsTable(tx)
+	if err != nil {
+		return fmt.Errorf("error analyzing validators table: %w", err)
 	}
 
 	// also update the queue deposit table once every epoch

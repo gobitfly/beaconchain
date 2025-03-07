@@ -18,7 +18,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -39,13 +38,16 @@ type SlotExporterRepository interface {
 	CacheBlockDepositLookup() error
 	SaveAttestationDuties(attDuties map[types.Slot]map[types.ValidatorIndex][]types.Slot) error
 	SaveSyncCommitteeDuties(syncDuties map[types.Slot]map[types.ValidatorIndex]bool) error
-	SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, tx *sqlx.Tx) error
+	SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error
 	UpdateEpochStatus(epochParticipationStats *types.ValidatorParticipation, tx *sqlx.Tx) error
 	GetAllSlots(tx *sqlx.Tx) ([]uint64, error)
 	GetLastSlot(tx *sqlx.Tx) (uint64, error)
 	SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error
 	GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error)
-	SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Client, batchSize int, tx *sqlx.Tx) error
+	SaveValidators(validators []*types.Validator, tx *sqlx.Tx) error
+	GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]types.ValidatorActivationEpoch, error)
+	UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error
+	AnalyzeValidatorsTable(tx *sqlx.Tx) error
 	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
 }
 
@@ -462,36 +464,11 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *slotExporterRepository) SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Client, activationBalanceBatchSize int, tx *sqlx.Tx) error {
+func (r *slotExporterRepository) SaveValidators(validators []*types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
 	}()
-
-	if activationBalanceBatchSize <= 0 {
-		activationBalanceBatchSize = 10000
-	}
-
-	var genesisBalances map[uint64][]*types.ValidatorBalance
-
-	if epoch == 0 {
-		var err error
-
-		indices := make([]uint64, 0, len(validators))
-
-		for _, validator := range validators {
-			indices = append(indices, validator.Index)
-		}
-		genesisBalances, err = db.BigtableClient.GetValidatorBalanceHistory(indices, 0, 0)
-		if err != nil {
-			return fmt.Errorf("error retrieving genesis validator balances: %w", err)
-		}
-	}
-
-	validatorsByIndex := make(map[uint64]*types.Validator, len(validators))
-	for _, v := range validators {
-		validatorsByIndex[v.Index] = v
-	}
 
 	var currentState []*types.Validator
 	err := tx.Select(&currentState, "SELECT validatorindex, withdrawableepoch, withdrawalcredentials, slashed, activationeligibilityepoch, activationepoch, exitepoch, status FROM validators;")
@@ -605,24 +582,10 @@ func (r *slotExporterRepository) SaveValidators(epoch uint64, validators []*type
 			}
 			validatorStatusCounts[v.Status]++
 		} else {
-			// status                     =
-			// CASE
-			// WHEN EXCLUDED.exitepoch <= %[1]d AND EXCLUDED.slashed THEN 'slashed'
-			// WHEN EXCLUDED.exitepoch <= %[1]d THEN 'exited'
-			// WHEN EXCLUDED.activationeligibilityepoch = 9223372036854775807 THEN 'deposited'
-			// WHEN EXCLUDED.activationepoch > %[1]d THEN 'pending'
-			// WHEN EXCLUDED.slashed AND EXCLUDED.activationepoch < %[1]d AND GREATEST(EXCLUDED.lastattestationslot, validators.lastattestationslot) < %[2]d THEN 'slashing_offline'
-			// WHEN EXCLUDED.slashed THEN 'slashing_online'
-			// WHEN EXCLUDED.exitepoch < 9223372036854775807 AND GREATEST(EXCLUDED.lastattestationslot, validators.lastattestationslot) < %[2]d THEN 'exiting_offline'
-			// WHEN EXCLUDED.exitepoch < 9223372036854775807 THEN 'exiting_online'
-			// WHEN EXCLUDED.activationepoch < %[1]d AND GREATEST(EXCLUDED.lastattestationslot, validators.lastattestationslot) < %[2]d THEN 'active_offline'
-			// ELSE 'active_online'
-			// END
 			db.BigtableClient.LastAttestationCacheMux.Lock()
 			lastAttestationSlot := db.BigtableClient.LastAttestationCache[v.Index]
 			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
 
-			// offline := lastAttestationSlot < thresholdSlot
 			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
 
 			db.BigtableClient.LastAttestationCacheMux.Unlock()
@@ -652,29 +615,14 @@ func (r *slotExporterRepository) SaveValidators(epoch uint64, validators []*type
 			validatorStatusCounts[v.Status]++
 			if c.Status != v.Status {
 				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
-				//queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
-				if validatorStatusUpdateMap[c.Status] == nil {
-					validatorStatusUpdateMap[c.Status] = make([]uint64, 0)
-				}
-				validatorStatusUpdateMap[c.Status] = append(validatorStatusUpdateMap[c.Status], c.Index)
+				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v",
+					v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 
-				// _, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
-				// if err != nil {
-				// 	return fmt.Errorf("error updating validator status: %w", err)
-				// }
-				//updates++
+				_, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
+				if err != nil {
+					return fmt.Errorf("error updating validator status: %w", err)
+				}
 			}
-			// if c.Balance != v.Balance {
-			// 	// log.LogInfo("Balance changed for validator %v from %v to %v", v.Index, c.Balance, v.Balance)
-			// 	queries.WriteString(fmt.Sprintf("UPDATE validators SET balance = %d WHERE validatorindex = %d;\n", v.Balance, c.Index))
-			// 	updates++
-			// }
-			// if c.EffectiveBalance != v.EffectiveBalance {
-			// 	// log.LogInfo("EffectiveBalance changed for validator %v from %v to %v", v.Index, c.EffectiveBalance, v.EffectiveBalance)
-			// 	queries.WriteString(fmt.Sprintf("UPDATE validators SET effectivebalance = %d WHERE validatorindex = %d;\n", v.EffectiveBalance, c.Index))
-			// 	updates++
-			// }
 			if c.Slashed != v.Slashed {
 				log.Infof("Slashed changed for validator %v from %v to %v", v.Index, c.Slashed, v.Slashed)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET slashed = %v WHERE validatorindex = %d;\n", v.Slashed, c.Index))
@@ -737,72 +685,12 @@ func (r *slotExporterRepository) SaveValidators(epoch uint64, validators []*type
 		}
 		log.Infof("validator table update completed, took %v", time.Since(updateStart))
 	}
+
 	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
-	s := time.Now()
-	newValidators := []struct {
-		Validatorindex  uint64
-		ActivationEpoch uint64
-	}{}
-
-	err = tx.Select(&newValidators, "SELECT validatorindex, activationepoch FROM validators WHERE balanceactivation IS NULL ORDER BY activationepoch LIMIT $1", activationBalanceBatchSize)
-	if err != nil {
-		return fmt.Errorf("error retreiving activation epoch balances from db: %w", err)
-	}
-
-	balanceCache := make(map[uint64]map[uint64]uint64)
-	currentActivationEpoch := uint64(0)
-
-	// get genesis balances of all validators for performance
-
-	for _, newValidator := range newValidators {
-		if newValidator.ActivationEpoch > epoch {
-			continue
-		}
-
-		if newValidator.ActivationEpoch != currentActivationEpoch {
-			log.Infof("removing epoch %v from the activation epoch balance cache", currentActivationEpoch)
-			delete(balanceCache, currentActivationEpoch) // remove old items from the map
-			currentActivationEpoch = newValidator.ActivationEpoch
-		}
-
-		var balance map[uint64][]*types.ValidatorBalance
-		if newValidator.ActivationEpoch == 0 {
-			balance = genesisBalances
-		} else {
-			balance, err = db.BigtableClient.GetValidatorBalanceHistory([]uint64{newValidator.Validatorindex}, newValidator.ActivationEpoch, newValidator.ActivationEpoch)
-			if err != nil {
-				return fmt.Errorf("error retreiving validator balance history: %w", err)
-			}
-		}
-
-		foundBalance := uint64(0)
-		if balance[newValidator.Validatorindex] == nil || len(balance[newValidator.Validatorindex]) == 0 {
-			log.Warnf("no activation epoch balance found for validator %v for epoch %v in bigtable, trying node", newValidator.Validatorindex, newValidator.ActivationEpoch)
-
-			if balanceCache[newValidator.ActivationEpoch] == nil {
-				balances, err := client.GetBalancesForEpoch(int64(newValidator.ActivationEpoch))
-				if err != nil {
-					return fmt.Errorf("error retrieving balances for epoch %d: %v", newValidator.ActivationEpoch, err)
-				}
-				balanceCache[newValidator.ActivationEpoch] = balances
-			}
-			foundBalance = balanceCache[newValidator.ActivationEpoch][newValidator.Validatorindex]
-		} else {
-			foundBalance = balance[newValidator.Validatorindex][0].Balance
-		}
-
-		log.Infof("retrieved activation epoch balance of %v for validator %v", foundBalance, newValidator.Validatorindex)
-
-		_, err = tx.Exec("update validators set balanceactivation = $1 WHERE validatorindex = $2 AND balanceactivation IS NULL;", foundBalance, newValidator.Validatorindex)
-		if err != nil {
-			return fmt.Errorf("error updating activation epoch balance for validator %v: %w", newValidator.Validatorindex, err)
-		}
-	}
-	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(s))
-
 	log.Infof("updating validator status counts")
-	s = time.Now()
+	timeStart := time.Now()
+
 	_, err = tx.Exec("TRUNCATE TABLE validators_status_counts;")
 	if err != nil {
 		return fmt.Errorf("error truncating validators_status_counts table: %w", err)
@@ -813,14 +701,39 @@ func (r *slotExporterRepository) SaveValidators(epoch uint64, validators []*type
 			return fmt.Errorf("error updating validator status counts: %w", err)
 		}
 	}
-	log.Infof("updating validator status counts completed, took %v", time.Since(s))
 
-	s = time.Now()
-	_, err = tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
+	log.Infof("updating validator status counts completed, took %v", time.Since(timeStart))
+
+	return nil
+}
+
+func (r *slotExporterRepository) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]types.ValidatorActivationEpoch, error) {
+	var validators []types.ValidatorActivationEpoch
+
+	err := tx.Select(&validators, "SELECT validatorindex, activationepoch FROM validators WHERE balanceactivation IS NULL ORDER BY activationepoch LIMIT $1", activationBalanceBatchSize)
 	if err != nil {
-		return fmt.Errorf("analyzing validators table: %w", err)
+		return nil, fmt.Errorf("error retreiving activation epoch balances from db: %w", err)
 	}
-	log.Infof("analyze of validators table completed, took %v", time.Since(s))
+
+	return validators, nil
+}
+
+func (r *slotExporterRepository) UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error {
+	_, err := tx.Exec("update validators set balanceactivation = $1 WHERE validatorindex = $2 AND balanceactivation IS NULL;", balance, validatorIndex)
+	if err != nil {
+		return fmt.Errorf("error updating activation epoch balance for validator %v: %w", validatorIndex, err)
+	}
+
+	return nil
+}
+
+func (r *slotExporterRepository) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
+	timeStart := time.Now()
+	_, err := tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
+	if err != nil {
+		return err
+	}
+	log.Infof("analyze of validators table completed, took %v", time.Since(timeStart))
 
 	return nil
 }
@@ -838,7 +751,7 @@ func (r *slotExporterRepository) SaveValidatorQueue(validators *types.ValidatorQ
 }
 
 // SaveEpoch will save the epoch data into the database
-func (r *slotExporterRepository) SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, tx *sqlx.Tx) error {
+func (r *slotExporterRepository) SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())

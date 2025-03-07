@@ -729,6 +729,11 @@ type QueuesMetadata struct {
 	ActivationIndex sql.NullInt64
 }
 
+type ValidatorActivationEpoch struct {
+	ValidatorIndex  uint64
+	ActivationEpoch uint64
+}
+
 type CachedValidator struct {
 	PublicKey                  []byte
 	ActivationEligibilityEpoch sql.NullInt64
