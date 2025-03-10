@@ -1122,7 +1122,7 @@ func debugBlocks(clClient *rpc.LighthouseClient) error {
 			return err
 		}
 
-		elBlock, _, err := elClient.GetBlock(int64(i), "parity/geth")
+		elBlock, _, err := elClient.GetBlock(i, "parity/geth")
 		if err != nil {
 			return err
 		}
@@ -1581,7 +1581,7 @@ func indexMissingBlocks(start uint64, end uint64, bt *db.Bigtable, client *rpc.E
 			if _, err := db.BigtableClient.GetBlockFromBlocksTable(block); err != nil {
 				log.Infof("could not load [%v] from blocks table, will try to fetch it from the node and save it", block)
 
-				bc, _, err := client.GetBlock(int64(block), "parity/geth")
+				bc, _, err := client.GetBlock(block, "parity/geth")
 				if err != nil {
 					log.Error(err, fmt.Sprintf("error getting block %v from the node", block), 0)
 					return
@@ -1628,13 +1628,19 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	store := db2.NewStoreV1FromBigtable(bigtable, cache)
+	store := db2.NewStoreV1FromBigtable(bigtable, database.FreeCache{Cache: cache})
 	transforms, err := executionlayer.TransformerFromList(transformerList)
 	if err != nil {
 		log.Error(nil, err.Error(), 0)
 		return
 	}
-	indexer := executionlayer.NewIndexer(store, transforms...)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:        utils.Config.RedisCacheEndpoint,
+		ReadTimeout: time.Second * 20,
+	})
+	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
+	indexer := executionlayer.NewIndexer(store, lastBlockStore, transforms...)
+	chainID := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
 
 	importENSChanges := false
 	if slices.Contains(transformerList, "TransformEnsNameRegistered") {
@@ -1643,13 +1649,13 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 
 	to := endBlock
 	if endBlock == math.MaxInt64 {
-		lastBlockFromBlocksTable, err := bt.GetLastBlockInBlocksTable()
+		lastBlockFromBlocksTable, err := lastBlockStore.GetInBlocksTable(chainID)
 		if err != nil {
 			log.Error(err, "error retrieving last blocks from blocks table", 0)
 			return
 		}
 
-		to = uint64(lastBlockFromBlocksTable)
+		to = lastBlockFromBlocksTable
 	}
 	blockCount := utilMath.MaxU64(1, batchSize)
 
@@ -1658,8 +1664,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		toBlock := utilMath.MinU64(to, from+blockCount-1)
 
 		log.Infof("indexing blocks %v to %v in data table ...", from, toBlock)
-		err := bt.IndexEventsWithIndexer(int64(from), int64(toBlock), indexer, int64(concurrency))
-		if err != nil {
+		if err := indexer.IndexEvents(chainID, from, to, concurrency); err != nil {
 			log.Error(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()

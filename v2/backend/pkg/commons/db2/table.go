@@ -4,6 +4,7 @@ const (
 	DataTable     = "data"
 	UpdatesTable  = "metadata_updates"
 	MetadataTable = "metadata"
+	BlocksTable   = "blocks"
 )
 
 // Schema is a map containing the bigtable table and the family
@@ -19,15 +20,21 @@ var Schema = map[string][]string{
 		accountFamily,
 		erc20MetadataFamily,
 	},
+	BlocksTable: {
+		defaultBlocksFamily,
+	},
 }
 
 const (
-	defaultFamily = "f"
+	defaultFamily       = "f"
+	defaultBlocksFamily = "default"
 
 	dataColumn = "d"
 
 	updatesBlockFamily = "blocks"
 	blockKeysColumn    = "keys"
+
+	blocksDataColumn = "data"
 )
 
 const (
