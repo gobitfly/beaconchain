@@ -277,6 +277,7 @@ var _ EnumFactory[VDBConsolidationsColumn] = VDBConsolidationsColumn(0)
 const (
 	VDBConsolidationEpoch VDBConsolidationsColumn = iota
 	VDBConsolidationSlot
+	VDBConsolidationIndex
 	VDBConsolidationSource
 	VDBConsolidationTarget
 	VDBConsolidationAmount
@@ -303,15 +304,34 @@ func (VDBConsolidationsColumn) NewFromString(s string) VDBConsolidationsColumn {
 	}
 }
 
+func (c VDBConsolidationsColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBConsolidationSlot:
+		return goqu.C("block_slot")
+	case VDBConsolidationIndex:
+		return goqu.C("request_index")
+	case VDBConsolidationSource:
+		return goqu.C("source_index")
+	case VDBConsolidationTarget:
+		return goqu.C("target_index")
+	case VDBConsolidationAmount:
+		return goqu.C("amount_consolidated")
+	default:
+		return nil
+	}
+}
+
 var VDBConsolidationsColumns = struct {
 	Epoch  VDBConsolidationsColumn
 	Slot   VDBConsolidationsColumn
+	Index  VDBConsolidationsColumn
 	Source VDBConsolidationsColumn
 	Target VDBConsolidationsColumn
 	Amount VDBConsolidationsColumn
 }{
 	VDBConsolidationEpoch,
 	VDBConsolidationSlot,
+	VDBConsolidationIndex,
 	VDBConsolidationSource,
 	VDBConsolidationTarget,
 	VDBConsolidationAmount,
