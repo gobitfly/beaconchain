@@ -26,7 +26,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type ExporterClient interface {
+type SlotExporterClient interface {
 	GetChainHead() (*types.ChainHead, error)
 	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
 	GetBlockBySlot(slot uint64) (*types.Block, error)
@@ -38,8 +38,8 @@ type ExporterClient interface {
 
 type slotExporter struct {
 	ModuleContext
-	Client ExporterClient
-	cache  edb.ExporterCache
+	Client SlotExporterClient
+	cache  edb.SlotExporterCacheRepository
 	db     edb.SlotExporterDBRepository
 	bt     edb.SlotExporterBTRepository
 
@@ -50,7 +50,7 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
 	return &slotExporter{
 		ModuleContext:  moduleContext,
 		Client:         moduleContext.ConsClient,
@@ -360,8 +360,8 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exp
 }
 
 type exporter struct {
-	Client ExporterClient
-	cache  edb.ExporterCache
+	Client SlotExporterClient
+	cache  edb.SlotExporterCacheRepository
 	db     edb.SlotExporterDBRepository
 	bt     edb.SlotExporterBTRepository
 	dbTx   *sqlx.Tx
@@ -369,7 +369,7 @@ type exporter struct {
 	slotExporter *slotExporter
 }
 
-func NewExporter(client ExporterClient, cache edb.ExporterCache, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+func NewExporter(client SlotExporterClient, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
 	return &exporter{
 		Client:       client,
 		cache:        cache,
