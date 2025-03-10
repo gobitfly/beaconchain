@@ -21,15 +21,15 @@ import (
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Failure		409				{object}	types.ApiErrorResponse	"Conflict. The request could not be performed by the server because the authenticated user has already reached their group limit."
 //	@Router			/validator-dashboards/{dashboard_id}/groups [post]
-func (i inputPostValidatorDashboardGroups) Validate(params map[string]string, body io.ReadCloser) (inputPostValidatorDashboardGroups, error) {
+func (i *inputPostValidatorDashboardGroups) Validate(params map[string]string, body io.ReadCloser) error {
 	var v validationError
 	var req types.PostValidatorDashboardGroupsRequest
 	if err := v.checkBody(&req, body); err != nil {
-		return i, err
+		return err
 	}
 	i.dashboardId = v.checkPrimaryDashboardId(params["dashboard_id"])
 	i.name = v.checkNameNotEmpty(req.Name)
-	return i, v.AsError()
+	return v.AsError()
 }
 
 type inputPostValidatorDashboardGroups struct {
@@ -37,7 +37,7 @@ type inputPostValidatorDashboardGroups struct {
 	name        string
 }
 
-func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input inputPostValidatorDashboardGroups) (types.ApiDataResponse[types.VDBPostCreateGroupData], error) {
+func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input *inputPostValidatorDashboardGroups) (types.ApiDataResponse[types.VDBPostCreateGroupData], error) {
 	var r types.ApiDataResponse[types.VDBPostCreateGroupData]
 	dataAccessor := h.getDataAccessor(ctx)
 	userId, err := GetUserIdByContext(ctx)
@@ -76,13 +76,13 @@ func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input
 //	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
-func (i inputGetValidatorDashboardGroupSummary) Validate(params map[string]string, _ io.ReadCloser) (inputGetValidatorDashboardGroupSummary, error) {
+func (i *inputGetValidatorDashboardGroupSummary) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
 	i.groupId = v.checkGroupId(params["group_id"], forbidEmpty)
 	i.period = checkEnum[enums.TimePeriod](&v, params["period"], "period")
 	i.protocolModes = v.checkProtocolModes(params["modes"])
-	return i, v.AsError()
+	return v.AsError()
 }
 
 type inputGetValidatorDashboardGroupSummary struct {
@@ -92,7 +92,7 @@ type inputGetValidatorDashboardGroupSummary struct {
 	period           enums.TimePeriod
 }
 
-func (h *HandlerService) GetValidatorDashboardGroupSummary(ctx context.Context, input inputGetValidatorDashboardGroupSummary) (types.GetValidatorDashboardGroupSummaryResponse, error) {
+func (h *HandlerService) GetValidatorDashboardGroupSummary(ctx context.Context, input *inputGetValidatorDashboardGroupSummary) (types.GetValidatorDashboardGroupSummaryResponse, error) {
 	var r types.GetValidatorDashboardGroupSummaryResponse
 	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
