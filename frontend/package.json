@@ -45,8 +45,8 @@
         "nuxt": "^3.14.1592",
         "postcss": "^8.4.49",
         "sass": "^1.81.1",
-        "typescript": "5.6.2",
-        "vue-tsc": "2.0.29"
+        "typescript": "^5.8.2",
+        "vue-tsc": "^2.2.8"
     },
     "engines": {
         "node": ">=22.0.0"

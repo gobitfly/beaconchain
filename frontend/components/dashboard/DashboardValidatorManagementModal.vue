@@ -22,7 +22,6 @@ import type { NumberOrString } from '~/types/value'
 
 import type { PathValues } from '~/types/customFetch'
 import type { InternalPostSearchResponse } from '~/types/api/search'
-// import type { InternalPostSearchResponse } from '~/types/api/search'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -49,7 +48,7 @@ const {
   removeEntities,
 } = useDashboardKey()
 const {
-  user,
+  premium_perks,
 } = useUserStore()
 
 const initialQuery = {
@@ -146,15 +145,13 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const { premium_perks } = useUserStore()
-
 const editSelected = () => {
   hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
     data: {
       groupId: selected.value?.[0]?.group_id ?? undefined,
       selectedValidators: selected.value?.length,
-      totalValidatorsValidators: totalValidators?.value,
+      totalValidators: totalValidators?.value,
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
@@ -265,22 +262,41 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
   })
 }
+
 const totalValidators = computed(() => {
   // this is necessary after an `typescript update`
   // for types created by api, we should use `types` instead of `interfaces`
   return addUpValues(overview.value?.validators as unknown as Record<string, number>)
 })
 
-const maxValidatorsPerDashboard = computed(() =>
-  isGuestDashboard.value || !user.value?.premium_perks?.validators_per_dashboard
-    ? 20
-    : user.value.premium_perks.validators_per_dashboard,
-)
+const {
+  displayCurrencyDefault,
+  formatAmount,
+} = useCurrency()
 
-const premiumLimit = computed(
-  () => totalValidators.value >= maxValidatorsPerDashboard.value,
-)
-// const hasTooManyValidators = computed(() => totalValidators.value + 1 > maxValidatorsPerDashboard.value)
+const EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH = '640'
+const effectiveBalanceLimitGuestDashboard = formatAmount(EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH, {
+  hasCurrencyDisplay: false,
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  sourceUnit: 'base',
+  targetCurrency: displayCurrencyDefault.main,
+  targetUnit: 'wei',
+  useGrouping: false,
+})
+
+const effectiveBalanceLimitPerDashboard = computed(() => {
+  if (isGuestDashboard.value || !premium_perks.value?.effective_balance_per_dashboard) {
+    return effectiveBalanceLimitGuestDashboard
+  }
+  return premium_perks.value?.effective_balance_per_dashboard
+})
+
+const hasReachedLimit = computed(() => {
+  if (!overview.value?.balances) return false
+  return effectiveBalanceLimitPerDashboard.value <= overview.value?.balances.total
+})
+
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
 
 const handleInvalidSubmit = () => {
@@ -295,10 +311,7 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     type,
     value,
   } = item
-  if (
-    totalValidators.value + 1 > maxValidatorsPerDashboard.value
-    || (type === 'validator_list' && totalValidators.value + value.validators.length > maxValidatorsPerDashboard.value)
-  ) {
+  if (hasReachedLimit.value) {
     handleInvalidSubmit()
     return
   }
@@ -385,8 +398,7 @@ const inputValidator = ref('')
             v-model="inputValidator"
             class="search-bar"
             :has-premium-perk-bulk-adding
-            :total-validators
-            :max-validators-per-dashboard
+            :has-reached-limit
             :is-guest-dashboard
             @submit="handleSubmit"
           />
@@ -551,9 +563,7 @@ const inputValidator = ref('')
                   />
                 </div>
                 <div class="info">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.withdrawal_credential") }}
-                  </div>
+                  <div class="label" />
                   <BcFormatHash
                     :hash="slotProps.data.withdrawal_credential"
                     type="withdrawal_credentials"
@@ -564,21 +574,23 @@ const inputValidator = ref('')
 
             <template #bc-table-footer-left>
               <div
-                v-if="maxValidatorsPerDashboard"
                 class="left"
               >
                 <div
                   class="labels"
-                  :class="{ premiumLimit }"
+                  :class="{ 'premium-limit': hasReachedLimit }"
                 >
                   <span>
-                    <BcFormatNumber
-                      :value="totalValidators"
-                      default="0"
-                    /> /
-                    <BcFormatNumber
-                      :value="maxValidatorsPerDashboard"
-                      default="0"
+                    <BcFormatAmount
+                      :value="overview?.balances.total ?? '0'"
+                      :maximum-fraction-digits="0"
+                      :source-currency="displayCurrencyDefault.main"
+                    />
+                    /
+                    <BcFormatAmount
+                      :value="effectiveBalanceLimitPerDashboard"
+                      :maximum-fraction-digits="0"
+                      :source-currency="displayCurrencyDefault.main"
                     />
                   </span>
                 </div>
@@ -676,7 +688,7 @@ const inputValidator = ref('')
     display: flex;
     gap: var(--padding-small);
 
-    &.premiumLimit {
+    &.premium-limit {
       color: var(--negative-color);
     }
 

@@ -71,6 +71,10 @@ type VDBDataEpochColumns struct {
 	AttestationAssignmentsIndex         [][]int64
 	SyncCommitteeAssignmentsPeriod      [][]int64
 	SyncCommitteeAssignmentsIndex       [][]int64
+	ConsolidationsIncomingAmount        []int64
+	ConsolidationsIncomingCount         []int64
+	ConsolidationsOutgoingAmount        []int64
+	ConsolidationsOutgoingCount         []int64
 }
 
 // get by string
@@ -187,6 +191,14 @@ func (c *VDBDataEpochColumns) Get(str string) any {
 		return c.SyncCommitteeAssignmentsPeriod
 	case "sync_committee_assignments.index":
 		return c.SyncCommitteeAssignmentsIndex
+	case "consolidations_incoming_amount":
+		return c.ConsolidationsIncomingAmount
+	case "consolidations_incoming_count":
+		return c.ConsolidationsIncomingCount
+	case "consolidations_outgoing_amount":
+		return c.ConsolidationsOutgoingAmount
+	case "consolidations_outgoing_count":
+		return c.ConsolidationsOutgoingCount
 	default:
 		return nil
 	}

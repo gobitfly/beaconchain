@@ -22,7 +22,7 @@ const maintenanceLabel = computed(() => {
   }
   const ts = new Date(parsed * 1000).getTime()
   if (ts > tick.value) {
-    return $t('maintenance.planned', { date: formatTsToAbsolute(ts / 1000, $t('locales.date'), true) })
+    return $t('maintenance.planned', { date: formatTsToAbsolute(ts / 1000, 'en-US', true) })
   }
   else {
     return $t('maintenance.ongoing')

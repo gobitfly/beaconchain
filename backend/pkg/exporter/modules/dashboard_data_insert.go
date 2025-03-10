@@ -201,7 +201,7 @@ func (d *dashboardData) fetchAndInsertEpochs(epochs []edb.EpochMetadata) error {
 			}()
 			err := db.UltraFastDumpToClickhouse(&data, edb.EpochWriterSink, insertId.String())
 			if err != nil {
-				d.log.Error(err, "failed to insert epochs", 0, log.Fields{"epochs": data})
+				d.log.Error(err, "failed to insert epochs", 0, log.Fields{"epochs": epochs})
 				return errors.Wrap(err, "failed to insert epochs")
 			}
 			// mark as successful
@@ -212,7 +212,7 @@ func (d *dashboardData) fetchAndInsertEpochs(epochs []edb.EpochMetadata) error {
 
 			err = edb.PushEpochMetadata(epochs)
 			if err != nil {
-				d.log.Error(err, "failed to push epoch metadata", 0, log.Fields{"epochs": insertBatchEpochs[insertId]})
+				d.log.Error(err, "failed to push epoch metadata", 0, log.Fields{"epochs": epochs})
 				return errors.Wrap(err, "failed to push epoch metadata")
 			}
 			return nil

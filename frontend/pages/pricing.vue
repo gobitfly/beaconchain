@@ -24,7 +24,7 @@ watch(
   { immediate: true },
 )
 
-const isYearly = ref(true)
+const isPaymentYearly = ref(true)
 
 const scrollToAddons = () => {
   const element = document.getElementById('addons')
@@ -40,19 +40,20 @@ const scrollToAddons = () => {
           <PricingTypeToggle />
         </div>
         <PricingHeaderLine />
-        <PricingPeriodToggle v-model="isYearly" />
+        <PricingPeriodToggle v-model="isPaymentYearly" />
         <PricingPremiumViaAppBanner />
-        <PricingPremiumProducts :is-yearly />
-        <Button
+        <PricingPremiumProducts :is-payment-yearly />
+        <BcButton
           class="view-addons-button"
           @click="scrollToAddons()"
         >
-          {{ $t("pricing.view_addons") }}<FontAwesomeIcon :icon="faArrowDown" />
-        </Button>
+          {{ $t("pricing.view_addons") }}
+          <FontAwesomeIcon :icon="faArrowDown" />
+        </BcButton>
         <PricingPremiumCompare />
         <PricingPremiumAddons
           id="addons"
-          :is-yearly
+          :is-payment-yearly
         />
         <BcFaq
           class="faq"
@@ -78,14 +79,17 @@ const scrollToAddons = () => {
   </BcPageWrapper>
 </template>
 
-<style lang="scss">
-// we need this one to have the pricing css variables on the whole page available
-@use "~/assets/css/pricing.scss";
+<style lang="css">
+:root {
+  --pricing-content-width: 800px;
+
+  @media (min-width: 1360px) {
+    --pricing-content-width: 1000px;
+  }
+}
 </style>
 
 <style lang="scss" scoped>
-@use "~/assets/css/pricing.scss";
-
 .promo-overlay {
   position: fixed;
   z-index: 6;
@@ -142,11 +146,8 @@ const scrollToAddons = () => {
       width: 100vw;
       justify-content: center;
     }
+
     .view-addons-button {
-      width: 215px;
-      @include pricing.pricing_button;
-      display: flex;
-      gap: 12px;
       margin-bottom: 35px;
     }
   }

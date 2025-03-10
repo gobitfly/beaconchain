@@ -13,6 +13,7 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
+	"github.com/prysmaticlabs/go-bitfield"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/pkg/errors"
@@ -119,6 +120,30 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBData
 		}
 		return nil
 	})
+	g.Go(func() error {
+		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_deposits_overall").Observe(time.Since(start).Seconds())
+		}()
+		err := d.processElectraDeposits(data, tar)
+		if err != nil {
+			return fmt.Errorf("error in processElectraDeposits: %w", err)
+		}
+		return nil
+	})
+	// electra consolidations
+	g.Go(func() error {
+		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_consolidations_overall").Observe(time.Since(start).Seconds())
+		}()
+		err := d.processElectraConsolidations(data, tar)
+		if err != nil {
+			return fmt.Errorf("error in processElectraConsolidations: %w", err)
+		}
+		return nil
+	})
+
 	// force sequential operation of attestation rewards and proposal rewards
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
 		d.phase0HotfixMutex.Lock()
@@ -427,6 +452,68 @@ func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]types.VDBDa
 
 	return g.Wait()
 }
+func (d *dashboardData) processElectraDeposits(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
+	g := &errgroup.Group{}
+	for i, e := range data.epochBasedData.epochs {
+		epoch := e
+		tI := data.epochBasedData.tarIndices[i]
+		tO := data.epochBasedData.tarOffsets[i]
+		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_deposits_single").Observe(time.Since(now).Seconds())
+			}()
+			if _, ok := data.epochBasedData.electraDeposits[epoch]; !ok {
+				// nothing to do
+				return nil
+			}
+			for _, deposit := range data.epochBasedData.electraDeposits[epoch] {
+				// debug log len of pubkey
+				d.log.Tracef("processing electra deposit of pubkey %s (len %d) in epoch %d", deposit.Pubkey, len(deposit.Pubkey), epoch)
+				index, indexExists := data.validatorBasedData.validatorIndices[string(deposit.Pubkey)]
+				if !indexExists {
+					return fmt.Errorf("validator index not found for electra deposit of pubkey %s in epoch %d", deposit.Pubkey, epoch)
+				}
+				(*tar)[tI].DepositsAmount[uint64(tO)+index] += int64(deposit.Amount)
+				(*tar)[tI].DepositsCount[uint64(tO)+index]++
+				d.log.Tracef("processed electra deposit of %d GWEI for validator %d in epoch %d", deposit.Amount, index, epoch)
+			}
+			return nil
+		})
+	}
+
+	return g.Wait()
+}
+
+func (d *dashboardData) processElectraConsolidations(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
+	g := &errgroup.Group{}
+	for i, e := range data.epochBasedData.epochs {
+		epoch := e
+		tI := data.epochBasedData.tarIndices[i]
+		tO := data.epochBasedData.tarOffsets[i]
+		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_consolidations_single").Observe(time.Since(now).Seconds())
+			}()
+			if _, ok := data.epochBasedData.electraConsolidations[epoch]; !ok {
+				// nothing to do
+				return nil
+			}
+			for _, consolidation := range data.epochBasedData.electraConsolidations[epoch] {
+				(*tar)[tI].ConsolidationsIncomingAmount[uint64(tO)+consolidation.TargetValidatorIndex] += int64(consolidation.Amount)
+				(*tar)[tI].ConsolidationsIncomingCount[uint64(tO)+consolidation.TargetValidatorIndex]++
+				(*tar)[tI].ConsolidationsOutgoingAmount[uint64(tO)+consolidation.SourceValidatorIndex] += int64(consolidation.Amount)
+				(*tar)[tI].ConsolidationsOutgoingCount[uint64(tO)+consolidation.SourceValidatorIndex]++
+				// source => target
+				d.log.Tracef("processed electra consolidation: %d => %d %d GWEI in epoch %d", consolidation.SourceValidatorIndex, consolidation.TargetValidatorIndex, consolidation.Amount, epoch)
+			}
+			return nil
+		})
+	}
+
+	return g.Wait()
+}
 
 func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
@@ -604,6 +691,8 @@ func filterArrayUsingBitMask(arr []uint64, bitmask []byte) []uint64 {
 			if (bitmask[byteIndex] & (1 << bitIndex)) != 0 {
 				result = append(result, arr[i])
 			}
+		} else {
+			panic("bitmask out of bounds")
 		}
 	}
 
@@ -646,6 +735,7 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 			}
 			blockValidityMap[j] = 1
 			if lastBlockHash == nil {
+				d.log.Tracef("slot %d, setting previousValidHash to %s", j, data.slotBasedData.blocks[j].ParentRoot)
 				previousValidHash = data.slotBasedData.blocks[j].ParentRoot
 			}
 			a := data.slotBasedData.blocks[j].BlockRoot
@@ -663,7 +753,16 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 			continue
 		}
 		blockValidityMap[j] = 1
+		if lastBlockHash == nil {
+			d.log.Tracef("slot %d, setting previousValidHash to %s (lookahead)", j, data.slotBasedData.blocks[j].ParentRoot)
+			previousValidHash = data.slotBasedData.blocks[j].ParentRoot
+		}
+		a := data.slotBasedData.blocks[j].BlockRoot
+		lastBlockHash = &a
+		blockRoots[j] = *lastBlockHash
 	}
+	// TODO: this breaks if we do 1 epoch batches and the current and lookahead epoch both have no proposals.
+	// should never happen, but dev-/testnets be funky
 	if lastBlockHash == nil {
 		return fmt.Errorf("no valid slots found")
 	}
@@ -680,7 +779,11 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
 		endSlot := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch
 		squareSlotsPerEpoch := IntegerSquareRoot(utils.Config.Chain.ClConfig.SlotsPerEpoch)
-		//debugCounters := make(map[string]int)
+		// cache array of committee indexes (0,1,…)
+		committeeIndexes := make([]uint64, utils.Config.Chain.ClConfig.MaxCommitteesPerSlot)
+		for i := range committeeIndexes {
+			committeeIndexes[i] = uint64(i)
+		}
 		g.Go(func() error {
 			start := time.Now()
 			defer func() {
@@ -691,19 +794,37 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 					// nothing to do
 					continue
 				}
-				// d.log.Infof("processing attestations for epoch %d in slot %d", epoch, j)
 				// attestations
 				for _, att := range data.slotBasedData.blocks[j].Attestations {
 					// ignore if slot is not within our epoch of interest
 					if att.Data.Slot < startSlot || att.Data.Slot >= endSlot {
-						//d.log.Infof("ignoring attestation in slot %d because its for a different epoch %d while we are processing epoch %d", att.Data.Slot, att.Data.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, epoch)
-						//debugCounters["skipped_different_epoch"]++
+						d.log.Tracef("skipping attestation in slot %d, not within epoch bounds %d-%d", att.Data.Slot, startSlot, endSlot)
 						continue
 					}
-					// precalculate integer squareroot of slots per epoch
-					v := filterArrayUsingBitMask(data.slotBasedData.assignments.attestationAssignments[att.Data.Slot][att.Data.Index], att.AggregationBits)
+					// hardfork handling
+					var v []uint64
+					aggregateBits := bitfield.Bitlist(att.AggregationBits).BytesNoTrim()
+
+					if epoch >= utils.Config.Chain.ClConfig.ElectraForkEpoch {
+						// use committee_bits map to generate
+						//var newAssignmentArray []uint64
+						committees := filterArrayUsingBitMask(committeeIndexes, att.CommitteeBits)
+						newAssignmentArray := make([]uint64, 0, len(committees)*int(utils.Config.Chain.ClConfig.MaxValidatorsPerCommittee))
+						for _, committee := range committees {
+							if len(data.slotBasedData.assignments.attestationAssignments[att.Data.Slot][committee]) == 0 {
+								// bad
+								return fmt.Errorf("no validators found in attestation assignment for slot %d and committee %d", att.Data.Slot, committee)
+							}
+							newAssignmentArray = append(newAssignmentArray, data.slotBasedData.assignments.attestationAssignments[att.Data.Slot][committee]...)
+						}
+						v = filterArrayUsingBitMask(newAssignmentArray, aggregateBits)
+					} else {
+						v = filterArrayUsingBitMask(data.slotBasedData.assignments.attestationAssignments[att.Data.Slot][att.Data.Index], aggregateBits)
+					}
+					// debug print the bitmask
+					//d.log.Debugf("aggregation bits for slot %d contained in slot %d (epoch %d):\n%s", att.Data.Slot, j, epoch, utils.RenderByteArrayAsQuadrants(aggregateBits, 8, true))
 					if len(v) == 0 {
-						//debugCounters["skipped_no_validators"]++
+						d.log.Tracef("skipping attestation in slot %d for epoch %d: no validators found", j, epoch)
 						continue
 					}
 					inclusion_delay := int64(j - att.Data.Slot)
@@ -712,7 +833,7 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 					}
 					// https://eips.ethereum.org/EIPS/eip-7045
 					if epoch < utils.Config.Chain.ClConfig.AltairForkEpoch && inclusion_delay > 32 {
-						//debugCounters["skipped_inclusion_delay"]++
+						d.log.Tracef("skipping attestation in slot %d during epoch %d: inclusion delay %d - pre altair fork", j, epoch, inclusion_delay)
 						continue
 					}
 					optimalInclusionDelay := int64(0)
@@ -760,11 +881,15 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 							headValue = 1
 						}
 					}
-
+					// log validator list that attested
+					d.log.Tracef("attestation in slot %d during epoch %d: inclusion delay %d (optimal: %d), source %d (m: %t), target %d (m: %t), head %d (m: %t) - validators: %v",
+						j, epoch, inclusion_delay, optimalInclusionDelay, sourceValue, is_matching_source, targetValue, is_matching_target, headValue, is_matching_head, v)
 					for _, valiIndex := range v {
 						valiIndex += tO
-						// check if it was already processed. if yes skip
+						// check if we already processed an attestations for this validator during this epoch
 						if (*tar)[tI].AttestationsObserved[valiIndex] > 0 {
+							//d.log.Tracef("skipping attestation in slot %d for validator %d during epoch %d - already processed",
+							//	j, valiIndex, epoch)
 							continue
 						}
 						// executed

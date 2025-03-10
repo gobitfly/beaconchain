@@ -18,7 +18,10 @@ import {
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
-const { isLoggedIn } = useUserStore()
+const {
+  isLoggedIn,
+  premium_perks,
+} = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
 
@@ -93,6 +96,15 @@ const {
 const {
   refreshOverview,
 } = validatorDashboardOverviewStore
+
+const hasReachedSubscriptionLimit = computed(() => {
+  if (!premium_perks.value?.effective_balance_per_dashboard || !overview.value) {
+    return false
+  }
+  return premium_perks.value?.effective_balance_per_dashboard
+    <= overview.value?.balances.total
+})
+
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const { error: validatorOverviewError } = await useAsyncData(
@@ -204,6 +216,18 @@ watch(
       :display-mode="'modal'"
     />
     <BcPageWrapper>
+      <template #banner>
+        <BcNotificationBanner
+          v-if="hasReachedSubscriptionLimit"
+          :title="$t('dashboard.subsciprion_limit_reached_title')"
+        >
+          <BcTranslation
+            keypath="dashboard.subsciprion_limit_reached.template"
+            linkpath="dashboard.subsciprion_limit_reached._link"
+            to="/pricing"
+          />
+        </BcNotificationBanner>
+      </template>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardControls :dashboard-title="overview?.name" />

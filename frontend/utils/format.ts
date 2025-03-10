@@ -3,6 +3,7 @@ import {
   DateTime, type StringUnitLength,
 } from 'luxon'
 import type { ComposerTranslation } from 'vue-i18n'
+import type { Locale } from '~/i18n/i18n.config'
 import type { AgeFormat } from '~/types/settings'
 import type { NumberOrString } from '~/types/value'
 
@@ -41,29 +42,49 @@ export function commmifyLeft(value: string): string {
   return formatted
 }
 
-export function formatFiat(
-  value: number,
-  currency: string,
-  locales: string,
-  minimumFractionDigits?: number,
-  maximumFractionDigits?: number,
+export function formatFiatCurrency(
+  value: number | string,
+  options: {
+    currency?: CurrencyCodeFiat,
+    locale?: Locale,
+    maximumFractionDigits?: number,
+    minimumFractionDigits?: number,
+  } = {},
 ) {
-  const formatter = new Intl.NumberFormat(locales, {
+  const {
+    currency = 'EUR',
+    locale = 'en-US',
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = options
+
+  return new Intl.NumberFormat(locale, {
     currency,
     maximumFractionDigits,
     minimumFractionDigits,
     style: 'currency',
-  })
-
-  return formatter.format(value)
+  }).format(value as `${number}`)
 }
 
+/**
+ * This should convert 0.2069 to 20
+ */
+export function formatFraction(value: NumberOrString, option?: { locale?: Locale }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(number * 100)
+}
 export function formatGoTimestamp(
   timestamp: number | string,
   compareTimestamp?: number,
   format?: AgeFormat,
   style?: StringUnitLength,
-  locales?: string,
+  locales?: Locale,
   withTime?: boolean,
 ) {
   if (typeof timestamp === 'number') {
@@ -79,6 +100,7 @@ export function formatGoTimestamp(
     withTime,
   )
 }
+
 export function formatNumber(value: number | string, {
   locale = 'en-US',
   maximumFractionDigits,
@@ -87,7 +109,7 @@ export function formatNumber(value: number | string, {
   signDisplay,
   useGrouping,
 }: {
-  locale?: string,
+  locale?: Locale,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
   scaleBy?: number,
@@ -105,6 +127,34 @@ export function formatNumber(value: number | string, {
     signDisplay,
     useGrouping,
   }).format(numberInScientificNotation as `${number}`)
+}
+
+/**
+ * Format number | string (fraction or number) to percent.
+ *
+ * @example 0.12346 to 12.346%
+ * @example (isFraction: false) 98 to 98%
+ *
+ */
+export function formatPercent(value: NumberOrString, option?: {
+  isFraction?: boolean,
+  locale?: Locale,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+}) {
+  const {
+    isFraction = true,
+    locale = 'en-US',
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = option ?? {}
+  const number = isFraction ? Number(value) * 100 : Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'unit',
+    unit: 'percent',
+  }).format(number)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {
@@ -144,12 +194,26 @@ export function formatTimeDuration(
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
 
+/**
+ * This should convert 20 to 0.2
+ */
+export function formatToFraction(value: NumberOrString, option?: { locale?: Locale }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value ?? 0)
+  return new Intl.NumberFormat(locale, {
+    // maximumFractionDigits: 0,
+    // minimumFractionDigits: 0,
+  }).format(number / 100)
+}
+
 export function formatTs(
   ts?: number,
   timestamp?: number,
   format: AgeFormat = 'relative',
   style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
+  locales: Locale = 'en-US',
   withTime = true,
 ) {
   if (ts === undefined) {
@@ -166,7 +230,7 @@ export function formatTs(
 
 export function formatTsToAbsolute(
   ts: number,
-  locales: string,
+  locales: Locale,
   includeTime?: boolean,
 ): string {
   const timeOptions: Intl.DateTimeFormatOptions = includeTime
@@ -187,7 +251,7 @@ export function formatTsToAbsolute(
     : date.toLocaleDateString(locales, options)
 }
 
-export function formatTsToTime(ts: number, locales: string): string {
+export function formatTsToTime(ts: number, locales: Locale): string {
   const options: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: 'numeric',
@@ -244,7 +308,7 @@ function formatTsToRelative(
   targetTimestamp?: number,
   baseTimestamp?: number,
   style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
+  locales: Locale = 'en-US',
 ): null | string | undefined {
   if (!targetTimestamp) {
     return undefined
@@ -259,76 +323,6 @@ function formatTsToRelative(
       base: date,
       style,
     })
-}
-
-export const formatPremiumProductPrice = (
-  t: ComposerTranslation,
-  price: number,
-  digits?: number,
-) => {
-  return formatFiat(
-    price,
-    'EUR',
-    t('locales.currency'),
-    digits ?? 2,
-    digits ?? 2,
-  )
-}
-
-/**
- * This should convert 0.2069 to 20
- */
-export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  }).format(number * 100)
-}
-
-/**
- * Format number | string (fraction or number) to percent.
- *
- * @example 0.12346 to 12.346%
- * @example (isFraction: false) 98 to 98%
- *
- */
-export function formatPercent(value: NumberOrString, option?: {
-  isFraction?: boolean,
-  locale?: string,
-  maximumFractionDigits?: number,
-  minimumFractionDigits?: number,
-}) {
-  const {
-    isFraction = true,
-    locale = 'en-US',
-    maximumFractionDigits,
-    minimumFractionDigits,
-  } = option ?? {}
-  const number = isFraction ? Number(value) * 100 : Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits,
-    minimumFractionDigits,
-    style: 'unit',
-    unit: 'percent',
-  }).format(number)
-}
-
-/**
- * This should convert 20 to 0.2
- */
-export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value ?? 0)
-  return new Intl.NumberFormat(locale, {
-    // maximumFractionDigits: 0,
-    // minimumFractionDigits: 0,
-  }).format(number / 100)
 }
 
 export const formatValue = (value: string, {

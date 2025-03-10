@@ -178,12 +178,21 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 
 	parsedCommittees, err := lc.cl.GetCommittees(depStateRoot, &epoch, nil, nil)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving committees data: %w", err)
+		if strings.Contains(err.Error(), "epoch out of bounds, too far in future") {
+			log.Warnf("error retrieving committees data for epoch %v: %v, trying slot based retrieval", epoch, err)
+			parsedCommittees, err = lc.cl.GetCommittees(epoch*utils.Config.ClConfig.SlotsPerEpoch, &epoch, nil, nil)
+			if err != nil {
+				return nil, fmt.Errorf("error retrieving committees data: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("error retrieving committees data: %w", err)
+		}
 	}
 
 	assignments := &types.EpochAssignments{
-		ProposerAssignments: make(map[uint64]uint64),
-		AttestorAssignments: make(map[string]uint64),
+		ProposerAssignments:         make(map[uint64]uint64),
+		AttestorAssignments:         make(map[string]uint64),
+		AttestationCommitteeLengths: make(map[string]uint64),
 	}
 
 	// propose
@@ -193,6 +202,7 @@ func (lc *LighthouseClient) GetEpochAssignments(epoch uint64) (*types.EpochAssig
 
 	// attest
 	for _, committee := range parsedCommittees.Data {
+		assignments.AttestationCommitteeLengths[fmt.Sprintf("%d-%d", committee.Slot, committee.Index)] = uint64(len(committee.Validators))
 		for i, valIndex := range committee.Validators {
 			k := utils.FormatAttestorAssignmentKey(committee.Slot, committee.Index, uint64(i))
 			assignments.AttestorAssignments[k] = uint64(valIndex)
@@ -616,6 +626,10 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 			Deposits:          make([]*types.Deposit, 0),
 			VoluntaryExits:    make([]*types.VoluntaryExit, 0),
 			SyncAggregate:     nil,
+			ExecutionRequests: &types.ExecutionRequests{
+				Consolidations: make([]*types.ConsolidationExecutionRequest, 0),
+				Withdrawals:    make([]*types.WithdrawalExecutionRequest, 0),
+			},
 		}
 
 		if isFirstSlotOfEpoch {
@@ -679,7 +693,7 @@ func (lc *LighthouseClient) GetBlockBySlot(slot uint64) (*types.Block, error) {
 	}
 
 	// for the first slot of an epoch, also retrieve the epoch assignments
-	if block.Slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0 {
+	if isFirstSlotOfEpoch {
 		var err error
 		block.EpochAssignments, err = lc.GetEpochAssignments(block.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		if err != nil {
@@ -743,27 +757,65 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		SignedBLSToExecutionChange: make([]*types.SignedBLSToExecutionChange, len(parsedBlock.Message.Body.SignedBLSToExecutionChange)),
 		BlobKZGCommitments:         make([][]byte, len(parsedBlock.Message.Body.BlobKZGCommitments)),
 		BlobKZGProofs:              make([][]byte, len(parsedBlock.Message.Body.BlobKZGCommitments)),
-		AttestationDuties:          make(map[types.ValidatorIndex][]types.Slot),
-		SyncDuties:                 make(map[types.ValidatorIndex]bool),
+		ExecutionRequests: &types.ExecutionRequests{
+			Deposits:       make([]*types.DepositExecutionRequest, len(parsedBlock.Message.Body.ExecutionRequests.Deposits)),
+			Consolidations: make([]*types.ConsolidationExecutionRequest, len(parsedBlock.Message.Body.ExecutionRequests.Consolidations)),
+			Withdrawals:    make([]*types.WithdrawalExecutionRequest, len(parsedBlock.Message.Body.ExecutionRequests.Withdrawals)),
+		},
+		AttestationDuties: make(map[types.ValidatorIndex][]types.Slot),
+		SyncDuties:        make(map[types.ValidatorIndex]bool),
 	}
 
 	for i, c := range parsedBlock.Message.Body.BlobKZGCommitments {
 		block.BlobKZGCommitments[i] = c
 	}
 
+	if len(parsedBlock.Message.Body.ExecutionRequests.Consolidations) > 0 {
+		for i, consolidation := range parsedBlock.Message.Body.ExecutionRequests.Consolidations {
+			block.ExecutionRequests.Consolidations[i] = &types.ConsolidationExecutionRequest{
+				SourceAddress: consolidation.SourceAddress,
+				SourcePubkey:  consolidation.SourcePubkey,
+				TargetPubkey:  consolidation.TargetPubkey,
+			}
+		}
+	}
+
+	if len(parsedBlock.Message.Body.ExecutionRequests.Withdrawals) > 0 {
+		for i, withdrawal := range parsedBlock.Message.Body.ExecutionRequests.Withdrawals {
+			block.ExecutionRequests.Withdrawals[i] = &types.WithdrawalExecutionRequest{
+				SourceAddress:   withdrawal.SourceAddress,
+				ValidatorPubkey: withdrawal.ValidatorPubkey,
+				Amount:          withdrawal.Amount,
+			}
+		}
+	}
+
+	if len(parsedBlock.Message.Body.ExecutionRequests.Deposits) > 0 {
+		for i, deposit := range parsedBlock.Message.Body.ExecutionRequests.Deposits {
+			block.ExecutionRequests.Deposits[i] = &types.DepositExecutionRequest{
+				Pubkey:                deposit.Pubkey,
+				WithdrawalCredentials: deposit.WithdrawalCredentials,
+				Amount:                deposit.Amount,
+				Signature:             deposit.Signature,
+				Index:                 deposit.Index,
+			}
+		}
+	}
+
 	if len(parsedBlock.Message.Body.BlobKZGCommitments) > 0 {
 		res, err := lc.GetBlobSidecars(fmt.Sprintf("%#x", block.BlockRoot))
 		if err != nil {
 			return nil, err
-		}
-		if len(res.Data) != len(parsedBlock.Message.Body.BlobKZGCommitments) {
-			return nil, fmt.Errorf("error constructing block at slot %v: len(blob_sidecars) != len(block.blob_kzg_commitments): %v != %v", block.Slot, len(res.Data), len(parsedBlock.Message.Body.BlobKZGCommitments))
-		}
-		for i, d := range res.Data {
-			if !bytes.Equal(d.KzgCommitment, block.BlobKZGCommitments[i]) {
-				return nil, fmt.Errorf("error constructing block at slot %v: unequal kzg_commitments at index %v: %#x != %#x", block.Slot, i, d.KzgCommitment, block.BlobKZGCommitments[i])
+		} else {
+			if len(res.Data) != len(parsedBlock.Message.Body.BlobKZGCommitments) {
+				return nil, fmt.Errorf("error constructing block at slot %v: len(blob_sidecars) != len(block.blob_kzg_commitments): %v != %v", block.Slot, len(res.Data), len(parsedBlock.Message.Body.BlobKZGCommitments))
 			}
-			block.BlobKZGProofs[i] = d.KzgProof
+			for i, d := range res.Data {
+				if !bytes.Equal(d.KzgCommitment, block.BlobKZGCommitments[i]) {
+					return nil, fmt.Errorf("error constructing block at slot %v: unequal kzg_commitments at index %v: %#x != %#x", block.Slot, i, d.KzgCommitment, block.BlobKZGCommitments[i])
+				}
+				block.BlobKZGProofs[i] = d.KzgProof
+			}
 		}
 	}
 
@@ -798,43 +850,6 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 	}
 
 	if payload := parsedBlock.Message.Body.ExecutionPayload; payload != nil && !bytes.Equal(payload.ParentHash, make([]byte, 32)) {
-		txs := make([]*types.Transaction, 0, len(payload.Transactions))
-		for i, rawTx := range payload.Transactions {
-			tx := &types.Transaction{Raw: rawTx}
-			var decTx gethtypes.Transaction
-			if err := decTx.UnmarshalBinary(rawTx); err != nil {
-				return nil, fmt.Errorf("error parsing tx %d block %x: %w", i, payload.BlockHash, err)
-			} else {
-				h := decTx.Hash()
-				tx.TxHash = h[:]
-				tx.AccountNonce = decTx.Nonce()
-				// big endian
-				tx.Price = decTx.GasPrice().Bytes()
-				tx.GasLimit = decTx.Gas()
-				sender, err := lc.signer.Sender(&decTx)
-				if err != nil {
-					return nil, fmt.Errorf("transaction with invalid sender (slot: %v, tx-hash: %x): %w", slot, h, err)
-				}
-				tx.Sender = sender.Bytes()
-				if v := decTx.To(); v != nil {
-					tx.Recipient = v.Bytes()
-				} else {
-					tx.Recipient = []byte{}
-				}
-				tx.Amount = decTx.Value().Bytes()
-				tx.Payload = decTx.Data()
-				tx.MaxPriorityFeePerGas = decTx.GasTipCap().Uint64()
-				tx.MaxFeePerGas = decTx.GasFeeCap().Uint64()
-
-				if decTx.BlobGasFeeCap() != nil {
-					tx.MaxFeePerBlobGas = decTx.BlobGasFeeCap().Uint64()
-				}
-				for _, h := range decTx.BlobHashes() {
-					tx.BlobVersionedHashes = append(tx.BlobVersionedHashes, h.Bytes())
-				}
-			}
-			txs = append(txs, tx)
-		}
 		withdrawals := make([]*types.Withdrawals, 0, len(payload.Withdrawals))
 		for _, w := range payload.Withdrawals {
 			withdrawals = append(withdrawals, &types.Withdrawals{
@@ -846,23 +861,23 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		}
 
 		block.ExecutionPayload = &types.ExecutionPayload{
-			ParentHash:    payload.ParentHash,
-			FeeRecipient:  payload.FeeRecipient,
-			StateRoot:     payload.StateRoot,
-			ReceiptsRoot:  payload.ReceiptsRoot,
-			LogsBloom:     payload.LogsBloom,
-			Random:        payload.PrevRandao,
-			BlockNumber:   payload.BlockNumber,
-			GasLimit:      payload.GasLimit,
-			GasUsed:       payload.GasUsed,
-			Timestamp:     payload.Timestamp,
-			ExtraData:     payload.ExtraData,
-			BaseFeePerGas: payload.BaseFeePerGas,
-			BlockHash:     payload.BlockHash,
-			Transactions:  txs,
-			Withdrawals:   withdrawals,
-			BlobGasUsed:   payload.BlobGasUsed,
-			ExcessBlobGas: payload.ExcessBlobGas,
+			ParentHash:        payload.ParentHash,
+			FeeRecipient:      payload.FeeRecipient,
+			StateRoot:         payload.StateRoot,
+			ReceiptsRoot:      payload.ReceiptsRoot,
+			LogsBloom:         payload.LogsBloom,
+			Random:            payload.PrevRandao,
+			BlockNumber:       payload.BlockNumber,
+			GasLimit:          payload.GasLimit,
+			GasUsed:           payload.GasUsed,
+			Timestamp:         payload.Timestamp,
+			ExtraData:         payload.ExtraData,
+			BaseFeePerGas:     payload.BaseFeePerGas,
+			BlockHash:         payload.BlockHash,
+			TransactionsCount: len(payload.Transactions),
+			Withdrawals:       withdrawals,
+			BlobGasUsed:       payload.BlobGasUsed,
+			ExcessBlobGas:     payload.ExcessBlobGas,
 		}
 	}
 
@@ -933,6 +948,7 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 	for i, attestation := range parsedBlock.Message.Body.Attestations {
 		a := &types.Attestation{
 			AggregationBits: attestation.AggregationBits,
+			CommitteeBits:   attestation.CommitteeBits,
 			Attesters:       []uint64{},
 			Data: &types.AttestationData{
 				Slot:            attestation.Data.Slot,
@@ -951,24 +967,52 @@ func (lc *LighthouseClient) blockFromResponse(parsedHeaders *constypes.StandardB
 		}
 
 		aggregationBits := bitfield.Bitlist(a.AggregationBits)
+		committeeBits := bitfield.Bitvector64(a.CommitteeBits)
+
 		assignments, err := lc.GetEpochAssignments(a.Data.Slot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("error receiving epoch assignment for epoch %v: %w", a.Data.Slot/utils.Config.Chain.ClConfig.SlotsPerEpoch, err)
 		}
+		if len(a.CommitteeBits) == 0 {
+			for i := uint64(0); i < aggregationBits.Len(); i++ {
+				if aggregationBits.BitAt(i) {
+					validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, uint64(a.Data.CommitteeIndex), i)]
+					if !found { // This should never happen!
+						validator = 0
+						log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
+					}
+					a.Attesters = append(a.Attesters, validator)
 
-		for i := uint64(0); i < aggregationBits.Len(); i++ {
-			if aggregationBits.BitAt(i) {
-				validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, uint64(a.Data.CommitteeIndex), i)]
-				if !found { // This should never happen!
-					validator = 0
-					log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
+					if block.AttestationDuties[types.ValidatorIndex(validator)] == nil {
+						block.AttestationDuties[types.ValidatorIndex(validator)] = []types.Slot{types.Slot(a.Data.Slot)}
+					} else {
+						block.AttestationDuties[types.ValidatorIndex(validator)] = append(block.AttestationDuties[types.ValidatorIndex(validator)], types.Slot(a.Data.Slot))
+					}
 				}
-				a.Attesters = append(a.Attesters, validator)
+			}
+		} else {
+			attestationsBitsOffset := uint64(0)
+			for i := uint64(0); i < committeeBits.Len(); i++ {
+				if committeeBits.BitAt(i) {
+					committeeLength := assignments.AttestationCommitteeLengths[fmt.Sprintf("%d-%d", a.Data.Slot, i)]
+					for j := uint64(0); j < committeeLength; j++ {
+						if aggregationBits.BitAt(attestationsBitsOffset + j) {
+							validator, found := assignments.AttestorAssignments[utils.FormatAttestorAssignmentKey(a.Data.Slot, i, j)]
+							if !found { // This should never happen!
+								validator = 0
+								log.Fatal(fmt.Errorf("error retrieving assigned validator for attestation %v of block %v for slot %v committee index %v member index %v", i, block.Slot, a.Data.Slot, a.Data.CommitteeIndex, i), "", 0)
+							}
+							//log.Infof("attestation %v of block %v for slot %v committee index %v member index %v validator %v", i, block.Slot, a.Data.Slot, i, attestationsBitsOffset+j, validator)
+							a.Attesters = append(a.Attesters, validator)
 
-				if block.AttestationDuties[types.ValidatorIndex(validator)] == nil {
-					block.AttestationDuties[types.ValidatorIndex(validator)] = []types.Slot{types.Slot(a.Data.Slot)}
-				} else {
-					block.AttestationDuties[types.ValidatorIndex(validator)] = append(block.AttestationDuties[types.ValidatorIndex(validator)], types.Slot(a.Data.Slot))
+							if block.AttestationDuties[types.ValidatorIndex(validator)] == nil {
+								block.AttestationDuties[types.ValidatorIndex(validator)] = []types.Slot{types.Slot(a.Data.Slot)}
+							} else {
+								block.AttestationDuties[types.ValidatorIndex(validator)] = append(block.AttestationDuties[types.ValidatorIndex(validator)], types.Slot(a.Data.Slot))
+							}
+						}
+					}
+					attestationsBitsOffset += committeeLength
 				}
 			}
 		}
@@ -1127,4 +1171,8 @@ type ExecutionPayload struct {
 	// present only after deneb
 	BlobGasUsed   constypes.Uint64Str `json:"blob_gas_used"`
 	ExcessBlobGas constypes.Uint64Str `json:"excess_blob_gas"`
+}
+
+func (lc *LighthouseClient) GetStandardBeaconState(stateID any) (*constypes.StandardBeaconStateResponse, error) {
+	return lc.cl.GetState(stateID)
 }

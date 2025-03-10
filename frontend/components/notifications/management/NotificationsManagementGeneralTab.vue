@@ -112,7 +112,7 @@ const textMutedUntil = computed(() => {
   return $t('notifications.general.mute.until', {
     date: formatTsToAbsolute(
       store.settings.general_settings.do_not_disturb_timestamp,
-      $t('locales.date'),
+      'en-US',
       true,
     ),
   })
