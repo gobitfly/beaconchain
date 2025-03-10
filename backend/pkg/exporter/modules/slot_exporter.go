@@ -42,7 +42,8 @@ type ExporterClient interface {
 type slotExporter struct {
 	ModuleContext
 	Client ExporterClient
-	db     edb.SlotExporterRepository
+	db     edb.SlotExporterDB
+	bt     edb.SlotExporterBT
 	cache  edb.ExporterCache
 
 	firstRun       bool
@@ -52,11 +53,12 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterDB, bt edb.SlotExporterBT) ModuleInterface {
 	return &slotExporter{
 		ModuleContext:  moduleContext,
 		Client:         moduleContext.ConsClient,
 		db:             db,
+		bt:             bt,
 		cache:          cache,
 		firstRun:       true,
 		latestEpoch:    0,
@@ -131,7 +133,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
 
-	tx, err := db.WriterDb.Beginx()
+	tx, err := s.db.WriterDb.Beginx()
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
@@ -169,6 +171,8 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 }
 
 func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
+	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
+
 	// get all slots we currently have in the database
 	dbSlots, err := s.db.GetAllSlots(tx)
 	if err != nil {
@@ -178,7 +182,6 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 	if len(dbSlots) > 0 {
 		if dbSlots[0] != 0 {
 			log.Infof("exporting genesis slot as it is missing in the database")
-			exporter := NewExporter(s.Client, s.db, tx, s)
 			err := exporter.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
@@ -199,7 +202,6 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 			if previousSlot != currentSlot-1 {
 				log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
 				for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
-					exporter := NewExporter(s.Client, s.db, tx, s)
 					err := exporter.ExportSlot(slot, false, tx)
 					if err != nil {
 						return fmt.Errorf("error exporting slot %v: %w", slot, err)
@@ -212,7 +214,7 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.db, tx, s)
+	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
 	lastDbSlot, err := s.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -256,7 +258,7 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.db, tx, s)
+	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
 
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := s.db.GetAllNonFinalizedSlots()
@@ -360,16 +362,18 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 
 type exporter struct {
 	Client ExporterClient
-	db     edb.SlotExporterRepository
+	db     edb.SlotExporterDB
+	bt     edb.SlotExporterBT
 	dbTx   *sqlx.Tx
 
 	slotExporter *slotExporter
 }
 
-func NewExporter(client ExporterClient, db edb.SlotExporterRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+func NewExporter(client ExporterClient, db edb.SlotExporterDB, bt edb.SlotExporterBT, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
 	return &exporter{
 		Client:       client,
 		db:           db,
+		bt:           bt,
 		dbTx:         dbTx,
 		slotExporter: slotExporter,
 	}
@@ -449,11 +453,11 @@ func (s *exporter) exportDuties(block *types.Block) error {
 	}
 
 	// save sync & attestation duties to bigtable
-	err := db.BigtableClient.SaveAttestationDuties(attDuties)
+	err := s.bt.SaveAttestationDuties(attDuties)
 	if err != nil {
 		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
 	}
-	err = db.BigtableClient.SaveSyncCommitteeDuties(syncDuties)
+	err = s.bt.SaveSyncCommitteeDuties(syncDuties)
 	if err != nil {
 		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
 	}
@@ -501,7 +505,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, 
 
 	// save attestation duties to bigtable
 	g.Go(func() error {
-		err := db.BigtableClient.SaveAttestationDuties(attDutiesEpoch)
+		err := s.bt.SaveAttestationDuties(attDutiesEpoch)
 		if err != nil {
 			return fmt.Errorf("error exporting attestation assignments to bigtable for slot %v: %w", block.Slot, err)
 		}
@@ -510,7 +514,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, 
 
 	// save sync committee duties to bigtable
 	g.Go(func() error {
-		err := db.BigtableClient.SaveSyncCommitteeDuties(syncDutiesEpoch)
+		err := s.bt.SaveSyncCommitteeDuties(syncDutiesEpoch)
 		if err != nil {
 			return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
 		}
@@ -519,7 +523,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, 
 
 	// save the validator balances to bigtable
 	g.Go(func() error {
-		return db.BigtableClient.SaveValidatorBalances(epoch, block.Validators)
+		return s.bt.SaveValidatorBalances(epoch, block.Validators)
 	})
 
 	// if we are exporting the head epoch, update the validator db table
@@ -649,7 +653,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sql
 		for _, validator := range block.Validators {
 			indices = append(indices, validator.Index)
 		}
-		genesisBalances, err = db.BigtableClient.GetValidatorBalanceHistory(indices, 0, 0)
+		genesisBalances, err = s.bt.GetValidatorBalanceHistory(indices, 0, 0)
 		if err != nil {
 			return fmt.Errorf("error retrieving genesis validator balances: %w", err)
 		}
@@ -679,7 +683,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sql
 		if validator.ActivationEpoch == 0 {
 			balance = genesisBalances
 		} else {
-			balance, err = db.BigtableClient.GetValidatorBalanceHistory([]uint64{validator.ValidatorIndex}, validator.ActivationEpoch, validator.ActivationEpoch)
+			balance, err = s.bt.GetValidatorBalanceHistory([]uint64{validator.ValidatorIndex}, validator.ActivationEpoch, validator.ActivationEpoch)
 			if err != nil {
 				return fmt.Errorf("error retrieving validator balance history: %w", err)
 			}

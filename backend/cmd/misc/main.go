@@ -159,6 +159,7 @@ func Run() {
 		if err != nil {
 			log.Fatal(err, "error initializing bigtable", 0)
 		}
+		db.BigtableClient = bt
 	}
 
 	var rpcClient *rpc.LighthouseClient
@@ -268,7 +269,7 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewExporter(rpcClient, edb.NewSlotExporterRepository(), tx, nil)
+				slotExporter := modules.NewExporter(rpcClient, *edb.NewSlotExporterDB(db.WriterDb), *edb.NewSlotExporterBT(db.BigtableClient), tx, nil)
 				err = slotExporter.ExportSlot(slot, false, tx)
 				if err != nil {
 					_ = tx.Rollback()
@@ -317,7 +318,7 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewExporter(rpcClient, edb.NewSlotExporterRepository(), tx, nil)
+				slotExporter := modules.NewExporter(rpcClient, *edb.NewSlotExporterDB(db.WriterDb), *edb.NewSlotExporterBT(db.BigtableClient), tx, nil)
 				err = slotExporter.ExportSlot(slot, false, tx)
 				if err != nil {
 					_ = tx.Rollback()
@@ -386,8 +387,6 @@ func Run() {
 			}
 		}()
 
-		exporterDb := edb.NewSlotExporterRepository()
-
 		batchSize := 10000
 		for i := 0; i < len(validatorsArr); i += batchSize {
 			data := &types.EpochData{
@@ -415,7 +414,7 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 
-			err = exporterDb.SaveValidators(data.Validators, tx)
+			err = edb.NewSlotExporterDB(db.WriterDb).SaveValidators(data.Validators, tx)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}
@@ -1262,8 +1261,6 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 			return
 		}
 
-		exporterDb := edb.NewSlotExporterRepository()
-
 		ctx := context.Background()
 		g, gCtx := errgroup.WithContext(ctx)
 		g.SetLimit(int(concurency))
@@ -1353,7 +1350,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 				}
 
 				if importWholeBlock {
-					err := exporterDb.SaveBlock(block, true, tx)
+					err := edb.NewSlotExporterDB(db.WriterDb).SaveBlock(block, true, tx)
 					if err != nil {
 						log.Error(err, fmt.Errorf("error saving Slot [%v]", block.Slot), 0)
 						return
