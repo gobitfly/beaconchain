@@ -45,7 +45,6 @@ type SlotExporterDBRepository interface {
 	UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error
 	AnalyzeValidatorsTable(tx *sqlx.Tx) error
 	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
-	//
 	GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error)
 	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
 	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, updates int, tx *sqlx.Tx) (int, error)
@@ -672,7 +671,6 @@ func (r *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.T
 		validator.Status)
 
 	return err
-
 }
 
 func (r *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
