@@ -832,12 +832,44 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 	}
 	resDeposits := make([]*resRowDeposits, 0, 1024)
 	depositsQry := `
-			select validators.validatorindex, count(*) AS deposits, sum(amount) AS deposits_amount
-			from blocks_deposits
-			inner join validators on blocks_deposits.publickey = validators.pubkey
-			inner join blocks on blocks_deposits.block_root = blocks.blockroot
-			where blocks.slot >= $1 and blocks.slot <= $2 and (blocks.status = '1' OR blocks.slot = 0) and blocks_deposits.valid_signature
-			group by validators.validatorindex`
+		with first_valid_deposits as (
+			select
+				distinct on (publickey)
+				publickey,
+				block_slot,
+				block_index
+			from
+				blocks_deposits
+			where
+				valid_signature
+			order by
+				publickey,
+				block_slot,
+				block_index
+		)
+		select
+			validators.validatorindex,
+			count(*) as deposits,
+			sum(amount) as deposits_amount
+		from
+			blocks_deposits
+		inner join validators on
+			blocks_deposits.publickey = validators.pubkey
+		inner join blocks on
+			blocks_deposits.block_root = blocks.blockroot
+		inner join first_valid_deposits on
+			blocks_deposits.publickey = first_valid_deposits.publickey
+		where
+			blocks.slot >= $1
+			and blocks.slot <= $2
+			and (blocks.status = '1'
+				or blocks.slot = 0)
+			and (blocks_deposits.block_slot > first_valid_deposits.block_slot  -- any slot after the valid deposit
+				or (blocks_deposits.block_slot = first_valid_deposits.block_slot -- or the same slot but a higher index
+					and blocks_deposits.block_index >= first_valid_deposits.block_index)
+			)
+		group by
+			validators.validatorindex;`
 
 	err := WriterDb.Select(&resDeposits, depositsQry, firstSlot, lastSlot)
 	if err != nil {
