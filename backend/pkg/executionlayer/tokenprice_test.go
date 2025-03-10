@@ -90,7 +90,7 @@ func TestTokenPricer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := db2.NewStoreV1(nil, database.Wrap(metadataBigtable, db2.MetadataTable), nil, db2.NoopCache{})
+	store := db2.NewStoreV1(nil, database.Wrap(metadataBigtable, db2.MetadataTable), nil, nil, database.NoopCache{})
 	backend := th.NewBackend(t)
 
 	tokenAddress, token := backend.DeployERC20(t, "usdt", "usdt", backend.BankAccount.From)

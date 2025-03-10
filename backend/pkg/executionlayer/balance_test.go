@@ -23,7 +23,7 @@ func TestBalanceUpdater(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := db2.NewStoreV1FromBigtable(bt, db2.NoopCache{})
+	store := db2.NewStoreV1FromBigtable(bt, database.NoopCache{})
 	backend := th.NewBackend(t)
 
 	multicall := backend.DeployContract(t, common.FromHex(contracts.MulticallMetaData.Bin))

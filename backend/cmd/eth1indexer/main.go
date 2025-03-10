@@ -1,16 +1,13 @@
 package eth1indexer
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"math/big"
 	"net/http"
 	"os"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -29,8 +26,8 @@ import (
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/go-redis/redis/v8"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"golang.org/x/sync/errgroup"
 
 	//nolint:gosec
 	_ "net/http/pprof"
@@ -39,24 +36,24 @@ import (
 func Run() {
 	fs := flag.NewFlagSet("fs", flag.ExitOnError)
 	erigonEndpoint := fs.String("erigon", "", "Erigon archive node enpoint")
-	block := fs.Int64("block", 0, "Index a specific block")
+	block := fs.Uint64("block", 0, "Index a specific block")
 
-	reorgDepth := fs.Int("reorg.depth", 20, "Lookback to check and handle chain reorgs")
+	reorgDepth := fs.Uint64("reorg.depth", 20, "Lookback to check and handle chain reorgs")
 
-	concurrencyBlocks := fs.Int64("blocks.concurrency", 30, "Concurrency to use when indexing blocks from erigon")
-	startBlocks := fs.Int64("blocks.start", 0, "Block to start indexing")
-	endBlocks := fs.Int64("blocks.end", 0, "Block to finish indexing")
-	bulkBlocks := fs.Int64("blocks.bulk", 8000, "Maximum number of blocks to be processed before saving")
-	offsetBlocks := fs.Int64("blocks.offset", 100, "Blocks offset")
+	concurrencyBlocks := fs.Uint64("blocks.concurrency", 30, "Concurrency to use when indexing blocks from erigon")
+	startBlocks := fs.Uint64("blocks.start", 0, "Block to start indexing")
+	endBlocks := fs.Uint64("blocks.end", 0, "Block to finish indexing")
+	bulkBlocks := fs.Uint64("blocks.bulk", 8000, "Maximum number of blocks to be processed before saving")
+	offsetBlocks := fs.Uint64("blocks.offset", 100, "Blocks offset")
 	checkBlocksGaps := fs.Bool("blocks.gaps", false, "Check for gaps in the blocks table")
 	checkBlocksGapsLookback := fs.Int("blocks.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
 	traceMode := fs.String("blocks.tracemode", "parity/geth", "Trace mode to use, can bei either 'parity', 'geth' or 'parity/geth' for both")
 
-	concurrencyData := fs.Int64("data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
-	startData := fs.Int64("data.start", 0, "Block to start indexing")
-	endData := fs.Int64("data.end", 0, "Block to finish indexing")
-	bulkData := fs.Int64("data.bulk", 8000, "Maximum number of blocks to be processed before saving")
-	offsetData := fs.Int64("data.offset", 1000, "Data offset")
+	concurrencyData := fs.Uint64("data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
+	startData := fs.Uint64("data.start", 0, "Block to start indexing")
+	endData := fs.Uint64("data.end", 0, "Block to finish indexing")
+	bulkData := fs.Uint64("data.bulk", 8000, "Maximum number of blocks to be processed before saving")
+	offsetData := fs.Uint64("data.offset", 1000, "Data offset")
 	checkDataGaps := fs.Bool("data.gaps", false, "Check for gaps in the data table")
 	checkDataGapsLookback := fs.Int("data.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
 
@@ -124,6 +121,11 @@ func Run() {
 	defer db.ReaderDb.Close()
 	defer db.WriterDb.Close()
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:        utils.Config.RedisCacheEndpoint,
+		ReadTimeout: time.Second * 20,
+	})
+
 	if erigonEndpoint == nil || *erigonEndpoint == "" {
 		if utils.Config.Eth1ErigonEndpoint == "" {
 			log.Fatal(nil, "no erigon node url provided", 0)
@@ -162,7 +164,7 @@ func Run() {
 	}
 
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	store := db2.NewStoreV1FromBigtable(bigtable, cache)
+	store := db2.NewStoreV1FromBigtable(bigtable, database.FreeCache{Cache: cache})
 
 	batcherConfig := evm.BatcherConfig{
 		Limit: utils.Config.Indexer.BatchLimit,
@@ -199,8 +201,10 @@ func Run() {
 		go ImportEnsUpdatesLoop(bt, client, *ensBatchSize)
 	}
 
-	indexer := executionlayer.NewIndexer(store, executionlayer.AllTransformers...)
+	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
+	indexer := executionlayer.NewIndexer(store, lastBlockStore, executionlayer.AllTransformers...)
 	balanceUpdater := executionlayer.NewBalanceUpdater(chainId, store, store, batcher)
+	reorgWatcher := executionlayer.NewReorgWatcher(client.GetNativeClient(), store, *reorgDepth, chainId, lastBlockStore)
 
 	if *enableFullBalanceUpdater {
 		ProcessBalanceUpdates(balanceUpdater, *balanceUpdaterBatchSize, -1)
@@ -208,12 +212,10 @@ func Run() {
 	}
 
 	if *block != 0 {
-		err = IndexFromNode(bt, client, *block, *block, *concurrencyBlocks, *traceMode)
-		if err != nil {
+		if err := indexer.IndexNode(chainId, client, *block, *block, *concurrencyBlocks, *traceMode); err != nil {
 			log.Fatal(err, "error indexing from node", 0, map[string]interface{}{"block": *block, "concurrency": *concurrencyBlocks})
 		}
-		err = bt.IndexEventsWithIndexer(*block, *block, indexer, *concurrencyData)
-		if err != nil {
+		if err := indexer.IndexEvents(chainId, *block, *block, *concurrencyData); err != nil {
 			log.Fatal(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
@@ -240,26 +242,23 @@ func Run() {
 	}
 
 	if *endBlocks != 0 && *startBlocks < *endBlocks {
-		err = IndexFromNode(bt, client, *startBlocks, *endBlocks, *concurrencyBlocks, *traceMode)
-		if err != nil {
+		if err = indexer.IndexNode(chainId, client, *startBlocks, *endBlocks, *concurrencyBlocks, *traceMode); err != nil {
 			log.Fatal(err, "error indexing from node", 0, map[string]interface{}{"start": *startBlocks, "end": *endBlocks, "concurrency": *concurrencyBlocks})
 		}
 		return
 	}
 
 	if *endData != 0 && *startData < *endData {
-		err = bt.IndexEventsWithIndexer(*startData, *endData, indexer, *concurrencyData)
-		if err != nil {
+		if err := indexer.IndexEvents(chainId, *startData, *endData, *concurrencyData); err != nil {
 			log.Fatal(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
 		return
 	}
 
-	lastSuccessulBlockIndexingTs := time.Now()
+	lastSuccessfulBlockIndexingTs := time.Now()
 	for ; ; time.Sleep(time.Second * 14) {
-		err := HandleChainReorgs(bt, client, *reorgDepth)
-		if err != nil {
+		if err := reorgWatcher.LookForReorg(); err != nil {
 			log.Error(err, "error handling chain reorg", 0)
 			continue
 		}
@@ -270,13 +269,13 @@ func Run() {
 			continue
 		}
 
-		lastBlockFromBlocksTable, err := bt.GetLastBlockInBlocksTable()
+		lastBlockFromBlocksTable, err := lastBlockStore.GetInBlocksTable(chainId)
 		if err != nil {
 			log.Error(err, "error retrieving last blocks from blocks table", 0)
 			continue
 		}
 
-		lastBlockFromDataTable, err := bt.GetLastBlockInDataTable()
+		lastBlockFromDataTable, err := lastBlockStore.GetInDataTable(chainId)
 		if err != nil {
 			log.Error(err, "error retrieving last blocks from data table", 0)
 			continue
@@ -290,32 +289,32 @@ func Run() {
 
 		continueAfterError := false
 		if lastBlockFromNode > 0 {
-			if lastBlockFromBlocksTable < int(lastBlockFromNode) {
+			if lastBlockFromBlocksTable < lastBlockFromNode {
 				log.Infof("missing blocks %v to %v in blocks table, indexing ...", lastBlockFromBlocksTable+1, lastBlockFromNode)
 
-				startBlock := int64(lastBlockFromBlocksTable+1) - *offsetBlocks
-				if startBlock < 0 {
-					startBlock = 0
+				startBlock := uint64(0)
+				if int64(lastBlockFromDataTable+1-*offsetData) > 0 {
+					startBlock = lastBlockFromBlocksTable + 1 - *offsetBlocks
 				}
 
-				if *bulkBlocks <= 0 || *bulkBlocks > int64(lastBlockFromNode)-startBlock+1 {
-					*bulkBlocks = int64(lastBlockFromNode) - startBlock + 1
+				if *bulkBlocks <= 0 || *bulkBlocks > lastBlockFromNode-startBlock+1 {
+					*bulkBlocks = lastBlockFromNode - startBlock + 1
 				}
 
-				for startBlock <= int64(lastBlockFromNode) && !continueAfterError {
+				for startBlock <= lastBlockFromNode && !continueAfterError {
 					endBlock := startBlock + *bulkBlocks - 1
-					if endBlock > int64(lastBlockFromNode) {
-						endBlock = int64(lastBlockFromNode)
+					if endBlock > lastBlockFromNode {
+						endBlock = lastBlockFromNode
 					}
 
-					err = IndexFromNode(bt, client, startBlock, endBlock, *concurrencyBlocks, *traceMode)
+					err = indexer.IndexNode(chainId, client, startBlock, endBlock, *concurrencyBlocks, *traceMode)
 					if err != nil {
 						errMsg := "error indexing from node"
 						errFields := map[string]interface{}{
 							"start":       startBlock,
 							"end":         endBlock,
 							"concurrency": *concurrencyBlocks}
-						if time.Since(lastSuccessulBlockIndexingTs) > time.Minute*30 {
+						if time.Since(lastSuccessfulBlockIndexingTs) > time.Minute*30 {
 							log.Fatal(err, errMsg, 0, errFields)
 						} else {
 							log.Error(err, errMsg, 0, errFields)
@@ -323,7 +322,7 @@ func Run() {
 						continueAfterError = true
 						continue
 					} else {
-						lastSuccessulBlockIndexingTs = time.Now()
+						lastSuccessfulBlockIndexingTs = time.Now()
 					}
 
 					startBlock = endBlock + 1
@@ -333,26 +332,25 @@ func Run() {
 				}
 			}
 
-			if lastBlockFromDataTable < int(lastBlockFromNode) {
+			if lastBlockFromDataTable < lastBlockFromNode {
 				log.Infof("missing blocks %v to %v in data table, indexing ...", lastBlockFromDataTable+1, lastBlockFromNode)
 
-				startBlock := int64(lastBlockFromDataTable+1) - *offsetData
-				if startBlock < 0 {
-					startBlock = 0
+				startBlock := uint64(0)
+				if int64(lastBlockFromDataTable+1-*offsetData) > 0 {
+					startBlock = lastBlockFromDataTable + 1 - *offsetData
 				}
 
-				if *bulkData <= 0 || *bulkData > int64(lastBlockFromNode)-startBlock+1 {
-					*bulkData = int64(lastBlockFromNode) - startBlock + 1
+				if *bulkData <= 0 || *bulkData > lastBlockFromNode-startBlock+1 {
+					*bulkData = lastBlockFromNode - startBlock + 1
 				}
 
-				for startBlock <= int64(lastBlockFromNode) && !continueAfterError {
+				for startBlock <= lastBlockFromNode && !continueAfterError {
 					endBlock := startBlock + *bulkData - 1
-					if endBlock > int64(lastBlockFromNode) {
-						endBlock = int64(lastBlockFromNode)
+					if endBlock > lastBlockFromNode {
+						endBlock = lastBlockFromNode
 					}
 
-					err = bt.IndexEventsWithIndexer(startBlock, endBlock, indexer, *concurrencyData)
-					if err != nil {
+					if err := indexer.IndexEvents(chainId, startBlock, endBlock, *concurrencyBlocks); err != nil {
 						log.Error(err, "error indexing from bigtable", 0, map[string]interface{}{"start": startBlock, "end": endBlock, "concurrency": *concurrencyData})
 						cache.Clear()
 						continueAfterError = true
@@ -404,73 +402,6 @@ func readTokenListFile(path string) (erc20.ERC20TokenList, error) {
 	return tokenList, nil
 }
 
-func HandleChainReorgs(bt *db.Bigtable, client *rpc.ErigonClient, depth int) error {
-	ctx := context.Background()
-	// get latest block from the node
-	latestNodeBlock, err := client.GetNativeClient().BlockByNumber(ctx, nil)
-	if err != nil {
-		return err
-	}
-	latestNodeBlockNumber := latestNodeBlock.NumberU64()
-
-	// for each block check if block node hash and block db hash match
-	if depth > int(latestNodeBlockNumber) {
-		depth = int(latestNodeBlockNumber)
-	}
-	for i := latestNodeBlockNumber - uint64(depth); i <= latestNodeBlockNumber; i++ {
-		nodeBlock, err := client.GetNativeClient().HeaderByNumber(ctx, big.NewInt(int64(i)))
-		if err != nil {
-			return err
-		}
-
-		dbBlock, err := bt.GetBlockFromBlocksTable(i)
-		if err != nil {
-			if err == db.ErrBlockNotFound { // exit if we hit a block that is not yet in the db
-				return nil
-			}
-			return err
-		}
-
-		if !bytes.Equal(nodeBlock.Hash().Bytes(), dbBlock.Hash) {
-			log.Warnf("found incosistency at height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)
-
-			// first we set the cached marker of the last block in the blocks/data table to the block prior to the forked one
-			if i > 0 {
-				previousBlock := i - 1
-				err := bt.SetLastBlockInBlocksTable(int64(previousBlock))
-				if err != nil {
-					return fmt.Errorf("error setting last block [%v] in blocks table: %w", previousBlock, err)
-				}
-				err = bt.SetLastBlockInDataTable(int64(previousBlock))
-				if err != nil {
-					return fmt.Errorf("error setting last block [%v] in data table: %w", previousBlock, err)
-				}
-				// now we can proceed to delete all blocks including and after the forked block
-			}
-			// delete all blocks starting from the fork block up to the latest block in the db
-			for j := i; j <= latestNodeBlockNumber; j++ {
-				dbBlock, err := bt.GetBlockFromBlocksTable(j)
-				if err != nil {
-					if err == db.ErrBlockNotFound { // exit if we hit a block that is not yet in the db
-						return nil
-					}
-					return err
-				}
-				log.Infof("deleting block at height %v with hash %x", dbBlock.Number, dbBlock.Hash)
-
-				err = bt.DeleteBlock(dbBlock.Number, dbBlock.Hash)
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			log.Infof("height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)
-		}
-	}
-
-	return nil
-}
-
 // ProcessBalanceUpdates will use the balanceUpdater to fetch and update the balances
 // if iterations == -1 it will run forever
 func ProcessBalanceUpdates(balanceUpdater executionlayer.BalanceUpdater, batchSize int, iterations int) {
@@ -483,73 +414,4 @@ func ProcessBalanceUpdates(balanceUpdater executionlayer.BalanceUpdater, batchSi
 		}
 		log.Infof("retrieved %v balances in %v, currently at %s", len(balances), time.Since(start), balances[len(balances)-1].Address)
 	}
-}
-
-func IndexFromNode(bt *db.Bigtable, client *rpc.ErigonClient, start, end, concurrency int64, traceMode string) error {
-	ctx := context.Background()
-	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(int(concurrency))
-
-	startTs := time.Now()
-	lastTickTs := time.Now()
-
-	processedBlocks := int64(0)
-
-	for i := start; i <= end; i++ {
-		i := i
-		g.Go(func() error {
-			select {
-			case <-gCtx.Done():
-				return gCtx.Err()
-			default:
-			}
-
-			blockStartTs := time.Now()
-			bc, timings, err := client.GetBlock(i, traceMode)
-			if err != nil {
-				return fmt.Errorf("error getting block: %v from ethereum node err: %w", i, err)
-			}
-
-			dbStart := time.Now()
-			err = bt.SaveBlock(bc)
-			if err != nil {
-				return fmt.Errorf("error saving block: %v to bigtable: %w", i, err)
-			}
-			current := atomic.AddInt64(&processedBlocks, 1)
-			if current%100 == 0 {
-				r := end - start
-				if r == 0 {
-					r = 1
-				}
-				perc := float64(i-start) * 100 / float64(r)
-
-				log.Infof("retrieved & saved block %v (0x%x) in %v (header: %v, receipts: %v, traces: %v, db: %v)", bc.Number, bc.Hash, time.Since(blockStartTs), timings.Headers, timings.Receipts, timings.Traces, time.Since(dbStart))
-				log.Infof("processed %v blocks in %v (%.1f blocks / sec); sync is %.1f%% complete", current, time.Since(startTs), float64((current))/time.Since(lastTickTs).Seconds(), perc)
-
-				lastTickTs = time.Now()
-				atomic.StoreInt64(&processedBlocks, 0)
-			}
-			return nil
-		})
-	}
-
-	err := g.Wait()
-
-	if err != nil {
-		return err
-	}
-
-	lastBlockInCache, err := bt.GetLastBlockInBlocksTable()
-	if err != nil {
-		return err
-	}
-
-	if end > int64(lastBlockInCache) {
-		err := bt.SetLastBlockInBlocksTable(end)
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -15,16 +15,15 @@ import (
 	"sync"
 	"time"
 
+	gcp_bigtable "cloud.google.com/go/bigtable"
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/executionlayer"
-
-	gcp_bigtable "cloud.google.com/go/bigtable"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -690,76 +689,6 @@ func reversePaddedBigtableTimestamp(timestamp *timestamppb.Timestamp) string {
 		log.Fatal(fmt.Errorf("unknown timestamp: %v", timestamp), "", 0)
 	}
 	return fmt.Sprintf("%019d", MAX_INT-timestamp.Seconds)
-}
-
-func (bigtable *Bigtable) IndexEventsWithIndexer(start, end int64, indexer *executionlayer.Indexer, concurrency int64) error {
-	g := new(errgroup.Group)
-	g.SetLimit(int(concurrency))
-
-	log.Infof("indexing blocks from %d to %d", start, end)
-	batchSize := int64(1000)
-	for i := start; i <= end; i += batchSize {
-		firstBlock := i
-		lastBlock := firstBlock + batchSize - 1
-		if lastBlock > end {
-			lastBlock = end
-		}
-
-		g.Go(func() error {
-			blocksChan := make(chan *types.Eth1Block, batchSize)
-
-			go func(stream chan *types.Eth1Block) {
-				log.Infof("querying blocks from %v to %v", firstBlock, lastBlock)
-				high := lastBlock
-				low := lastBlock - batchSize + 1
-				if firstBlock > low {
-					low = firstBlock
-				}
-
-				err := BigtableClient.GetFullBlocksDescending(stream, uint64(high), uint64(low))
-				if err != nil {
-					log.Error(err, "error getting blocks descending", 0, map[string]interface{}{"high": high, "low": low})
-				}
-				close(stream)
-			}(blocksChan)
-			subG := new(errgroup.Group)
-			subG.SetLimit(int(concurrency))
-			for b := range blocksChan {
-				block := b
-				subG.Go(func() error {
-					return indexer.IndexBlock(bigtable.chainId, block)
-				})
-			}
-			return subG.Wait()
-		})
-	}
-
-	if err := g.Wait(); err == nil {
-		log.Infof("data table indexing completed")
-	} else {
-		log.Error(err, "wait group error", 0)
-		return err
-	}
-
-	err := g.Wait()
-
-	if err != nil {
-		return err
-	}
-
-	lastBlockInCache, err := bigtable.GetLastBlockInDataTable()
-	if err != nil {
-		return err
-	}
-
-	if end > int64(lastBlockInCache) {
-		err := bigtable.SetLastBlockInDataTable(end)
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // custom timestamp
@@ -2337,129 +2266,6 @@ func (bigtable *Bigtable) SaveContractMetadata(address []byte, metadata *types.C
 	mut.Set(CONTRACT_METADATA_FAMILY, CONTRACT_ABI, gcp_bigtable.Timestamp(0), metadata.ABIJson)
 
 	return bigtable.tableMetadata.Apply(ctx, fmt.Sprintf("%s:%x", bigtable.chainId, address), mut)
-}
-
-func (bigtable *Bigtable) GetBlockKeys(blockNumber uint64, blockHash []byte) ([]string, error) {
-	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		log.WarnWithFields(log.Fields{
-			"blockNumber": blockNumber,
-			"blockHash":   blockHash,
-			"func":        utils.GetCurrentFuncName(),
-			"duration":    REPORT_TIMEOUT,
-		}, "call took longer than expected")
-	})
-	defer tmr.Stop()
-
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*30))
-	defer cancel()
-
-	key := fmt.Sprintf("%s:BLOCK:%s:%x", bigtable.chainId, reversedPaddedBlockNumber(blockNumber), blockHash)
-
-	row, err := bigtable.tableMetadataUpdates.ReadRow(ctx, key)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if row == nil {
-		return nil, fmt.Errorf("keys for block %v not found", blockNumber)
-	}
-
-	return strings.Split(string(row[METADATA_UPDATES_FAMILY_BLOCKS][0].Value), ","), nil
-}
-
-// Deletes all block data from bigtable
-func (bigtable *Bigtable) DeleteBlock(blockNumber uint64, blockHash []byte) error {
-	// handle contract state updates
-	starttime, err := encodeIsContractUpdateTs(blockNumber, 0, 0)
-	if err != nil {
-		return err
-	}
-	endtime, err := encodeIsContractUpdateTs(blockNumber+1, 0, 0)
-	if err != nil {
-		return err
-	}
-
-	filter := gcp_bigtable.ChainFilters(
-		gcp_bigtable.FamilyFilter(ACCOUNT_METADATA_FAMILY),
-		gcp_bigtable.ColumnFilter(ACCOUNT_IS_CONTRACT),
-		gcp_bigtable.TimestampRangeFilterMicros(starttime, endtime-1),
-	)
-
-	mutsDelete := &types.BulkMutations{
-		Keys: make([]string, 0),
-		Muts: make([]*gcp_bigtable.Mutation, 0),
-	}
-
-	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
-		log.WarnWithFields(log.Fields{
-			"blockNumber": blockNumber,
-			"blockHash":   blockHash,
-			"func":        utils.GetCurrentFuncName(),
-			"duration":    REPORT_TIMEOUT,
-		}, "call took longer than expected")
-	})
-	defer tmr.Stop()
-
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*30))
-	defer cancel()
-
-	err = bigtable.tableMetadata.ReadRows(ctx, gcp_bigtable.PrefixRange(fmt.Sprintf("%s:S:", bigtable.chainId)), func(row gcp_bigtable.Row) bool {
-		mutDelete := gcp_bigtable.NewMutation()
-		mutDelete.DeleteTimestampRange(ACCOUNT_METADATA_FAMILY, ACCOUNT_IS_CONTRACT, starttime, endtime)
-
-		mutsDelete.Keys = append(mutsDelete.Keys, row.Key())
-		mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-		return true
-	}, gcp_bigtable.RowFilter(filter))
-	if err != nil {
-		return err
-	}
-
-	if len(mutsDelete.Keys) > 0 {
-		err = bigtable.WriteBulk(mutsDelete, bigtable.tableMetadata, DEFAULT_BATCH_INSERTS)
-		if err != nil {
-			return err
-		}
-	}
-
-	// receive all keys that were written by this block (entities & indices)
-	keys, err := bigtable.GetBlockKeys(blockNumber, blockHash)
-	if err != nil {
-		return err
-	}
-
-	// Delete all of those keys
-	mutsDelete = &types.BulkMutations{
-		Keys: make([]string, 0, len(keys)),
-		Muts: make([]*gcp_bigtable.Mutation, 0, len(keys)),
-	}
-	for _, key := range keys {
-		mutDelete := gcp_bigtable.NewMutation()
-		mutDelete.DeleteRow()
-		mutsDelete.Keys = append(mutsDelete.Keys, key)
-		mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-	}
-
-	err = bigtable.WriteBulk(mutsDelete, bigtable.tableData, DEFAULT_BATCH_INSERTS)
-	if err != nil {
-		return err
-	}
-
-	mutsDelete = &types.BulkMutations{
-		Keys: make([]string, 0, len(keys)),
-		Muts: make([]*gcp_bigtable.Mutation, 0, len(keys)),
-	}
-	mutDelete := gcp_bigtable.NewMutation()
-	mutDelete.DeleteRow()
-	mutsDelete.Keys = append(mutsDelete.Keys, fmt.Sprintf("%s:%s", bigtable.chainId, reversedPaddedBlockNumber(blockNumber)))
-	mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
-	err = bigtable.WriteBulk(mutsDelete, bigtable.tableBlocks, DEFAULT_BATCH_INSERTS)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (bigtable *Bigtable) GetEth1TxForToken(prefix string, limit int64) ([]*types.Eth1ERC20Indexed, string, error) {

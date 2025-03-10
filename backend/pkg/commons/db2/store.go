@@ -2,6 +2,7 @@ package db2
 
 import (
 	"fmt"
+	"math/big"
 	"slices"
 	"strings"
 
@@ -17,23 +18,26 @@ type StoreV1 struct {
 	data     database.Database
 	metadata database.Database
 	updates  database.Database
-	cache    Cache
+	blocks   database.Database
+	cache    database.RemoteCache
 }
 
-func NewStoreV1(data, metadata, updates database.Database, cache Cache) *StoreV1 {
-	return &StoreV1{
+func NewStoreV1(data, metadata, updates, blocks database.Database, cache database.RemoteCache) StoreV1 {
+	return StoreV1{
 		data:     data,
 		metadata: metadata,
 		updates:  updates,
+		blocks:   blocks,
 		cache:    cache,
 	}
 }
 
-func NewStoreV1FromBigtable(bigtable *database.BigTable, cache Cache) *StoreV1 {
-	return &StoreV1{
+func NewStoreV1FromBigtable(bigtable *database.BigTable, cache database.RemoteCache) StoreV1 {
+	return StoreV1{
 		data:     database.Wrap(bigtable, DataTable),
 		metadata: database.Wrap(bigtable, MetadataTable),
 		updates:  database.Wrap(bigtable, UpdatesTable),
+		blocks:   database.Wrap(bigtable, BlocksTable),
 		cache:    cache,
 	}
 }
@@ -256,6 +260,175 @@ func (store StoreV1) TokenPrice(chainID string, token common.Address) (*types.ER
 		Price:       row.Values[fmt.Sprintf("%s:%s", erc20MetadataFamily, erc20ColumnPrice)],
 		TotalSupply: row.Values[fmt.Sprintf("%s:%s", erc20MetadataFamily, erc20ColumnTotalSupply)],
 	}, nil
+}
+
+func (store StoreV1) SaveBlock(chainID string, block *types.Eth1Block) error {
+	b, err := proto.Marshal(block)
+	if err != nil {
+		return err
+	}
+
+	if err := store.blocks.BulkAdd(map[string][]database.Item{
+		blockKey(chainID, block.Number): {
+			{
+				Family: defaultBlocksFamily,
+				Column: blocksDataColumn,
+				Data:   b,
+			},
+		},
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store StoreV1) GetBlock(chainID string, number uint64) (*types.Eth1Block, error) {
+	row, err := store.blocks.GetRow(blockKey(chainID, number))
+	if err != nil {
+		return nil, err
+	}
+	var block types.Eth1Block
+	if err := proto.Unmarshal(row.Values[fmt.Sprintf("%s:%s", defaultBlocksFamily, blocksDataColumn)], &block); err != nil {
+		return nil, err
+	}
+	return &block, nil
+}
+
+func (store StoreV1) GetBlocksRange(chainID string, start, end uint64) ([]*types.Eth1Block, error) {
+	if end < start {
+		return nil, fmt.Errorf("invalid block range provided (high: %v, low: %v)", end, start)
+	}
+
+	rows, err := store.blocks.GetRowsRange(blockKey(chainID, end), blockKey(chainID, start))
+	if err != nil {
+		return nil, err
+	}
+	var blocks []*types.Eth1Block
+	for _, row := range rows {
+		var block types.Eth1Block
+		if err := proto.Unmarshal(row.Values[fmt.Sprintf("%s:%s", defaultBlocksFamily, blocksDataColumn)], &block); err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, &block)
+	}
+	return blocks, nil
+}
+
+// RevertBlock
+// - revert contract updates in metadata table
+// - retrieve and delete all indexing keys concerning that block in data table
+// - delete the block in blocks table
+func (store StoreV1) RevertBlock(chainID string, number uint64, blockHash []byte) error {
+	if err := store.revertContractUpdate(chainID, number); err != nil {
+		return err
+	}
+	if err := store.deleteBlockKeys(chainID, number, blockHash); err != nil {
+		return err
+	}
+	if err := store.deleteBlock(chainID, number); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store StoreV1) revertContractUpdate(chainID string, number uint64) error {
+	start, err := encodeIsContractUpdateTs(number, 0, 0)
+	if err != nil {
+		return err
+	}
+	end, err := encodeIsContractUpdateTs(number+1, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	// handle contract state updates
+	// TODO: this is potentially very resources consuming
+	rows, err := store.metadata.Read(fmt.Sprintf("%s:S:", chainID),
+		database.WithFamilyFilter(accountFamily),
+		database.WithColumnFilter(accountIsContractColumn),
+		database.WithTimestampRangeFilter(start, end-1),
+	)
+	if err != nil {
+		return err
+	}
+	var keys []string
+	for _, row := range rows {
+		keys = append(keys, row.Key)
+	}
+	if err := store.metadata.DeleteRowsWithKeys(keys,
+		database.WithFamilyFilter(accountFamily),
+		database.WithColumnFilter(accountIsContractColumn),
+		database.WithTimestampRangeFilter(start, end),
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store StoreV1) deleteBlockKeys(chainID string, number uint64, blockHash []byte) error {
+	keys, err := store.getBlockKeys(chainID, number, blockHash)
+	if err != nil {
+		return err
+	}
+	if err := store.data.DeleteRowsWithKeys(keys); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store StoreV1) deleteBlock(chainID string, number uint64) error {
+	if err := store.blocks.DeleteRowsWithKeys([]string{blockKey(chainID, number)}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (store StoreV1) getBlockKeys(chainID string, blockNumber uint64, blockHash []byte) ([]string, error) {
+	row, err := store.updates.GetRow(fmt.Sprintf("%s:BLOCK:%s:%x", chainID, reversedPaddedBlockNumber(blockNumber), blockHash))
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(string(row.Values[fmt.Sprintf("%s:%s", updatesBlockFamily, blockKeysColumn)]), ","), nil
+}
+
+func (store StoreV1) GetLastBlockInDataTable(chainID string) (uint64, error) {
+	prefix := chainID + ":B:"
+	rows, err := store.data.Read(prefix, database.WithLimit(1), database.WithoutValue())
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) != 1 {
+		return 0, nil
+	}
+	reversedLastBlockStr := strings.TrimPrefix(rows[0].Key, prefix)
+	reversedLastBlock, ok := new(big.Int).SetString(reversedLastBlockStr, 10)
+	if !ok {
+		return 0, fmt.Errorf("failed to parse last block from string: %s", reversedLastBlockStr)
+	}
+	lastBlock := maxExecutionLayerBlockNumber - reversedLastBlock.Uint64()
+	return lastBlock, nil
+}
+
+func (store StoreV1) GetLastBlockInBlocksTable(chainID string) (uint64, error) {
+	prefix := chainID + ":"
+	rows, err := store.blocks.Read(prefix, database.WithLimit(1), database.WithoutValue())
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) != 1 {
+		return 0, nil
+	}
+	reversedLastBlockStr := strings.TrimPrefix(rows[0].Key, prefix)
+	reversedLastBlock, ok := new(big.Int).SetString(reversedLastBlockStr, 10)
+	if !ok {
+		return 0, fmt.Errorf("failed to parse last block from string: %s", reversedLastBlockStr)
+	}
+	lastBlock := maxExecutionLayerBlockNumber - reversedLastBlock.Uint64()
+	return lastBlock, nil
+}
+
+func blockKey(chainID string, number uint64) string {
+	return fmt.Sprintf("%s:%s", chainID, reversedPaddedBlockNumber(number))
 }
 
 func mergeItems(dest map[string][]database.Item, source map[string][]database.Item) {

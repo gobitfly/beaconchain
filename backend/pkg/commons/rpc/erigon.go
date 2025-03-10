@@ -84,7 +84,7 @@ type minimalBlock struct {
 	Hash string `json:"hash"`
 }
 
-func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth1Block, *types.GetBlockTimings, error) {
+func (client *ErigonClient) GetBlock(number uint64, traceMode string) (*types.Eth1Block, *types.GetBlockTimings, error) {
 	start := time.Now()
 	timings := &types.GetBlockTimings{}
 	mu := sync.Mutex{}
@@ -101,7 +101,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 	var receipts []*gethtypes.Receipt
 	g := new(errgroup.Group)
 	g.Go(func() error {
-		b, err := client.ethClient.BlockByNumber(ctx, big.NewInt(number))
+		b, err := client.ethClient.BlockByNumber(ctx, new(big.Int).SetUint64(number))
 		if err != nil {
 			return err
 		}
@@ -121,7 +121,7 @@ func (client *ErigonClient) GetBlock(number int64, traceMode string) (*types.Eth
 		return nil
 	})
 	g.Go(func() error {
-		t, err := client.getTrace(traceMode, big.NewInt(number))
+		t, err := client.getTrace(traceMode, new(big.Int).SetUint64(number))
 		if err != nil {
 			return fmt.Errorf("error retrieving traces for block %v: %w", number, err)
 		}
@@ -486,7 +486,7 @@ func (client *ErigonClient) getTraceGeth(blockNumber *big.Int) ([]*Eth1InternalT
 	return indexedTraces, nil
 }
 
-func (client *ErigonClient) getBlockHash(blockNumber int64, receipts []*gethtypes.Receipt) (common.Hash, error) {
+func (client *ErigonClient) getBlockHash(blockNumber uint64, receipts []*gethtypes.Receipt) (common.Hash, error) {
 	var blockHash common.Hash
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()

@@ -43,8 +43,8 @@ func Wrap(db *BigTable, table string) TableWrapper {
 	}
 }
 
-func (w TableWrapper) Read(prefix string) ([]Row, error) {
-	res, err := w.BigTable.Read(w.table, prefix)
+func (w TableWrapper) Read(prefix string, opts ...Option) ([]Row, error) {
+	res, err := w.BigTable.Read(w.table, prefix, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("table %s: %w", w.table, err)
 	}
@@ -215,14 +215,15 @@ func (b BigTable) applyBulk(table string, keys []string, mutations []*bigtable.M
 
 // Read retrieves all rows from the Bigtable's receiver column family
 // It returns the data in the form of a 2D byte slice and an error if the operation fails
-func (b BigTable) Read(table, prefix string) ([]Row, error) {
-	// Open the transfer table for reading
+func (b BigTable) Read(table, prefix string, opts ...Option) ([]Row, error) {
+	options := newOptions(opts)
+
 	tbl := b.client.Open(table)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	readOptions := bigtableReadOptions(options, bigtable.PrefixRange(prefix))
 	var rows []Row
-	// Read all rows from the table and collect values from the receiver column family
 	err := tbl.ReadRows(ctx, bigtable.PrefixRange(prefix), func(row bigtable.Row) bool {
 		values := make(map[string][]byte)
 		for _, family := range row {
@@ -235,7 +236,7 @@ func (b BigTable) Read(table, prefix string) ([]Row, error) {
 			Values: values,
 		})
 		return true
-	})
+	}, readOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("could not read rows: %w", err)
 	}
@@ -288,9 +289,6 @@ func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, 
 		rowRange = bigtable.NewClosedOpenRange(low, high)
 	}
 	readOptions := bigtableReadOptions(options, rowRange)
-	if options.RowKeyFilter != "" {
-		readOptions = append(readOptions, bigtable.RowFilter(bigtable.RowKeyFilter(options.RowKeyFilter)))
-	}
 	var data []Row
 	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
 		values := make(map[string][]byte)
@@ -355,7 +353,16 @@ func (b BigTable) DeleteRowsWithKeys(table string, source []string, opts ...Opti
 			continue
 		}
 		mut := bigtable.NewMutation()
-		mut.DeleteRow()
+		switch {
+		case options.TimestampRangeFilter != nil && options.FamilyFilter != "" && options.ColumnFilter != "":
+			mut.DeleteTimestampRange(options.FamilyFilter, options.ColumnFilter, bigtable.Timestamp(options.TimestampRangeFilter[0]), bigtable.Timestamp(options.TimestampRangeFilter[1]))
+		case options.ColumnFilter != "" && options.FamilyFilter != "":
+			mut.DeleteCellsInColumn(options.FamilyFilter, options.ColumnFilter)
+		case options.FamilyFilter != "":
+			mut.DeleteCellsInFamily(options.FamilyFilter)
+		default:
+			mut.DeleteRow()
+		}
 		muts = append(muts, mut)
 		keys = append(keys, key)
 	}
@@ -436,6 +443,34 @@ func bigtableReadOptions(options options, rowRange bigtable.RowRange) []bigtable
 				KeyStatEfficiency, efficiency,
 			)
 		}))
+	}
+	var filters []bigtable.Filter
+	if options.RowKeyFilter != "" {
+		filters = append(filters, bigtable.RowKeyFilter(options.RowKeyFilter))
+	}
+	if options.ColumnFilter != "" {
+		filters = append(filters, bigtable.ColumnFilter(options.ColumnFilter))
+	}
+	if options.FamilyFilter != "" {
+		filters = append(filters, bigtable.FamilyFilter(options.FamilyFilter))
+	}
+	if options.TimestampRangeFilter != nil {
+		filters = append(filters,
+			bigtable.TimestampRangeFilterMicros(
+				bigtable.Timestamp(options.TimestampRangeFilter[0]),
+				bigtable.Timestamp(options.TimestampRangeFilter[1]),
+			),
+		)
+	}
+	if options.WithoutValue {
+		filters = append(filters, bigtable.StripValueFilter())
+	}
+	if len(filters) != 0 {
+		if len(filters) == 1 {
+			readOptions = append(readOptions, bigtable.RowFilter(filters[0]))
+		} else {
+			readOptions = append(readOptions, bigtable.RowFilter(bigtable.ChainFilters(filters...)))
+		}
 	}
 	return readOptions
 }
