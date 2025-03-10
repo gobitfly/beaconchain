@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
@@ -132,14 +133,10 @@ func TestIndexerWithBigTable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() { _ = bt.Clear() }()
-
+			store := db2.NewStoreV1FromBigtable(bt, database.NoopCache{})
 			indexer := NewIndexer(
-				db2.NewStoreV1(
-					database.Wrap(bt, db2.DataTable),
-					database.Wrap(bt, db2.MetadataTable),
-					database.Wrap(bt, db2.UpdatesTable),
-					db2.NoopCache{},
-				),
+				store,
+				db2.NewCachedLastBlocks(&database.MemCache{}, store),
 				tt.transformers...,
 			)
 			if err := tt.action(t); err != nil {
@@ -150,11 +147,11 @@ func TestIndexerWithBigTable(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			block, _, err := client.GetBlock(int64(lastBlock), "geth")
-			if err != nil {
+
+			if err := indexer.IndexNode(fmt.Sprintf("%d", backend.ChainID), client, lastBlock, lastBlock, 1, "geth"); err != nil {
 				t.Fatal(err)
 			}
-			if err := indexer.IndexBlocks(fmt.Sprintf("%d", backend.ChainID), []*types.Eth1Block{block}); err != nil {
+			if err := indexer.IndexEvents(fmt.Sprintf("%d", backend.ChainID), lastBlock, lastBlock, 1); err != nil {
 				t.Fatal(err)
 			}
 
@@ -180,6 +177,39 @@ func TestIndexerWithBigTable(t *testing.T) {
 			}
 			if err := rowsContains(metadataRows, tt.metadataKeys); err != nil {
 				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestReported(t *testing.T) {
+	tests := []struct {
+		name            string
+		count           uint64
+		lastTick        time.Time
+		shouldBeUpdated bool
+	}{
+		{
+			name:     "update last tick when count is 100",
+			count:    99,
+			lastTick: time.Unix(0, 0),
+		},
+		{
+			name:     "nothing happening otherwise",
+			count:    0,
+			lastTick: time.Unix(0, 0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reporter := reporter{}
+			reporter.count.Store(tt.count)
+			lastTick := tt.lastTick
+			reporter.report(1_000, &types.Eth1Block{}, &types.GetBlockTimings{}, &lastTick, time.Now(), time.Now(), time.Now())
+			if tt.shouldBeUpdated {
+				if lastTick.Equal(tt.lastTick) {
+					t.Errorf("last tick should have been be updated")
+				}
 			}
 		})
 	}

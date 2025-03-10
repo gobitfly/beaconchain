@@ -209,13 +209,13 @@ func TestGetRowsRange(t *testing.T) {
 			name:     "open range",
 			txs:      3,
 			expected: 1,
-			options:  []Option{WithOpenRange(true)},
+			options:  []Option{WithOpenRange()},
 		},
 		{
 			name:     "open close range",
 			txs:      3,
 			expected: 2,
-			options:  []Option{WithOpenCloseRange(true)},
+			options:  []Option{WithOpenCloseRange()},
 		},
 		{
 			name:     "with limit",
