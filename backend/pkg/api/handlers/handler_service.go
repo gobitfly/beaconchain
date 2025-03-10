@@ -63,12 +63,13 @@ func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAcc
 var allNetworks []types.NetworkInfo
 
 type InputValidator[T any] interface {
-	Validate(params map[string]string, payload io.ReadCloser) (T, error)
+	Validate(params map[string]string, payload io.ReadCloser) error
+	*T
 }
 
 type BusinessLogicFunc[Input any, Response any] func(ctx context.Context, input Input) (Response, error)
 
-func Handle[Input InputValidator[Input], Response any](defaultCode int, logicFunc BusinessLogicFunc[Input, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
+func Handle[Input InputValidator[Value], Value, Response any](defaultCode int, logicFunc BusinessLogicFunc[Input, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// prepare input
 		vars := mux.Vars(r)
@@ -83,8 +84,8 @@ func Handle[Input InputValidator[Input], Response any](defaultCode int, logicFun
 			vars[k] = v[0]
 		}
 		// input validation
-		var i Input
-		input, err := i.Validate(vars, r.Body)
+		var input Input = new(Value)
+		err := input.Validate(vars, r.Body)
 		if err != nil {
 			handleErr(w, r, err)
 			return
