@@ -132,7 +132,7 @@ export const useCurrency = () => {
         hasHigherPrecision,
         targetCurrency,
       }),
-      minimumFractionDigits,
+      minimumFractionDigits = isFiat(targetCurrency) ? 2 : undefined,
       signDisplay,
       sourceCurrency = clCurrency,
       sourceUnit = 'wei',
