@@ -5,9 +5,8 @@ import type { InternalPostSearchResponse } from '~/types/api/search'
 
 const props = defineProps<{
   hasPremiumPerkBulkAdding: boolean,
+  hasReachedLimit: boolean,
   isGuestDashboard: boolean,
-  maxValidatorsPerDashboard: number,
-  totalValidators: number,
 }>()
 
 const { fetch } = useCustomFetch()
@@ -53,11 +52,8 @@ const emit = defineEmits<{
 const handleSubmit = (result: InternalPostSearchResponse['data'][number] | undefined) => {
   emit('submit', result)
 }
-const isDisabled = (type: InternalPostSearchResponse['data'][number]['type'], validatorCount?: number) => {
-  if (
-    props.totalValidators + 1 > props.maxValidatorsPerDashboard
-    || (type === 'validator_list' && props.totalValidators + (validatorCount ?? 0) > props.maxValidatorsPerDashboard)
-  ) {
+const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) => {
+  if (props.hasReachedLimit) {
     return true
   }
   if (
@@ -141,7 +137,7 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type'], va
       <div
         v-if="item.type === 'validator_list'"
         class="dashboard-validator-management-modal-search__item"
-        :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type, item.value.validators.length) }"
+        :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
         <IconDatatypeValidatorIcon
           width="16px"
@@ -149,7 +145,7 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type'], va
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           {{ item.value.validators.length }} {{ $t('common.validator', item.value.validators.length) }}
           <FontAwesomeIcon
-            v-if="isDisabled(item.type, item.value.validators.length)"
+            v-if="isDisabled(item.type)"
             :icon="faGem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
