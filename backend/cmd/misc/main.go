@@ -269,8 +269,13 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewExporter(rpcClient, *edb.NewSlotExporterDB(db.WriterDb), *edb.NewSlotExporterBT(db.BigtableClient), tx, nil)
-				err = slotExporter.ExportSlot(slot, false, tx)
+				slotExporter := modules.NewExporter(rpcClient,
+					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+					*edb.NewSlotExporterDB(db.WriterDb),
+					*edb.NewSlotExporterBT(db.BigtableClient),
+					tx,
+					nil)
+				err = slotExporter.ExportSlot(slot, false)
 				if err != nil {
 					_ = tx.Rollback()
 					log.Fatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})
@@ -318,8 +323,13 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				slotExporter := modules.NewExporter(rpcClient, *edb.NewSlotExporterDB(db.WriterDb), *edb.NewSlotExporterBT(db.BigtableClient), tx, nil)
-				err = slotExporter.ExportSlot(slot, false, tx)
+				slotExporter := modules.NewExporter(rpcClient,
+					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+					*edb.NewSlotExporterDB(db.WriterDb),
+					*edb.NewSlotExporterBT(db.BigtableClient),
+					tx,
+					nil)
+				err = slotExporter.ExportSlot(slot, false)
 				if err != nil {
 					_ = tx.Rollback()
 					log.Fatal(err, "error exporting slot", 0, map[string]interface{}{"slot": slot})

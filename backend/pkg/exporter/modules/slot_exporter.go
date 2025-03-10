@@ -137,8 +137,10 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	}
 	defer utils.Rollback(tx)
 
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
+
 	if s.firstRun {
-		if err := s.handleFirstRun(head, tx); err != nil {
+		if err := s.handleFirstRun(head, exporter, tx); err != nil {
 			return err
 		}
 		s.firstRun = false
@@ -146,13 +148,13 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 
 	// at this point we know that we have a coherent list of slots in the database without any gaps
 
-	if err := s.exportNewSlots(head, tx); err != nil {
+	if err := s.exportNewSlots(head, exporter, tx); err != nil {
 		return err
 	}
 
 	// at this point we have all data up to the current chain head in the database
 
-	if err := s.handleFinalizedSlots(head, tx); err != nil {
+	if err := s.handleFinalizedSlots(head, exporter, tx); err != nil {
 		return err
 	}
 
@@ -168,8 +170,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	return nil
 }
 
-func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
+func (s *slotExporter) handleFirstRun(head *types.ChainHead, exporter *exporter, tx *sqlx.Tx) error {
 
 	// get all slots we currently have in the database
 	dbSlots, err := s.db.GetAllSlots(tx)
@@ -180,7 +181,8 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 	if len(dbSlots) > 0 {
 		if dbSlots[0] != 0 {
 			log.Infof("exporting genesis slot as it is missing in the database")
-			err := exporter.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
+			isHeadEpoch := utils.EpochOfSlot(0) == head.HeadEpoch
+			err := exporter.ExportSlot(0, isHeadEpoch)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
@@ -200,7 +202,7 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 			if previousSlot != currentSlot-1 {
 				log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
 				for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
-					err := exporter.ExportSlot(slot, false, tx)
+					err := exporter.ExportSlot(slot, false)
 					if err != nil {
 						return fmt.Errorf("error exporting slot %v: %w", slot, err)
 					}
@@ -211,13 +213,13 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 	return nil
 }
 
-func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
+func (s *slotExporter) exportNewSlots(head *types.ChainHead, exporter *exporter, tx *sqlx.Tx) error {
 	lastDbSlot, err := s.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("db is empty, export genesis slot")
-			err := exporter.ExportSlot(0, utils.EpochOfSlot(0) == head.HeadEpoch, tx)
+			isHeadEpoch := utils.EpochOfSlot(0) == head.HeadEpoch
+			err := exporter.ExportSlot(0, isHeadEpoch)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
@@ -231,7 +233,8 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 	if lastDbSlot != head.HeadSlot {
 		slotsExported := 0
 		for slot := lastDbSlot + 1; slot <= head.HeadSlot; slot++ { // export any new slots
-			err = exporter.ExportSlot(slot, utils.EpochOfSlot(slot) == head.HeadEpoch, tx)
+			isHeadEpoch := utils.EpochOfSlot(slot) == head.HeadEpoch
+			err = exporter.ExportSlot(slot, isHeadEpoch)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", slot, err)
 			}
@@ -255,9 +258,7 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 	return nil
 }
 
-func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
-
+func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exporter, tx *sqlx.Tx) error {
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := s.db.GetAllNonFinalizedSlots()
 	if err != nil {
@@ -309,7 +310,8 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
-				err = exporter.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+				isHeadEpoch := utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch
+				err = exporter.ExportSlot(dbSlot.Slot, isHeadEpoch)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 				}
@@ -347,7 +349,8 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 		} else { // check if a late slot has been proposed in the meantime
 			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
 				log.Infof("exporting new slot %v", dbSlot.Slot)
-				err := exporter.ExportSlot(dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+				isHeadEpoch := utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch
+				err := exporter.ExportSlot(dbSlot.Slot, isHeadEpoch)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 				}
@@ -379,7 +382,7 @@ func NewExporter(client ExporterClient, cache edb.ExporterCache, db edb.SlotExpo
 	}
 }
 
-func (s *exporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) error {
+func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -403,7 +406,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) error {
 	}
 
 	// save the block data to the db
-	if err := s.db.SaveBlock(block, false, tx); err != nil {
+	if err := s.db.SaveBlock(block, false, s.dbTx); err != nil {
 		return fmt.Errorf("error saving slot to the db: %w", err)
 	}
 
@@ -416,7 +419,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool, tx *sqlx.Tx) error {
 	}
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
-		if err := s.exportEpochAssignments(block, headEpoch, tx); err != nil {
+		if err := s.exportEpochAssignments(block, headEpoch); err != nil {
 			return err
 		}
 	}
@@ -465,7 +468,7 @@ func (s *exporter) exportDuties(block *types.Block) error {
 	return nil
 }
 
-func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error {
+func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
 	epoch := utils.EpochOfSlot(block.Slot)
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
@@ -528,7 +531,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, 
 
 	// if we are exporting the head epoch, update the validator db table
 	if isHeadEpoch {
-		if err := s.exportValidatorData(block, epoch, tx); err != nil {
+		if err := s.exportValidatorData(block, epoch); err != nil {
 			return err
 		}
 	}
@@ -551,14 +554,14 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool, 
 	}
 
 	// save the epoch metadata to the database
-	err = s.db.SaveEpoch(epoch, block.Validators, tx)
+	err = s.db.SaveEpoch(epoch, block.Validators, s.dbTx)
 	if err != nil {
 		return fmt.Errorf("error saving epoch data: %w", err)
 	}
 
 	if epoch > 0 && epochParticipationStats != nil {
 		log.Infof("updating epoch %v with participation rate %v", epoch, epochParticipationStats.GlobalParticipationRate)
-		err := s.db.UpdateEpochStatus(epochParticipationStats, tx)
+		err := s.db.UpdateEpochStatus(epochParticipationStats, s.dbTx)
 
 		if err != nil {
 			return err
@@ -633,12 +636,12 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 	return nil
 }
 
-func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sqlx.Tx) error {
+func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
 	// and also updates the status field in the validators array
-	err := s.db.SaveValidators(block.Validators, tx)
+	err := s.db.SaveValidators(block.Validators, s.dbTx)
 	if err != nil {
 		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
 	}
@@ -657,7 +660,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sql
 		}
 	}
 
-	validators, err := s.db.GetValidatorsWithMissingBalances(10000, tx)
+	validators, err := s.db.GetValidatorsWithMissingBalances(10000, s.dbTx)
 	if err != nil {
 		return fmt.Errorf("error retrieving validators with missing balances: %w", err)
 	}
@@ -705,21 +708,21 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sql
 
 		log.Infof("retrieved activation epoch balance of %v for validator %v", foundBalance, validator.ValidatorIndex)
 
-		err = s.db.UpdateActivationEpochBalance(validator.ValidatorIndex, foundBalance, tx)
+		err = s.db.UpdateActivationEpochBalance(validator.ValidatorIndex, foundBalance, s.dbTx)
 		if err != nil {
 			return fmt.Errorf("error saving activation epoch balance for validator %v: %w", validator.ValidatorIndex, err)
 		}
 	}
 	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
 
-	err = s.db.AnalyzeValidatorsTable(tx)
+	err = s.db.AnalyzeValidatorsTable(s.dbTx)
 	if err != nil {
 		return fmt.Errorf("error analyzing validators table: %w", err)
 	}
 
 	// also update the queue deposit table once every epoch
 	g.Go(func() error {
-		err = s.db.UpdateQueueDeposits(tx)
+		err = s.db.UpdateQueueDeposits(s.dbTx)
 		if err != nil {
 			return fmt.Errorf("error updating queue deposits cache: %w", err)
 		}
