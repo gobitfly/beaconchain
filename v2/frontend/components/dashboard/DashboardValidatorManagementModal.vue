@@ -294,7 +294,7 @@ const effectiveBalanceLimitPerDashboard = computed(() => {
 
 const hasReachedLimit = computed(() => {
   if (!overview.value?.balances) return false
-  return effectiveBalanceLimitPerDashboard.value <= overview.value?.balances.total
+  return effectiveBalanceLimitPerDashboard.value <= overview.value?.balances.effective
 })
 
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
