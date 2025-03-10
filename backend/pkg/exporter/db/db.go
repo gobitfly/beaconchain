@@ -34,7 +34,7 @@ var (
 
 type SlotExporterDBRepository interface {
 	BeginTx() (*sqlx.Tx, error)
-	RollbackTx(tx *sqlx.Tx) error
+	RollbackTx(tx *sqlx.Tx)
 
 	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
 	UpdateQueueDeposits(tx *sqlx.Tx) error
@@ -69,12 +69,11 @@ func (s *SlotExporterDB) BeginTx() (*sqlx.Tx, error) {
 	return db.WriterDb.Beginx()
 }
 
-func (s *SlotExporterDB) RollbackTx(tx *sqlx.Tx) error {
+func (s *SlotExporterDB) RollbackTx(tx *sqlx.Tx) {
 	err := tx.Rollback()
 	if err != nil && !errors.Is(err, sql.ErrTxDone) {
 		log.Error(err, "error rolling back transaction", 1)
 	}
-	return err
 }
 
 func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
