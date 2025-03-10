@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"regexp"
@@ -33,6 +34,7 @@ var (
 
 type SlotExporterDBRepository interface {
 	BeginTx() (*sqlx.Tx, error)
+	RollbackTx(tx *sqlx.Tx) error
 
 	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
 	UpdateQueueDeposits(tx *sqlx.Tx) error
@@ -63,11 +65,19 @@ func NewSlotExporterDB(writerDb *sqlx.DB) *SlotExporterDB {
 	}
 }
 
-func (db *SlotExporterDB) BeginTx() (*sqlx.Tx, error) {
+func (s *SlotExporterDB) BeginTx() (*sqlx.Tx, error) {
 	return db.WriterDb.Beginx()
 }
 
-func (r *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) RollbackTx(tx *sqlx.Tx) error {
+	err := tx.Rollback()
+	if err != nil && !errors.Is(err, sql.ErrTxDone) {
+		log.Error(err, "error rolling back transaction", 1)
+	}
+	return err
+}
+
+func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 	blocksMap := make(map[uint64]map[string]*types.Block)
 	if blocksMap[block.Slot] == nil {
 		blocksMap[block.Slot] = make(map[string]*types.Block)
@@ -636,7 +646,7 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error) {
+func (s *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error) {
 	var currentState []*types.Validator
 	err := tx.Select(&currentState, "SELECT validatorindex, withdrawableepoch, withdrawalcredentials, slashed, activationeligibilityepoch, activationepoch, exitepoch, status FROM validators;")
 
@@ -647,7 +657,7 @@ func (r *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Valida
 	return currentState, nil
 }
 
-func (r *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error {
 	_, err := tx.Exec(`INSERT INTO validators (
 		validatorindex,
 		pubkey,
@@ -679,7 +689,7 @@ func (r *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.T
 	return err
 }
 
-func (r *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
+func (s *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
 	var queries strings.Builder
 	updates := 0
 
@@ -722,7 +732,7 @@ func (r *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, 
 	return updates, queries.String(), nil
 }
 
-func (r *SlotExporterDB) SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error {
 	log.Infof("applying %v validator table update queries", totalUpdates)
 	updateStart := time.Now()
 
@@ -735,7 +745,7 @@ func (r *SlotExporterDB) SaveValidatorsFieldsUpdate(queries string, totalUpdates
 	return nil
 }
 
-func (r *SlotExporterDB) UpdateValidatorStatusCount(validatorStatusCounts map[string]int, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) UpdateValidatorStatusCount(validatorStatusCounts map[string]int, tx *sqlx.Tx) error {
 	log.Infof("updating validator status counts")
 	timeStart := time.Now()
 
@@ -760,7 +770,7 @@ type ValidatorActivationEpoch struct {
 	ActivationEpoch uint64
 }
 
-func (r *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ValidatorActivationEpoch, error) {
+func (s *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ValidatorActivationEpoch, error) {
 	var validators []ValidatorActivationEpoch
 
 	err := tx.Select(&validators, "SELECT validatorindex, activationepoch FROM validators WHERE balanceactivation IS NULL ORDER BY activationepoch LIMIT $1", activationBalanceBatchSize)
@@ -771,7 +781,7 @@ func (r *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatch
 	return validators, nil
 }
 
-func (r *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error {
 	_, err := tx.Exec("update validators set balanceactivation = $1 WHERE validatorindex = $2 AND balanceactivation IS NULL;", balance, validatorIndex)
 	if err != nil {
 		return fmt.Errorf("error updating activation epoch balance for validator %v: %w", validatorIndex, err)
@@ -780,7 +790,7 @@ func (r *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, bal
 	return nil
 }
 
-func (r *SlotExporterDB) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
+func (s *SlotExporterDB) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
 	timeStart := time.Now()
 	_, err := tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
 	if err != nil {
@@ -792,7 +802,7 @@ func (r *SlotExporterDB) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
 }
 
 // SaveValidatorQueue will save the validator queue into the database
-func (r *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
 	_, err := tx.Exec(`
 		INSERT INTO queue (
 			ts, 
@@ -808,7 +818,7 @@ func (r *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx
 }
 
 // SaveEpoch will save the epoch data into the database
-func (r *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
@@ -911,7 +921,7 @@ func (r *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, 
 }
 
 // UpdateEpochStatus will update the epoch status in the database
-func (r *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_update_epochs_status").Observe(time.Since(start).Seconds())
@@ -1088,7 +1098,7 @@ func GetLatestUnsafeEpoch() (int64, error) {
 	return epoch, nil
 }
 
-func (r *SlotExporterDB) GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
+func (s *SlotExporterDB) GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	var slots []uint64
 	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
 
@@ -1099,7 +1109,7 @@ func (r *SlotExporterDB) GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	return slots, nil
 }
 
-func (r *SlotExporterDB) GetLastSlot(tx *sqlx.Tx) (uint64, error) {
+func (s *SlotExporterDB) GetLastSlot(tx *sqlx.Tx) (uint64, error) {
 	var slot uint64
 	err := tx.Get(&slot, "SELECT slot FROM blocks ORDER BY slot DESC LIMIT 1")
 	if err != nil {
@@ -1108,7 +1118,7 @@ func (r *SlotExporterDB) GetLastSlot(tx *sqlx.Tx) (uint64, error) {
 	return slot, nil
 }
 
-func (r *SlotExporterDB) SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
 	_, err := tx.Exec(`
 		UPDATE blocks
 		SET finalized = $1, status = $2
@@ -1125,7 +1135,7 @@ type GetAllNonFinalizedSlotsRow struct {
 	Status    string `db:"status"`
 }
 
-func (r *SlotExporterDB) GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error) {
+func (s *SlotExporterDB) GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error) {
 	var slots []*GetAllNonFinalizedSlotsRow
 	err := db.WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot") // TODO
 
@@ -1136,7 +1146,7 @@ func (r *SlotExporterDB) GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRo
 	return slots, nil
 }
 
-func (r *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
+func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
@@ -1219,7 +1229,7 @@ func (r *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *SlotExporterDB) CacheBlockDepositLookup() error {
+func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 	err := CacheQuery(`
 			SELECT
 				uvdv.dashboard_id,
@@ -1258,8 +1268,8 @@ const (
 	RollingTotal Rollings = `validator_dashboard_rolling_total`
 )
 
-func (r *Rollings) GetDuration() time.Duration {
-	switch *r {
+func (s *Rollings) GetDuration() time.Duration {
+	switch *s {
 	case Rolling1h:
 		return time.Hour
 	case Rolling24h:

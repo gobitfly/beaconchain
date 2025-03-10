@@ -134,7 +134,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
-	defer utils.Rollback(tx)
+	defer s.db.RollbackTx(tx)
 
 	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
 
