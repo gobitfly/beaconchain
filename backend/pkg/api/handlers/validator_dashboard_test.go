@@ -44,7 +44,7 @@ func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		params["dashboard_id"] = "1"
 		body := stringAsBody(`{"name":"test"}`)
-		i, err := i.Validate(params, body)
+		err := i.Validate(params, body)
 		assert.Nil(t, err)
 		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
 		assert.Equal(t, "test", i.name)
@@ -52,7 +52,7 @@ func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
 	t.Run("empty name", func(t *testing.T) {
 		params["dashboard_id"] = "1"
 		body := stringAsBody(`{"name":""}`)
-		_, err := i.Validate(params, body)
+		err := i.Validate(params, body)
 		assert.NotNil(t, err)
 	})
 }
@@ -63,7 +63,7 @@ func TestPostValidatorDashboardGroups(t *testing.T) {
 			dashboardId: 0,
 			name:        "test",
 		}
-		_, err := h.PostValidatorDashboardGroups(ctx, input)
+		_, err := h.PostValidatorDashboardGroups(ctx, &input)
 		assert.Nil(t, err)
 	})
 	t.Run("group count reached", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestPostValidatorDashboardGroups(t *testing.T) {
 			dashboardId: 1,
 			name:        "test",
 		}
-		_, err := h.PostValidatorDashboardGroups(ctx, input)
+		_, err := h.PostValidatorDashboardGroups(ctx, &input)
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, errConflict))
 	})
@@ -87,7 +87,7 @@ func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
 			"group_id":     "1",
 			"period":       "all_time",
 		}
-		i, err := i.Validate(params, nil)
+		err := i.Validate(params, nil)
 		assert.Nil(t, err)
 		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardIdParam)
 		assert.Equal(t, int64(1), i.groupId)
@@ -98,7 +98,7 @@ func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
 			"group_id":     "1",
 			"period":       "all_time",
 		}
-		_, err := i.Validate(params, nil)
+		err := i.Validate(params, nil)
 		assert.NotNil(t, err)
 	})
 	t.Run("empty group_id", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
 			"group_id":     "",
 			"period":       "all_time",
 		}
-		_, err := i.Validate(params, nil)
+		err := i.Validate(params, nil)
 		assert.NotNil(t, err)
 	})
 	t.Run("empty period", func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
 			"group_id":     "1",
 			"period":       "",
 		}
-		_, err := i.Validate(params, nil)
+		err := i.Validate(params, nil)
 		assert.NotNil(t, err)
 	})
 }
