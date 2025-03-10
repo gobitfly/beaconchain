@@ -16,6 +16,14 @@ useHead(
 useWindowSizeProvider()
 useBcToastProvider()
 useDateProvider()
+
+const { latestState } = storeToRefs(useLatestStateStore())
+const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])
+const exchangeRateLengthOnTestNetworks = 1
+if (exchangeRates.value.length === exchangeRateLengthOnTestNetworks) {
+  const { selectedCurrencyMain } = useCurrency()
+  selectedCurrencyMain.value = exchangeRates.value[0].code as CurrencyCode
+}
 </script>
 
 <template>
