@@ -2,10 +2,9 @@
 const { t: $t } = useTranslation()
 const { products } = useProductsStore()
 
-interface Props {
-  isYearly: boolean,
-}
-defineProps<Props>()
+defineProps<({
+  isPaymentYearly: boolean,
+})>()
 </script>
 
 <template>
@@ -23,8 +22,8 @@ defineProps<Props>()
         v-for="addon in products?.extra_dashboard_validators_premium_addons"
         :key="addon.product_id_yearly"
         :addon
-        :is-yearly
-        :maximum-validator-limit="products?.validators_per_dashboard_limit"
+        :is-payment-yearly
+        :effective-balance-per-dashboard-limit="products?.effective_balance_per_dashboard_limit ?? '0'"
       />
     </div>
   </div>

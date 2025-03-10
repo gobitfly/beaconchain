@@ -21,6 +21,7 @@ type Client interface {
 	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
 	GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error)
 	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+	GetStandardBeaconState(stateID any) (*constypes.StandardBeaconStateResponse, error)
 }
 
 type Eth1Client interface {

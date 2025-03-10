@@ -213,6 +213,10 @@ func (d *DummyService) GetValidatorsFromSlices(ctx context.Context, indices []ui
 	return getDummyData[[]t.VDBValidator](ctx)
 }
 
+func (d *DummyService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, indices []uint64) (uint64, error) {
+	return getDummyData[uint64](ctx)
+}
+
 func (d *DummyService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	return getDummyStruct[t.UserDashboardsData](ctx)
 }
@@ -269,16 +273,16 @@ func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dash
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (d *DummyService) GetValidatorsByDepositAddress(ctx context.Context, depositAddress string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (d *DummyService) GetValidatorsByWithdrawalCredentials(ctx context.Context, withdrawalCredentials string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (d *DummyService) GetValidatorsByGraffiti(ctx context.Context, graffiti string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
 func (d *DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
@@ -541,8 +545,12 @@ func (d *DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dash
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
+func (d *DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
 	return getDummyData[uint64](ctx)
+}
+
+func (d *DummyService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
+	return map[t.VDBValidator]uint64{}, nil
 }
 
 func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {

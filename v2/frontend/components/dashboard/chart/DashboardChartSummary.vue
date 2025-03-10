@@ -264,7 +264,7 @@ const formatTSToDate = (value: string) => {
     undefined,
     'absolute',
     'narrow',
-    $t('locales.date'),
+    'en-US',
     false,
   )
 }
@@ -284,7 +284,7 @@ const formatTimestamp = (value: string) => {
     case 'epoch':
       return `${date}\n${formatTSToEpoch(value)}`
     case 'hourly':
-      return `${date}\n${formatTsToTime(Number(value), $t('locales.date'))}`
+      return `${date}\n${formatTsToTime(Number(value), 'en-US')}`
     default:
       return date
   }

@@ -69,7 +69,7 @@ function createDutyLabels(dutyObjects?: number[]) {
         undefined,
         'relative',
         'short',
-        $t('locales.date'),
+        'en-US',
         true,
       )
     case 'got_slashed':

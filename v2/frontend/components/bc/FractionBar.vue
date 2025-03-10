@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-interface Props {
-  fillPercentage?: number,
-}
-const props = defineProps<Props>()
+const props = defineProps<{ fillPercentage: number | string }>()
 
 const fillPercentage = computed(() => {
   return props.fillPercentage ? `${props.fillPercentage}%` : '0'

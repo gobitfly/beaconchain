@@ -142,12 +142,13 @@ func Run() {
 	requires, ok := REQUIRES_LIST[opts.Command]
 	if !ok {
 		requires = misctypes.Requires{
-			Bigtable:   true,
-			Redis:      true,
-			ClNode:     true,
-			ElNode:     true,
-			UserDBs:    true,
-			NetworkDBs: true,
+			Bigtable:      true,
+			Redis:         true,
+			ClNode:        true,
+			ElNode:        true,
+			UserDBs:       true,
+			NetworkDBs:    true,
+			ClickhouseDBs: true,
 		}
 	}
 
@@ -199,9 +200,11 @@ func Run() {
 	}
 
 	// clickhouse
-	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
-	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	if requires.ClickhouseDBs {
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
+		defer db.ClickHouseReader.Close()
+		defer db.ClickHouseWriter.Close()
+	}
 
 	// Initialize the persistent redis client
 	if requires.Redis {
@@ -1146,7 +1149,7 @@ func debugBlocks(clClient *rpc.LighthouseClient) error {
 		} else if clBlock.ExecutionPayload.BlockNumber != i {
 			log.Warnf("clBlock.ExecutionPayload.BlockNumber != i: %v != %v", clBlock.ExecutionPayload.BlockNumber, i)
 		} else {
-			logFields["cl.txs"] = len(clBlock.ExecutionPayload.Transactions)
+			logFields["cl.txs"] = clBlock.ExecutionPayload.TransactionsCount
 		}
 
 		log.InfoWithFields(logFields, "debug block")

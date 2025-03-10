@@ -97,6 +97,24 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Frontend.SiteBrand = "beaconcha.in"
 	}
 
+	// rewrite to match to allow trace as well
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	}
+
 	err = setCLConfig(cfg)
 	if err != nil {
 		return err
@@ -133,6 +151,10 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "pectra-devnet-5":
+			cfg.Chain.GenesisTimestamp = 1737034260
+		case "pectra-devnet-6":
+			cfg.Chain.GenesisTimestamp = 1738603860
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
@@ -315,6 +337,12 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &minimalCfg)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg)
+		case "mekong":
+			err = yaml.Unmarshal([]byte(config.MekongChainYml), &minimalCfg)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &minimalCfg)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &minimalCfg)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ElConfigPath)
 		}
@@ -348,6 +376,8 @@ func setELConfig(cfg *types.Config) error {
 	return nil
 }
 
+var MaxForkEpoch = uint64(18446744073709551615)
+
 func setCLConfig(cfg *types.Config) error {
 	var err error
 	if cfg.Chain.ClConfigPath == "" {
@@ -365,6 +395,10 @@ func setCLConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &cfg.Chain.ClConfig)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &cfg.Chain.ClConfig)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ClConfigPath)
 		}
@@ -384,23 +418,25 @@ func setCLConfig(cfg *types.Config) error {
 			return err
 		}
 
-		maxForkEpoch := uint64(18446744073709551615)
-
 		if jr.Data.AltairForkEpoch == nil {
 			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.AltairForkEpoch = &maxForkEpoch
+			jr.Data.AltairForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
 			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.BellatrixForkEpoch = &maxForkEpoch
+			jr.Data.BellatrixForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
 			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.CapellaForkEpoch = &maxForkEpoch
+			jr.Data.CapellaForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
 			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.DenebForkEpoch = &maxForkEpoch
+			jr.Data.DenebForkEpoch = &MaxForkEpoch
+		}
+		if jr.Data.ElectraForkEpoch == nil {
+			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
+			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
 
 		chainCfg := types.ClChainConfig{
@@ -421,6 +457,8 @@ func setCLConfig(cfg *types.Config) error {
 			CapellaForkEpoch:                        *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
 			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
+			ElectraForkVersion:                      jr.Data.ElectraForkVersion,
+			ElectraForkEpoch:                        *jr.Data.ElectraForkEpoch,
 			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),
 			SecondsPerEth1Block:                     uint64(jr.Data.SecondsPerEth1Block),
 			MinValidatorWithdrawabilityDelay:        uint64(jr.Data.MinValidatorWithdrawabilityDelay),
@@ -437,7 +475,7 @@ func setCLConfig(cfg *types.Config) error {
 			DepositContractAddress:                  jr.Data.DepositContractAddress,
 			MaxCommitteesPerSlot:                    uint64(jr.Data.MaxCommitteesPerSlot),
 			TargetCommitteeSize:                     uint64(jr.Data.TargetCommitteeSize),
-			MaxValidatorsPerCommittee:               uint64(jr.Data.TargetCommitteeSize),
+			MaxValidatorsPerCommittee:               uint64(jr.Data.MaxValidatorsPerCommittee),
 			ShuffleRoundCount:                       uint64(jr.Data.ShuffleRoundCount),
 			HysteresisQuotient:                      uint64(jr.Data.HysteresisQuotient),
 			HysteresisDownwardMultiplier:            uint64(jr.Data.HysteresisDownwardMultiplier),
@@ -484,6 +522,8 @@ func setCLConfig(cfg *types.Config) error {
 			MaxWithdrawalsPerPayload:                uint64(jr.Data.MaxWithdrawalsPerPayload),
 			MaxValidatorsPerWithdrawalSweep:         uint64(jr.Data.MaxValidatorsPerWithdrawalsSweep),
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
+			MaxEffectiveBalanceElectra:              uint64(jr.Data.MaxEffectiveBalanceElectra),
+			MinPerEpochChurnLimitElectra:            uint64(jr.Data.MinPerEpochChurnLimitElectra),
 		}
 
 		cfg.Chain.ClConfig = chainCfg
@@ -509,24 +549,6 @@ func setCLConfig(cfg *types.Config) error {
 			return fmt.Errorf("error decoding Chain Config file %v: %v", cfg.Chain.ClConfigPath, err)
 		}
 		cfg.Chain.ClConfig = *chainConfig
-	}
-
-	// rewrite to match to allow trace as well
-	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
-	case "trace":
-		logrus.SetLevel(logrus.TraceLevel)
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "warn":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logrus.SetLevel(logrus.PanicLevel)
 	}
 
 	return nil
