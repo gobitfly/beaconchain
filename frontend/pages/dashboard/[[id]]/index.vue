@@ -102,7 +102,7 @@ const hasReachedSubscriptionLimit = computed(() => {
     return false
   }
   return premium_perks.value?.effective_balance_per_dashboard
-    <= overview.value?.balances.total
+    <= overview.value?.balances.effective
 })
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
