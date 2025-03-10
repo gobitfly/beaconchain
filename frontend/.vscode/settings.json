@@ -58,6 +58,7 @@
         "notifications",
         "nuxt.config",
         "qrCode",
+        "useCurrency",
         "useCustomFetch",
         "useFeatureFlag",
         "useNotificationsOverviewStore",
