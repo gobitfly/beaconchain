@@ -25,8 +25,6 @@ const {
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
 
-const { hasReachedSubscriptionLimit } = useNotificationSubscriptionLimitReached()
-
 const tabs: HashTabs = [
   {
     component: DashboardTableSummary,
@@ -91,30 +89,6 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
-function useNotificationSubscriptionLimitReached() {
-  const userDashboardStore = useUserDashboardStore()
-  const {
-    dashboards,
-  } = storeToRefs(userDashboardStore)
-  const { dashboardKey } = useDashboardKeyProvider()
-
-  const currentDashboard = computed(() => {
-    return dashboards.value?.validator_dashboards.find(
-      dashboard => `${dashboard.id}` === dashboardKey.value,
-    )
-  })
-
-  const hasReachedSubscriptionLimit = computed(() => {
-    if (!premium_perks.value?.effective_balance_per_dashboard || !currentDashboard.value) {
-      return false
-    }
-    return premium_perks.value?.effective_balance_per_dashboard
-      <= currentDashboard.value?.effective_balance
-  })
-
-  return { hasReachedSubscriptionLimit }
-}
-
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   overview,
@@ -122,6 +96,15 @@ const {
 const {
   refreshOverview,
 } = validatorDashboardOverviewStore
+
+const hasReachedSubscriptionLimit = computed(() => {
+  if (!premium_perks.value?.effective_balance_per_dashboard || !overview.value) {
+    return false
+  }
+  return premium_perks.value?.effective_balance_per_dashboard
+    <= overview.value?.balances.total
+})
+
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const { error: validatorOverviewError } = await useAsyncData(

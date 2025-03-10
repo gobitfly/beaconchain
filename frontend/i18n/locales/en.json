@@ -200,7 +200,7 @@
             "_link": "Upgrade your subscription or get an add-on.",
             "template": "This dashboard exceeds your maximum stake limit, so you can't add more validators. {_link}"
         },
-        "subsciprion_limit_reached_title": "Max stake exceeded",
+        "subsciprion_limit_reached_title": "Maximum stake exceeded",
         "title": "Dashboard",
         "validator": {
             "blocks": {
