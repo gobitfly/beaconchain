@@ -33,7 +33,7 @@ type inputMock struct {
 	successMessage string
 }
 
-func (i inputMock) Validate(params map[string]string, payload io.ReadCloser) (inputMock, error) {
+func (i *inputMock) Validate(params map[string]string, payload io.ReadCloser) error {
 	var v validationError
 
 	i.shouldFail = v.checkBool(params["should_fail"], "should_fail")
@@ -44,14 +44,14 @@ func (i inputMock) Validate(params map[string]string, payload io.ReadCloser) (in
 		}
 		var req request
 		if err := v.checkBody(&req, payload); err != nil {
-			return i, err
+			return err
 		}
 		i.successMessage = req.SuccessMessage
 	}
-	return i, v.AsError()
+	return v.AsError()
 }
 
-func logicMock(ctx context.Context, input inputMock) (string, error) {
+func logicMock(ctx context.Context, input *inputMock) (string, error) {
 	if !input.shouldFail {
 		return input.successMessage, nil
 	}
