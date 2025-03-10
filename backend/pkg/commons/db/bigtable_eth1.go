@@ -2339,47 +2339,6 @@ func (bigtable *Bigtable) SaveContractMetadata(address []byte, metadata *types.C
 	return bigtable.tableMetadata.Apply(ctx, fmt.Sprintf("%s:%x", bigtable.chainId, address), mut)
 }
 
-func (bigtable *Bigtable) SaveERC20TokenPrices(prices []*types.ERC20TokenPrice) error {
-	if len(prices) == 0 {
-		return nil
-	}
-
-	mutsWrite := &types.BulkMutations{
-		Keys: make([]string, 0, len(prices)),
-		Muts: make([]*gcp_bigtable.Mutation, 0, len(prices)),
-	}
-
-	for _, price := range prices {
-		rowKey := fmt.Sprintf("%s:%x", bigtable.chainId, price.Token)
-		mut := gcp_bigtable.NewMutation()
-		mut.Set(ERC20_METADATA_FAMILY, ERC20_COLUMN_PRICE, gcp_bigtable.Timestamp(0), price.Price)
-		mut.Set(ERC20_METADATA_FAMILY, ERC20_COLUMN_TOTALSUPPLY, gcp_bigtable.Timestamp(0), price.TotalSupply)
-		mutsWrite.Keys = append(mutsWrite.Keys, rowKey)
-		mutsWrite.Muts = append(mutsWrite.Muts, mut)
-	}
-
-	err := bigtable.WriteBulk(mutsWrite, bigtable.tableMetadata, DEFAULT_BATCH_INSERTS)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (bigtable *Bigtable) SaveBlockKeys(blockNumber uint64, blockHash []byte, keys string) error {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Second*30))
-	defer cancel()
-
-	mut := gcp_bigtable.NewMutation()
-	mut.Set(METADATA_UPDATES_FAMILY_BLOCKS, "keys", gcp_bigtable.Now(), []byte(keys))
-
-	key := fmt.Sprintf("%s:BLOCK:%s:%x", bigtable.chainId, reversedPaddedBlockNumber(blockNumber), blockHash)
-	err := bigtable.tableMetadataUpdates.Apply(ctx, key, mut)
-
-	return err
-}
-
 func (bigtable *Bigtable) GetBlockKeys(blockNumber uint64, blockHash []byte) ([]string, error) {
 	tmr := time.AfterFunc(REPORT_TIMEOUT, func() {
 		log.WarnWithFields(log.Fields{
