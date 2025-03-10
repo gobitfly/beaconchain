@@ -72,6 +72,24 @@ func TestBatcher(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Run("ERC20Supply", func(t *testing.T) {
+				supply, err := token.TotalSupply(nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if supply.Cmp(big.NewInt(0)) == 0 {
+					t.Fatal("expected supply cannot be zero")
+				}
+
+				res, err := ERC20Supply(tt.batcher, []common.Address{tokenAddress, {}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got, want := res[0].String(), supply.String(); got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+			})
+
 			t.Run("Balance", func(t *testing.T) {
 				t.Run("erc20", func(t *testing.T) {
 					balance, err := token.BalanceOf(nil, b.BankAccount.From)
