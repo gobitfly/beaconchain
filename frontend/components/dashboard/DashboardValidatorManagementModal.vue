@@ -582,7 +582,7 @@ const inputValidator = ref('')
                 >
                   <span>
                     <BcFormatAmount
-                      :value="overview?.balances.total ?? '0'"
+                      :value="overview?.balances.effective ?? '0'"
                       :maximum-fraction-digits="0"
                       :source-currency="displayCurrencyDefault.main"
                     />
