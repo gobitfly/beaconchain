@@ -721,7 +721,11 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsCl))
 	ret.MissedRewards.ProposerRewards.El = decimal.NewFromFloat(totalMissedRewardsEl)
 
-	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, hours)
+	investedAmount, err := d.GetValidatorDashboardEffectiveBalanceTotal(ctx, dashboardId, true)
+	if err != nil {
+		return nil, err
+	}
+	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, hours, investedAmount)
 	if err != nil {
 		return nil, err
 	}
