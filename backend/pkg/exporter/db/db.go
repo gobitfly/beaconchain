@@ -32,6 +32,8 @@ var (
 )
 
 type SlotExporterDBRepository interface {
+	BeginTx() (*sqlx.Tx, error)
+
 	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
 	UpdateQueueDeposits(tx *sqlx.Tx) error
 	CacheBlockDepositLookup() error
@@ -47,7 +49,7 @@ type SlotExporterDBRepository interface {
 	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
 	GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error)
 	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
-	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, updates int, tx *sqlx.Tx) (int, error)
+	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error)
 	SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error
 }
 
@@ -59,6 +61,10 @@ func NewSlotExporterDB(writerDb *sqlx.DB) *SlotExporterDB {
 	return &SlotExporterDB{
 		WriterDb: writerDb,
 	}
+}
+
+func (db *SlotExporterDB) BeginTx() (*sqlx.Tx, error) {
+	return db.WriterDb.Beginx()
 }
 
 func (r *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {

@@ -271,8 +271,8 @@ func Run() {
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-					*edb.NewSlotExporterDB(db.WriterDb),
-					*edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterDB(db.WriterDb),
+					edb.NewSlotExporterBT(db.BigtableClient),
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -325,8 +325,8 @@ func Run() {
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-					*edb.NewSlotExporterDB(db.WriterDb),
-					*edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterDB(db.WriterDb),
+					edb.NewSlotExporterBT(db.BigtableClient),
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -423,8 +423,13 @@ func Run() {
 			data.Validators = append(data.Validators, validatorsArr[start:end]...)
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
-
-			err = edb.NewSlotExporterDB(db.WriterDb).SaveValidators(data.Validators, tx)
+			slotExporter := modules.NewExporter(rpcClient,
+				edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+				edb.NewSlotExporterDB(db.WriterDb),
+				edb.NewSlotExporterBT(db.BigtableClient),
+				tx,
+				nil)
+			err = slotExporter.SaveValidators(data.Validators)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}

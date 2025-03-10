@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/gob"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,18 +15,15 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/klauspost/pgzip"
-
-	"fmt"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
-
-	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 )
 
 type ExporterClient interface {
@@ -42,8 +40,8 @@ type slotExporter struct {
 	ModuleContext
 	Client ExporterClient
 	cache  edb.ExporterCache
-	db     edb.SlotExporterDB
-	bt     edb.SlotExporterBT
+	db     edb.SlotExporterDBRepository
+	bt     edb.SlotExporterBTRepository
 
 	firstRun       bool
 	latestEpoch    uint64
@@ -52,7 +50,7 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterDB, bt edb.SlotExporterBT) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
 	return &slotExporter{
 		ModuleContext:  moduleContext,
 		Client:         moduleContext.ConsClient,
@@ -132,7 +130,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
 
-	tx, err := s.db.WriterDb.Beginx()
+	tx, err := s.db.BeginTx()
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
@@ -364,14 +362,14 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exp
 type exporter struct {
 	Client ExporterClient
 	cache  edb.ExporterCache
-	db     edb.SlotExporterDB
-	bt     edb.SlotExporterBT
+	db     edb.SlotExporterDBRepository
+	bt     edb.SlotExporterBTRepository
 	dbTx   *sqlx.Tx
 
 	slotExporter *slotExporter
 }
 
-func NewExporter(client ExporterClient, cache edb.ExporterCache, db edb.SlotExporterDB, bt edb.SlotExporterBT, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+func NewExporter(client ExporterClient, cache edb.ExporterCache, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
 	return &exporter{
 		Client:       client,
 		cache:        cache,
@@ -636,8 +634,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 	return nil
 }
 
-func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
-	g := errgroup.Group{}
+func (s *exporter) SaveValidators(validators []*types.Validator) error {
 	start := time.Now()
 
 	currentState, err := s.db.GetValidatorsCurrentState(s.dbTx)
@@ -667,7 +664,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
 	validatorStatusCounts := make(map[string]int)
 	updates := 0
 	var queries strings.Builder
-	for _, v := range block.Validators {
+	for _, v := range validators {
 		// exchange farFutureEpoch with the corresponding max sql value
 		if v.WithdrawableEpoch == edb.FarFutureEpoch {
 			v.WithdrawableEpoch = edb.MaxSqlNumber
@@ -744,6 +741,19 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
 
 	metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
 	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
+
+	return nil
+}
+
+func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
+	g := errgroup.Group{}
+
+	// this function sets exports the validator status into the db
+	// and also updates the status field in the validators array
+	err := s.SaveValidators(block.Validators)
+	if err != nil {
+		return fmt.Errorf("error saving validators: %w", err)
+	}
 
 	var genesisBalances map[uint64][]*types.ValidatorBalance
 	if epoch == 0 {

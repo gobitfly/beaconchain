@@ -12,6 +12,8 @@ type SlotExporterBTRepository interface {
 	SaveAttestationDuties(attDuties map[types.Slot]map[types.ValidatorIndex][]types.Slot) error
 	SaveSyncCommitteeDuties(syncDuties map[types.Slot]map[types.ValidatorIndex]bool) error
 	SaveValidatorBalances(epoch uint64, validators []*types.Validator) error
+	GetLastAttestationCacheMux() *sync.Mutex
+	GetLastAttestationCache() map[uint64]uint64
 }
 
 type SlotExporterBT struct {
