@@ -1,6 +1,5 @@
 {
     "conventionalCommits.scopes": [
-        "App",
         "BcButton",
         "BcDataWrapper",
         "BcFormatAmount",
@@ -38,6 +37,7 @@
         "NotificationsOverview",
         "NotificationsTableEmpty",
         "a11y",
+        "app",
         "checkout",
         "ci",
         "color-mode",
