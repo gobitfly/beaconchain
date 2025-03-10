@@ -8,9 +8,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/holiman/uint256"
+
 	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/holiman/uint256"
 )
 
 var (
@@ -242,7 +243,7 @@ func TestGetBlobGasUsed(t *testing.T) {
 	}{
 		{
 			name:     "block with blob gas used",
-			block:    gethtypes.NewBlockWithHeader(&gethtypes.Header{BlobGasUsed: uint64Ptr(100)}),
+			block:    gethtypes.NewBlockWithHeader(&gethtypes.Header{BlobGasUsed: toPtr(uint64(100))}),
 			expected: 100,
 		},
 		{
@@ -272,7 +273,7 @@ func TestGetExcessBlobGas(t *testing.T) {
 	}{
 		{
 			name:     "block with excess blob gas",
-			block:    gethtypes.NewBlockWithHeader(&gethtypes.Header{ExcessBlobGas: uint64Ptr(100)}),
+			block:    gethtypes.NewBlockWithHeader(&gethtypes.Header{ExcessBlobGas: toPtr(uint64(100))}),
 			expected: 100,
 		},
 		{
@@ -377,39 +378,34 @@ func TestGetBlockHash(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	block, err := client.ethClient.BlockByNumber(context.Background(), big.NewInt(int64(lastBlock)))
+	block, err := client.ethClient.BlockByNumber(context.Background(), new(big.Int).SetUint64(lastBlock))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	tests := []struct {
 		name        string
-		blockNumber int64
+		blockNumber uint64
 		receipts    []*gethtypes.Receipt
 		expected    common.Hash
 		expectError bool
 	}{
 		{
 			name:        "block hash from receipts",
-			blockNumber: int64(lastBlock),
+			blockNumber: lastBlock,
 			receipts: []*gethtypes.Receipt{
 				{BlockHash: common.HexToHash("0x123")},
 			},
-			expected:    common.HexToHash("0x123"),
-			expectError: false,
+			expected: common.HexToHash("0x123"),
 		},
 		{
 			name:        "block hash from RPC",
-			blockNumber: int64(lastBlock),
-			receipts:    nil,
+			blockNumber: lastBlock,
 			expected:    block.Hash(),
-			expectError: false,
 		},
 		{
-			name:        "RPC call error",
-			blockNumber: -1,
-			receipts:    nil,
-			expected:    common.Hash{},
+			name:        "RPC call error for block that doesn't exist",
+			blockNumber: ^uint64(0), // max uint, block doesn't exist
 			expectError: true,
 		},
 	}
@@ -433,7 +429,7 @@ func TestGetBlockHash(t *testing.T) {
 	}
 }
 
-// unit64Ptr returns a pointer to a uint64
-func uint64Ptr(i uint64) *uint64 {
+// toPtr returns a pointer
+func toPtr[T any](i T) *T {
 	return &i
 }

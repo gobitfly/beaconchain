@@ -71,7 +71,14 @@ func (api RemoteServer) GetRowsRange(w http.ResponseWriter, r *http.Request) {
 		respondWithErr(w, http.StatusBadRequest, err)
 		return
 	}
-	rows, err := api.db.GetRowsRange(args.High, args.Low, WithOpenRange(args.OpenRange), WithLimit(args.Limit))
+	var options []Option
+	if args.OpenRange {
+		options = append(options, WithOpenRange())
+	}
+	if args.Limit != 0 {
+		options = append(options, WithLimit(args.Limit))
+	}
+	rows, err := api.db.GetRowsRange(args.High, args.Low, options...)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
 			err = ErrNotFound
@@ -186,7 +193,7 @@ func (r RemoteClient) BulkAdd(itemsByKey map[string][]Item, opts ...Option) erro
 	return nil
 }
 
-func (r RemoteClient) Read(prefix string) ([]Row, error) {
+func (r RemoteClient) Read(prefix string, opts ...Option) ([]Row, error) {
 	b, err := json.Marshal(ParamsRead{Prefix: prefix})
 	if err != nil {
 		return nil, err
