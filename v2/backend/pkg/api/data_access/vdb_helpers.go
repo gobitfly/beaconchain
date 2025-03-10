@@ -162,7 +162,7 @@ type IncomeInfo struct {
 	Apr t.ClElValue[float64]
 }
 
-func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (rewardsApr IncomeInfo, err error) {
+func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int, investedAmount uint64) (rewardsApr IncomeInfo, err error) {
 	result := IncomeInfo{}
 	table := ""
 
@@ -233,15 +233,11 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		aprDivisor = 90 * 24
 	}
 
-	investedAmountUInt, err := d.GetValidatorDashboardEffectiveBalanceTotal(ctx, dashboardId, true)
-	if err != nil {
-		return IncomeInfo{}, fmt.Errorf("error retrieving total effective balance: %w", err)
-	}
 	// invested amount is wrong if the effective balance changed during the period (because of auto compound, consolidation, partial withdrawal etc.)
 	// would need to split at eb changes and weigh results
-	investedAmount := d.convertClToMain(decimal.NewFromUint64(investedAmountUInt))
+	investedAmountDec := d.convertClToMain(decimal.NewFromUint64(investedAmount))
 
-	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmount, aprDivisor)
+	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmountDec, aprDivisor)
 
 	result.Rewards.Cl = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
 
@@ -293,7 +289,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return IncomeInfo{}, err
 	}
 
-	result.Apr.El = calcAPR(d.convertElToMain(result.Rewards.El), investedAmount, aprDivisor)
+	result.Apr.El = calcAPR(d.convertElToMain(result.Rewards.El), investedAmountDec, aprDivisor)
 
 	if hours == -1 {
 		elTotalDs := elDs.
