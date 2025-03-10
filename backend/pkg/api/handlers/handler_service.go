@@ -147,8 +147,13 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		if len(validators) == 0 {
 			return nil, newNotFoundErr("no validators found for given id")
 		}
-		if len(validators) > maxValidatorsInList {
-			return nil, newBadRequestErr("too many validators in list, maximum is %d", maxValidatorsInList)
+		validatorEb, err := h.daService.GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Validators: validators}, false)
+		if err != nil {
+			return nil, err
+		}
+		// TODO check if we also need a count limit because of cf url length limits
+		if validatorEb > maxEBInList {
+			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", maxEBInList/1e9)
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}

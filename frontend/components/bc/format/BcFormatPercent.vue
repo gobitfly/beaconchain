@@ -61,7 +61,7 @@ const data = computed(() => {
     }
   }
   const localPercent = percent ?? calculatePercent(value, base)
-  label = new Intl.NumberFormat('en', {
+  label = new Intl.NumberFormat('en-Us', {
     maximumFractionDigits,
     // due to the default value of minimumFractionDigits: 2
     // there will be an error when `minimumFractionDigits > maximumFractionDitigs`

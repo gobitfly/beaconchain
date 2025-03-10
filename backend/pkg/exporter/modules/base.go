@@ -14,6 +14,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus" //nolint:depguard
 	"golang.org/x/sync/errgroup"
 )
 
@@ -209,19 +210,27 @@ func (m ModuleLog) Infof(format string, args ...interface{}) {
 }
 
 func (m ModuleLog) Debug(message string) {
-	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+	}
 }
 
 func (m ModuleLog) Debugf(format string, args ...interface{}) {
-	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	}
 }
 
 func (m ModuleLog) Trace(message string) {
-	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
+	}
 }
 
 func (m ModuleLog) Tracef(format string, args ...interface{}) {
-	log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	}
 }
 
 func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {

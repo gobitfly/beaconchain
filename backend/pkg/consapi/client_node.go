@@ -205,3 +205,8 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 	}()
 	return responseCh
 }
+
+func (r *NodeClient) GetState(stateID any) (*types.StandardBeaconStateResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/debug/beacon/states/%v", r.Endpoint, stateID)
+	return network.Get[types.StandardBeaconStateResponse](r.httpClient, requestURL)
+}

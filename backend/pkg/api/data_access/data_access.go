@@ -18,6 +18,7 @@ import (
 
 type DataAccessor interface {
 	ValidatorDashboardRepository
+	ValidatorRepository
 	SearchRepository
 	NetworkRepository
 	ClientRepository

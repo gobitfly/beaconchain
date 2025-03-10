@@ -97,6 +97,20 @@ func SliceContains(list []string, target string) bool {
 
 // ForkVersionAtEpoch returns the forkversion active a specific epoch
 func ForkVersionAtEpoch(epoch uint64) *types.ForkVersion {
+	if epoch >= Config.Chain.ClConfig.ElectraForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.ElectraForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.ElectraForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.DenebForkVersion,
+		}
+	}
+	if epoch >= Config.Chain.ClConfig.DenebForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.DenebForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.DenebForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.CapellaForkVersion,
+		}
+	}
 	if epoch >= Config.Chain.ClConfig.CapellaForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.CapellaForkEpoch,
@@ -387,6 +401,21 @@ func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
 
 	return result
 }
+func GetMaxEffectiveBalanceByWithdrawalCredentials(withCred []byte) uint64 {
+	if len(withCred) == 0 {
+		return 0
+	}
+	switch withCred[0] {
+	case 0x00, 0x01:
+		// phase0, capella
+		return Config.Chain.ClConfig.MaxEffectiveBalance
+	case 0x02:
+		// electra
+		return Config.Chain.ClConfig.MaxEffectiveBalanceElectra
+	default:
+		return 0
+	}
+}
 
 func Deduplicate[T comparable](slice []T) []T {
 	keys := make(map[T]struct{})
@@ -405,4 +434,11 @@ func FirstN(input string, n int) string {
 		return input
 	}
 	return input[:n]
+}
+
+func Min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
 }

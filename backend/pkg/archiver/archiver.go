@@ -69,8 +69,9 @@ func (a *Archiver) updateArchivedStatus() error {
 			} else {
 				if dashboardInfo.GroupCount > userInfo.PremiumPerks.ValidatorGroupsPerDashboard {
 					dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Groups})
-				} else if dashboardInfo.ValidatorCount > userInfo.PremiumPerks.ValidatorsPerDashboard {
-					dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Validators})
+					// TODO make archiver pectra-ready
+					// } else if dashboardInfo.ValidatorCount > userInfo.PremiumPerks.ValidatorsPerDashboard {
+					//	dashboardsToBeArchived = append(dashboardsToBeArchived, t.ArchiverDashboardArchiveReason{DashboardId: dashboardInfo.DashboardId, ArchivedReason: enums.VDBArchivedReasons.Validators})
 				} else {
 					activeDashboards = append(activeDashboards, dashboardInfo.DashboardId)
 				}

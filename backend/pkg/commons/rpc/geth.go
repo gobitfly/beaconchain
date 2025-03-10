@@ -247,7 +247,7 @@ func (client *GethClient) GetERC20TokenMetadata(token []byte) (*types.ERC20Metad
 		return ret, err
 	}
 
-	if err == nil && len(ret.Decimals) == 0 && ret.Symbol == "" && len(ret.TotalSupply) == 0 {
+	if len(ret.Decimals) == 0 && ret.Symbol == "" && len(ret.TotalSupply) == 0 {
 		// it's possible that a token contract implements the ERC20 interfaces but does not
 		// return any values; we use a backup in this case
 		ret = &types.ERC20Metadata{

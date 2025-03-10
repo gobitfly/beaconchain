@@ -1,4 +1,5 @@
 import type { StringUnitLength } from 'luxon'
+import type { Locale } from '~/i18n/i18n.config'
 import type { AgeFormat } from '~/types/settings'
 
 export function useFormat() {
@@ -12,7 +13,7 @@ export function useFormat() {
     timestamp?: number,
     format?: AgeFormat,
     style?: StringUnitLength,
-    locales?: string,
+    locales?: Locale,
     withTime?: boolean,
   ): null | string | undefined {
     return formatTs(
@@ -30,7 +31,7 @@ export function useFormat() {
     timestamp?: number,
     format?: AgeFormat,
     style?: StringUnitLength,
-    locales?: string,
+    locales?: Locale,
     withTime?: boolean,
   ): null | string | undefined {
     return formatTs(
@@ -45,7 +46,7 @@ export function useFormat() {
 
   function formatEpochToDate(
     epoch: number,
-    locales: string,
+    locales: Locale,
   ): null | string | undefined {
     return formatEpochToDateTime(
       epoch,
