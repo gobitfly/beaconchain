@@ -20,7 +20,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -42,11 +41,15 @@ type SlotExporterDBRepository interface {
 	GetLastSlot(tx *sqlx.Tx) (uint64, error)
 	SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error
 	GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error)
-	SaveValidators(validators []*types.Validator, tx *sqlx.Tx) error
 	GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ValidatorActivationEpoch, error)
 	UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error
 	AnalyzeValidatorsTable(tx *sqlx.Tx) error
 	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
+	//
+	GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error)
+	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
+	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, updates int, tx *sqlx.Tx) (int, error)
+	SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error
 }
 
 type SlotExporterDB struct {
@@ -628,52 +631,19 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	return nil
 }
 
-func (r *SlotExporterDB) SaveValidators(validators []*types.Validator, tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
-	}()
-
+func (r *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error) {
 	var currentState []*types.Validator
 	err := tx.Select(&currentState, "SELECT validatorindex, withdrawableepoch, withdrawalcredentials, slashed, activationeligibilityepoch, activationepoch, exitepoch, status FROM validators;")
 
 	if err != nil {
-		return fmt.Errorf("error retrieving current validator state set: %v", err)
+		return nil, fmt.Errorf("error retrieving current validator state set: %v", err)
 	}
 
-	for ; ; time.Sleep(time.Second) { // wait till the last attestation in memory cache has been populated by the exporter
-		db.BigtableClient.LastAttestationCacheMux.Lock()
-		if db.BigtableClient.LastAttestationCache != nil {
-			db.BigtableClient.LastAttestationCacheMux.Unlock()
-			break
-		}
-		db.BigtableClient.LastAttestationCacheMux.Unlock()
-		log.Infof("waiting until LastAttestation in memory cache is available")
-	}
+	return currentState, nil
+}
 
-	currentStateMap := make(map[uint64]*types.Validator, len(currentState))
-	latestBlock := uint64(0)
-	db.BigtableClient.LastAttestationCacheMux.Lock()
-	for _, v := range currentState {
-		if db.BigtableClient.LastAttestationCache[v.Index] > latestBlock {
-			latestBlock = db.BigtableClient.LastAttestationCache[v.Index]
-		}
-		currentStateMap[v.Index] = v
-	}
-	db.BigtableClient.LastAttestationCacheMux.Unlock()
-
-	thresholdSlot := uint64(0)
-	if latestBlock >= 64 {
-		thresholdSlot = latestBlock - 64
-	}
-
-	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
-
-	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
-
-	var queries strings.Builder
-
-	insertStmt, err := tx.Prepare(`INSERT INTO validators (
+func (r *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error {
+	_, err := tx.Exec(`INSERT INTO validators (
 		validatorindex,
 		pubkey,
 		withdrawableepoch,
@@ -687,175 +657,85 @@ func (r *SlotExporterDB) SaveValidators(validators []*types.Validator, tx *sqlx.
 		pubkeyhex,
 		status
 	)
-	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`)
-	if err != nil {
-		return fmt.Errorf("error preparing insert validator statement: %w", err)
-	}
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`,
+		validator.Index,
+		validator.PublicKey,
+		validator.WithdrawableEpoch,
+		validator.WithdrawalCredentials,
+		0,
+		0,
+		validator.Slashed,
+		validator.ActivationEligibilityEpoch,
+		validator.ActivationEpoch,
+		validator.ExitEpoch,
+		fmt.Sprintf("%x", validator.PublicKey),
+		validator.Status)
 
-	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = ANY($2);`)
-	if err != nil {
-		return fmt.Errorf("error preparing update validator status statement: %w", err)
-	}
+	return err
 
-	log.Info("updating validator status and metadata")
-	valiudatorUpdateTs := time.Now()
+}
 
-	validatorStatusCounts := make(map[string]int)
-	validatorStatusUpdateMap := make(map[string][]uint64)
-
+func (r *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
+	var queries strings.Builder
 	updates := 0
-	for _, v := range validators {
-		// exchange farFutureEpoch with the corresponding max sql value
-		if v.WithdrawableEpoch == FarFutureEpoch {
-			v.WithdrawableEpoch = MaxSqlNumber
-		}
-		if v.ExitEpoch == FarFutureEpoch {
-			v.ExitEpoch = MaxSqlNumber
-		}
-		if v.ActivationEligibilityEpoch == FarFutureEpoch {
-			v.ActivationEligibilityEpoch = MaxSqlNumber
-		}
-		if v.ActivationEpoch == FarFutureEpoch {
-			v.ActivationEpoch = MaxSqlNumber
-		}
 
-		c := currentStateMap[v.Index]
-
-		if c == nil {
-			if v.Index%1000 == 0 {
-				log.Infof("validator %v is new", v.Index)
-			}
-
-			_, err = insertStmt.Exec(
-				v.Index,
-				v.PublicKey,
-				v.WithdrawableEpoch,
-				v.WithdrawalCredentials,
-				0,
-				0,
-				v.Slashed,
-				v.ActivationEligibilityEpoch,
-				v.ActivationEpoch,
-				v.ExitEpoch,
-				fmt.Sprintf("%x", v.PublicKey),
-				v.Status,
-			)
-
-			if err != nil {
-				log.Error(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
-			}
-			validatorStatusCounts[v.Status]++
-		} else {
-			db.BigtableClient.LastAttestationCacheMux.Lock()
-			lastAttestationSlot := db.BigtableClient.LastAttestationCache[v.Index]
-			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
-
-			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
-
-			db.BigtableClient.LastAttestationCacheMux.Unlock()
-
-			if v.ExitEpoch <= latestEpoch && v.Slashed {
-				v.Status = string(constypes.DbSlashed)
-			} else if v.ExitEpoch <= latestEpoch {
-				v.Status = string(constypes.DbExited)
-			} else if v.ActivationEligibilityEpoch == MaxSqlNumber {
-				v.Status = string(constypes.DbDeposited)
-			} else if v.ActivationEpoch > latestEpoch {
-				v.Status = string(constypes.DbPending)
-			} else if v.Slashed && v.ActivationEpoch < latestEpoch && offline {
-				v.Status = string(constypes.DbSlashingOffline)
-			} else if v.Slashed {
-				v.Status = string(constypes.DbSlashingOnline)
-			} else if v.ExitEpoch < MaxSqlNumber && offline {
-				v.Status = string(constypes.DbExitingOffline)
-			} else if v.ExitEpoch < MaxSqlNumber {
-				v.Status = string(constypes.DbExitingOnline)
-			} else if v.ActivationEpoch < latestEpoch && offline {
-				v.Status = string(constypes.DbActiveOffline)
-			} else {
-				v.Status = string(constypes.DbActiveOnline)
-			}
-
-			validatorStatusCounts[v.Status]++
-			if c.Status != v.Status {
-				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
-				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v",
-					v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
-
-				_, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
-				if err != nil {
-					return fmt.Errorf("error updating validator status: %w", err)
-				}
-			}
-			if c.Slashed != v.Slashed {
-				log.Infof("Slashed changed for validator %v from %v to %v", v.Index, c.Slashed, v.Slashed)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET slashed = %v WHERE validatorindex = %d;\n", v.Slashed, c.Index))
-				updates++
-			}
-			if c.ActivationEligibilityEpoch != v.ActivationEligibilityEpoch {
-				log.Infof("ActivationEligibilityEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEligibilityEpoch, v.ActivationEligibilityEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET activationeligibilityepoch = %d WHERE validatorindex = %d;\n", v.ActivationEligibilityEpoch, c.Index))
-				updates++
-			}
-			if c.ActivationEpoch != v.ActivationEpoch {
-				log.Infof("ActivationEpoch changed for validator %v from %v to %v", v.Index, c.ActivationEpoch, v.ActivationEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET activationepoch = %d WHERE validatorindex = %d;\n", v.ActivationEpoch, c.Index))
-				updates++
-			}
-			if c.ExitEpoch != v.ExitEpoch {
-				log.Infof("ExitEpoch changed for validator %v from %v to %v", v.Index, c.ExitEpoch, v.ExitEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET exitepoch = %d WHERE validatorindex = %d;\n", v.ExitEpoch, c.Index))
-				updates++
-			}
-			if c.WithdrawableEpoch != v.WithdrawableEpoch {
-				log.Infof("WithdrawableEpoch changed for validator %v from %v to %v", v.Index, c.WithdrawableEpoch, v.WithdrawableEpoch)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawableepoch = %d WHERE validatorindex = %d;\n", v.WithdrawableEpoch, c.Index))
-				updates++
-			}
-			if !bytes.Equal(c.WithdrawalCredentials, v.WithdrawalCredentials) {
-				log.Infof("WithdrawalCredentials changed for validator %v from %x to %x", v.Index, c.WithdrawalCredentials, v.WithdrawalCredentials)
-				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawalcredentials = '\\x%x' WHERE validatorindex = %d;\n", v.WithdrawalCredentials, c.Index))
-				updates++
-			}
-		}
+	if currentState.Status != newState.Status {
+		log.Debugf("Status changed for validator %v from %v to %v", newState.Index, currentState.Status, newState.Status)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET status = %s WHERE validatorindex = %d;\n", newState.Status, currentState.Index))
+		updates++
+	}
+	if currentState.Slashed != newState.Slashed {
+		log.Infof("Slashed changed for validator %v from %v to %v", newState.Index, currentState.Slashed, newState.Slashed)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET slashed = %v WHERE validatorindex = %d;\n", newState.Slashed, currentState.Index))
+		updates++
+	}
+	if currentState.ActivationEligibilityEpoch != newState.ActivationEligibilityEpoch {
+		log.Infof("ActivationEligibilityEpoch changed for validator %v from %v to %v", newState.Index, currentState.ActivationEligibilityEpoch, newState.ActivationEligibilityEpoch)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET activationeligibilityepoch = %d WHERE validatorindex = %d;\n", newState.ActivationEligibilityEpoch, currentState.Index))
+		updates++
+	}
+	if currentState.ActivationEpoch != newState.ActivationEpoch {
+		log.Infof("ActivationEpoch changed for validator %v from %v to %v", newState.Index, currentState.ActivationEpoch, newState.ActivationEpoch)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET activationepoch = %d WHERE validatorindex = %d;\n", newState.ActivationEpoch, currentState.Index))
+		updates++
+	}
+	if currentState.ExitEpoch != newState.ExitEpoch {
+		log.Infof("ExitEpoch changed for validator %v from %v to %v", newState.Index, currentState.ExitEpoch, newState.ExitEpoch)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET exitepoch = %d WHERE validatorindex = %d;\n", newState.ExitEpoch, currentState.Index))
+		updates++
+	}
+	if currentState.WithdrawableEpoch != newState.WithdrawableEpoch {
+		log.Infof("WithdrawableEpoch changed for validator %v from %v to %v", newState.Index, currentState.WithdrawableEpoch, newState.WithdrawableEpoch)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawableepoch = %d WHERE validatorindex = %d;\n", newState.WithdrawableEpoch, currentState.Index))
+		updates++
+	}
+	if !bytes.Equal(currentState.WithdrawalCredentials, newState.WithdrawalCredentials) {
+		log.Infof("WithdrawalCredentials changed for validator %v from %x to %x", newState.Index, currentState.WithdrawalCredentials, newState.WithdrawalCredentials)
+		queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawalcredentials = '\\x%x' WHERE validatorindex = %d;\n", newState.WithdrawalCredentials, currentState.Index))
+		updates++
 	}
 
-	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
-	for status, validators := range validatorStatusUpdateMap {
-		log.Infof("updating validator status to %s for %d validators", status, len(validators))
-		_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(validators))
-		if err != nil {
-			return fmt.Errorf("error updating validator status: %w", err)
-		}
-	}
+	return updates, queries.String(), nil
+}
 
-	err = validatorStatusUpdateStmt.Close()
+func (r *SlotExporterDB) SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error {
+	log.Infof("applying %v validator table update queries", totalUpdates)
+	updateStart := time.Now()
+
+	_, err := tx.Exec(queries)
 	if err != nil {
-		return fmt.Errorf("error closing validator status update statement: %w", err)
+		log.Error(err, "error executing validator update query", 0)
+		return err
 	}
+	log.Infof("validator table update completed, took %v", time.Since(updateStart))
+	return nil
+}
 
-	err = insertStmt.Close()
-	if err != nil {
-		return fmt.Errorf("error closing insert validator statement: %w", err)
-	}
-
-	if updates > 0 {
-		updateStart := time.Now()
-		log.Infof("applying %v validator table update queries", updates)
-		_, err = tx.Exec(queries.String())
-		if err != nil {
-			log.Error(err, "error executing validator update query", 0)
-			return err
-		}
-		log.Infof("validator table update completed, took %v", time.Since(updateStart))
-	}
-
-	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
-
+func (r *SlotExporterDB) UpdateValidatorStatusCount(validatorStatusCounts map[string]int, tx *sqlx.Tx) error {
 	log.Infof("updating validator status counts")
 	timeStart := time.Now()
 
-	_, err = tx.Exec("TRUNCATE TABLE validators_status_counts;")
+	_, err := tx.Exec("TRUNCATE TABLE validators_status_counts;")
 	if err != nil {
 		return fmt.Errorf("error truncating validators_status_counts table: %w", err)
 	}

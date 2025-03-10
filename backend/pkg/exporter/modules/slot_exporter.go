@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -171,7 +172,6 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 }
 
 func (s *slotExporter) handleFirstRun(head *types.ChainHead, exporter *exporter, tx *sqlx.Tx) error {
-
 	// get all slots we currently have in the database
 	dbSlots, err := s.db.GetAllSlots(tx)
 	if err != nil {
@@ -638,13 +638,112 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 
 func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
 	g := errgroup.Group{}
+	start := time.Now()
 
-	// this function sets exports the validator status into the db
-	// and also updates the status field in the validators array
-	err := s.db.SaveValidators(block.Validators, s.dbTx)
+	currentState, err := s.db.GetValidatorsCurrentState(s.dbTx)
 	if err != nil {
-		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
+		return fmt.Errorf("error retrieving current validator state: %w", err)
 	}
+
+	currentStateMap := make(map[uint64]*types.Validator, len(currentState))
+	latestBlock := uint64(0)
+
+	// safely access and update the latestBlock and currentStateMap
+	s.bt.GetLastAttestationCacheMux().Lock()
+	for _, v := range currentState {
+		if s.bt.GetLastAttestationCache()[v.Index] > latestBlock {
+			latestBlock = s.bt.GetLastAttestationCache()[v.Index]
+		}
+		currentStateMap[v.Index] = v
+	}
+	s.bt.GetLastAttestationCacheMux().Unlock()
+
+	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
+
+	log.Info("updating validator status and metadata")
+
+	valiudatorUpdateTs := time.Now()
+	validatorStatusCounts := make(map[string]int)
+	updates := 0
+	var queries strings.Builder
+	for _, v := range block.Validators {
+		// exchange farFutureEpoch with the corresponding max sql value
+		if v.WithdrawableEpoch == edb.FarFutureEpoch {
+			v.WithdrawableEpoch = edb.MaxSqlNumber
+		}
+		if v.ExitEpoch == edb.FarFutureEpoch {
+			v.ExitEpoch = edb.MaxSqlNumber
+		}
+		if v.ActivationEligibilityEpoch == edb.FarFutureEpoch {
+			v.ActivationEligibilityEpoch = edb.MaxSqlNumber
+		}
+		if v.ActivationEpoch == edb.FarFutureEpoch {
+			v.ActivationEpoch = edb.MaxSqlNumber
+		}
+
+		c := currentStateMap[v.Index]
+
+		if c == nil {
+			if v.Index%1000 == 0 {
+				log.Infof("validator %v is new", v.Index)
+			}
+
+			err := s.db.SaveNewValidator(v, s.dbTx)
+			if err != nil {
+				log.Error(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
+			}
+			validatorStatusCounts[v.Status]++
+		} else {
+			// safely read the last attestation slot for the validator
+			s.bt.GetLastAttestationCacheMux().Lock()
+			lastAttestationSlot := s.bt.GetLastAttestationCache()[v.Index]
+			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
+			s.bt.GetLastAttestationCacheMux().Unlock()
+
+			if v.ExitEpoch <= latestEpoch && v.Slashed {
+				v.Status = string(constypes.DbSlashed)
+			} else if v.ExitEpoch <= latestEpoch {
+				v.Status = string(constypes.DbExited)
+			} else if v.ActivationEligibilityEpoch == edb.MaxSqlNumber {
+				v.Status = string(constypes.DbDeposited)
+			} else if v.ActivationEpoch > latestEpoch {
+				v.Status = string(constypes.DbPending)
+			} else if v.Slashed && v.ActivationEpoch < latestEpoch && offline {
+				v.Status = string(constypes.DbSlashingOffline)
+			} else if v.Slashed {
+				v.Status = string(constypes.DbSlashingOnline)
+			} else if v.ExitEpoch < edb.MaxSqlNumber && offline {
+				v.Status = string(constypes.DbExitingOffline)
+			} else if v.ExitEpoch < edb.MaxSqlNumber {
+				v.Status = string(constypes.DbExitingOnline)
+			} else if v.ActivationEpoch < latestEpoch && offline {
+				v.Status = string(constypes.DbActiveOffline)
+			} else {
+				v.Status = string(constypes.DbActiveOnline)
+			}
+
+			validatorStatusCounts[v.Status]++
+			updateCount, updateQueries, err := s.db.PrepareValidatorsUpdate(c, v, s.dbTx)
+			if err != nil {
+				return fmt.Errorf("error preparing validators update: %w", err)
+			}
+
+			updates += updateCount
+			queries.WriteString(updateQueries)
+		}
+	}
+
+	if updates > 0 {
+		err := s.db.SaveValidatorsFieldsUpdate(queries.String(), updates, s.dbTx)
+		if err != nil {
+			return fmt.Errorf("error saving validators update: %w", err)
+		}
+	}
+
+	metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
+	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
 	var genesisBalances map[uint64][]*types.ValidatorBalance
 	if epoch == 0 {
