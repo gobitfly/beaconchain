@@ -2,7 +2,6 @@ package modules
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/gob"
 	"sort"
@@ -19,7 +18,6 @@ import (
 
 	"fmt"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
@@ -42,9 +40,9 @@ type ExporterClient interface {
 type slotExporter struct {
 	ModuleContext
 	Client ExporterClient
+	cache  edb.ExporterCache
 	db     edb.SlotExporterDB
 	bt     edb.SlotExporterBT
-	cache  edb.ExporterCache
 
 	firstRun       bool
 	latestEpoch    uint64
@@ -57,9 +55,9 @@ func NewSlotExporter(moduleContext ModuleContext, cache edb.ExporterCache, db ed
 	return &slotExporter{
 		ModuleContext:  moduleContext,
 		Client:         moduleContext.ConsClient,
+		cache:          cache,
 		db:             db,
 		bt:             bt,
-		cache:          cache,
 		firstRun:       true,
 		latestEpoch:    0,
 		latestSlot:     0,
@@ -171,7 +169,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 }
 
 func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
 
 	// get all slots we currently have in the database
 	dbSlots, err := s.db.GetAllSlots(tx)
@@ -214,7 +212,7 @@ func (s *slotExporter) handleFirstRun(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
 	lastDbSlot, err := s.db.GetLastSlot(tx)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -258,7 +256,7 @@ func (s *slotExporter) exportNewSlots(head *types.ChainHead, tx *sqlx.Tx) error 
 }
 
 func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) error {
-	exporter := NewExporter(s.Client, s.db, s.bt, tx, s)
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
 
 	// check if any non-finalized slot has changed by comparing it with the node
 	dbNonFinalSlots, err := s.db.GetAllNonFinalizedSlots()
@@ -362,6 +360,7 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, tx *sqlx.Tx) 
 
 type exporter struct {
 	Client ExporterClient
+	cache  edb.ExporterCache
 	db     edb.SlotExporterDB
 	bt     edb.SlotExporterBT
 	dbTx   *sqlx.Tx
@@ -369,9 +368,10 @@ type exporter struct {
 	slotExporter *slotExporter
 }
 
-func NewExporter(client ExporterClient, db edb.SlotExporterDB, bt edb.SlotExporterBT, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+func NewExporter(client ExporterClient, cache edb.ExporterCache, db edb.SlotExporterDB, bt edb.SlotExporterBT, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
 	return &exporter{
 		Client:       client,
+		cache:        cache,
 		db:           db,
 		bt:           bt,
 		dbTx:         dbTx,
@@ -581,7 +581,6 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 		return fmt.Errorf("error serializing assignments to gob for slot %v: %w", block.Slot, err)
 	}
 
-	key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
 	expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
 	expirationDuration := time.Until(expirationTime)
 
@@ -589,7 +588,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 		log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
 	} else {
 		log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
-		err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+		err = s.cache.SetEpochAssignments(epoch, serializedAssignmentsData.Bytes(), expirationDuration)
 		if err != nil {
 			return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
 		}
@@ -617,7 +616,6 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 			return fmt.Errorf("error serializing assignments to gob for head+1 epoch %v: %w", block.Slot, err)
 		}
 
-		key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", nextEpoch)
 		expirationTime := utils.EpochToTime(nextEpoch + 7) // keep it for at least 7 epochs in the cache
 		expirationDuration := time.Until(expirationTime)
 
@@ -625,7 +623,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 			log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
 		} else {
 			log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
-			err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+			err = s.cache.SetEpochAssignments(nextEpoch, serializedAssignmentsData.Bytes(), expirationDuration)
 			if err != nil {
 				return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
 			}
@@ -815,9 +813,8 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64, tx *sql
 
 		// load into redis
 		start = time.Now()
-		key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
 		log.Infof("writing validator mappping to redis with no TTL")
-		err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
+		err = s.cache.SetValidatorMapping(compressedValidatorMapping.Bytes(), 0)
 		if err != nil {
 			return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
 		}
