@@ -115,6 +115,13 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
+type ConsolidationsCursor struct {
+	GenericCursor
+
+	Slot               uint64
+	ConsolidationIndex uint64
+}
+
 type NotificationSettingsCursor struct {
 	GenericCursor
 
