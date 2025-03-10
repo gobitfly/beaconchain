@@ -842,6 +842,15 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 				blocks_deposits
 			where
 				valid_signature
+				and publickey in (  -- doesnt need to be 100% accurate, we only filter for performance reasons
+					select
+						publickey
+					from
+						blocks_deposits
+					where
+						blocks_deposits.block_slot >= $1
+						and blocks_deposits.block_slot <= $2
+				)
 			order by
 				publickey,
 				block_slot,
