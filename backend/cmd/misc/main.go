@@ -270,7 +270,7 @@ func Run() {
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
 					edb.NewSlotExporterBT(db.BigtableClient),
 					tx,
@@ -324,7 +324,7 @@ func Run() {
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
 					edb.NewSlotExporterBT(db.BigtableClient),
 					tx,
@@ -424,7 +424,7 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 			slotExporter := modules.NewExporter(rpcClient,
-				edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterDB(db.WriterDb),
 				edb.NewSlotExporterBT(db.BigtableClient),
 				tx,

@@ -182,7 +182,7 @@ func Run() {
 	} else {
 		usedModules = append(usedModules,
 			modules.NewSlotExporter(context,
-				edb.NewExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterDB(db.WriterDb),
 				edb.NewSlotExporterBT(db.BigtableClient),
 			),
