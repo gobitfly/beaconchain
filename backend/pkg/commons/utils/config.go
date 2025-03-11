@@ -97,7 +97,6 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Frontend.SiteBrand = "beaconcha.in"
 	}
 
-	// rewrite to match to allow trace as well
 	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
 	case "trace":
 		logrus.SetLevel(logrus.TraceLevel)

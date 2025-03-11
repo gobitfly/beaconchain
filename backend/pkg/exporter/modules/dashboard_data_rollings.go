@@ -116,14 +116,16 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_nuke_unsafe", rolling)).Observe(time.Since(now).Seconds())
 	// now we fetch the start & end for each pre-aggregated table we use
 	minTs := utils.EpochToTime(uint64(finishedEpoch)).Add(-rolling.GetDuration())
+	// we also need to add one epoch to the minTs because each epoch timestamp is the start of the epoch
+	minTs = minTs.Add(time.Duration(utils.Config.ClConfig.SlotsPerEpoch*utils.Config.ClConfig.SecondsPerSlot) * time.Second)
 	d.log.Infof("rolling %s, min ts %s", rolling, minTs)
-	tables := []edb.RollingSources{
+	tables := []edb.RollingSourcesSuffix{
 		edb.RollingSourceMonthly,
 		edb.RollingSourceDaily,
 		edb.RollingSourceHourly,
 		edb.RollingSourceEpochly,
 	}
-	minMaxMap := make(map[edb.RollingSources]*edb.MinMax)
+	minMaxMap := make(map[edb.RollingSourcesSuffix]*edb.MinMax)
 	var lowestSeenTs *time.Time
 	for _, table := range tables {
 		now := time.Now()
