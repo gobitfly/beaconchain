@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 type validatorDashboardDataAccessStub struct {
 	dataaccess.DummyService
 	overridePremiumPerks *types.PremiumPerks
+	overrideGroupCount   *uint64
 }
 
 func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
@@ -39,10 +39,10 @@ func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id u
 	}, nil
 }
 
-func (da *validatorDashboardDataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
 	var count uint64
-	if dashboardId == 1 {
-		count = 1
+	if d.overrideGroupCount != nil {
+		count = *d.overrideGroupCount
 	}
 	return count, nil
 }
@@ -58,6 +58,11 @@ func withPremiumPerks(perks types.PremiumPerks) stubOption {
 		d.overridePremiumPerks = &perks
 	}
 }
+func withGroupCount(count uint64) stubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.overrideGroupCount = &count
+	}
+}
 func validatorDashboardTestSetup(options ...stubOption) (context.Context, *HandlerService) {
 	d := &validatorDashboardDataAccessStub{}
 	for _, option := range options {
@@ -67,80 +72,87 @@ func validatorDashboardTestSetup(options ...stubOption) (context.Context, *Handl
 }
 
 // ------------------------------------------------------------
+// POST /validator-dashboards/{dashboard_id}/groups
 
 func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
-	var i inputPostValidatorDashboardGroups
 	params := make(map[string]string)
 	t.Run("success", func(t *testing.T) {
+		var i inputPostValidatorDashboardGroups
 		params["dashboard_id"] = "1"
 		body := stringAsBody(`{"name":"test"}`)
 		err := i.Validate(params, body)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
 		assert.Equal(t, "test", i.name)
 	})
 	t.Run("empty name", func(t *testing.T) {
+		var i inputPostValidatorDashboardGroups
 		params["dashboard_id"] = "1"
 		body := stringAsBody(`{"name":""}`)
 		err := i.Validate(params, body)
-		assert.NotNil(t, err)
+		assert.Error(t, err)
 	})
 }
 func TestPostValidatorDashboardGroups(t *testing.T) {
-	ctx, h := validatorDashboardTestSetup()
 	t.Run("success", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup()
 		input := inputPostValidatorDashboardGroups{
 			dashboardId: 0,
 			name:        "test",
 		}
 		_, err := h.PostValidatorDashboardGroups(ctx, input)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 	})
 	t.Run("group count reached", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withGroupCount(1))
 		input := inputPostValidatorDashboardGroups{
-			dashboardId: 1,
+			dashboardId: 0,
 			name:        "test",
 		}
 		_, err := h.PostValidatorDashboardGroups(ctx, input)
-		assert.NotNil(t, err)
-		assert.True(t, errors.Is(err, errConflict))
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errConflict)
 	})
 }
 
 // ------------------------------------------------------------
+// GET /validator-dashboards/{dashboard_id}/groups/{group_id}/summary
 
 func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
-	var i inputGetValidatorDashboardGroupSummary
 	t.Run("success", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
 		params := map[string]string{
 			"dashboard_id": "1",
 			"group_id":     "1",
 			"period":       "all_time",
 		}
 		err := i.Validate(params, nil)
-		assert.Nil(t, err)
+		assert.NoError(t, err)
 		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardIdParam)
 		assert.Equal(t, int64(1), i.groupId)
 	})
 	t.Run("empty dashboard_id", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
 		params := map[string]string{
 			"dashboard_id": "",
 			"group_id":     "1",
 			"period":       "all_time",
 		}
 		err := i.Validate(params, nil)
-		assert.NotNil(t, err)
+		assert.Error(t, err)
 	})
 	t.Run("empty group_id", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
 		params := map[string]string{
 			"dashboard_id": "1",
 			"group_id":     "",
 			"period":       "all_time",
 		}
 		err := i.Validate(params, nil)
-		assert.NotNil(t, err)
+		assert.Error(t, err)
 	})
 	t.Run("empty period", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
 		params := map[string]string{
 			"dashboard_id": "1",
 			"group_id":     "1",
