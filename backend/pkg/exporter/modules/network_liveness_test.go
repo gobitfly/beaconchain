@@ -8,7 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	cachemocks "github.com/gobitfly/beaconchain/pkg/commons/cache/mocks"
-	"github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
 	rpcmocks "github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -64,7 +64,7 @@ func TestNetworkLivenessExport(t *testing.T) {
 		DeploymentType: "development",
 	}
 
-	mockConsDBClient := new(mocks.ConsensusDBI)
+	mockConsDBClient := new(mocks.ConsensusRepository)
 	mockRPCClient := new(rpcmocks.EpochClient)
 	cachemocks := new(cachemocks.RemoteCache)
 	tieredCache := cache.NewTieredCache(cachemocks, 1000)

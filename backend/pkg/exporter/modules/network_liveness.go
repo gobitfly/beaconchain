@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -24,12 +24,12 @@ type EpochClient interface {
 
 type networkLivenessUpdater struct {
 	client EpochClient
-	db     db.ConsensusDBI
+	db     db2.ConsensusRepository
 	ctx    context.Context
 	cache  *cache.TieredCacheBase
 }
 
-func newNetworkLivenessUpdater(ctx context.Context, client rpc.Client, db db.ConsensusDBI) networkLivenessUpdater {
+func newNetworkLivenessUpdater(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) networkLivenessUpdater {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}

@@ -2307,21 +2307,6 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	return validatoridxs, nil
 }
 
-func (c *ConsensusDB) SaveNetworkLivenessData(head *types.ChainHead) error {
-	_, err := c.WriterDb.Exec(`
-        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
-        VALUES (NOW(), $1, $2, $3, $4)`,
-		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
-
-	return err
-}
-
-func (c *ConsensusDB) GetNetworkLivenessPreviousHeadEpoch() (uint64, error) {
-	var headEpoch uint64
-	err := c.WriterDb.Get(&headEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
-	return headEpoch, err
-}
-
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
 //
 // If a slot is missed, the map will not contain an entry for it
