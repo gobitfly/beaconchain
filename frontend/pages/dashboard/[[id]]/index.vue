@@ -105,12 +105,12 @@ const currentEffectiveBalance = computed(() => {
 })
 
 const hasReachedLimit = computed(() => {
-  if (!currentEffectiveBalance.value || !premium_perks.value?.effective_balance_per_dashboard) {
+  const effectiveBalancePerDashboard = premium_perks.value?.effective_balance_per_dashboard
+
+  if (!currentEffectiveBalance.value || !effectiveBalancePerDashboard) {
     return false
   }
-
-  return currentEffectiveBalance.value
-    >= premium_perks.value?.effective_balance_per_dashboard
+  return isGreaterOrEqual(currentEffectiveBalance.value, effectiveBalancePerDashboard)
 })
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })

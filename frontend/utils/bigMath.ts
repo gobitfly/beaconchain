@@ -24,3 +24,11 @@ export const divideBigNumbers = (
   const quotient = new Big(dividend).div(divisor)
   return `${quotient}`
 }
+
+export const isGreaterOrEqual = (
+  leftHandValue: number | string,
+  rightHandValue: number | string,
+) => {
+  assertIsNumber(leftHandValue, rightHandValue)
+  return Big(leftHandValue).gte(Big(rightHandValue))
+}
