@@ -273,6 +273,17 @@ const {
   displayCurrencyDefault,
   formatAmount,
 } = useCurrency()
+const userDashboardStore = useUserDashboardStore()
+const {
+  dashboards,
+} = storeToRefs(userDashboardStore)
+
+const currentEffectiveBalance = computed(() => {
+  const currentDashboard = dashboards.value?.validator_dashboards.find(
+    validatorDashboard => `${validatorDashboard.id}` === dashboardKey.value,
+  )
+  return currentDashboard?.effective_balance
+})
 
 const EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH = '640'
 const effectiveBalanceLimitGuestDashboard = formatAmount(EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH, {
@@ -293,8 +304,10 @@ const effectiveBalanceLimitPerDashboard = computed(() => {
 })
 
 const hasReachedLimit = computed(() => {
-  if (!overview.value?.balances) return false
-  return effectiveBalanceLimitPerDashboard.value <= overview.value?.balances.effective
+  if (!currentEffectiveBalance.value || !effectiveBalanceLimitPerDashboard.value) {
+    return false
+  }
+  return currentEffectiveBalance.value >= effectiveBalanceLimitPerDashboard.value
 })
 
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
@@ -582,7 +595,7 @@ const inputValidator = ref('')
                 >
                   <span>
                     <BcFormatAmount
-                      :value="overview?.balances.effective ?? '0'"
+                      :value="currentEffectiveBalance ?? '0'"
                       :maximum-fraction-digits="0"
                       :source-currency="displayCurrencyDefault.main"
                     />
@@ -659,6 +672,7 @@ const inputValidator = ref('')
   flex-direction: column;
   overflow-y: hidden;
   justify-content: space-between;
+  padding-bottom: var(--padding-medium);
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;
