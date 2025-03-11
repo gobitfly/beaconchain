@@ -2306,43 +2306,6 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	return validatoridxs, nil
 }
 
-func (c *ConsensusDB) GetSyncCommitteesPeriods() ([]uint64, error) {
-	var periods []uint64
-	err := c.WriterDb.Select(&periods, `SELECT period FROM sync_committees GROUP BY period`)
-	return periods, err
-}
-
-func (c *ConsensusDB) SaveSyncCommitteeData(data []types.SyncCommittee) error {
-	tx, err := c.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	nArgs := 3
-	ids := make([]string, len(data))
-	queryArgs := make([]interface{}, len(data)*nArgs)
-	for i, entry := range data {
-		ids[i] = fmt.Sprintf("($%d,$%d,$%d)", i*nArgs+1, i*nArgs+2, i*nArgs+3)
-		queryArgs[i*nArgs] = entry.Period
-		queryArgs[i*nArgs+1] = entry.ValidatorIndex
-		queryArgs[i*nArgs+2] = entry.CommitteeIndex
-	}
-
-	_, err = tx.Exec(
-		fmt.Sprintf(`
-			INSERT INTO sync_committees (period, validatorindex, committeeindex)
-			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
-			strings.Join(ids, ",")),
-		queryArgs...)
-
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
 //
 // If a slot is missed, the map will not contain an entry for it

@@ -8,7 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	cachemocks "github.com/gobitfly/beaconchain/pkg/commons/cache/mocks"
-	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -75,7 +75,7 @@ func TestSyncCommitteesExport(t *testing.T) {
 		},
 	}
 
-	mockConsDBClient := new(dbmocks.ConsensusDBI)
+	mockConsDBClient := new(dbmocks.ConsensusRepository)
 	mockClient := new(mocks.SyncCommitteeClient)
 	cachemocks := new(cachemocks.RemoteCache)
 	tieredCache := cache.NewTieredCache(cachemocks, 1000)

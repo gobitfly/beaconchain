@@ -2085,7 +2085,7 @@ func UpdateValidatorStatisticsSyncData(day uint64, dryRun bool) error {
 
 func reExportSyncCommittee(rpcClient rpc.Client, period uint64, dryRun bool) error {
 	ctx := context.Background()
-	consDB := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
+	consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
 	syncCommitteesExporter := modules.NewSyncCommitteesExporter(ctx, rpcClient, consDB)
 
 	if dryRun {

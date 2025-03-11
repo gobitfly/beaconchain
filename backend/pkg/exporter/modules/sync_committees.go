@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -22,14 +22,14 @@ type SyncCommitteeClient interface {
 
 type syncCommitteesExporter struct {
 	client SyncCommitteeClient
-	db     db.ConsensusDBI
+	db     db2.ConsensusRepository
 
 	delay time.Duration
 	ctx   context.Context
 	cache *cache.TieredCacheBase
 }
 
-func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) syncCommitteesExporter {
+func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) syncCommitteesExporter {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}
