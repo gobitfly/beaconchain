@@ -8,6 +8,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -41,7 +42,7 @@ var Client *rpc.Client
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
 		ctx := context.Background()
-		consDB := &db.ConsensusDB{WriterDb: db.WriterDb, ReaderDb: db.ReaderDb}
+		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
 
 		go networkLivenessUpdater(moduleCtx.ConsClient)
 		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)

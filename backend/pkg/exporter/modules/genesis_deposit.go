@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -17,13 +17,13 @@ type ValidatorClient interface {
 
 type genesisDepositsExporter struct {
 	client ValidatorClient
-	db     db.ConsensusDBI
+	db     db2.ConsensusRepository
 
 	delay time.Duration
 	ctx   context.Context
 }
 
-func newGenesisDepositsExporter(ctx context.Context, client rpc.Client, db db.ConsensusDBI) genesisDepositsExporter {
+func newGenesisDepositsExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) genesisDepositsExporter {
 	return genesisDepositsExporter{
 		client: client,
 		db:     db,
