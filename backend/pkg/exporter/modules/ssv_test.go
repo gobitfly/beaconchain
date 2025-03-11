@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/websocket"
 )
 
 func TestSSVExport(t *testing.T) {
-	mockConsDBClient := new(mocks.ConsensusDBI)
+	mockConsDBClient := new(mocks.ConsensusRepository)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 

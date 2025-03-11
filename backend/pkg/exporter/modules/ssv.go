@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -14,10 +14,10 @@ import (
 )
 
 type ssvExporter struct {
-	db db.ConsensusDBI
+	db db2.ConsensusRepository
 }
 
-func newSSVExporter(db db.ConsensusDBI) *ssvExporter {
+func newSSVExporter(db db2.ConsensusRepository) *ssvExporter {
 	return &ssvExporter{
 		db: db,
 	}
