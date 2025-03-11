@@ -97,12 +97,20 @@ const {
   refreshOverview,
 } = validatorDashboardOverviewStore
 
-const hasReachedSubscriptionLimit = computed(() => {
-  if (!premium_perks.value?.effective_balance_per_dashboard || !overview.value) {
+const currentEffectiveBalance = computed(() => {
+  const currentDashboard = dashboards.value?.validator_dashboards.find(
+    validatorDashboard => `${validatorDashboard.id}` === dashboardKey.value,
+  )
+  return currentDashboard?.effective_balance
+})
+
+const hasReachedLimit = computed(() => {
+  if (!currentEffectiveBalance.value || !premium_perks.value?.effective_balance_per_dashboard) {
     return false
   }
-  return premium_perks.value?.effective_balance_per_dashboard
-    <= overview.value?.balances.effective
+
+  return currentEffectiveBalance.value
+    >= premium_perks.value?.effective_balance_per_dashboard
 })
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
@@ -218,7 +226,7 @@ watch(
     <BcPageWrapper>
       <template #banner>
         <BcNotificationBanner
-          v-if="hasReachedSubscriptionLimit"
+          v-if="hasReachedLimit"
           :title="$t('dashboard.subsciprion_limit_reached_title')"
         >
           <BcTranslation
