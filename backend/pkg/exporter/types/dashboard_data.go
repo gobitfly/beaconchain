@@ -12,6 +12,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+/*
+
+efficiency_attestations_dividend := ALIAS attestations_reward_rewards_only
+efficiency_attestations_divisor := 	ALIAS attestations_ideal_reward
+efficiency_proposals_dividend := 	ALIAS blocks_cl_reward
+efficiency_proposals_divisor := 	MATERIALIZED blocks_cl_reward + blocks_cl_missed_median_reward
+efficiency_sync_dividend := 		ALIAS sync_reward_rewards_only
+efficiency_sync_divisor := 			ALIAS sync_localized_max_reward
+efficiency_dividend := 				MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend
+efficiency_divisor := 				MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor
+// only on epoch table, cant be retroactively added to aggregated tables
+balance_effective_attestations := 	DEFAULT balance_effective_end // written correctly on newer data, wrong for historical data where slashings occurred ;c
+// needs separate aggregation tables because they reference a newly added column and we cant retroactively add it to the aggregated tables
+// need to scale the rewards of either attestations or proposal & sync to a common eb value
+// currently it discredits attestations by half because we basically double the invested amount without doubling the rewards
+roi_dividend := 					MATERIALIZED balance_end - deposits_amount + withdrawals_amount - incoming_consolidations + outgoing_consolidations
+roi_divisor := 						MATERIALIZED balance_start
+*/
+
 type VDBDataEpochColumns struct {
 	// this should be the same as Epoch but only once, basically
 	EpochsContained                     []uint64    `custom_size:"1"`
@@ -21,6 +40,7 @@ type VDBDataEpochColumns struct {
 	EpochTimestamp                      []*time.Time
 	BalanceEffectiveStart               []int64
 	BalanceEffectiveEnd                 []int64
+	BalanceEffectiveAttestations        []int64
 	BalanceStart                        []int64
 	BalanceEnd                          []int64
 	DepositsCount                       []int64
@@ -91,6 +111,8 @@ func (c *VDBDataEpochColumns) Get(str string) any {
 		return c.BalanceEffectiveStart
 	case "balance_effective_end":
 		return c.BalanceEffectiveEnd
+	case "balance_effective_attestations":
+		return c.BalanceEffectiveAttestations
 	case "balance_start":
 		return c.BalanceStart
 	case "balance_end":
