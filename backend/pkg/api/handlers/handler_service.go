@@ -69,7 +69,7 @@ type InputValidator[T any] interface {
 
 type BusinessLogicFunc[Input any, Response any] func(ctx context.Context, input Input) (Response, error)
 
-func Handle[Input InputValidator[Value], Value, Response any](defaultCode int, logicFunc BusinessLogicFunc[Input, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
+func Handle[Input InputValidator[Value], Value, Response any](defaultCode int, logicFunc BusinessLogicFunc[Value, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// prepare input
 		vars := mux.Vars(r)
@@ -95,7 +95,7 @@ func Handle[Input InputValidator[Value], Value, Response any](defaultCode int, l
 			ctx = context.WithValue(ctx, types.CtxIsMockingAllowedKey, true)
 		}
 		// business logic
-		response, err := logicFunc(ctx, input)
+		response, err := logicFunc(ctx, *input)
 		if err != nil {
 			handleErr(w, r, err)
 			return

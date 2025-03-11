@@ -216,7 +216,7 @@ func TestInternalGetProductSummaryHandler(t *testing.T) {
 	respData := api_types.InternalGetProductSummaryResponse{}
 	e.GET("/api/i/product-summary").Expect().Status(http.StatusOK).JSON().Decode(&respData)
 
-	assert.NotEqual(t, 0, respData.Data.ValidatorsPerDashboardLimit, "ValidatorsPerDashboardLimit should not be 0")
+	assert.NotEqual(t, 0, respData.Data.EffectiveBalancePerDashboardLimit, "EffectiveBalancePerDashboardLimit should not be 0")
 	assert.NotEqual(t, 0, len(respData.Data.ApiProducts), "ApiProducts should not be empty")
 	assert.NotEqual(t, 0, len(respData.Data.ExtraDashboardValidatorsPremiumAddon), "ExtraDashboardValidatorsPremiumAddon should not be empty")
 	assert.NotEqual(t, 0, len(respData.Data.PremiumProducts), "PremiumProducts should not be empty")
