@@ -135,6 +135,11 @@ defineProps<Props>()
   }
 }
 
+.tooltip {
+  display: flex;
+  align-items: center;
+}
+
 .tooltip-content {
   width: 130px;
   text-align: left;
