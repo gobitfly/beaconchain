@@ -982,6 +982,7 @@
             "coming_soon": "(coming soon)",
             "manage_dashboard_via_api": "Manage Dashboard via API",
             "max_effective_balance": "{amount} Max Stake",
+            "max_effective_balance_per_dashboard": "{amount} Max Stake per Dashboard",
             "max_effective_balance_tooltip": "Alternative term: {amount} maximum effective balance",
             "mobile_app_widget": "Mobile App Widget",
             "no_ads": "No Ads",
