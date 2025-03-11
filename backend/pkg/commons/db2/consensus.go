@@ -1,4 +1,4 @@
-package consensus
+package db2
 
 import (
 	"fmt"
