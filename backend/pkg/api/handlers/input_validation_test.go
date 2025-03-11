@@ -3,11 +3,13 @@ package handlers
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
@@ -1298,4 +1300,482 @@ func TestCheckGroupIdList(t *testing.T) {
 	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[[]int64]) []int64 {
 		return v.checkGroupIdList(tt.param)
 	})
+}
+
+func TestCheckPagingParams(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    url.Values
+		expected Paging
+		errMsg   string
+	}{
+		{
+			name: "Valid paging parameters",
+			query: url.Values{
+				"cursor": []string{"validCursor123"},
+				"limit":  []string{"10"},
+				"search": []string{"test"},
+			},
+			expected: Paging{
+				cursor: "validCursor123",
+				limit:  10,
+				search: "test",
+			},
+		},
+		{
+			name: "Valid cursor, missing limit (should use default)",
+			query: url.Values{
+				"cursor": []string{"validCursor"},
+				"search": []string{"query"},
+			},
+			expected: Paging{
+				cursor: "validCursor",
+				limit:  defaultReturnLimit,
+				search: "query",
+			},
+		},
+		{
+			name:  "Missing all optional parameters (should use defaults)",
+			query: url.Values{},
+			expected: Paging{
+				cursor: "",
+				limit:  defaultReturnLimit,
+				search: "",
+			},
+		},
+		{
+			name: "Invalid cursor (wrong format)",
+			query: url.Values{
+				"cursor": []string{"invalid@cursor"},
+			},
+			errMsg: "given value 'invalid@cursor' has incorrect format",
+		},
+		{
+			name: "Invalid limit (negative value)",
+			query: url.Values{
+				"limit": []string{"-5"},
+			},
+			errMsg: "given value -5 is not a positive integer",
+		},
+		{
+			name: "Limit above maximum",
+			query: url.Values{
+				"limit": []string{fmt.Sprintf("%d", maxQueryLimit+1)},
+			},
+			errMsg: fmt.Sprintf("given value '%d' is too large, maximum value is %d", maxQueryLimit+1, maxQueryLimit),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := v.checkPagingParams(tt.query)
+			err := v.AsError()
+			if tt.errMsg != "" {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.ErrorContains(t, err, tt.errMsg)
+			} else {
+				assert.Nil(t, err, "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected correct value")
+			}
+		})
+	}
+}
+
+// Mock enum type for testing
+type TestEnum int
+
+const (
+	TestEnumOne TestEnum = iota + 1
+	TestEnumTwo
+)
+
+func (t TestEnum) Int() int {
+	return int(t)
+}
+
+func (t TestEnum) NewFromString(s string) TestEnum {
+	switch s {
+	case "", "one":
+		return TestEnumOne
+	case "two", "2":
+		return TestEnumTwo
+	default:
+		return -1
+	}
+}
+
+// Implement EnumFactory interface for TestEnum
+var _ enums.EnumFactory[TestEnum] = TestEnum(0)
+
+func TestCheckEnum(t *testing.T) {
+	tests := []struct {
+		name      string
+		param     string
+		expectErr bool
+		expected  TestEnum
+		errMsg    string
+	}{
+		{
+			name:      "Valid enum value - one",
+			param:     "one",
+			expectErr: false,
+			expected:  TestEnumOne,
+		},
+		{
+			name:      "Valid enum value - empty string",
+			param:     "",
+			expectErr: false,
+			expected:  TestEnumOne,
+		},
+		{
+			name:      "Valid enum value - two",
+			param:     "two",
+			expectErr: false,
+			expected:  TestEnumTwo,
+		},
+		{
+			name:      "Valid enum value - two",
+			param:     "2",
+			expectErr: false,
+			expected:  TestEnumTwo,
+		},
+		{
+			name:      "Invalid enum value",
+			param:     "invalid",
+			expectErr: true,
+			expected:  -1,
+			errMsg:    "given value 'invalid' is not valid",
+		},
+		{
+			name:      "Invalid enum value",
+			param:     "One",
+			expectErr: true,
+			expected:  -1,
+			errMsg:    "given value 'One' is not valid",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			result := checkEnum[TestEnum](&v, tt.param, "enum_field")
+
+			if tt.expectErr {
+				assert.True(t, v.hasErrors(), "Expected an error but got none")
+				assert.True(t, enums.IsInvalidEnum(result), "Expected invalid enum value")
+				assert.Contains(t, v["enum_field"], tt.errMsg)
+			} else {
+				assert.False(t, v.hasErrors(), "Expected no errors but found some")
+				assert.Equal(t, tt.expected, result, "Expected correct enum value")
+			}
+		})
+	}
+}
+
+func TestParseSortOrder(t *testing.T) {
+	tests := []validationTestCase[bool]{
+		{
+			name:     "Empty string (should return default)",
+			param:    "",
+			expected: defaultDesc,
+		},
+		{
+			name:     "Ascending order",
+			param:    "asc",
+			expected: false,
+		},
+		{
+			name:     "Descending order",
+			param:    "desc",
+			expected: true,
+		},
+		{
+			name:     "Invalid sort order",
+			param:    "random",
+			expected: false, // Default return value in case of error
+			errMsg:   "given value 'random' for parameter 'sort' is not valid, allowed order values are: asc, desc",
+		},
+		{
+			name:     "Case-sensitive check (invalid ASC)",
+			param:    "ASC",
+			expected: false,
+			errMsg:   "given value 'ASC' for parameter 'sort' is not valid, allowed order values are: asc, desc",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[bool]) bool {
+		return v.parseSortOrder(tt.param)
+	})
+}
+
+func TestCheckSort(t *testing.T) {
+	tests := []validationTestCase[*types.Sort[TestEnum]]{
+		{
+			name:     "Valid sort with default order",
+			param:    "one",
+			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
+		},
+		{
+			name:     "Valid sort with ascending order",
+			param:    "one:asc",
+			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: false},
+		},
+		{
+			name:     "Valid sort with descending order",
+			param:    "two:desc",
+			expected: &types.Sort[TestEnum]{Column: TestEnumTwo, Desc: true},
+		},
+		{
+			name:   "Invalid column name",
+			param:  "invalid",
+			errMsg: "given value 'invalid' is not valid",
+		},
+		{
+			name:   "Invalid sort order",
+			param:  "one:random",
+			errMsg: "given value 'random' for parameter 'sort' is not valid, allowed order values are: asc, desc",
+		},
+		{
+			name:   "Too many parts in sort string",
+			param:  "one:desc:extra",
+			errMsg: "given value 'one:desc:extra' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'",
+		},
+		{
+			name:     "Empty string (should return default enum and order)",
+			param:    "",
+			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[*types.Sort[TestEnum]]) *types.Sort[TestEnum] {
+		return checkSort[TestEnum](v, tt.param)
+	})
+}
+
+func TestCheckProtocolModes(t *testing.T) {
+	tests := []validationTestCase[types.VDBProtocolModes]{
+		{
+			name:     "Valid single protocol mode",
+			param:    "rocket_pool",
+			expected: types.VDBProtocolModes{RocketPool: true},
+		},
+		{
+			name:     "Valid protocol mode with spaces",
+			param:    " rocket_pool ",
+			expected: types.VDBProtocolModes{RocketPool: true},
+		},
+		{
+			name:     "Empty string (should return empty struct)",
+			param:    "",
+			expected: types.VDBProtocolModes{},
+		},
+		{
+			name:   "Invalid protocol mode",
+			param:  "invalid_mode",
+			errMsg: "given value 'invalid_mode' is not a valid protocol mode",
+		},
+		{
+			name:     "Multiple valid protocol modes (should only enable rocket_pool)",
+			param:    "rocket_pool,rocket_pool",
+			expected: types.VDBProtocolModes{RocketPool: true},
+		},
+		{
+			name:   "Valid and invalid protocol mode mixed",
+			param:  "rocket_pool,invalid_mode",
+			errMsg: "given value 'invalid_mode' is not a valid protocol mode",
+		},
+	}
+
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[types.VDBProtocolModes]) types.VDBProtocolModes {
+		return v.checkProtocolModes(tt.param)
+	})
+}
+
+func TestCheckValidatorList(t *testing.T) {
+	tests := []struct {
+		name         string
+		param        string
+		allowEmpty   bool
+		expectedIdx  []types.VDBValidator
+		expectedKeys []string
+		errMsg       string
+	}{
+		{
+			name:        "Valid single validator index",
+			param:       "123",
+			allowEmpty:  false,
+			expectedIdx: []types.VDBValidator{123},
+		},
+		{
+			name:        "Valid multiple validator indices",
+			param:       "123,456,789",
+			allowEmpty:  false,
+			expectedIdx: []types.VDBValidator{123, 456, 789},
+		},
+		{
+			name:         "Valid single public key",
+			param:        "0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd",
+			allowEmpty:   false,
+			expectedKeys: []string{"0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd"},
+		},
+		{
+			name:         "Valid multiple public keys",
+			param:        "0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd,0xac701fb11446a7b0fe2dd2f10f07b6b899201cea9c102d5c5c3290fc05ef214645e4eb1466bb89ed0af4d2f16c901fc9",
+			allowEmpty:   false,
+			expectedKeys: []string{"0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd", "0xac701fb11446a7b0fe2dd2f10f07b6b899201cea9c102d5c5c3290fc05ef214645e4eb1466bb89ed0af4d2f16c901fc9"},
+		},
+		{
+			name:        "Mixed indices and public keys",
+			param:       "123,0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd,456",
+			allowEmpty:  false,
+			expectedIdx: []types.VDBValidator{123, 456},
+			expectedKeys: []string{
+				"0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd",
+			},
+		},
+		{
+			name:       "Empty string but allowEmpty = true",
+			param:      "",
+			allowEmpty: true,
+		},
+		{
+			name:       "Empty string but allowEmpty = false",
+			param:      "",
+			allowEmpty: false,
+			errMsg:     "list of validators must not be empty",
+		},
+		{
+			name:       "Invalid index (non-numeric)",
+			param:      "abc",
+			allowEmpty: false,
+			errMsg:     "invalid value",
+		},
+		{
+			name:       "Invalid public key format",
+			param:      "0xinvalidkey",
+			allowEmpty: false,
+			errMsg:     "invalid value",
+		},
+		{
+			name:       "Hex decoding failure",
+			param:      "0x123",
+			allowEmpty: false,
+			errMsg:     "invalid value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			indexes, publicKeys := v.checkValidatorList(tt.param, tt.allowEmpty)
+			err := v.AsError()
+
+			if tt.errMsg != "" {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.ErrorContains(t, err, tt.errMsg)
+			} else {
+				assert.NoError(t, err, "Expected no errors but found some: %w", v)
+				assert.Equal(t, tt.expectedIdx, indexes, "Expected correct validator indices")
+				assert.Equal(t, tt.expectedKeys, publicKeys, "Expected correct public keys")
+			}
+		})
+	}
+}
+
+func TestCheckValidators(t *testing.T) {
+	validInt1 := uint64(123)
+	validInt2 := uint64(456)
+	validKey1 := "0x90ffa3d94a3b54f785087d9f9a0bb9925cb74cceb0759404b4ea85a7e46641eb45fd30e98c8bc289a8706733bf3a07dd"
+	validKey2 := "0xac701fb11446a7b0fe2dd2f10f07b6b899201cea9c102d5c5c3290fc05ef214645e4eb1466bb89ed0af4d2f16c901fc9"
+
+	tests := []struct {
+		name         string
+		param        []intOrString
+		allowEmpty   bool
+		expectedIdx  []types.VDBValidator
+		expectedKeys []string
+		errMsg       string
+	}{
+		{
+			name:       "Valid single validator index",
+			param:      []intOrString{{intValue: &validInt1}},
+			allowEmpty: false,
+			expectedIdx: []types.VDBValidator{
+				123,
+			},
+		},
+		{
+			name:       "Valid multiple validator indices",
+			param:      []intOrString{{intValue: &validInt1}, {intValue: &validInt2}},
+			allowEmpty: false,
+			expectedIdx: []types.VDBValidator{
+				123, 456,
+			},
+		},
+		{
+			name:         "Valid single public key",
+			param:        []intOrString{{strValue: &validKey1}},
+			allowEmpty:   false,
+			expectedKeys: []string{validKey1},
+		},
+		{
+			name:         "Valid multiple public keys",
+			param:        []intOrString{{strValue: &validKey1}, {strValue: &validKey2}},
+			allowEmpty:   false,
+			expectedKeys: []string{validKey1, validKey2},
+		},
+		{
+			name:       "Mixed indices and public keys",
+			param:      []intOrString{{intValue: &validInt1}, {strValue: &validKey1}, {intValue: &validInt2}},
+			allowEmpty: false,
+			expectedIdx: []types.VDBValidator{
+				123, 456,
+			},
+			expectedKeys: []string{validKey1},
+		},
+		{
+			name:       "Empty list but allowEmpty = true",
+			param:      []intOrString{},
+			allowEmpty: true,
+		},
+		{
+			name:       "Empty list but allowEmpty = false",
+			param:      []intOrString{},
+			allowEmpty: false,
+			errMsg:     "list of validators is empty",
+		},
+		{
+			name:       "Invalid public key format",
+			param:      []intOrString{{strValue: new(string)}}, // Empty string as strValue
+			allowEmpty: false,
+			errMsg:     "given value '' is not a valid validator",
+		},
+		{
+			name:       "Nil value in list",
+			param:      []intOrString{{}},
+			allowEmpty: false,
+			errMsg:     "list contains invalid validator",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var v validationError
+
+			indexes, publicKeys := v.checkValidators(tt.param, tt.allowEmpty)
+			err := v.AsError()
+			if tt.errMsg != "" {
+				assert.Error(t, err, "Expected an error but got none")
+				assert.ErrorContains(t, err, tt.errMsg)
+			} else {
+				assert.NoError(t, err, "Expected no errors but found some: %w", v)
+				assert.Equal(t, tt.expectedIdx, indexes, "Expected correct validator indices")
+				assert.Equal(t, tt.expectedKeys, publicKeys, "Expected correct public keys")
+			}
+		})
+	}
 }
