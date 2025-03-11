@@ -63,7 +63,7 @@ func TestPostValidatorDashboardGroups(t *testing.T) {
 			dashboardId: 0,
 			name:        "test",
 		}
-		_, err := h.PostValidatorDashboardGroups(ctx, &input)
+		_, err := h.PostValidatorDashboardGroups(ctx, input)
 		assert.Nil(t, err)
 	})
 	t.Run("group count reached", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestPostValidatorDashboardGroups(t *testing.T) {
 			dashboardId: 1,
 			name:        "test",
 		}
-		_, err := h.PostValidatorDashboardGroups(ctx, &input)
+		_, err := h.PostValidatorDashboardGroups(ctx, input)
 		assert.NotNil(t, err)
 		assert.True(t, errors.Is(err, errConflict))
 	})

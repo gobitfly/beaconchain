@@ -51,7 +51,7 @@ func (i *inputMock) Validate(params map[string]string, payload io.ReadCloser) er
 	return v.AsError()
 }
 
-func logicMock(ctx context.Context, input *inputMock) (string, error) {
+func logicMock(ctx context.Context, input inputMock) (string, error) {
 	if !input.shouldFail {
 		return input.successMessage, nil
 	}

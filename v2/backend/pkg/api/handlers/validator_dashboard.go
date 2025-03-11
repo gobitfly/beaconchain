@@ -37,7 +37,7 @@ type inputPostValidatorDashboardGroups struct {
 	name        string
 }
 
-func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input *inputPostValidatorDashboardGroups) (types.ApiDataResponse[types.VDBPostCreateGroupData], error) {
+func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input inputPostValidatorDashboardGroups) (types.ApiDataResponse[types.VDBPostCreateGroupData], error) {
 	var r types.ApiDataResponse[types.VDBPostCreateGroupData]
 	dataAccessor := h.getDataAccessor(ctx)
 	userId, err := GetUserIdByContext(ctx)
@@ -92,7 +92,7 @@ type inputGetValidatorDashboardGroupSummary struct {
 	period           enums.TimePeriod
 }
 
-func (h *HandlerService) GetValidatorDashboardGroupSummary(ctx context.Context, input *inputGetValidatorDashboardGroupSummary) (types.GetValidatorDashboardGroupSummaryResponse, error) {
+func (h *HandlerService) GetValidatorDashboardGroupSummary(ctx context.Context, input inputGetValidatorDashboardGroupSummary) (types.GetValidatorDashboardGroupSummaryResponse, error) {
 	var r types.GetValidatorDashboardGroupSummaryResponse
 	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
