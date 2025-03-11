@@ -14,13 +14,23 @@ import (
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 )
 
 func handlerTestSetup(da dataaccess.DataAccessor) (context.Context, *HandlerService) {
 	ctx := context.WithValue(context.Background(), types.CtxUserIdKey, uint64(1))
-	return ctx, NewHandlerService(da, da, nil, nil)
+	cfg := &commontypes.Config{
+		Chain: commontypes.Chain{
+			ClConfig: commontypes.ClChainConfig{
+				SecondsPerSlot: 12,
+				SlotsPerEpoch:  32,
+			},
+		},
+	}
+
+	return ctx, NewHandlerService(da, da, nil, cfg)
 }
 
 func stringAsBody(s string) io.ReadCloser {
