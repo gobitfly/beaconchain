@@ -103,7 +103,7 @@ export const useCurrency = () => {
    * maximumFractionDigits and minimumFractionDigits depending on targetCurrency
    * @param {number} [options.maximumFractionDigits] - Defaults:
    *   - fiat: 2 (4 if hasHigherPrecision=true)
-   *   - crypto: 9 (18 if hasHigherPrecision=true)
+   *   - crypto: 6 (18 if hasHigherPrecision=true)
    * @returns {string} The formatted amount with currency code
    */
   const formatAmount = (
