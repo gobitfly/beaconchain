@@ -201,7 +201,9 @@ const mainFeatures = computed<Feature[]>(() => {
     },
     {
       available: true,
-      name: $t('pricing.premium_product.max_effective_balance', { amount: maxDashboardEffectiveBalance }),
+      name: product.premium_perks.validator_dashboards === 1
+        ? $t('pricing.premium_product.max_effective_balance', { amount: maxDashboardEffectiveBalance })
+        : $t('pricing.premium_product.max_effective_balance_per_dashboard', { amount: maxDashboardEffectiveBalance }),
       percentage: percentages.value.effectiveBalancePerDashboard,
       subtext: $t('pricing.per_min_validator_deposit', {
         amount: formatFiatCurrency(Number(pricePerOldMaxEffectiveBalance.value), {
@@ -462,16 +464,6 @@ const minorFeatures = computed<Feature[]>(() => {
         text-align: left;
       }
 
-      .info-badge {
-        background-color: var(--subcontainer-background);
-        font-size: 0.7rem;
-        padding: 0.25rem 0.15rem;
-        border-radius: 4px;
-        gap: 0.25rem;
-        justify-content: center;
-        margin-bottom: 0.75rem;
-      }
-
       .main-features-container {
         gap: 15px;
         margin-bottom: 18px;
@@ -482,6 +474,16 @@ const minorFeatures = computed<Feature[]>(() => {
         margin-bottom: 18px;
       }
     }
+  }
+
+  .info-badge {
+    background-color: var(--subcontainer-background);
+    font-size: 0.7rem;
+    padding: 0.25rem 0.15rem;
+    border-radius: 4px;
+    gap: 0.25rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
   }
 
   .submit-button--downgrade {
