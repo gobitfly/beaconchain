@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -99,7 +100,6 @@ func updateSafeEpoch(d *dashboardData) error {
 	if err != nil {
 		return err
 	}
-
 	finalized := res.Data.Finalized.Epoch
 	safe := int64(res.Data.Finalized.Epoch) - 2
 
@@ -146,8 +146,9 @@ type MultiEpochData struct {
 			attestationRewards      map[uint64][]constypes.AttestationReward               // epoch => validator index => reward
 			attestationIdealRewards map[uint64]map[uint64]constypes.AttestationIdealReward // epoch => effective balance => reward
 		}
-		electraDeposits       map[uint64][]constypes.ElectraDeposit       // epoch => deposits
-		electraConsolidations map[uint64][]constypes.ElectraConsolidation // epoch => consolidations
+		electraDeposits                   map[uint64][]constypes.ElectraDeposit       // epoch => deposits
+		electraConsolidations             map[uint64][]constypes.ElectraConsolidation // epoch => consolidations
+		electraRemovedExcessBalanceEvents map[uint64][]constypes.ElectraExcessBalance
 	}
 	validatorBasedData struct {
 		// mapping pubkey => validator index
@@ -183,6 +184,7 @@ func NewMultiEpochData(epochCount int) MultiEpochData {
 	data.epochBasedData.rewards.attestationIdealRewards = make(map[uint64]map[uint64]constypes.AttestationIdealReward, epochCount)
 	data.epochBasedData.electraDeposits = make(map[uint64][]constypes.ElectraDeposit, epochCount)
 	data.epochBasedData.electraConsolidations = make(map[uint64][]constypes.ElectraConsolidation, epochCount)
+	data.epochBasedData.electraRemovedExcessBalanceEvents = make(map[uint64][]constypes.ElectraExcessBalance, epochCount)
 	slotCount := epochCount * int(utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	data.slotBasedData.blocks = make(map[uint64]constypes.LightAnySignedBlock, slotCount)
 	data.slotBasedData.assignments.attestationAssignments = make(map[uint64][][]uint64, slotCount)
@@ -258,13 +260,15 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 	g1.Go(func() error {
 		return d.fetchAttestationAssignments(epochStart, epochEnd, tar)
 	})
-	// electra deposits using GetDebugState
 	g1.Go(func() error {
 		return d.fetchElectraDeposits(epochStart, epochEnd, tar)
 	})
 	// electra consolidations using GetDebugState
 	g1.Go(func() error {
 		return d.fetchElectraConsolidations(epochStart, epochEnd, tar)
+	})
+	g1.Go(func() error {
+		return d.fetchElectraRemovedExcessBalances(epochStart, epochEnd, tar)
 	})
 	// wait for all tasks to finish
 	err := g1.Wait()
@@ -274,9 +278,32 @@ func (d *dashboardData) getDataForEpochRange(epochStart, epochEnd uint64, tar *M
 	return nil
 }
 
+func (d *dashboardData) ElectraVerifyEpochExported(epoch uint64) error {
+	if epoch < utils.Config.ClConfig.ElectraForkEpoch {
+		return errors.New("epoch is before electra fork")
+	}
+	// we need to check that 2 epochs are exported:
+	// - the current epoch, so we can be sure that the events from the epoch n-1 => epoch n transition are exported
+	// - the next epoch, so we can be sure that the events generated during epoch n, up to the slot before epoch n+1, are exported
+	// if we are at the exact fork epoch, we cant do the epoch n check. in that cases we will only check for epoch n + 1
+	_, err := d.WorkaroundGetBlockHashForEpoch(epoch + 1)
+	if err != nil {
+		return fmt.Errorf("can not get workaround block hash for epoch %d: %w", epoch+1, err)
+	}
+	if epoch == utils.Config.ClConfig.ElectraForkEpoch {
+		// we are at the fork epoch, so we can not check for epoch n
+		return nil
+	}
+	_, err = d.WorkaroundGetBlockHashForEpoch(epoch)
+	if err != nil {
+		return fmt.Errorf("can not get workaround block hash for epoch %d: %w", epoch, err)
+	}
+	return nil
+}
+
 func (d *dashboardData) WorkaroundGetBlockHashForEpoch(epoch uint64) ([]byte, error) {
 	// get the workaround block hashes
-	hashes, err := db.WorkaroundGetEpochProcessedHashes(epoch)
+	hashes, err := db.ElectraGetEpochProcessedHashes(epoch)
 	if err != nil {
 		return nil, fmt.Errorf("can not get workaround block hashes for epoch %d: %w", epoch, err)
 	}
@@ -284,29 +311,38 @@ func (d *dashboardData) WorkaroundGetBlockHashForEpoch(epoch uint64) ([]byte, er
 		// this is bad
 		return nil, fmt.Errorf("no workaround block hashes for epoch %d", epoch)
 	}
-	var canonicalHash []byte
-	for _, hash := range hashes {
-		// look up hash using beacon api
-		block, err := d.CL.GetBlockHeader(fmt.Sprintf("0x%x", hash))
+	// find the last proposed bloc by iterating through the slots and looking up the block hash
+	// we do this for at most 128 slots, because anything more than that means something went very wrong
+	// and we should not continue anyways
+	epochSlot := (utils.Config.ClConfig.SlotsPerEpoch * epoch) - 1
+	lastProposedBlockHash := make([]byte, 0)
+	for slot := epochSlot; slot > epochSlot-128; slot-- {
+		d.log.Tracef("trying to get block header for workaround block hash for epoch %d, slot %d", epoch, slot)
+		header, err := d.CL.GetBlockHeader(slot)
 		if err != nil {
-			// if not found, skip, means that the block was missed or orphaned
-			httpErr := network.SpecificError(err)
-			if httpErr != nil && httpErr.StatusCode == http.StatusNotFound {
-				d.log.Tracef("skipping workaround block hash %s for epoch %d because it was not found", hexutil.Encode(hash), epoch)
+			if network.SpecificError(err) != nil && network.SpecificError(err).StatusCode == http.StatusNotFound {
+				// if the block is not found, skip
 				continue
 			}
-			return nil, fmt.Errorf("can not get block header for workaround block hash %s for epoch %d: %w", hexutil.Encode(hash), epoch, err)
+			return nil, fmt.Errorf("can not get block header for workaround block hash for epoch %d: %w", epoch, err)
 		}
-		if block.Data.Canonical {
-			canonicalHash = block.Data.Root
-			break
+		if !header.Data.Canonical {
+			d.log.Debugf("skipping workaround block hash for epoch %d, slot %d because it is not canonical", epoch, slot)
+			continue
 		}
-		d.log.Tracef("skipping workaround block hash %s for epoch %d because it is not canonical", hexutil.Encode(hash), epoch)
+		lastProposedBlockHash = header.Data.Root
+		d.log.Debugf("found last proposed block hash for epoch %d: %s", epoch, hexutil.Encode(lastProposedBlockHash))
+		break
 	}
-	if canonicalHash == nil {
-		return nil, fmt.Errorf("no canonical workaround block hash for epoch %d", epoch)
+	if len(lastProposedBlockHash) == 0 {
+		return nil, fmt.Errorf("found no last proposed block hash for epoch %d", epoch)
 	}
-	return canonicalHash, nil
+	for _, hash := range hashes {
+		if hexutil.Encode(hash) == hexutil.Encode(lastProposedBlockHash) {
+			return hash, nil
+		}
+	}
+	return nil, fmt.Errorf("no workaround block hash for epoch %d matches the last proposed block hash", epoch)
 }
 
 func (d *dashboardData) fetchElectraDeposits(epochStart uint64, epochEnd uint64, tar *MultiEpochData) error {
@@ -319,9 +355,10 @@ func (d *dashboardData) fetchElectraDeposits(epochStart uint64, epochEnd uint64,
 	writeMutex := &sync.Mutex{}
 	for i := epochStart; i <= epochEnd; i++ {
 		epoch := i
+		// trace log checked epoch and electra fork epoch
+		d.log.Tracef("electra deposits epoch %d, electra fork epoch %d", epoch, utils.Config.Chain.ClConfig.ElectraForkEpoch)
 		// ignore if epoch is smaller than electra fork
-		// we use <= instead of < because the first state transition that will include electra deposits is one epoch after the fork
-		if epoch <= utils.Config.Chain.ClConfig.ElectraForkEpoch {
+		if epoch < utils.Config.Chain.ClConfig.ElectraForkEpoch {
 			d.log.Tracef("skipping epoch %d for electra deposits because it is before the electra fork", epoch)
 			continue
 		}
@@ -336,23 +373,23 @@ func (d *dashboardData) fetchElectraDeposits(epochStart uint64, epochEnd uint64,
 			defer func() {
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_electra_deposits_single").Observe(time.Since(start).Seconds())
 			}()
-			blockhash, err := d.WorkaroundGetBlockHashForEpoch(epoch)
+			err = d.ElectraVerifyEpochExported(epoch)
 			if err != nil {
-				d.log.Error(err, "can not get workaround block hash for electra deposits", 0, map[string]interface{}{"epoch": epoch})
+				d.log.Error(err, "can not verify epoch exported for electra deposits", 0, map[string]interface{}{"epoch": epoch})
 				return err
 			}
 			// get workaround deposits event using block hash
-			deposits, err := db.WorkaroundGetProcessedDeposits(blockhash)
+			deposits, err := db.ElectraGetProcessedDeposits(epoch)
 			if err != nil {
-				return fmt.Errorf("can not get workaround deposits for epoch %d: %w", epoch, err)
+				return fmt.Errorf("can not get electra deposits for epoch %d: %w", epoch, err)
 			}
 			if len(deposits) == 0 {
 				// this is okay
-				d.log.Tracef("no workaround deposits for epoch %d", epoch)
+				d.log.Tracef("no electra deposits for epoch %d", epoch)
 				return nil
 			}
 			// processedDeposits is now a list of deposits that were processed in the block of slot n
-			d.log.Tracef("processed deposits for epoch %d: %v", epoch, deposits)
+			d.log.Tracef("processed electra for epoch %d: %v", epoch, deposits)
 			writeMutex.Lock()
 			tar.epochBasedData.electraDeposits[epoch] = deposits
 			writeMutex.Unlock()
@@ -391,23 +428,23 @@ func (d *dashboardData) fetchElectraConsolidations(epochStart uint64, epochEnd u
 			defer func() {
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_electra_consolidations_single").Observe(time.Since(start).Seconds())
 			}()
-			blockhash, err := d.WorkaroundGetBlockHashForEpoch(epoch)
+			err = d.ElectraVerifyEpochExported(epoch)
 			if err != nil {
-				d.log.Error(err, "can not get workaround block hash for electra consolidations", 0, map[string]interface{}{"epoch": epoch})
+				d.log.Error(err, "can not verify epoch exported for electra consolidations", 0, map[string]interface{}{"epoch": epoch})
 				return err
 			}
 			// get workaround consolidations event using block hash
-			consolidations, err := db.WorkaroundGetProcessedConsolidations(blockhash)
+			consolidations, err := db.ElectraGetProcessedConsolidations(epoch)
 			if err != nil {
-				return fmt.Errorf("can not get workaround consolidations for epoch %d: %w", epoch, err)
+				return fmt.Errorf("can not get electra consolidations for epoch %d: %w", epoch, err)
 			}
 			if len(consolidations) == 0 {
 				// this is okay
-				d.log.Tracef("no workaround consolidations for epoch %d", epoch)
+				d.log.Tracef("no electra consolidations for epoch %d", epoch)
 				return nil
 			}
 			// processedConsolidations is now a list of consolidations that were processed in the block of slot n
-			d.log.Tracef("processed consolidations for epoch %d: %v", epoch, consolidations)
+			d.log.Tracef("processed electra consolidations for epoch %d: %v", epoch, consolidations)
 			// write to tar
 			writeMutex.Lock()
 			tar.epochBasedData.electraConsolidations[epoch] = consolidations
@@ -419,6 +456,61 @@ func (d *dashboardData) fetchElectraConsolidations(epochStart uint64, epochEnd u
 	err := g2.Wait()
 	if err != nil {
 		return fmt.Errorf("error in electra consolidations: %w", err)
+	}
+	return nil
+}
+
+func (d *dashboardData) fetchElectraRemovedExcessBalances(epochStart uint64, epochEnd uint64, tar *MultiEpochData) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_electra_removed_excess_balance_overall").Observe(time.Since(start).Seconds())
+	}()
+	g2 := &errgroup.Group{}
+	writeMutex := &sync.Mutex{}
+	for i := epochStart; i <= epochEnd; i++ {
+		epoch := i
+		if epoch <= utils.Config.ClConfig.ElectraForkEpoch {
+			d.log.Tracef("skipping epoch %d for electra removed excess balances because it is before the electra fork", epoch)
+			continue
+		}
+		g2.Go(func() error {
+			err := d.lightSemaphore.Acquire(context.Background(), 1)
+			if err != nil {
+				return err
+			}
+			defer d.lightSemaphore.Release(1)
+			start := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_electra_removed_excess_balance_single").Observe(time.Since(start).Seconds())
+			}()
+			err = d.ElectraVerifyEpochExported(epoch)
+			if err != nil {
+				d.log.Error(err, "can not verify epoch exported for electra consolidations", 0, map[string]interface{}{"epoch": epoch})
+				return err
+			}
+			// get workaround events event using block hash
+			events, err := db.ElectraGetRemovedExcessBalanceEvents(epoch)
+			if err != nil {
+				return fmt.Errorf("can not get electra removed excess balances for epoch %d: %w", epoch, err)
+			}
+			if len(events) == 0 {
+				// this is okay
+				d.log.Tracef("no electra removed excess balances for epoch %d", epoch)
+				return nil
+			}
+			// processedConsolidations is now a list of consolidations that were processed in the block of slot n
+			d.log.Tracef("processed electra removed excess balances for epoch %d: %v", epoch, events)
+			// write to tar
+			writeMutex.Lock()
+			tar.epochBasedData.electraRemovedExcessBalanceEvents[epoch] = events
+			writeMutex.Unlock()
+
+			return nil
+		})
+	}
+	err := g2.Wait()
+	if err != nil {
+		return fmt.Errorf("error in electra removed excess balances: %w", err)
 	}
 	return nil
 }
@@ -549,8 +641,11 @@ func (d *dashboardData) fetchBlockAssignments(epochStart uint64, epochEnd uint64
 			}()
 			data, err := d.CL.GetProposalAssignments(epoch)
 			if err != nil {
-				d.log.Error(err, "can not get block assignments", 0, map[string]interface{}{"epoch": epoch})
-				return err
+				return nil
+				/*
+					d.log.Error(err, "can not get block assignments", 0, map[string]interface{}{"epoch": epoch})
+					return err
+				*/
 			}
 			writeMutex.Lock()
 			for _, p := range data.Data {
@@ -876,7 +971,12 @@ func (d *dashboardData) fetchEpochValidatorStates(epochStart uint64, epochEnd ui
 	slots := make([]uint64, 0)
 	// first slot of the first epoch
 	firstEpochToFetch := epochStart
-	for i := firstEpochToFetch; i <= epochEnd+1; i++ {
+	// we need to look ahead epochs worth of slots because
+	// - we use slot-1 as the balance_start
+	// - we use slot+32-1 as the balance_end
+	// - we use slot+64-1 as the balance_effective_attestation
+	// this is because attestations are
+	for i := firstEpochToFetch; i <= epochEnd+2; i++ {
 		if i == 0 {
 			slots = append(slots, 0)
 			continue
