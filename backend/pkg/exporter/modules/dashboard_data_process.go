@@ -143,6 +143,18 @@ func (d *dashboardData) processRunner(data *MultiEpochData, tar *[]types.VDBData
 		}
 		return nil
 	})
+	// RemovedExcessBalanceEvent
+	g.Go(func() error {
+		start := time.Now()
+		defer func() {
+			metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_removed_excess_balance_events_overall").Observe(time.Since(start).Seconds())
+		}()
+		err := d.processElectraRemovedExcessBalanceEvents(data, tar)
+		if err != nil {
+			return fmt.Errorf("error in processElectraRemovedExcessBalanceEvents: %w", err)
+		}
+		return nil
+	})
 
 	// force sequential operation of attestation rewards and proposal rewards
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
@@ -258,20 +270,23 @@ func (d *dashboardData) processValidatorStates(data *MultiEpochData, tar *[]type
 		iEpoch := int64(epoch)
 		tI := data.epochBasedData.tarIndices[i]
 		tO := data.epochBasedData.tarOffsets[i]
-		startSate := data.epochBasedData.validatorStates[iEpoch-1]
-		endState := data.epochBasedData.validatorStates[iEpoch]
-		ts := utils.EpochToTime(epoch)
 		g.Go(func() error {
 			start := time.Now()
 			defer func() {
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_validator_states_single").Observe(time.Since(start).Seconds())
 			}()
+			ts := utils.EpochToTime(epoch)
+			startSate := data.epochBasedData.validatorStates[iEpoch-1]
+			endState := data.epochBasedData.validatorStates[iEpoch]
+			nextState := data.epochBasedData.validatorStates[iEpoch+1]
 			for j := range endState.Data {
 				(*tar)[tI].ValidatorIndex[tO+j] = uint64(j)
 				(*tar)[tI].Epoch[tO+j] = iEpoch
 				(*tar)[tI].EpochTimestamp[tO+j] = &ts
 				(*tar)[tI].BalanceEnd[tO+j] = int64(endState.Data[j].Balance)
 				(*tar)[tI].BalanceEffectiveEnd[tO+j] = int64(endState.Data[j].EffectiveBalance)
+				// balance effective attestations needs to look 2 epochs ahead because attestation processing happens in the transition from n+1 => n+2
+				(*tar)[tI].BalanceEffectiveAttestations[tO+j] = int64(nextState.Data[j].EffectiveBalance)
 				// do NOT set the slashed flag here. it is set by the block processing
 			}
 			if epoch == 0 {
@@ -515,6 +530,33 @@ func (d *dashboardData) processElectraConsolidations(data *MultiEpochData, tar *
 	return g.Wait()
 }
 
+func (d *dashboardData) processElectraRemovedExcessBalanceEvents(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
+	g := &errgroup.Group{}
+	for i, e := range data.epochBasedData.epochs {
+		epoch := e
+		tI := data.epochBasedData.tarIndices[i]
+		tO := data.epochBasedData.tarOffsets[i]
+		g.Go(func() error {
+			now := time.Now()
+			defer func() {
+				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_electra_removed_excess_balance_events_single").Observe(time.Since(now).Seconds())
+			}()
+			if _, ok := data.epochBasedData.electraRemovedExcessBalanceEvents[epoch]; !ok {
+				// nothing to do
+				return nil
+			}
+			for _, event := range data.epochBasedData.electraRemovedExcessBalanceEvents[epoch] {
+				(*tar)[tI].WithdrawalsAmount[uint64(tO)+event.ValidatorIndex] += int64(event.Amount)
+				(*tar)[tI].WithdrawalsCount[uint64(tO)+event.ValidatorIndex]++
+				d.log.Tracef("processed electra removed excess balance event: %d %d GWEI in epoch %d", event.ValidatorIndex, event.Amount, epoch)
+			}
+			return nil
+		})
+	}
+
+	return g.Wait()
+}
+
 func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	if data.epochBasedData.epochs[len(data.epochBasedData.epochs)-1] < utils.Config.Chain.ClConfig.AltairForkEpoch {
 		d.phase0HotfixMutex.Lock()
@@ -533,6 +575,7 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 			defer func() {
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_attestation_rewards_single").Observe(time.Since(now).Seconds())
 			}()
+			nextState := data.epochBasedData.validatorStates[int64(epoch)+1]
 			// calculate max per committee x attestation slot
 			// array of slotsperepoch length, then array of committee per slot length. no maps because maps are slow
 			hyperlocalizedMax := make([][]int64, int(utils.Config.Chain.ClConfig.SlotsPerEpoch))
@@ -577,7 +620,9 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 				}
 				valiIndextO := uint64(tO) + ar.ValidatorIndex
 				// ideal rewards
-				idealReward, ok := data.epochBasedData.rewards.attestationIdealRewards[epoch][data.epochBasedData.validatorStates[int64(epoch)].Data[ar.ValidatorIndex].EffectiveBalance]
+				// we need to use the effective balance of epoch n+1 because the attestation processing for epoch n happens in the transition from n+1 => n+2
+				effectiveBalance := nextState.Data[ar.ValidatorIndex].EffectiveBalance
+				idealReward, ok := data.epochBasedData.rewards.attestationIdealRewards[epoch][effectiveBalance]
 				if !ok {
 					return fmt.Errorf("no ideal reward for validator %d in epoch %d", valiIndextO, epoch)
 				}
@@ -761,10 +806,12 @@ func (d *dashboardData) processAttestations(data *MultiEpochData, tar *[]types.V
 		lastBlockHash = &a
 		blockRoots[j] = *lastBlockHash
 	}
-	// TODO: this breaks if we do 1 epoch batches and the current and lookahead epoch both have no proposals.
-	// should never happen, but dev-/testnets be funky
+	// if there were no blocks between the start epoch and the lookahead, there were also no attestations
+	// … because attestations are included in blocks
+	// do not error, just warn and return
 	if lastBlockHash == nil {
-		return fmt.Errorf("no valid slots found")
+		d.log.Warnf("no blocks found between epoch %d and epoch %d, skipping attestation processing (there can be no attestations without blocks)", data.epochBasedData.epochs[0], lookaheadEpoch)
+		return nil
 	}
 	// fill toBeFilled
 	for _, slot := range toBeFilled {
