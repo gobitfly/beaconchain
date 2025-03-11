@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -13,13 +13,13 @@ import (
 )
 
 type syncCommitteesCountExporter struct {
-	db db.ConsensusDBI
+	db db2.ConsensusRepository
 
 	delay time.Duration
 	ctx   context.Context
 }
 
-func newSyncCommitteesCountExporter(ctx context.Context, db db.ConsensusDBI) syncCommitteesCountExporter {
+func newSyncCommitteesCountExporter(ctx context.Context, db db2.ConsensusRepository) syncCommitteesCountExporter {
 	return syncCommitteesCountExporter{
 		db:    db,
 		delay: time.Second * 12,

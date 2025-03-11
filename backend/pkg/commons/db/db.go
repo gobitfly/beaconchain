@@ -2307,67 +2307,6 @@ func GetSyncCommitteeValidators(readerDb *sqlx.DB, epoch uint64) ([]uint64, erro
 	return validatoridxs, nil
 }
 
-func (c *ConsensusDB) GetLatestFinalizedEpoch() (uint64, error) {
-	var latestFinalized uint64
-	err := c.WriterDb.Get(&latestFinalized, "SELECT epoch FROM epochs WHERE finalized ORDER BY epoch DESC LIMIT 1")
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return 0, nil
-		}
-		log.Error(err, "error retrieving latest exported finalized epoch from the database", 0)
-		return 0, err
-	}
-
-	return latestFinalized, nil
-}
-
-func (c *ConsensusDB) GetSyncCommitteesCountPerValidator() (uint64, error) {
-	var rowCount uint64
-	err := c.WriterDb.Get(&rowCount, `SELECT COUNT(*) FROM sync_committees_count_per_validator`)
-	return rowCount, err
-}
-
-func (c *ConsensusDB) GetTotalPeriodSyncCommitteesCountPerValidator() (uint64, error) {
-	var dbPeriod uint64
-	err := c.WriterDb.Get(&dbPeriod, `SELECT MAX(period) FROM sync_committees_count_per_validator`)
-	return dbPeriod, err
-}
-
-func (c *ConsensusDB) GetCountSoFarSyncCommitteesCountPerValidator(period uint64) (float64, error) {
-	var countSoFar float64
-	err := c.WriterDb.Get(&countSoFar, `SELECT count_so_far FROM sync_committees_count_per_validator WHERE period = $1`, period)
-	return countSoFar, err
-}
-
-func (c *ConsensusDB) SaveSyncCommitteesCount(period uint64, count float64) error {
-	tx, err := c.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	_, err = tx.Exec(
-		fmt.Sprintf(`
-			INSERT INTO sync_committees_count_per_validator (period, count_so_far)
-			VALUES (%d, %f)
-			ON CONFLICT (period) DO UPDATE SET
-				period = excluded.period,
-				count_so_far = excluded.count_so_far`,
-			period, count))
-
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-func (c *ConsensusDB) GetEpochValidatorsCount(epoch uint64) (uint64, error) {
-	var totalCount uint64
-	err := c.WriterDb.Get(&totalCount, "SELECT validatorscount FROM epochs WHERE epoch = $1", epoch)
-	return totalCount, err
-}
-
 // Returns the participation rate for every slot between startSlot and endSlot (both inclusive) as a map with the slot as key
 //
 // If a slot is missed, the map will not contain an entry for it

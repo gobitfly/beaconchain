@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
@@ -25,7 +25,7 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		mockConsDBClient := new(dbmocks.ConsensusDBI)
+		mockConsDBClient := new(dbmocks.ConsensusRepository)
 		exporter := syncCommitteesCountExporter{
 			db:    mockConsDBClient,
 			delay: 0,
@@ -49,7 +49,7 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
 
-		mockConsDBClient := new(dbmocks.ConsensusDBI)
+		mockConsDBClient := new(dbmocks.ConsensusRepository)
 		exporter := syncCommitteesCountExporter{
 			db:    mockConsDBClient,
 			delay: 0,
