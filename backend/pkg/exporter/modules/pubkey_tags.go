@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -14,12 +14,12 @@ import (
 )
 
 type pubkeyTagsUpdater struct {
-	db    db.ConsensusDBI
+	db    db2.ConsensusRepository
 	delay time.Duration
 	ctx   context.Context
 }
 
-func newPubkeyTagsUpdater(ctx context.Context, db db.ConsensusDBI) pubkeyTagsUpdater {
+func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository) pubkeyTagsUpdater {
 	return pubkeyTagsUpdater{
 		db:    db,
 		delay: time.Minute * 10,

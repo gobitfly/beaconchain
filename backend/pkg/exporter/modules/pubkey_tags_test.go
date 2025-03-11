@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db/mocks"
+	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
@@ -26,7 +26,7 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 		},
 	}
 
-	mockConsDBClient := new(dbmocks.ConsensusDBI)
+	mockConsDBClient := new(dbmocks.ConsensusRepository)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 

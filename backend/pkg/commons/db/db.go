@@ -2409,27 +2409,6 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
-func (c *ConsensusDB) UpdatePubkeyTags() error {
-	tx, err := c.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
-		SELECT publickey, FORMAT('pool:%s', sps.name) tag
-		FROM eth1_deposits
-		inner join stake_pools_stats as sps on ENCODE(from_address::bytea, 'hex')=sps.address
-		WHERE sps.name NOT LIKE '%Rocketpool -%'
-		ON CONFLICT (publickey, tag) DO NOTHING`)
-
-	if err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
 	tmpViewName := "_tmp_" + viewName
 	trashViewName := "_trash_" + viewName
