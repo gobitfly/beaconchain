@@ -35,6 +35,7 @@ var (
 type SlotExporterDBRepository interface {
 	BeginTx() (*sqlx.Tx, error)
 	RollbackTx(tx *sqlx.Tx)
+	CommitTx(tx *sqlx.Tx) error
 
 	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
 	UpdateQueueDeposits(tx *sqlx.Tx) error
@@ -44,8 +45,8 @@ type SlotExporterDBRepository interface {
 	GetAllSlots(tx *sqlx.Tx) ([]uint64, error)
 	GetLastSlot(tx *sqlx.Tx) (uint64, error)
 	SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error
-	GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error)
-	GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ValidatorActivationEpoch, error)
+	GetAllNonFinalizedSlots() ([]*NonFinalizedSlotsRow, error)
+	GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ActivationEpochValidator, error)
 	UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error
 	AnalyzeValidatorsTable(tx *sqlx.Tx) error
 	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
@@ -74,6 +75,10 @@ func (s *SlotExporterDB) RollbackTx(tx *sqlx.Tx) {
 	if err != nil && !errors.Is(err, sql.ErrTxDone) {
 		log.Error(err, "error rolling back transaction", 1)
 	}
+}
+
+func (s *SlotExporterDB) CommitTx(tx *sqlx.Tx) error {
+	return tx.Commit()
 }
 
 func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
@@ -764,13 +769,13 @@ func (s *SlotExporterDB) UpdateValidatorStatusCount(validatorStatusCounts map[st
 	return nil
 }
 
-type ValidatorActivationEpoch struct {
+type ActivationEpochValidator struct {
 	ValidatorIndex  uint64
 	ActivationEpoch uint64
 }
 
-func (s *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ValidatorActivationEpoch, error) {
-	var validators []ValidatorActivationEpoch
+func (s *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]ActivationEpochValidator, error) {
+	var validators []ActivationEpochValidator
 
 	err := tx.Select(&validators, "SELECT validatorindex, activationepoch FROM validators WHERE balanceactivation IS NULL ORDER BY activationepoch LIMIT $1", activationBalanceBatchSize)
 	if err != nil {
@@ -1127,15 +1132,15 @@ func (s *SlotExporterDB) SetSlotFinalizationAndStatus(slot uint64, finalized boo
 	return err
 }
 
-type GetAllNonFinalizedSlotsRow struct {
+type NonFinalizedSlotsRow struct {
 	Slot      uint64 `db:"slot"`
 	BlockRoot []byte `db:"blockroot"`
 	Finalized bool   `db:"finalized"`
 	Status    string `db:"status"`
 }
 
-func (s *SlotExporterDB) GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error) {
-	var slots []*GetAllNonFinalizedSlotsRow
+func (s *SlotExporterDB) GetAllNonFinalizedSlots() ([]*NonFinalizedSlotsRow, error) {
+	var slots []*NonFinalizedSlotsRow
 	err := db.WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot") // TODO
 
 	if err != nil {

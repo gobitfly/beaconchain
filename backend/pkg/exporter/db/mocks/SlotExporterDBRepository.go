@@ -82,24 +82,42 @@ func (_m *SlotExporterDBRepository) CacheBlockDepositLookup() error {
 	return r0
 }
 
+// CommitTx provides a mock function with given fields: tx
+func (_m *SlotExporterDBRepository) CommitTx(tx *sqlx.Tx) error {
+	ret := _m.Called(tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CommitTx")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(*sqlx.Tx) error); ok {
+		r0 = rf(tx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // GetAllNonFinalizedSlots provides a mock function with no fields
-func (_m *SlotExporterDBRepository) GetAllNonFinalizedSlots() ([]*db.GetAllNonFinalizedSlotsRow, error) {
+func (_m *SlotExporterDBRepository) GetAllNonFinalizedSlots() ([]*db.NonFinalizedSlotsRow, error) {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAllNonFinalizedSlots")
 	}
 
-	var r0 []*db.GetAllNonFinalizedSlotsRow
+	var r0 []*db.NonFinalizedSlotsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]*db.GetAllNonFinalizedSlotsRow, error)); ok {
+	if rf, ok := ret.Get(0).(func() ([]*db.NonFinalizedSlotsRow, error)); ok {
 		return rf()
 	}
-	if rf, ok := ret.Get(0).(func() []*db.GetAllNonFinalizedSlotsRow); ok {
+	if rf, ok := ret.Get(0).(func() []*db.NonFinalizedSlotsRow); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]*db.GetAllNonFinalizedSlotsRow)
+			r0 = ret.Get(0).([]*db.NonFinalizedSlotsRow)
 		}
 	}
 
@@ -201,23 +219,23 @@ func (_m *SlotExporterDBRepository) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*t
 }
 
 // GetValidatorsWithMissingBalances provides a mock function with given fields: activationBalanceBatchSize, tx
-func (_m *SlotExporterDBRepository) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]db.ValidatorActivationEpoch, error) {
+func (_m *SlotExporterDBRepository) GetValidatorsWithMissingBalances(activationBalanceBatchSize int, tx *sqlx.Tx) ([]db.ActivationEpochValidator, error) {
 	ret := _m.Called(activationBalanceBatchSize, tx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetValidatorsWithMissingBalances")
 	}
 
-	var r0 []db.ValidatorActivationEpoch
+	var r0 []db.ActivationEpochValidator
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, *sqlx.Tx) ([]db.ValidatorActivationEpoch, error)); ok {
+	if rf, ok := ret.Get(0).(func(int, *sqlx.Tx) ([]db.ActivationEpochValidator, error)); ok {
 		return rf(activationBalanceBatchSize, tx)
 	}
-	if rf, ok := ret.Get(0).(func(int, *sqlx.Tx) []db.ValidatorActivationEpoch); ok {
+	if rf, ok := ret.Get(0).(func(int, *sqlx.Tx) []db.ActivationEpochValidator); ok {
 		r0 = rf(activationBalanceBatchSize, tx)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]db.ValidatorActivationEpoch)
+			r0 = ret.Get(0).([]db.ActivationEpochValidator)
 		}
 	}
 

@@ -157,7 +157,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err := s.db.CommitTx(tx); err != nil {
 		return fmt.Errorf("error committing tx: %w", err)
 	}
 
