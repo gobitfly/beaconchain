@@ -307,7 +307,7 @@ const hasReachedLimit = computed(() => {
   if (!currentEffectiveBalance.value || !effectiveBalanceLimitPerDashboard.value) {
     return false
   }
-  return currentEffectiveBalance.value >= effectiveBalanceLimitPerDashboard.value
+  return isGreaterOrEqual(currentEffectiveBalance.value, effectiveBalanceLimitPerDashboard.value)
 })
 
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
