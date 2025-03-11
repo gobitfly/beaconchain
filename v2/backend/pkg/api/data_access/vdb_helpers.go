@@ -12,7 +12,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -46,53 +45,6 @@ func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboard
 		return validatorsArray, err
 	}
 	return dashboardId.Validators, nil
-}
-
-func (d DataAccessService) calculateChartEfficiency(efficiencyType enums.VDBSummaryChartEfficiencyType, row *t.VDBValidatorSummaryChartRow) (float64, error) {
-	efficiency := float64(0)
-	switch efficiencyType {
-	case enums.VDBSummaryChartAll:
-		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if row.AttestationIdealReward > 0 {
-			attestationEfficiency.Float64 = row.AttestationReward / row.AttestationIdealReward
-			attestationEfficiency.Valid = true
-		}
-		if row.BlocksScheduled > 0 {
-			proposerEfficiency.Float64 = row.BlocksProposed / row.BlocksScheduled
-			proposerEfficiency.Valid = true
-		}
-		if row.SyncScheduled > 0 {
-			syncEfficiency.Float64 = row.SyncExecuted / row.SyncScheduled
-			syncEfficiency.Valid = true
-		}
-
-		efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
-	case enums.VDBSummaryChartAttestation:
-		if row.AttestationIdealReward > 0 {
-			efficiency = (row.AttestationReward / row.AttestationIdealReward) * 100
-		} else {
-			efficiency = 100
-		}
-	case enums.VDBSummaryChartProposal:
-		if row.BlocksScheduled > 0 {
-			efficiency = (row.BlocksProposed / row.BlocksScheduled) * 100
-		} else {
-			efficiency = 100
-		}
-	case enums.VDBSummaryChartSync:
-		if row.SyncScheduled > 0 {
-			efficiency = (row.SyncExecuted / row.SyncScheduled) * 100
-		} else {
-			efficiency = 100
-		}
-	default:
-		return 0, fmt.Errorf("unexpected efficiency type: %v", efficiency)
-	}
-	if efficiency > 100 {
-		log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
-		efficiency = 100
-	}
-	return efficiency, nil
 }
 
 func (d *DataAccessService) getWithdrawableCountFromCursor(validatorindex t.VDBValidator, cursor uint64) (uint64, error) {

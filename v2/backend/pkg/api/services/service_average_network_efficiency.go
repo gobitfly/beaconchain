@@ -13,7 +13,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -51,23 +50,20 @@ func (s *Services) updateEfficiencyData() error {
 
 	setEfficiencyData := func(tableName string, period enums.TimePeriod) error {
 		var queryResult struct {
-			AttestationReward      decimal.Decimal `db:"attestations_reward"`
-			AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-			BlocksProposed         uint64          `db:"blocks_proposed"`
-			BlocksScheduled        uint64          `db:"blocks_scheduled"`
-			SyncExecuted           uint64          `db:"sync_executed"`
-			SyncScheduled          uint64          `db:"sync_scheduled"`
+			TotalEfficiency       sql.NullFloat64 `db:"total_efficiency"`
+			AttestationEfficiency sql.NullFloat64 `db:"attestation_efficiency"`
+			ProposalEfficiency    sql.NullFloat64 `db:"proposal_efficiency"`
+			SyncEfficiency        sql.NullFloat64 `db:"sync_efficiency"`
 		}
 
 		ds := goqu.Dialect("postgres").
 			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, tableName))).
 			Select(
-				goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-				goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-				goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-				goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-				goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-				goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
+				goqu.L("SUM(efficiency_dividend::decimal) / NULLIF(SUM(efficiency_divisor::decimal), 0)").As("total_efficiency"),
+				goqu.L("SUM(efficiency_attestations_dividend::decimal) / NULLIF(SUM(efficiency_attestations_divisor::decimal), 0)").As("attestation_efficiency"),
+				goqu.L("SUM(efficiency_proposals_dividend::decimal) / NULLIF(SUM(efficiency_proposals_divisor::decimal), 0)").As("proposal_efficiency"),
+				goqu.L("SUM(efficiency_sync_dividend::decimal) / NULLIF(SUM(efficiency_sync_divisor::decimal), 0)").As("sync_efficiency"),
+			)
 
 		query, args, err := ds.Prepared(true).ToSQL()
 		if err != nil {
@@ -79,24 +75,11 @@ func (s *Services) updateEfficiencyData() error {
 			return err
 		}
 
-		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if !queryResult.AttestationIdealReward.IsZero() {
-			attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
-			attestationEfficiency.Valid = true
-		}
-		if queryResult.BlocksScheduled > 0 {
-			proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
-			proposerEfficiency.Valid = true
-		}
-		if queryResult.SyncScheduled > 0 {
-			syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
-			syncEfficiency.Valid = true
-		}
-
 		efficiencyMutex.Lock()
-		efficiencyInfo.AttestationEfficiency[period] = attestationEfficiency
-		efficiencyInfo.ProposalEfficiency[period] = proposerEfficiency
-		efficiencyInfo.SyncEfficiency[period] = syncEfficiency
+		efficiencyInfo.TotalEfficiency[period] = queryResult.TotalEfficiency
+		efficiencyInfo.AttestationEfficiency[period] = queryResult.AttestationEfficiency
+		efficiencyInfo.ProposalEfficiency[period] = queryResult.ProposalEfficiency
+		efficiencyInfo.SyncEfficiency[period] = queryResult.SyncEfficiency
 		efficiencyMutex.Unlock()
 
 		return nil
@@ -152,6 +135,7 @@ func (s *Services) GetCurrentEfficiencyInfo() (*EfficiencyData, error) {
 
 func (s *Services) initEfficiencyInfo() *EfficiencyData {
 	efficiencyInfo := EfficiencyData{}
+	efficiencyInfo.TotalEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
 	efficiencyInfo.AttestationEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
 	efficiencyInfo.ProposalEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
 	efficiencyInfo.SyncEfficiency = make(map[enums.TimePeriod]sql.NullFloat64)
@@ -159,6 +143,7 @@ func (s *Services) initEfficiencyInfo() *EfficiencyData {
 }
 
 type EfficiencyData struct {
+	TotalEfficiency       map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
 	AttestationEfficiency map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
 	ProposalEfficiency    map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency
 	SyncEfficiency        map[enums.TimePeriod]sql.NullFloat64 // period -> efficiency

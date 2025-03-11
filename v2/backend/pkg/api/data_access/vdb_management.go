@@ -400,12 +400,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 				Select(
-					goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-					goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-					goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-					goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
+					goqu.L("COALESCE(SUM(efficiency_dividend::decimal) / NULLIF(SUM(efficiency_divisor::decimal), 0), 0)").As("efficiency"),
+				)
 
 			if len(dashboardId.Validators) == 0 {
 				ds = ds.
@@ -416,42 +412,9 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
-			var queryResult struct {
-				AttestationReward      decimal.Decimal `db:"attestations_reward"`
-				AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-				BlocksProposed         uint64          `db:"blocks_proposed"`
-				BlocksScheduled        uint64          `db:"blocks_scheduled"`
-				SyncExecuted           uint64          `db:"sync_executed"`
-				SyncScheduled          uint64          `db:"sync_scheduled"`
-			}
-
-			query, args, err := ds.Prepared(true).ToSQL()
-			if err != nil {
-				return fmt.Errorf("error preparing query: %w", err)
-			}
-
-			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
-			if err != nil {
-				return err
-			}
-
-			// Calculate efficiency
-			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-			if !queryResult.AttestationIdealReward.IsZero() {
-				attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
-				attestationEfficiency.Valid = true
-			}
-			if queryResult.BlocksScheduled > 0 {
-				proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
-				proposerEfficiency.Valid = true
-			}
-			if queryResult.SyncScheduled > 0 {
-				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
-				syncEfficiency.Valid = true
-			}
-			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
-
-			return nil
+			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
+			*efficiency *= 100
+			return err
 		})
 	}
 
