@@ -49,7 +49,7 @@ a {
     opacity: 0.8;
   }
   &[disabled] {
-    color: var(--disabled-color);
+    color: var(--text-color-disabled);
   }
 }
 

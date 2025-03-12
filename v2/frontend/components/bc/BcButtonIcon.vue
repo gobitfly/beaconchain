@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 const props = defineProps<{
+  isDisabled?: boolean,
   /**
    *
    * ♿️ screenreader text
@@ -10,7 +11,10 @@ const props = defineProps<{
 </script>
 
 <template>
-  <button class="bc-button-icon">
+  <button
+    class="bc-button-icon"
+    :disabled="isDisabled"
+  >
     <BcScreenreaderOnly>{{ props.screenreaderText }}</BcScreenreaderOnly>
     <slot />
   </button>
