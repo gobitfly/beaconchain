@@ -222,6 +222,10 @@ function getTypeIcon(type: DashboardType) {
 const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0]) => {
   deleteDashboardNotifications(payload).then(() => refreshOverview())
 }
+const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
+  const hasSubscriptions = dashboard.subscriptions?.length
+  return !hasSubscriptions || dashboard.is_archived
+}
 </script>
 
 <template>
@@ -256,7 +260,22 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.dashboard')"
         >
           <template #body="slotProps">
-            <span>
+            <BcTooltip
+              v-if="slotProps.data.is_archived"
+              fit-content
+              tooltip-text-align="left"
+              class="disabled-text"
+              :text="$t('notifications.dashboards.archived')"
+            >
+              <FontAwesomeIcon
+                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+                class="type-icon"
+              />
+              {{ slotProps.data.dashboard_name }}
+            </BcTooltip>
+            <span
+              v-else
+            >
               <FontAwesomeIcon
                 :icon="getTypeIcon(slotProps.data.dashboard_type)"
                 class="type-icon"
@@ -273,7 +292,9 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.group')"
         >
           <template #body="slotProps">
-            {{ slotProps.data.group_name }}
+            <span :class="{ 'text-disabled': slotProps.data.is_archived }">
+              {{ slotProps.data.group_name }}
+            </span>
           </template>
         </Column>
         <Column
@@ -286,6 +307,8 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           <template #body="slotProps">
             <BcTablePopoutEdit
               :truncate-text="true"
+              :class="{ 'text-disabled': slotProps.data.is_archived }"
+              :is-disabled="slotProps.data.is_archived"
               :label="slotProps.data.subscriptions.join(', ')"
               @on-edit="onEdit('subscriptions', slotProps.data)"
             />
@@ -300,6 +323,8 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
         >
           <template #body="slotProps">
             <BcTablePopoutEdit
+              :class="{ 'text-disabled': slotProps.data.is_archived }"
+              :is-disabled="slotProps.data.is_archived"
               :truncate-text="true"
               :label="slotProps.data.settings.webhook_url"
               @on-edit="() => onEdit('webhook', slotProps.data)"
@@ -318,12 +343,12 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
                   $t('notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
                      { dashboard_id: slotProps.data.dashboard_name },
                   )"
-                :disabled="!slotProps.data.subscriptions?.length ? true : null"
+                :disabled="isDeleteButtonDisabled(slotProps.data)"
+                class="link"
                 @click="onEdit('delete', slotProps.data)"
               >
                 <FontAwesomeIcon
                   :icon="faTrash"
-                  class="link"
                 />
               </BcButtonIcon>
             </div>
@@ -332,22 +357,32 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
         <template #expansion="slotProps">
           <div class="expansion">
             <div class="info">
-              <div class="label">
+              <div
+                class="label"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+              >
                 {{ $t("notifications.col.subscriptions") }}
               </div>
 
               <BcTablePopoutEdit
                 class="value"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+                :is-disabled="slotProps.data.is_archived"
                 :label="slotProps.data.subscriptions.join(', ')"
                 @on-edit="onEdit('subscriptions', slotProps.data)"
               />
             </div>
             <div class="info">
-              <div class="label">
+              <div
+                class="label"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+              >
                 {{ $t("notifications.col.webhook") }}
               </div>
 
               <BcTablePopoutEdit
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+                :is-disabled="slotProps.data.is_archived"
                 class="value"
                 :label="slotProps.data.settings.webhook_url"
                 truncate-text
@@ -400,6 +435,10 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
 .action-row {
   display: flex;
   justify-content: flex-end;
+}
+
+.disabled-text {
+  color: var(--text-color-disabled)
 }
 
 :deep(.notifications-management-dashboard-table) {

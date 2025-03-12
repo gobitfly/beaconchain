@@ -4,12 +4,13 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
 const emit = defineEmits<{ (e: 'onEdit'): void }>()
 
-interface Props {
+defineProps<{
+  isDisabled?: boolean,
   label?: string,
-  noIcon?: boolean,
   truncateText?: boolean,
-}
-defineProps<Props>()
+}>()
+
+const { t: $t } = useTranslation()
 </script>
 
 <template>
@@ -30,12 +31,16 @@ defineProps<Props>()
       </BcTooltip>
     </slot>
     <div class="icon">
-      <FontAwesomeIcon
-        v-if="!noIcon"
+      <BcButtonIcon
+        :screenreader-text="$t('common.edit')"
+        :is-disabled
         class="link"
-        :icon="faEdit"
         @click="() => emit('onEdit')"
-      />
+      >
+        <FontAwesomeIcon
+          :icon="faEdit"
+        />
+      </BcButtonIcon>
     </div>
   </div>
 </template>
@@ -65,6 +70,12 @@ defineProps<Props>()
 
   .content {
     padding-right: var(--padding);
+  }
+
+  .link {
+    &:disabled {
+      cursor: auto;
+    }
   }
 }
 </style>
