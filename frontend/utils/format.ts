@@ -1,4 +1,3 @@
-import { commify } from '@ethersproject/units'
 import {
   DateTime, type StringUnitLength,
 } from 'luxon'
@@ -31,15 +30,6 @@ export function calculatePercent(value?: number, base?: number): number {
     return 0
   }
   return ((value ?? 0) * 100) / base
-}
-
-export function commmifyLeft(value: string): string {
-  const formatted = commify(value)
-  const i = formatted.lastIndexOf('.0')
-  if (i >= 0 && i === formatted.length - 2) {
-    return formatted.substring(0, formatted.length - 2)
-  }
-  return formatted
 }
 
 export function formatFiatCurrency(
@@ -276,38 +266,6 @@ export function nZeros(count: number): string {
         .map(() => '0')
         .join('')
     : ''
-}
-
-export function trim(
-  value: number | string,
-  maxDecimalCount: number,
-  minDecimalCount?: number,
-): string {
-  if (typeof value !== 'string') {
-    value = `${value}`
-  }
-  minDecimalCount
-    = minDecimalCount === undefined
-      ? maxDecimalCount
-      : Math.min(minDecimalCount, maxDecimalCount)
-  const split = value.split('.')
-  let dec = split[1] ?? ''
-  const hasTinyValue = !!dec && REGEXP_HAS_NUMBERS.test(dec)
-  dec = dec.substring(0, maxDecimalCount)
-  while (dec.length < minDecimalCount) {
-    dec += '0'
-  }
-  if (split[0] === '0' && (!dec || parseInt(dec) === 0) && hasTinyValue) {
-    if (maxDecimalCount === 0) {
-      return '<1'
-    }
-    return `<0.${nZeros(maxDecimalCount - 1)}1`
-  }
-  const left = commmifyLeft(split[0])
-  if (!dec?.length) {
-    return left
-  }
-  return `${left}.${dec}`
 }
 
 export function withCurrency(value: string, currency: string): string {

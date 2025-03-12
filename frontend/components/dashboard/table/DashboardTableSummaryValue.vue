@@ -140,7 +140,14 @@ const data = computed(() => {
     }
   }
   else if (col && props.property === 'attestation_avg_incl_dist') {
-    return { simple: { value: trim(col.attestation_avg_incl_dist, 2, 2) } }
+    return {
+      simple: {
+        value: formatNumber(col.attestation_avg_incl_dist, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 2,
+        }),
+      },
+    }
   }
   else if (row && props.property === 'reward') {
     return { reward: row.reward }
