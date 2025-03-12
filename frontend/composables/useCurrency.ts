@@ -111,6 +111,7 @@ export const useCurrency = () => {
     options: {
       hasCurrencyDisplay?: boolean,
       hasHigherPrecision?: boolean,
+      hasRoundingIndication?: boolean,
       hasUnitDisplay?: boolean,
       maximumFractionDigits?: number,
       minimumFractionDigits?: number,
@@ -126,6 +127,7 @@ export const useCurrency = () => {
     const {
       hasCurrencyDisplay = true,
       hasHigherPrecision = false,
+      hasRoundingIndication,
       hasUnitDisplay = false,
       targetCurrency = selectedCurrencyMain.value,
       maximumFractionDigits = getFractionDigitDefault({
@@ -153,14 +155,15 @@ export const useCurrency = () => {
       wei: $t('common.units.wei'),
     }
     const unit = hasUnitDisplay && targetUnit !== 'base' ? ` (${unitTranslation[targetUnit]})` : ''
-    const currency = hasCurrencyDisplay ? ` ${targetCurrency}` : ''
     const formattedValue = `${formatNumber(valueConverted, {
+      hasRoundingIndication,
       maximumFractionDigits,
       minimumFractionDigits,
       scaleBy: unitFactor,
       signDisplay,
       useGrouping,
     })}`
+    const currency = hasCurrencyDisplay ? ` ${targetCurrency}` : ''
     return `${formattedValue}${unit}${currency}`
   }
 
