@@ -110,7 +110,7 @@ const hasReachedLimit = computed(() => {
   if (!currentEffectiveBalance.value || !effectiveBalancePerDashboard) {
     return false
   }
-  return isGreaterOrEqual(currentEffectiveBalance.value, effectiveBalancePerDashboard)
+  return isGreaterEquals(currentEffectiveBalance.value, effectiveBalancePerDashboard)
 })
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
