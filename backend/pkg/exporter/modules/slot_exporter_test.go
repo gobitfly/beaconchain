@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	rpcmocks "github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -28,6 +29,11 @@ func TestSlotExporter(t *testing.T) {
 				SlotsPerEpoch:  32,
 			},
 		},
+	}
+
+	electraForkEpoch := uint64(0)
+	config.ClConfig = &constypes.StandardSpec{
+		ElectraForkEpoch: &electraForkEpoch,
 	}
 
 	t.Run("genesis slot", func(t *testing.T) {
@@ -157,7 +163,7 @@ func TestSlotExporter(t *testing.T) {
 				WithdrawableEpoch:          3,
 			},
 		}
-		var mockBlock = &types.Block{
+		mockBlock := &types.Block{
 			Status: 1,
 			EpochAssignments: &types.EpochAssignments{
 				ProposerAssignments: map[uint64]uint64{
@@ -241,6 +247,8 @@ func TestSlotExporter(t *testing.T) {
 				},
 			},
 		}
+		firstSlot := (utils.EpochOfSlot(mockBlock.Slot) - 1) * 32
+		lastSlot := (utils.EpochOfSlot(mockBlock.Slot) * 32) - 1
 
 		mockDB := new(dbmocks.SlotExporterDBRepository)
 		mockBT := new(dbmocks.SlotExporterBTRepository)
@@ -258,6 +266,7 @@ func TestSlotExporter(t *testing.T) {
 		mockDB.On("GetValidatorsWithMissingBalances", 10000, mockTx).Return(mockActivationEpochVal, nil)
 		mockDB.On("AnalyzeValidatorsTable", mockTx).Return(nil)
 		mockDB.On("CacheBlockDepositLookup").Return(nil)
+		mockDB.On("CacheBlockDepositRequestsLookup").Return(nil)
 		mockDB.On("UpdateQueueDeposits", mockTx).Return(nil)
 		mockDB.On("SaveEpoch", utils.EpochOfSlot(mockBlock.Slot), mockBlock.Validators, mockTx).Return(nil)
 		mockDB.On("GetAllNonFinalizedSlots").Return(mockNonFinalSlots, nil)
@@ -265,6 +274,11 @@ func TestSlotExporter(t *testing.T) {
 		mockDB.On("UpdateEpochStatus", mockParticipationStats, mockTx).Return(nil)
 		mockDB.On("PrepareValidatorsUpdate", mockCurrentValidators[0], mockBlock.Validators[0], mockTx).Return(mockUpdateCount, queries, nil)
 		mockDB.On("SaveValidatorsFieldsUpdate", queries, mockUpdateCount, mockTx).Return(nil)
+		mockDB.On("HasEventsForEpoch", firstSlot, lastSlot).Return(true, nil)
+		mockDB.On("TransformSwitchToCompoundingRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformConsolidationRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformDepositRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformRemovedExcessBalanceEvents", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
 
 		// mock BT calls
 		mockBT.On("SaveAttestationDuties", "mock.Anything").Return(nil)
@@ -333,7 +347,7 @@ func TestSlotExporter(t *testing.T) {
 				Finalized: false,
 			},
 		}
-		var mockBlock = &types.Block{
+		mockBlock := &types.Block{
 			Status: 1,
 			EpochAssignments: &types.EpochAssignments{
 				ProposerAssignments: map[uint64]uint64{
@@ -373,6 +387,8 @@ func TestSlotExporter(t *testing.T) {
 			GlobalParticipationRate: 0.5,
 			VotedEther:              1,
 		}
+		firstSlot := (utils.EpochOfSlot(mockBlock.Slot) - 1) * 32
+		lastSlot := (utils.EpochOfSlot(mockBlock.Slot) * 32) - 1
 
 		mockDB := new(dbmocks.SlotExporterDBRepository)
 		mockBT := new(dbmocks.SlotExporterBTRepository)
@@ -390,6 +406,11 @@ func TestSlotExporter(t *testing.T) {
 		mockDB.On("GetAllNonFinalizedSlots").Return(mockNonFinalSlots, nil)
 		mockDB.On("UpdateEpochStatus", mockParticipationStats, mockTx).Return(nil)
 		mockDB.On("SetSlotFinalizationAndStatus", mockNonFinalSlots[0].Slot, mockNonFinalSlots[0].Slot <= mockChainHead.FinalizedSlot, "3", mockTx).Return(nil)
+		mockDB.On("HasEventsForEpoch", firstSlot, lastSlot).Return(true, nil)
+		mockDB.On("TransformSwitchToCompoundingRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformConsolidationRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformDepositRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
+		mockDB.On("TransformRemovedExcessBalanceEvents", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
 
 		// mock BT calls
 		mockBT.On("SaveAttestationDuties", "mock.Anything").Return(nil)
@@ -429,6 +450,7 @@ func TestSlotExporter(t *testing.T) {
 		mockClient.AssertExpectations(t)
 		mockCache.AssertExpectations(t)
 	})
+
 }
 
 func compressValidatorMapping(mapping *types.RedisCachedValidatorsMapping) ([]byte, error) {
