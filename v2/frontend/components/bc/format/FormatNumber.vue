@@ -16,8 +16,13 @@ const label = computed(() => {
     return props.default
   }
   return formattedNumberToHtml(
-    trim(props.value, props.maxDecimals ?? 2, props.minDecimals ?? 0),
-  )
+    formatNumber(props.value,
+      {
+        hasRoundingIndication: true,
+        maximumFractionDigits: props.maxDecimals ?? 2,
+        minimumFractionDigits: props.minDecimals ?? 0,
+      },
+    ))
 })
 </script>
 
