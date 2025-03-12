@@ -621,6 +621,7 @@
             "webhook": "Webhook"
         },
         "dashboards": {
+            "archived": "This dashboard has been archived.",
             "col": {
                 "entity": "Entity",
                 "notification": "Notification"
