@@ -450,7 +450,6 @@ func TestSlotExporter(t *testing.T) {
 		mockClient.AssertExpectations(t)
 		mockCache.AssertExpectations(t)
 	})
-
 }
 
 func compressValidatorMapping(mapping *types.RedisCachedValidatorsMapping) ([]byte, error) {
