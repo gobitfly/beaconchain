@@ -30,6 +30,7 @@ type FormatAmountOptions = (
   hasColor?: boolean,
   hasDashForZero?: boolean,
   hasHigherPrecision?: boolean,
+  hasRoundingIndication?: boolean,
   hasSignDisplay?: boolean,
   hasTooltip?: boolean,
   maximumFractionDigits?: number,
@@ -47,6 +48,7 @@ type FormatAmountOptions = (
 }
 
 const {
+  hasRoundingIndication = true,
   zeroDisplay = 'dash',
   ...props
 } = defineProps<FormatAmountOptions>()
@@ -101,7 +103,7 @@ const color = computed(() => {
   return undefined
 })
 const signDisplay = computed(() => {
-  if (props.hasSignDisplay) return 'exceptZero'
+  if (props.hasSignDisplay && !hasRoundingIndication) return 'exceptZero'
   return undefined
 })
 
@@ -132,6 +134,7 @@ const format = (value: string, optionsOverride?: Parameters<typeof formatAmount>
   }
   return formatAmount(value, {
     hasHigherPrecision: props.hasHigherPrecision,
+    hasRoundingIndication,
     hasUnitDisplay: getTargetUnit() !== 'base',
     maximumFractionDigits: props.maximumFractionDigits
       ?? (

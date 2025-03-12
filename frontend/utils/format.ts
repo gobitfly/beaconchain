@@ -102,6 +102,7 @@ export function formatGoTimestamp(
 }
 
 export function formatNumber(value: number | string, {
+  hasRoundingIndication,
   locale = 'en-US',
   maximumFractionDigits,
   minimumFractionDigits,
@@ -109,6 +110,7 @@ export function formatNumber(value: number | string, {
   signDisplay,
   useGrouping,
 }: {
+  hasRoundingIndication?: boolean,
   locale?: Locale,
   maximumFractionDigits?: number,
   minimumFractionDigits?: number,
@@ -121,12 +123,20 @@ export function formatNumber(value: number | string, {
     exponent = 0,
   ] = `${value}`.toLowerCase().split('e')
   const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}`
-  return new Intl.NumberFormat(locale, {
+  const numberInScientificNotationAbsolute = Number(numberInScientificNotation)
+  const isPositive = numberInScientificNotationAbsolute > 0
+  const isRoundedToZero = numberInScientificNotationAbsolute < Number(`1e-${maximumFractionDigits || 1}`)
+  const shouldShowRoundingIndication = hasRoundingIndication && isPositive && isRoundedToZero
+  const formattedValue = new Intl.NumberFormat(locale, {
     maximumFractionDigits,
     minimumFractionDigits,
+    roundingMode: shouldShowRoundingIndication
+      ? 'expand'
+      : 'halfExpand',
     signDisplay,
     useGrouping,
   }).format(numberInScientificNotation as `${number}`)
+  return `${shouldShowRoundingIndication ? '<' : ''}${formattedValue}`
 }
 
 /**
