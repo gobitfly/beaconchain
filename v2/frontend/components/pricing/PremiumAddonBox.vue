@@ -71,7 +71,7 @@ const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
 // This is used to show users that the price they used to pay per Validator
 // hasn't changed now that we charge by Effective Balance
 const pricePerValidator = computed(() => {
-  return divideBigNumbers(
+  return divide(
     (pricePerUnit.value * oldMaxEffectiveBalance),
     addon.extra_dashboard_effective_balance,
   )
@@ -106,14 +106,14 @@ const isQuantityLimitReached = computed(() => {
 })
 
 const maximumQuantity = computed(() => {
-  const unusedDashboardEffectiveBalance = addBigNumbers(
+  const unusedDashboardEffectiveBalance = add(
     effectiveBalancePerDashboardLimit ?? 0,
     -(premium_perks.value?.effective_balance_per_dashboard ?? 0),
   )
   const extraAddonEffectiveBalanacePerDashboard = addon.extra_dashboard_effective_balance
 
   return Math.floor(
-    Number(divideBigNumbers(unusedDashboardEffectiveBalance, extraAddonEffectiveBalanacePerDashboard)),
+    Number(divide(unusedDashboardEffectiveBalance, extraAddonEffectiveBalanacePerDashboard)),
   )
 })
 

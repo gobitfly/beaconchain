@@ -37,10 +37,10 @@ export const useCurrency = () => {
     }
 
     const exchangeRateSourceCurrency = `${getExchangeRate(sourceCurrency)}`
-    const valueInMainCurrency = divideBigNumbers(value, exchangeRateSourceCurrency)
+    const valueInMainCurrency = divide(value, exchangeRateSourceCurrency)
 
     const exchangeRateTargetCurrency = `${getExchangeRate(targetCurrency)}`
-    const valueInTargetCurrency = multiplyBigNumbers(
+    const valueInTargetCurrency = multiply(
       valueInMainCurrency,
       exchangeRateTargetCurrency,
     )
@@ -196,7 +196,7 @@ export const useCurrency = () => {
         targetCurrency,
         value,
       })
-      return sum = `${addBigNumbers(sum, convertedCurrencyValue)}`
+      return sum = `${add(sum, convertedCurrencyValue)}`
     }, '0')
   }
 
