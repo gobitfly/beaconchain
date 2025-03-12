@@ -82,6 +82,24 @@ func (_m *SlotExporterDBRepository) CacheBlockDepositLookup() error {
 	return r0
 }
 
+// CacheBlockDepositRequestsLookup provides a mock function with no fields
+func (_m *SlotExporterDBRepository) CacheBlockDepositRequestsLookup() error {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for CacheBlockDepositRequestsLookup")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // CommitTx provides a mock function with given fields: tx
 func (_m *SlotExporterDBRepository) CommitTx(tx *sqlx.Tx) error {
 	ret := _m.Called(tx)
@@ -248,6 +266,34 @@ func (_m *SlotExporterDBRepository) GetValidatorsWithMissingBalances(activationB
 	return r0, r1
 }
 
+// HasEventsForEpoch provides a mock function with given fields: firstSlot, lastSlot
+func (_m *SlotExporterDBRepository) HasEventsForEpoch(firstSlot uint64, lastSlot uint64) (bool, error) {
+	ret := _m.Called(firstSlot, lastSlot)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HasEventsForEpoch")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64, uint64) (bool, error)); ok {
+		return rf(firstSlot, lastSlot)
+	}
+	if rf, ok := ret.Get(0).(func(uint64, uint64) bool); ok {
+		r0 = rf(firstSlot, lastSlot)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64, uint64) error); ok {
+		r1 = rf(firstSlot, lastSlot)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PrepareValidatorsUpdate provides a mock function with given fields: currentState, newState, tx
 func (_m *SlotExporterDBRepository) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
 	ret := _m.Called(currentState, newState, tx)
@@ -394,6 +440,118 @@ func (_m *SlotExporterDBRepository) SetSlotFinalizationAndStatus(slot uint64, fi
 	}
 
 	return r0
+}
+
+// TransformConsolidationRequests provides a mock function with given fields: firstSlot, lastSlot, tx
+func (_m *SlotExporterDBRepository) TransformConsolidationRequests(firstSlot uint64, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	ret := _m.Called(firstSlot, lastSlot, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransformConsolidationRequests")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) (int64, error)); ok {
+		return rf(firstSlot, lastSlot, tx)
+	}
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) int64); ok {
+		r0 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64, uint64, *sqlx.Tx) error); ok {
+		r1 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TransformDepositRequests provides a mock function with given fields: firstSlot, lastSlot, tx
+func (_m *SlotExporterDBRepository) TransformDepositRequests(firstSlot uint64, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	ret := _m.Called(firstSlot, lastSlot, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransformDepositRequests")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) (int64, error)); ok {
+		return rf(firstSlot, lastSlot, tx)
+	}
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) int64); ok {
+		r0 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64, uint64, *sqlx.Tx) error); ok {
+		r1 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TransformRemovedExcessBalanceEvents provides a mock function with given fields: firstSlot, lastSlot, tx
+func (_m *SlotExporterDBRepository) TransformRemovedExcessBalanceEvents(firstSlot uint64, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	ret := _m.Called(firstSlot, lastSlot, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransformRemovedExcessBalanceEvents")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) (int64, error)); ok {
+		return rf(firstSlot, lastSlot, tx)
+	}
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) int64); ok {
+		r0 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64, uint64, *sqlx.Tx) error); ok {
+		r1 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// TransformSwitchToCompoundingRequests provides a mock function with given fields: firstSlot, lastSlot, tx
+func (_m *SlotExporterDBRepository) TransformSwitchToCompoundingRequests(firstSlot uint64, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	ret := _m.Called(firstSlot, lastSlot, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for TransformSwitchToCompoundingRequests")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) (int64, error)); ok {
+		return rf(firstSlot, lastSlot, tx)
+	}
+	if rf, ok := ret.Get(0).(func(uint64, uint64, *sqlx.Tx) int64); ok {
+		r0 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64, uint64, *sqlx.Tx) error); ok {
+		r1 = rf(firstSlot, lastSlot, tx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // UpdateActivationEpochBalance provides a mock function with given fields: validatorIndex, balance, tx

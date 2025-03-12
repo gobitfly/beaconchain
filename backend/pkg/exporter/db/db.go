@@ -43,6 +43,7 @@ type SlotExporterDBRepository interface {
 	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
 	UpdateQueueDeposits(tx *sqlx.Tx) error
 	CacheBlockDepositLookup() error
+	CacheBlockDepositRequestsLookup() error
 	SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error
 	UpdateEpochStatus(epochParticipationStats *types.ValidatorParticipation, tx *sqlx.Tx) error
 	GetAllSlots(tx *sqlx.Tx) ([]uint64, error)
@@ -57,6 +58,11 @@ type SlotExporterDBRepository interface {
 	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
 	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error)
 	SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error
+	HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error)
+	TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
 }
 
 type SlotExporterDB struct {
@@ -608,7 +614,9 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
             validator
         )
         VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (slot) DO UPDATE SET
+        ON CONFLICT 
+			(slot) 
+		DO UPDATE SET
             x = EXCLUDED.x,
             y = EXCLUDED.y,
             color = EXCLUDED.color,
@@ -789,7 +797,14 @@ func (s *SlotExporterDB) GetValidatorsWithMissingBalances(activationBalanceBatch
 }
 
 func (s *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, balance uint64, tx *sqlx.Tx) error {
-	_, err := tx.Exec("update validators set balanceactivation = $1 WHERE validatorindex = $2 AND balanceactivation IS NULL;", balance, validatorIndex)
+	_, err := tx.Exec(`
+		UPDATE 
+			validators 
+		SET 
+			balanceactivation = $1 
+		WHERE 
+			validatorindex = $2 AND balanceactivation IS NULL;
+		`, balance, validatorIndex)
 	if err != nil {
 		return fmt.Errorf("error updating activation epoch balance for validator %v: %w", validatorIndex, err)
 	}
@@ -874,7 +889,9 @@ func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, 
 			finalized
 		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-		ON CONFLICT (epoch) DO UPDATE SET
+		ON CONFLICT 
+			(epoch) 
+		DO UPDATE SET
 			blockscount             = excluded.blockscount,
 			proposerslashingscount  = excluded.proposerslashingscount,
 			attesterslashingscount  = excluded.attesterslashingscount,
@@ -1144,7 +1161,7 @@ type NonFinalizedSlotsRow struct {
 
 func (s *SlotExporterDB) GetAllNonFinalizedSlots() ([]*NonFinalizedSlotsRow, error) {
 	var slots []*NonFinalizedSlotsRow
-	err := db.WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot") // TODO
+	err := s.WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot")
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving all non finalized slots from the DB: %w", err)
@@ -1163,10 +1180,13 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	// first we remove any validator that isn't queued anymore
 	_, err := tx.Exec(`
 		DELETE FROM validator_queue_deposits
-		WHERE validator_queue_deposits.validatorindex NOT IN (
+		WHERE 
+			validator_queue_deposits.validatorindex NOT IN (
 			SELECT validatorindex
 			FROM validators
-			WHERE activationepoch=9223372036854775807 and status='pending')`)
+			WHERE 
+				activationepoch=9223372036854775807 AND status='pending'
+			)`)
 	if err != nil {
 		log.Error(err, "error removing queued publickeys from validator_queue_deposits", 0)
 		return err
@@ -1175,7 +1195,12 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	// then we add any new ones that are queued
 	_, err = tx.Exec(`
 		INSERT INTO validator_queue_deposits
-		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
+		SELECT 
+			validatorindex 
+		FROM validators 
+		WHERE 
+			activationepoch=$1 AND status='pending' 
+		ON CONFLICT DO NOTHING
 	`, MaxSqlNumber)
 	if err != nil {
 		log.Error(err, "error adding queued publickeys to validator_queue_deposits", 0)
@@ -1238,23 +1263,49 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 
 func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 	err := CacheQuery(`
-			SELECT
-				uvdv.dashboard_id,
-				uvdv.group_id,
-				bd.block_slot,
-				bd.block_index,
-				bd.amount
-			FROM
-				blocks_deposits bd
-				INNER JOIN validators v ON bd.publickey = v.pubkey
-				INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-			ORDER BY
-				uvdv.dashboard_id DESC,
-				bd.block_slot DESC,
-				bd.block_index DESC;
-			
-			`, "cached_blocks_deposits_lookup",
+		SELECT
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			bd.block_slot,
+			bd.block_index,
+			bd.amount
+		FROM
+			blocks_deposits bd
+			INNER JOIN validators v ON bd.publickey = v.pubkey
+			INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+		ORDER BY
+			uvdv.dashboard_id DESC,
+			bd.block_slot DESC,
+			bd.block_index DESC;
+		`, "cached_blocks_deposits_lookup",
 		[]string{"dashboard_id", "block_slot", "block_index"},
+		[]string{"dashboard_id", "amount"})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SlotExporterDB) CacheBlockDepositRequestsLookup() error {
+	err := CacheQuery(`
+		SELECT
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			bdr.block_slot,
+			bdr.request_index,
+			bdr.amount
+		FROM
+			blocks_deposit_requests bdr
+			INNER JOIN validators v ON bdr.pubkey = v.pubkey
+			INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+			INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
+		ORDER BY
+			uvdv.dashboard_id DESC,
+			bdr.block_slot DESC,
+			bdr.request_index DESC;
+		`, "cached_blocks_deposit_requests_lookup",
+		[]string{"dashboard_id", "block_slot", "request_index"},
 		[]string{"dashboard_id", "amount"})
 	if err != nil {
 		return err
@@ -1758,6 +1809,163 @@ func WorkaroundGetProcessedConsolidations(blockhash []byte) ([]constypes.Electra
 		return nil, fmt.Errorf("error fetching consolidations for block %v: %w", blockhash, err)
 	}
 	return consolidations, nil
+}
+
+func (s *SlotExporterDB) HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error) {
+	var count uint64
+	err := s.WriterDb.Get(&count, `
+		SELECT 
+			COUNT(*) 
+		FROM 
+			consensus_layer_events 
+		WHERE 
+			slot >= $1 AND slot <= $2`, firstSlot, lastSlot)
+	if err != nil {
+		return false, fmt.Errorf("error checking for events for epoch: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_switch_to_compounding_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		address, 
+		validator_index
+	)
+	SELECT
+		slot AS slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		decode((data->>'address'), 'base64') AS address,
+		(data->>'index')::int AS validator_index
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_consolidation_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		source_index, 
+		target_index, 
+		amount_consolidated
+	)
+	SELECT
+		slot AS slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		(data->>'source_index')::int AS source_index,
+		(data->>'target_index')::int AS target_index,
+		(data->>'amount')::bigint AS amount_consolidated
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_deposit_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		pubkey, 
+		withdrawal_credentials, 
+		amount, 
+		signature
+	)
+	SELECT
+		slot AS block_slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		decode((data->>'pubkey'), 'base64') AS pubkey,
+		decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
+		(data->>'amount')::bigint AS amount,
+		decode((data->>'signature'), 'base64')::bytea AS signature
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
+	}
+
+	depositRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
+	}
+
+	return depositRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
+	res, err := tx.Exec(`
+	INSERT INTO blocks_withdrawals (
+		block_slot, 
+		block_root, 
+		withdrawalindex, 
+		validatorindex, 
+		address, 
+		amount
+	)
+	SELECT
+		slot AS block_slot,
+		block_root AS block_root,
+		-20000 + event_index AS withdrawalindex,
+		(data->>'validator_index')::int AS validatorindex,
+		''::bytea as address,
+		(data->>'amount')::bigint AS amount
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
+	}
+
+	excessBalanceRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed excess balance requests: %w", err)
+	}
+
+	return excessBalanceRequestsProcessed, nil
 }
 
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
