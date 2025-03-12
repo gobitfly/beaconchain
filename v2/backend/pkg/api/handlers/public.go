@@ -982,7 +982,12 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			returnConflict(w, r, errors.New("maximum number of groups in dashboards reached"))
 			return
 		}
-		if dashboardInfo.EffectiveBalance.GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
+		totalBalance, err := h.getDataAccessor(ctx).GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Id: dashboardId}, false)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		if decimal.NewFromUint64(totalBalance).GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
 			returnConflict(w, r, errors.New("maximum effective balance in dashboards reached"))
 			return
 		}

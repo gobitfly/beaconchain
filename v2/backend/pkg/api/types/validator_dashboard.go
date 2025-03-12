@@ -14,9 +14,10 @@ type VDBOverviewGroup struct {
 }
 
 type ValidatorBalances struct {
-	Total     decimal.Decimal `json:"total"`
-	Effective decimal.Decimal `json:"effective"`
-	StakedEth decimal.Decimal `json:"staked_eth"`
+	Total            decimal.Decimal `json:"total"`
+	EffectiveCurrent decimal.Decimal `json:"effective_current"` // on-chain
+	EffectiveLatest  decimal.Decimal `json:"effective_latest"`  // from premium perks pov: exited validators are counted with their latest eb
+	StakedEth        decimal.Decimal `json:"staked_eth"`
 }
 
 type VDBOverviewData struct {
