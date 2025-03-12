@@ -15,9 +15,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 //////////////////// 		Helper functions (must be used by more than one VDB endpoint!)
@@ -381,7 +383,7 @@ func (d *DataAccessService) calculateValidatorDashboardBalance(ctx context.Conte
 
 	// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
 	var nonRpDashboardId t.VDBId
-
+	var withdrawnValidators []uint64
 	for _, validator := range validators {
 		metadata := validatorMapping.ValidatorMetadata[validator]
 		validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
@@ -410,16 +412,41 @@ func (d *DataAccessService) calculateValidatorDashboardBalance(ctx context.Conte
 
 			nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
 		}
-		balances.Effective = balances.Effective.Add(effectiveBalance)
+		balances.EffectiveCurrent = balances.EffectiveCurrent.Add(effectiveBalance)
+		status := constypes.ValidatorDbStatus(validatorMapping.ValidatorMetadata[validator].Status)
+		if (status == constypes.DbSlashed || status == constypes.DbExited) &&
+			validatorMapping.ValidatorMetadata[validator].EffectiveBalance == 0 {
+			withdrawnValidators = append(withdrawnValidators, validator)
+		}
 	}
 
-	// Get the total cl deposits for non-rocketpool validators
-	if len(nonRpDashboardId.Validators) > 0 {
-		totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
+	wg := errgroup.Group{}
+	wg.Go(func() error {
+		preWithdrawnEbs, err := d.GetValidatorsEffectiveBalances(ctx, withdrawnValidators, false)
 		if err != nil {
-			return balances, fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
+			return err
 		}
-		balances.StakedEth = balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
+		balances.EffectiveLatest = balances.EffectiveCurrent
+		for _, eb := range preWithdrawnEbs {
+			balances.EffectiveLatest = balances.EffectiveLatest.Add(utils.GWeiToWei(big.NewInt(int64(eb))))
+		}
+		return nil
+	})
+
+	wg.Go(func() error {
+		// Get the total cl deposits for non-rocketpool validators
+		if len(nonRpDashboardId.Validators) > 0 {
+			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
+			if err != nil {
+				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
+			}
+			balances.StakedEth = balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
+		}
+		return nil
+	})
+
+	if err := wg.Wait(); err != nil {
+		return t.ValidatorBalances{}, err
 	}
 	return balances, nil
 }

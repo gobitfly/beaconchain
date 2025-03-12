@@ -46,7 +46,6 @@ var (
 
 const (
 	maxNameLength                     = 50
-	maxEBInList                uint64 = 20 * 32 * 1e9
 	maxQueryLimit              uint64 = 100
 	defaultReturnLimit         uint64 = 10
 	sortOrderAscending                = "asc"
