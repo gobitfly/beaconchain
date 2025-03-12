@@ -213,6 +213,9 @@ func TestSlotExporterOnHead(t *testing.T) {
 			GlobalParticipationRate: 0.5,
 			VotedEther:              1,
 		}
+		mockLastAttestationCache := map[uint64]uint64{
+			0: 1,
+		}
 
 		utils.Config = &types.Config{
 			Chain: types.Chain{
@@ -252,7 +255,7 @@ func TestSlotExporterOnHead(t *testing.T) {
 		mockBT.On("SaveSyncCommitteeDuties", "mock.Anything").Return(nil)
 		mockBT.On("SaveValidatorBalances", mockChainHead.HeadEpoch, mockBlock.Validators).Return(nil)
 		mockBT.On("GetLastAttestationCacheMux").Return(&sync.Mutex{})
-		mockBT.On("GetLastAttestationCache").Return(map[uint64]uint64{})
+		mockBT.On("GetLastAttestationCache").Return(mockLastAttestationCache)
 		mockBT.On("GetValidatorBalanceHistory",
 			[]uint64{mockActivationEpochVal[0].ValidatorIndex},
 			mockActivationEpochVal[0].ActivationEpoch,
