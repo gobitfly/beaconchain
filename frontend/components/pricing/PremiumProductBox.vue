@@ -56,12 +56,12 @@ const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
 // This is used to show users that the price they used to pay per Validator
 // hasn't changed now that we charge by Effective Balance
 const pricePerOldMaxEffectiveBalance = computed(() => {
-  const pricePerDashboard = divideBigNumbers(
+  const pricePerDashboard = divide(
     (productPrice.value * oldMaxEffectiveBalance),
     product.premium_perks.validator_dashboards,
   )
 
-  return divideBigNumbers(
+  return divide(
     pricePerDashboard,
     product.premium_perks.effective_balance_per_dashboard,
   )
@@ -95,7 +95,7 @@ const percentages = computed(() => {
       * 100
   }
 
-  const effectiveBalancePerDashbordRatio = divideBigNumbers(product.premium_perks.effective_balance_per_dashboard,
+  const effectiveBalancePerDashbordRatio = divide(product.premium_perks.effective_balance_per_dashboard,
     bestProduct.premium_perks.effective_balance_per_dashboard)
 
   const effectiveBalancePerDashboard = formatNumber(effectiveBalancePerDashbordRatio, { scaleBy: 2 })
