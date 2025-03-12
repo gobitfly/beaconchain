@@ -12,7 +12,8 @@ export interface VDBOverviewGroup {
 }
 export interface ValidatorBalances {
   total: string /* decimal.Decimal */;
-  effective: string /* decimal.Decimal */;
+  effective_current: string /* decimal.Decimal */; // on-chain
+  effective_latest: string /* decimal.Decimal */; // from premium perks pov: exited validators are counted with their latest eb
   staked_eth: string /* decimal.Decimal */;
 }
 export interface VDBOverviewData {

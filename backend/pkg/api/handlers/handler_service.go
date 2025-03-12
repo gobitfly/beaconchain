@@ -7,13 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
+	"github.com/shopspring/decimal"
 
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
@@ -152,8 +155,12 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 			return nil, err
 		}
 		// TODO check if we also need a count limit because of cf url length limits
-		if validatorEb > maxEBInList {
-			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", maxEBInList/1e9)
+		perks, err := h.daService.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if utils.GWeiToWei(big.NewInt(int64(validatorEb))).GreaterThan(perks.EffectiveBalancePerDashboard) {
+			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", perks.EffectiveBalancePerDashboard.Div(decimal.NewFromInt(1e9)).IntPart())
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
