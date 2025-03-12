@@ -273,8 +273,7 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exp
 
 		if nodeSlotFinalized != dbSlot.Finalized {
 			log.Infof("checking slot %d for finalization / reorgs", dbSlot.Slot)
-			header, err = e.Client.GetBlockHeader(dbSlot.Slot)
-
+			header, err = s.Client.GetBlockHeader(dbSlot.Slot)
 			if err != nil {
 				return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
 			}
@@ -345,12 +344,15 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exp
 				}
 			}
 		} else { // check if a late slot has been proposed in the meantime
-			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
-				log.Infof("exporting new slot %v", dbSlot.Slot)
-				isHeadEpoch := utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch
-				err := exporter.ExportSlot(dbSlot.Slot, isHeadEpoch)
-				if err != nil {
-					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
+			// TODO: reenable once holesky is close to recovery
+			if utils.Config.Chain.Id != 17000 {
+				if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
+					log.Infof("exporting new slot %v", dbSlot.Slot)
+					isHeadEpoch := utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch
+					err := exporter.ExportSlot(dbSlot.Slot, isHeadEpoch)
+					if err != nil {
+						return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
+					}
 				}
 			}
 		}

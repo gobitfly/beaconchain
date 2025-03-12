@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -15,12 +16,14 @@ import (
 
 	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -1668,6 +1671,93 @@ func PushEpochMetadata(metdata []EpochMetadata) error {
 		return fmt.Errorf("error sending batch: %w", err)
 	}
 	return nil
+}
+
+func WorkaroundGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
+	var hashes [][]byte
+	/*
+		err := db.ReaderDb.Get(&hashes, fmt.Sprintf(`
+			SELECT block_root
+			FROM consensus_layer_events
+			WHERE event_name = 'EpochProcessedEvent' and slot = %d
+		`, (utils.Config.ClConfig.SlotsPerEpoch*epoch)-1))
+	*/
+	// use goqu
+	q := goqu.Dialect("postgres").Select("block_root").
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("EpochProcessedEvent"),
+			goqu.I("slot").Eq((utils.Config.ClConfig.SlotsPerEpoch*epoch)-1),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&hashes, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	return hashes, nil
+}
+
+func WorkaroundGetProcessedDeposits(blockhash []byte) ([]constypes.ElectraDeposit, error) {
+	var deposits []struct {
+		Amount uint64 `db:"amount"`
+		Pubkey string `db:"pubkey"`
+	}
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'pubkey'").As("pubkey"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("DepositProcessedEvent"),
+			goqu.I("block_root").Eq(blockhash),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching deposits for block %v: %w", blockhash, err)
+	}
+	err = db.ReaderDb.Select(&deposits, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching deposits for block %v: %w", blockhash, err)
+	}
+	var result []constypes.ElectraDeposit
+	// decode pubkey, is stored in base64
+	for i := range deposits {
+		decodedPubkey, err := base64.StdEncoding.DecodeString(deposits[i].Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding pubkey for deposit %v: %w", deposits[i].Pubkey, err)
+		}
+		result = append(result, constypes.ElectraDeposit{
+			Amount: deposits[i].Amount,
+			Pubkey: decodedPubkey,
+		})
+	}
+	return result, nil
+}
+
+func WorkaroundGetProcessedConsolidations(blockhash []byte) ([]constypes.ElectraConsolidation, error) {
+	var consolidations []constypes.ElectraConsolidation
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'source_index'").As("source_index"),
+		goqu.L("data->>'target_index'").As("target_index"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("ConsolidationProcessedEvent"),
+			goqu.I("block_root").Eq(blockhash),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching consolidations for block %v: %w", blockhash, err)
+	}
+	err = db.ReaderDb.Select(&consolidations, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching consolidations for block %v: %w", blockhash, err)
+	}
+	return consolidations, nil
 }
 
 func CacheQuery(query string, viewName string, indexes ...[]string) error {
