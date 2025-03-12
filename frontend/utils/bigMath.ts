@@ -1,6 +1,6 @@
 import Big from 'big.js'
 
-export const multiplyBigNumbers = (...numbers: (number | string)[]) => {
+export const multiply = (...numbers: (number | string)[]) => {
   const product = numbers.reduce((product, number) => {
     assertIsNumber(number)
     return product = product.mul(Big(number))
@@ -8,7 +8,7 @@ export const multiplyBigNumbers = (...numbers: (number | string)[]) => {
   return `${product}`
 }
 
-export const addBigNumbers = (...numbers: (number | string)[]) => {
+export const add = (...numbers: (number | string)[]) => {
   const sum = numbers.reduce((sum, number) => {
     assertIsNumber(number)
     return sum = sum.add(Big(number))
@@ -16,7 +16,7 @@ export const addBigNumbers = (...numbers: (number | string)[]) => {
   return `${sum}`
 }
 
-export const divideBigNumbers = (
+export const divide = (
   dividend: number | string,
   divisor: number | string,
 ) => {
@@ -25,7 +25,7 @@ export const divideBigNumbers = (
   return `${quotient}`
 }
 
-export const isGreaterOrEqual = (
+export const isGreaterEquals = (
   leftHandValue: number | string,
   rightHandValue: number | string,
 ) => {
