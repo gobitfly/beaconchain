@@ -1223,6 +1223,10 @@ func (d *dashboardData) processSyncCommitteeRewards(data *MultiEpochData, tar *[
 					}
 			*/
 			for j := startSlot; j < endSlot; j++ {
+				if _, ok := data.slotBasedData.blocks[j]; !ok {
+					// since sync committee votes can only be included in the block they were meant for, we should not penalize the voter if the block was missed
+					continue
+				}
 				for _, reward := range data.slotBasedData.rewards.syncCommitteeRewards[j].Data {
 					(*tar)[tI].SyncLocalizedMaxReward[tO+reward.ValidatorIndex] += maxRewards
 				}
