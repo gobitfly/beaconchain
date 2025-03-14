@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -20,6 +21,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/errgroup"
 )
+
+const NOTIFICATION_DISPATCH_TYPES = 4
 
 const NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET = "n_mails"
 const NOTIFICAION_PUSH_RATE_LIMIT_BUCKET = "n_push"
@@ -144,27 +147,54 @@ func garbageCollectOldPendingEvents() error {
 }
 
 func dispatchNotifications() error {
-	err := sendEmailNotifications()
-	if err != nil {
-		return fmt.Errorf("error sending email notifications, err: %w", err)
+	start := time.Now()
+	log.Infof("Notifications dispatching started")
+
+	// sending (email, push, webhook, discord) notifications
+	var wg sync.WaitGroup
+	errChan := make(chan error, NOTIFICATION_DISPATCH_TYPES)
+	wg.Add(NOTIFICATION_DISPATCH_TYPES)
+
+	// parallel execution using Goroutines
+	go func() {
+		defer wg.Done()
+		if err := sendEmailNotifications(); err != nil {
+			errChan <- fmt.Errorf("error sending email notifications: %w", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := sendPushNotifications(); err != nil {
+			errChan <- fmt.Errorf("error sending push notifications: %w", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := sendWebhookNotifications(); err != nil {
+			errChan <- fmt.Errorf("error sending webhook notifications: %w", err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if err := sendDiscordNotifications(); err != nil {
+			errChan <- fmt.Errorf("error sending discord notifications: %w", err)
+		}
+	}()
+
+	wg.Wait()
+	close(errChan)
+
+	var finalErr error
+	for err := range errChan {
+		log.Error(err, "notification dispatch error", 0)
+		finalErr = err
 	}
 
-	err = sendPushNotifications()
-	if err != nil {
-		return fmt.Errorf("error sending push notifications, err: %w", err)
-	}
-
-	err = sendWebhookNotifications()
-	if err != nil {
-		return fmt.Errorf("error sending webhook notifications, err: %w", err)
-	}
-
-	err = sendDiscordNotifications()
-	if err != nil {
-		return fmt.Errorf("error sending webhook discord notifications, err: %w", err)
-	}
-
-	return nil
+	log.Infof("Notifications dispatching finished in %v", time.Since(start))
+	return finalErr
 }
 
 func sendEmailNotifications() error {

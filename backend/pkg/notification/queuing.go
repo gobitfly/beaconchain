@@ -33,27 +33,32 @@ func queueNotifications(epoch uint64, notificationsByUserID types.NotificationsP
 
 	err = QueueEmailNotifications(epoch, notificationsByUserID, tx)
 	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_queuing_email").Inc()
 		return fmt.Errorf("error queuing email notifications: %w", err)
 	}
 
 	err = QueuePushNotification(epoch, notificationsByUserID, tx)
 	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_queuing_push").Inc()
 		return fmt.Errorf("error queuing push notifications: %w", err)
 	}
 
 	err = QueueWebhookNotifications(notificationsByUserID, tx)
 	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_queuing_webhook").Inc()
 		return fmt.Errorf("error queuing webhook notifications: %w", err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
+		metrics.Errors.WithLabelValues("notifications_queuing_tx_commit").Inc()
 		return fmt.Errorf("error committing transaction: %w", err)
 	}
 
 	err = ExportNotificationHistory(epoch, notificationsByUserID)
 	if err != nil {
-		log.Error(err, "error exporting notification historyw", 0)
+		log.Error(err, "error exporting notification history", 0)
+		metrics.Errors.WithLabelValues("notifications_export_history").Inc()
 	}
 
 	subByEpoch := map[uint64][]uint64{}
