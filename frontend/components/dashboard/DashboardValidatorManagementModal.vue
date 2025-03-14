@@ -578,13 +578,13 @@ const inputValidator = ref('')
                     <BcFormatAmount
                       :value="latestEffectiveBalance ?? '0'"
                       :maximum-fraction-digits="0"
-                      :target-currency="displayCurrencyDefault.main"
+                      target-currency="mainDisplayCurrency"
                     />
                     /
                     <BcFormatAmount
                       :value="effectiveBalanceLimitPerDashboard || '0'"
                       :maximum-fraction-digits="0"
-                      :target-currency="displayCurrencyDefault.main"
+                      target-currency="mainDisplayCurrency"
                     />
                   </span>
                 </div>
