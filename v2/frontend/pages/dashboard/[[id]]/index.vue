@@ -81,7 +81,6 @@ const {
   cookieDashboards,
   dashboards,
 } = storeToRefs(userDashboardStore)
-await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const seoTitle = computed(() => {
   return getDashboardLabel(dashboardKey.value, 'validator')
@@ -97,20 +96,24 @@ const {
   refreshOverview,
 } = validatorDashboardOverviewStore
 
-const currentEffectiveBalance = computed(() => {
-  const currentDashboard = dashboards.value?.validator_dashboards.find(
-    validatorDashboard => `${validatorDashboard.id}` === dashboardKey.value,
-  )
-  return currentDashboard?.effective_balance
-})
+const {
+  getProducts,
+  premiumProducts,
+} = useProductsStore()
+
+await useAsyncData('get_products', () => getProducts())
 
 const hasReachedLimit = computed(() => {
+  const latestEffectiveBalance = overview.value?.balances.effective_latest
+  const freeProduct = premiumProducts.value['Free']
+  const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
   const effectiveBalancePerDashboard = premium_perks.value?.effective_balance_per_dashboard
+    || effectiveBalanceLimitFreeProduct
 
-  if (!currentEffectiveBalance.value || !effectiveBalancePerDashboard) {
+  if (!latestEffectiveBalance || !effectiveBalancePerDashboard) {
     return false
   }
-  return isGreaterEquals(currentEffectiveBalance.value, effectiveBalancePerDashboard)
+  return isGreaterEquals(latestEffectiveBalance, effectiveBalancePerDashboard)
 })
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })

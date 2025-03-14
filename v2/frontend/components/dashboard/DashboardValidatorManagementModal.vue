@@ -270,44 +270,25 @@ const totalValidators = computed(() => {
 })
 
 const {
-  displayCurrencyDefault,
-  formatAmount,
-} = useCurrency()
-const userDashboardStore = useUserDashboardStore()
-const {
-  dashboards,
-} = storeToRefs(userDashboardStore)
+  premiumProducts,
+} = useProductsStore()
 
-const currentEffectiveBalance = computed(() => {
-  const currentDashboard = dashboards.value?.validator_dashboards.find(
-    validatorDashboard => `${validatorDashboard.id}` === dashboardKey.value,
-  )
-  return currentDashboard?.effective_balance
-})
-
-const EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH = '640'
-const effectiveBalanceLimitGuestDashboard = formatAmount(EFFECTIVE_BALANCE_LIMIT_GUEST_DASHBOARD_IN_ETH, {
-  hasCurrencyDisplay: false,
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-  sourceUnit: 'base',
-  targetCurrency: displayCurrencyDefault.main,
-  targetUnit: 'wei',
-  useGrouping: false,
+const latestEffectiveBalance = computed(() => {
+  return overview.value?.balances.effective_latest
 })
 
 const effectiveBalanceLimitPerDashboard = computed(() => {
-  if (isGuestDashboard.value || !premium_perks.value?.effective_balance_per_dashboard) {
-    return effectiveBalanceLimitGuestDashboard
-  }
-  return premium_perks.value?.effective_balance_per_dashboard
+  const freeProduct = premiumProducts.value['Free']
+  const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
+
+  return premium_perks.value?.effective_balance_per_dashboard ?? effectiveBalanceLimitFreeProduct
 })
 
 const hasReachedLimit = computed(() => {
-  if (!currentEffectiveBalance.value || !effectiveBalanceLimitPerDashboard.value) {
+  if (!latestEffectiveBalance.value || !effectiveBalanceLimitPerDashboard.value) {
     return false
   }
-  return isGreaterEquals(currentEffectiveBalance.value, effectiveBalanceLimitPerDashboard.value)
+  return isGreaterEquals(latestEffectiveBalance.value, effectiveBalanceLimitPerDashboard.value)
 })
 
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
@@ -595,15 +576,15 @@ const inputValidator = ref('')
                 >
                   <span>
                     <BcFormatAmount
-                      :value="currentEffectiveBalance ?? '0'"
+                      :value="latestEffectiveBalance ?? '0'"
                       :maximum-fraction-digits="0"
-                      :source-currency="displayCurrencyDefault.main"
+                      :target-currency="displayCurrencyDefault.main"
                     />
                     /
                     <BcFormatAmount
-                      :value="effectiveBalanceLimitPerDashboard"
+                      :value="effectiveBalanceLimitPerDashboard || '0'"
                       :maximum-fraction-digits="0"
-                      :source-currency="displayCurrencyDefault.main"
+                      :target-currency="displayCurrencyDefault.main"
                     />
                   </span>
                 </div>
