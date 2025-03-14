@@ -45,6 +45,15 @@ export function useProductsStore() {
     )
   })
 
+  const premiumProducts = computed(() => {
+    if (!data.value?.api_products) return {}
+
+    return Object.fromEntries(data.value.premium_products.map(product => [
+      product.product_name,
+      product,
+    ]))
+  })
+
   async function getProducts() {
     if (data.value) {
       return data.value
@@ -63,6 +72,7 @@ export function useProductsStore() {
     currentPremiumSubscription,
     getProducts,
     isPremiumSubscribedViaApp,
+    premiumProducts,
     products,
   }
 }
