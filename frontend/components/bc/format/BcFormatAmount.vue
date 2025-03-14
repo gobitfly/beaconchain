@@ -42,7 +42,7 @@ type FormatAmountOptions = (
    *
    * E.g.: we get mGno values but want to display them in GNO
    */
-  targetCurrency?: 'clDisplayCurrency' | 'elDisplayCurrency' | CurrencyCode,
+  targetCurrency?: 'clDisplayCurrency' | 'elDisplayCurrency' | 'mainDisplayCurrency' | CurrencyCode,
   targetUnitCrypto?: 'auto',
   zeroDisplay?: 'auto' | 'dash',
 }
@@ -110,6 +110,7 @@ const signDisplay = computed(() => {
 const targetCurrency = computed(() => {
   if (props.targetCurrency === 'elDisplayCurrency') return displayCurrencyDefault.executionLayer
   if (props.targetCurrency === 'clDisplayCurrency') return displayCurrencyDefault.consensusLayer
+  if (props.targetCurrency === 'mainDisplayCurrency') return displayCurrencyDefault.main
   if (!props.targetCurrency) return selectedCurrencyMain.value
   return props.targetCurrency
 })
