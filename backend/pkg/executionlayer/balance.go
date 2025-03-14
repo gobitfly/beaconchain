@@ -37,10 +37,12 @@ func (u BalanceUpdater) UpdateBalances(batchSize int64) ([]db2.Balance, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve metadata updates from bigtable: %w", err)
 	}
+
 	values, err := evm.BalanceForPairs(u.batcher, pairs)
 	if err != nil {
 		return nil, fmt.Errorf("cannot retrieve balances from node: %w", err)
 	}
+
 	var balances []db2.Balance
 	for i, value := range values {
 		balances = append(balances, db2.Balance{

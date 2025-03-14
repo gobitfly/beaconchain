@@ -73,7 +73,6 @@ func (r *ReorgWatcher) LookForReorg() error {
 		}
 
 		if bytes.Equal(nodeBlock.Hash().Bytes(), dbBlock.Hash) {
-			log.Infof("height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)
 			continue
 		}
 		log.Warnf("found incosistency at height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)

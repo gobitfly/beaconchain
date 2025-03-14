@@ -23,24 +23,48 @@ type Store interface {
 	SaveBlock(chainID string, block *types.Eth1Block) error
 }
 
+type IndexerConfig struct {
+	Concurrency uint64
+	TraceMode   string
+}
+
+var defaultIndexerConfig = IndexerConfig{
+	Concurrency: 30,
+	TraceMode:   "geth",
+}
+
+func (config *IndexerConfig) validate() {
+	if config.Concurrency == 0 {
+		config.Concurrency = defaultIndexerConfig.Concurrency
+	}
+	if config.TraceMode == "" {
+		config.TraceMode = defaultIndexerConfig.TraceMode
+	}
+}
+
 type Indexer struct {
 	store          Store
 	lastBlockStore db2.LastBlocksStore
 	transformers   []TransformFunc
+	client         Client
+	config         IndexerConfig
 }
 
-func NewIndexer(store Store, lastBlockStore db2.LastBlocksStore, transformers ...TransformFunc) *Indexer {
+func NewIndexer(store Store, lastBlockStore db2.LastBlocksStore, config IndexerConfig, client Client, transformers ...TransformFunc) *Indexer {
+	config.validate()
 	return &Indexer{
 		store:          store,
 		lastBlockStore: lastBlockStore,
 		transformers:   transformers,
+		client:         client,
+		config:         config,
 	}
 }
 
 // IndexNode retrieve types.Eth1Block from the client and save them into the store
-func (indexer *Indexer) IndexNode(chainID string, client Client, start, end uint64, concurrency uint64, traceMode string) error {
+func (indexer *Indexer) IndexNode(chainID string, start, end uint64) error {
 	g, gCtx := errgroup.WithContext(context.Background())
-	g.SetLimit(int(concurrency))
+	g.SetLimit(int(indexer.config.Concurrency))
 
 	startTs := time.Now()
 	lastTickTs := time.Now()
@@ -55,7 +79,7 @@ func (indexer *Indexer) IndexNode(chainID string, client Client, start, end uint
 			}
 
 			blockStartTs := time.Now()
-			block, timings, err := client.GetBlock(i, traceMode)
+			block, timings, err := indexer.client.GetBlock(i, indexer.config.TraceMode)
 			if err != nil {
 				return fmt.Errorf("error getting block: %v from ethereum node err: %w", i, err)
 			}
@@ -88,14 +112,13 @@ func (indexer *Indexer) IndexNode(chainID string, client Client, start, end uint
 }
 
 // IndexEvents retrieve read the types.Eth1Block from the store and apply the transformers to them
-func (indexer *Indexer) IndexEvents(chainID string, start, end uint64, concurrency uint64) error {
+func (indexer *Indexer) IndexEvents(chainID string, start, end uint64) error {
 	retrieval := new(errgroup.Group)
-	retrieval.SetLimit(int(concurrency))
+	retrieval.SetLimit(int(indexer.config.Concurrency))
 
 	indexing := new(errgroup.Group)
-	indexing.SetLimit(int(concurrency * concurrency))
+	indexing.SetLimit(int(indexer.config.Concurrency * indexer.config.Concurrency))
 
-	log.Infof("indexing blocks from %d to %d", start, end)
 	batchSize := uint64(1000)
 	for i := start; i <= end; i += batchSize {
 		firstBlock := i
@@ -105,13 +128,13 @@ func (indexer *Indexer) IndexEvents(chainID string, start, end uint64, concurren
 		}
 
 		retrieval.Go(func() error {
-			log.Infof("querying blocks from %v to %v", firstBlock, lastBlock)
 			high := lastBlock
 			low := firstBlock
 
-			blocks, err := indexer.store.GetBlocksRange(chainID, high, low)
+			blocks, err := indexer.store.GetBlocksRange(chainID, low, high)
 			if err != nil {
 				log.Error(err, "error getting blocks descending", 0, map[string]interface{}{"high": high, "low": low})
+				return err
 			}
 
 			for _, block := range blocks {
@@ -131,7 +154,6 @@ func (indexer *Indexer) IndexEvents(chainID string, start, end uint64, concurren
 		log.Error(err, "indexing wait group error", 0)
 		return err
 	}
-	log.Infof("data table indexing completed")
 
 	lastBlockInCache, err := indexer.lastBlockStore.GetInDataTable(chainID)
 	if err != nil {
@@ -147,12 +169,12 @@ func (indexer *Indexer) IndexEvents(chainID string, start, end uint64, concurren
 }
 
 // Index retrieve the types.Eth1Block from the client and apply the transformers to them
-func (indexer *Indexer) Index(chainID string, client Client, start, end uint64, concurrency uint64, traceMode string) error {
-	if err := indexer.IndexNode(chainID, client, start, end, concurrency, traceMode); err != nil {
-		return err
+func (indexer *Indexer) Index(chainID string, start, end uint64) error {
+	if err := indexer.IndexNode(chainID, start, end); err != nil {
+		return fmt.Errorf("blocks from node: %w", err)
 	}
-	if err := indexer.IndexEvents(chainID, start, end, concurrency); err != nil {
-		return err
+	if err := indexer.IndexEvents(chainID, start, end); err != nil {
+		return fmt.Errorf("events: %w", err)
 	}
 	return nil
 }

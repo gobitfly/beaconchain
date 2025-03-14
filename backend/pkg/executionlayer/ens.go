@@ -13,7 +13,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 )
 
@@ -41,62 +40,77 @@ type ENSImporter struct {
 	ens     ENS
 }
 
-func NewENSImporter(updates ENSUpdateStore, store ENSStore, ens ENS) ENSImporter {
-	return ENSImporter{
+func NewENSImporter(updates ENSUpdateStore, store ENSStore, ens ENS) *ENSImporter {
+	return &ENSImporter{
 		updates: updates,
 		store:   store,
 		ens:     ens,
 	}
 }
 
-func (importer ENSImporter) Import(chainID string, readBatchSize int64) error {
+type EnsImportResult struct {
+	updated []string
+	deleted []string
+}
+
+func (importer ENSImporter) Import(chainID string, readBatchSize int64) (*EnsImportResult, error) {
 	updates, err := importer.updates.GetENSUpdate(chainID, readBatchSize)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	batchSize := 100
 	total := len(updates)
 	checked := newENSChecked()
+
+	var all EnsImportResult
+	var mu sync.Mutex
 	for i := 0; i < total; i += batchSize {
 		to := i + batchSize
 		if to > total {
 			to = total
 		}
 		batch := updates[i:to]
-		log.Infof("Batching ENS entries %v:%v of %v", i, to, total)
 
 		g := new(errgroup.Group)
 		g.SetLimit(10) // limit load on the node
 
 		for _, ensLog := range batch {
 			g.Go(func() error {
-				return importer.importENS(ensLog, checked)
+				res, err := importer.importENS(ensLog, checked)
+				if err != nil {
+					return err
+				}
+				mu.Lock()
+				all.updated = append(all.updated, res.updated...)
+				all.deleted = append(all.deleted, res.deleted...)
+				mu.Unlock()
+				return nil
 			})
 		}
 
 		if err := g.Wait(); err != nil {
-			return err
+			return nil, err
 		}
 
 		// after processing a batch of keys we remove them from the update store
 		if err := importer.updates.DeleteENSUpdate(chainID, batch); err != nil {
-			return err
+			return nil, err
 		}
 
 		// give node some time for other stuff between batches
 		time.Sleep(time.Millisecond * 100)
 	}
 
-	return nil
+	return &all, nil
 }
 
-func (importer ENSImporter) importENS(ensLog db2.ENSLog, checked *ensChecked) error {
+func (importer ENSImporter) importENS(ensLog db2.ENSLog, checked *ensChecked) (*EnsImportResult, error) {
 	var names []string
 	if ensLog.Node != nil {
 		name, err := importer.store.GetENSNameFromHash(*ensLog.Node)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		names = append(names, name)
 	}
@@ -104,7 +118,7 @@ func (importer ENSImporter) importENS(ensLog db2.ENSLog, checked *ensChecked) er
 	if ensLog.Owner != nil {
 		addressNames, err := importer.getEnsNamesForAddress(*ensLog.Owner, checked)
 		if err != nil {
-			return fmt.Errorf("error getting names for new address [%v]: %w", *ensLog.Owner, err)
+			return nil, fmt.Errorf("error getting names for new address [%v]: %w", *ensLog.Owner, err)
 		}
 		names = append(names, addressNames...)
 	}
@@ -112,18 +126,22 @@ func (importer ENSImporter) importENS(ensLog db2.ENSLog, checked *ensChecked) er
 	if ensLog.Name != nil {
 		names = append(names, *ensLog.Name)
 	}
+	var res EnsImportResult
 	for _, name := range names {
 		deleteName, err := importer.validateEnsName(name, checked)
 		if err != nil {
-			return fmt.Errorf("error validating new name [%v]: %w", name, err)
+			return nil, fmt.Errorf("error validating new name [%v]: %w", name, err)
 		}
 		if deleteName {
+			res.deleted = append(res.deleted, name)
 			if err := importer.store.DeleteENS(name); err != nil {
-				return fmt.Errorf("error removing ens name [%v]: %w", name, err)
+				return nil, fmt.Errorf("error removing ens name [%v]: %w", name, err)
 			}
+			continue
 		}
+		res.updated = append(res.updated, name)
 	}
-	return nil
+	return &res, nil
 }
 
 func (importer ENSImporter) validateEnsName(name string, alreadyChecked *ensChecked) (bool, error) {

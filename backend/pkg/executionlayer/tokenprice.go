@@ -26,16 +26,14 @@ type TokenStore interface {
 
 type TokenPricer struct {
 	store    TokenStore
-	tokens   erc20.ERC20TokenList
 	external ExternalPricer
 	batcher  evm.Batcher
 	chainID  string
 }
 
-func NewTokenPricer(store TokenStore, chainID string, external ExternalPricer, tokens erc20.ERC20TokenList, batcher evm.Batcher) *TokenPricer {
+func NewTokenPricer(store TokenStore, chainID string, external ExternalPricer, batcher evm.Batcher) *TokenPricer {
 	return &TokenPricer{
 		store:    store,
-		tokens:   tokens,
 		external: external,
 		batcher:  batcher,
 		chainID:  chainID,
@@ -43,9 +41,9 @@ func NewTokenPricer(store TokenStore, chainID string, external ExternalPricer, t
 }
 
 // UpdateTokens retrieve the prices from an external source and the total supply from the chain
-func (t *TokenPricer) UpdateTokens() error {
+func (t *TokenPricer) UpdateTokens(list erc20.ERC20TokenList) error {
 	var tokens []common.Address
-	for _, token := range t.tokens.Tokens {
+	for _, token := range list.Tokens {
 		tokens = append(tokens, common.HexToAddress(token.Address))
 	}
 	prices, err := t.external.GetPrices(tokens)
