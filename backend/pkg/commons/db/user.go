@@ -230,11 +230,7 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 }
 
 func premiumLimitNetworkfactor() int64 {
-	networkFactor := int64(1)
-	if utils.Config.Chain.Id == 100 { // gnosis
-		networkFactor = 5
-	}
-	return networkFactor
+	return 1
 }
 
 func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
