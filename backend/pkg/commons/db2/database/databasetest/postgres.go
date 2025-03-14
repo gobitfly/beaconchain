@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -16,9 +17,10 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
+var oncePostgres sync.Once
+
 func NewPostgres(t *testing.T) *sqlx.DB {
 	t.Helper()
-
 	ctx := context.Background()
 
 	var err error
@@ -56,21 +58,22 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 		t.Fatal(err)
 	}
 
-	_, path, _, _ := runtime.Caller(0)
-	// for now migration path is not configurable
-	migrationPath := strings.ReplaceAll(filepath.Dir(path), "db2/database/databasetest", "db/migrations/postgres")
-	if err := runMigrations(db, migrationPath); err != nil {
-		if !strings.Contains(err.Error(), "no next version found") {
-			t.Fatal(err)
+	// only run migration once
+	oncePostgres.Do(func() {
+		_, path, _, _ := runtime.Caller(0)
+		// for now migration path is not configurable
+		migrationPath := strings.ReplaceAll(filepath.Dir(path), "db2/database/databasetest", "db/migrations/postgres")
+		if err := runMigrations(db, migrationPath); err != nil {
+			if !strings.Contains(err.Error(), "no next version found") {
+				t.Fatal(err)
+			}
 		}
-	}
-
+	})
 	t.Cleanup(func() {
 		if err := truncate(db); err != nil {
 			t.Fatal(err)
 		}
 	})
-
 	return db
 }
 
