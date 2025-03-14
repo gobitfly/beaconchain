@@ -106,7 +106,6 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
         validator_dashboards: [
           ...(dashboards.value?.validator_dashboards || []),
           {
-            effective_balance: '0',
             group_count: 1,
             id: res.data.id,
             is_archived: false,

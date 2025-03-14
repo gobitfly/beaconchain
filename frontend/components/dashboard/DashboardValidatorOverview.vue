@@ -133,7 +133,7 @@ const aprInfos = [
               {{ $t('dashboard.validator.overview.validators_balance.balance_effective') }}:
             </span>
             <BcFormatAmount
-              :value="overview?.balances.effective ?? '0'"
+              :value="overview?.balances.effective_current ?? '0'"
             />
           </section>
           <section>
