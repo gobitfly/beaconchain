@@ -7,20 +7,19 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type SlotExporterCacheRepository interface {
-	SetLatestEpoch(epoch uint64) error
-	SetLatestFinalizedEpoch(epoch uint64) error
-	SetLatestSlot(slot uint64) error
-	SetLatestProposedSlot(slot uint64) error
-	SetEpochAssignments(epoch uint64, value []byte, expiration time.Duration) error
-	SetValidatorMapping(value []byte, expiration time.Duration) error
-	GetLatestEpoch() (uint64, error)
-	GetLatestFinalizedEpoch() (uint64, error)
-	GetLatestSlot() (uint64, error)
-	GetLatestProposedSlot() (uint64, error)
+	SetLatestEpoch(chainID, epoch uint64) error
+	SetLatestFinalizedEpoch(chainID, epoch uint64) error
+	SetLatestSlot(chainID, slot uint64) error
+	SetLatestProposedSlot(chainID, slot uint64) error
+	SetEpochAssignments(chainID, epoch uint64, value []byte, expiration time.Duration) error
+	SetValidatorMapping(chainID uint64, value []byte, expiration time.Duration) error
+	GetLatestEpoch(chainID uint64) (uint64, error)
+	GetLatestFinalizedEpoch(chainID uint64) (uint64, error)
+	GetLatestSlot(chainID uint64) (uint64, error)
+	GetLatestProposedSlot(chainID uint64) (uint64, error)
 }
 
 type SlotExporterCache struct {
@@ -49,52 +48,52 @@ func (c *SlotExporterCache) getValue(key string) (uint64, error) {
 	return new(big.Int).SetBytes(res).Uint64(), nil
 }
 
-func (c *SlotExporterCache) SetLatestEpoch(epoch uint64) error {
-	key := fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) SetLatestEpoch(chainID, epoch uint64) error {
+	key := fmt.Sprintf("%d:frontend:latestEpoch", chainID)
 	return c.setValue(key, new(big.Int).SetUint64(epoch).Bytes(), 0)
 }
 
-func (c *SlotExporterCache) SetLatestFinalizedEpoch(epoch uint64) error {
-	key := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) SetLatestFinalizedEpoch(chainID, epoch uint64) error {
+	key := fmt.Sprintf("%d:frontend:latestFinalized", chainID)
 	return c.setValue(key, new(big.Int).SetUint64(epoch).Bytes(), 0)
 }
 
-func (c *SlotExporterCache) SetLatestSlot(slot uint64) error {
-	key := fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) SetLatestSlot(chainID, slot uint64) error {
+	key := fmt.Sprintf("%d:frontend:slot", chainID)
 	return c.setValue(key, new(big.Int).SetUint64(slot).Bytes(), 0)
 }
 
-func (c *SlotExporterCache) SetLatestProposedSlot(slot uint64) error {
-	key := fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) SetLatestProposedSlot(chainID, slot uint64) error {
+	key := fmt.Sprintf("%d:frontend:latestProposedSlot", chainID)
 	return c.setValue(key, new(big.Int).SetUint64(slot).Bytes(), 0)
 }
 
-func (c *SlotExporterCache) SetEpochAssignments(epoch uint64, value []byte, expiration time.Duration) error {
-	key := fmt.Sprintf("%d:ea:%d", utils.Config.Chain.ClConfig.DepositChainID, epoch)
+func (c *SlotExporterCache) SetEpochAssignments(chainID, epoch uint64, value []byte, expiration time.Duration) error {
+	key := fmt.Sprintf("%d:ea:%d", chainID, epoch)
 	return c.setValue(key, value, expiration)
 }
 
-func (c *SlotExporterCache) SetValidatorMapping(value []byte, expiration time.Duration) error {
-	key := fmt.Sprintf("%d:vm", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) SetValidatorMapping(chainID uint64, value []byte, expiration time.Duration) error {
+	key := fmt.Sprintf("%d:vm", chainID)
 	return c.setValue(key, value, expiration)
 }
 
-func (c *SlotExporterCache) GetLatestEpoch() (uint64, error) {
-	key := fmt.Sprintf("%d:frontend:latestEpoch", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) GetLatestEpoch(chainID uint64) (uint64, error) {
+	key := fmt.Sprintf("%d:frontend:latestEpoch", chainID)
 	return c.getValue(key)
 }
 
-func (c *SlotExporterCache) GetLatestFinalizedEpoch() (uint64, error) {
-	key := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) GetLatestFinalizedEpoch(chainID uint64) (uint64, error) {
+	key := fmt.Sprintf("%d:frontend:latestFinalized", chainID)
 	return c.getValue(key)
 }
 
-func (c *SlotExporterCache) GetLatestSlot() (uint64, error) {
-	key := fmt.Sprintf("%d:frontend:slot", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) GetLatestSlot(chainID uint64) (uint64, error) {
+	key := fmt.Sprintf("%d:frontend:slot", chainID)
 	return c.getValue(key)
 }
 
-func (c *SlotExporterCache) GetLatestProposedSlot() (uint64, error) {
-	key := fmt.Sprintf("%d:frontend:latestProposedSlot", utils.Config.Chain.ClConfig.DepositChainID)
+func (c *SlotExporterCache) GetLatestProposedSlot(chainID uint64) (uint64, error) {
+	key := fmt.Sprintf("%d:frontend:latestProposedSlot", chainID)
 	return c.getValue(key)
 }

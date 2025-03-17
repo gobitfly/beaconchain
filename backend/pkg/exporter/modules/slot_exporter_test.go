@@ -108,12 +108,12 @@ func TestSlotExporter(t *testing.T) {
 		mockClient.On("GetBlockBySlot", mockDBSlots[0]+1).Return(mockBlock, nil)
 
 		// mock Cache calls
-		mockCache.On("GetLatestEpoch").Return(uint64(0), nil)
-		mockCache.On("GetLatestSlot").Return(uint64(0), nil)
-		mockCache.On("GetLatestFinalizedEpoch").Return(uint64(0), nil)
-		mockCache.On("GetLatestProposedSlot").Return(uint64(0), nil)
-		mockCache.On("SetLatestSlot", mockChainHead.HeadSlot).Return(nil)
-		mockCache.On("SetLatestProposedSlot", mockBlock.Slot).Return(nil)
+		mockCache.On("GetLatestEpoch", uint64(1)).Return(uint64(0), nil)
+		mockCache.On("GetLatestSlot", uint64(1)).Return(uint64(0), nil)
+		mockCache.On("GetLatestFinalizedEpoch", uint64(1)).Return(uint64(0), nil)
+		mockCache.On("GetLatestProposedSlot", uint64(1)).Return(uint64(0), nil)
+		mockCache.On("SetLatestSlot", uint64(1), mockChainHead.HeadSlot).Return(nil)
+		mockCache.On("SetLatestProposedSlot", uint64(1), mockBlock.Slot).Return(nil)
 
 		exporter := &slotExporter{
 			Client:   mockClient,
@@ -300,18 +300,18 @@ func TestSlotExporter(t *testing.T) {
 		mockClient.On("GetValidatorParticipation", utils.EpochOfSlot(mockNonFinalSlots[0].Slot)-1).Return(mockParticipationStats, nil)
 
 		// mock Cache calls
-		mockCache.On("GetLatestEpoch").Return(utils.EpochOfSlot(mockChainHead.HeadSlot)-1, nil)
-		mockCache.On("GetLatestSlot").Return(mockChainHead.HeadSlot-1, nil)
-		mockCache.On("GetLatestFinalizedEpoch").Return(mockParticipationStats.Epoch-1, nil)
-		mockCache.On("GetLatestProposedSlot").Return(mockBlock.Slot-1, nil)
-		mockCache.On("SetLatestEpoch", utils.EpochOfSlot(mockChainHead.HeadSlot)).Return(nil)
-		mockCache.On("SetLatestSlot", mockChainHead.HeadSlot).Return(nil)
-		mockCache.On("SetLatestProposedSlot", mockBlock.Slot).Return(nil)
+		mockCache.On("GetLatestEpoch", uint64(1)).Return(utils.EpochOfSlot(mockChainHead.HeadSlot)-1, nil)
+		mockCache.On("GetLatestSlot", uint64(1)).Return(mockChainHead.HeadSlot-1, nil)
+		mockCache.On("GetLatestFinalizedEpoch", uint64(1)).Return(mockParticipationStats.Epoch-1, nil)
+		mockCache.On("GetLatestProposedSlot", uint64(1)).Return(mockBlock.Slot-1, nil)
+		mockCache.On("SetLatestEpoch", uint64(1), utils.EpochOfSlot(mockChainHead.HeadSlot)).Return(nil)
+		mockCache.On("SetLatestSlot", uint64(1), mockChainHead.HeadSlot).Return(nil)
+		mockCache.On("SetLatestProposedSlot", uint64(1), mockBlock.Slot).Return(nil)
 		valMapping, err := compressValidatorMapping(mockCachedValidator)
 		if err != nil {
 			t.Errorf("error compressing validator mapping: %v", err)
 		}
-		mockCache.On("SetValidatorMapping", valMapping, time.Duration(0)).Return(nil)
+		mockCache.On("SetValidatorMapping", uint64(1), valMapping, time.Duration(0)).Return(nil)
 
 		exporter := &slotExporter{
 			Client:   mockClient,
@@ -424,13 +424,13 @@ func TestSlotExporter(t *testing.T) {
 		mockClient.On("GetValidatorParticipation", utils.EpochOfSlot(mockBlock.Slot)-1).Return(mockParticipationStats, nil)
 
 		// mock Cache calls
-		mockCache.On("GetLatestEpoch").Return(utils.EpochOfSlot(mockChainHead.HeadSlot)-1, nil)
-		mockCache.On("GetLatestSlot").Return(mockChainHead.HeadSlot-1, nil)
-		mockCache.On("GetLatestFinalizedEpoch").Return(mockParticipationStats.Epoch-1, nil)
-		mockCache.On("GetLatestProposedSlot").Return(mockBlock.Slot-1, nil)
-		mockCache.On("SetLatestEpoch", utils.EpochOfSlot(mockChainHead.HeadSlot)).Return(nil)
-		mockCache.On("SetLatestSlot", mockChainHead.HeadSlot).Return(nil)
-		mockCache.On("SetLatestProposedSlot", mockBlock.Slot).Return(nil)
+		mockCache.On("GetLatestEpoch", uint64(1)).Return(utils.EpochOfSlot(mockChainHead.HeadSlot)-1, nil)
+		mockCache.On("GetLatestSlot", uint64(1)).Return(mockChainHead.HeadSlot-1, nil)
+		mockCache.On("GetLatestFinalizedEpoch", uint64(1)).Return(mockParticipationStats.Epoch-1, nil)
+		mockCache.On("GetLatestProposedSlot", uint64(1)).Return(mockBlock.Slot-1, nil)
+		mockCache.On("SetLatestEpoch", uint64(1), utils.EpochOfSlot(mockChainHead.HeadSlot)).Return(nil)
+		mockCache.On("SetLatestSlot", uint64(1), mockChainHead.HeadSlot).Return(nil)
+		mockCache.On("SetLatestProposedSlot", uint64(1), mockBlock.Slot).Return(nil)
 
 		exporter := &slotExporter{
 			Client:   mockClient,

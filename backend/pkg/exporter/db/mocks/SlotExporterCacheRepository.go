@@ -13,9 +13,9 @@ type SlotExporterCacheRepository struct {
 	mock.Mock
 }
 
-// GetLatestEpoch provides a mock function with no fields
-func (_m *SlotExporterCacheRepository) GetLatestEpoch() (uint64, error) {
-	ret := _m.Called()
+// GetLatestEpoch provides a mock function with given fields: chainID
+func (_m *SlotExporterCacheRepository) GetLatestEpoch(chainID uint64) (uint64, error) {
+	ret := _m.Called(chainID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLatestEpoch")
@@ -23,17 +23,17 @@ func (_m *SlotExporterCacheRepository) GetLatestEpoch() (uint64, error) {
 
 	var r0 uint64
 	var r1 error
-	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(uint64) (uint64, error)); ok {
+		return rf(chainID)
 	}
-	if rf, ok := ret.Get(0).(func() uint64); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(uint64) uint64); ok {
+		r0 = rf(chainID)
 	} else {
 		r0 = ret.Get(0).(uint64)
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(chainID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -41,9 +41,9 @@ func (_m *SlotExporterCacheRepository) GetLatestEpoch() (uint64, error) {
 	return r0, r1
 }
 
-// GetLatestFinalizedEpoch provides a mock function with no fields
-func (_m *SlotExporterCacheRepository) GetLatestFinalizedEpoch() (uint64, error) {
-	ret := _m.Called()
+// GetLatestFinalizedEpoch provides a mock function with given fields: chainID
+func (_m *SlotExporterCacheRepository) GetLatestFinalizedEpoch(chainID uint64) (uint64, error) {
+	ret := _m.Called(chainID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLatestFinalizedEpoch")
@@ -51,17 +51,17 @@ func (_m *SlotExporterCacheRepository) GetLatestFinalizedEpoch() (uint64, error)
 
 	var r0 uint64
 	var r1 error
-	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(uint64) (uint64, error)); ok {
+		return rf(chainID)
 	}
-	if rf, ok := ret.Get(0).(func() uint64); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(uint64) uint64); ok {
+		r0 = rf(chainID)
 	} else {
 		r0 = ret.Get(0).(uint64)
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(chainID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -69,9 +69,9 @@ func (_m *SlotExporterCacheRepository) GetLatestFinalizedEpoch() (uint64, error)
 	return r0, r1
 }
 
-// GetLatestProposedSlot provides a mock function with no fields
-func (_m *SlotExporterCacheRepository) GetLatestProposedSlot() (uint64, error) {
-	ret := _m.Called()
+// GetLatestProposedSlot provides a mock function with given fields: chainID
+func (_m *SlotExporterCacheRepository) GetLatestProposedSlot(chainID uint64) (uint64, error) {
+	ret := _m.Called(chainID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLatestProposedSlot")
@@ -79,17 +79,17 @@ func (_m *SlotExporterCacheRepository) GetLatestProposedSlot() (uint64, error) {
 
 	var r0 uint64
 	var r1 error
-	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(uint64) (uint64, error)); ok {
+		return rf(chainID)
 	}
-	if rf, ok := ret.Get(0).(func() uint64); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(uint64) uint64); ok {
+		r0 = rf(chainID)
 	} else {
 		r0 = ret.Get(0).(uint64)
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(chainID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -97,9 +97,9 @@ func (_m *SlotExporterCacheRepository) GetLatestProposedSlot() (uint64, error) {
 	return r0, r1
 }
 
-// GetLatestSlot provides a mock function with no fields
-func (_m *SlotExporterCacheRepository) GetLatestSlot() (uint64, error) {
-	ret := _m.Called()
+// GetLatestSlot provides a mock function with given fields: chainID
+func (_m *SlotExporterCacheRepository) GetLatestSlot(chainID uint64) (uint64, error) {
+	ret := _m.Called(chainID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetLatestSlot")
@@ -107,17 +107,17 @@ func (_m *SlotExporterCacheRepository) GetLatestSlot() (uint64, error) {
 
 	var r0 uint64
 	var r1 error
-	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
-		return rf()
+	if rf, ok := ret.Get(0).(func(uint64) (uint64, error)); ok {
+		return rf(chainID)
 	}
-	if rf, ok := ret.Get(0).(func() uint64); ok {
-		r0 = rf()
+	if rf, ok := ret.Get(0).(func(uint64) uint64); ok {
+		r0 = rf(chainID)
 	} else {
 		r0 = ret.Get(0).(uint64)
 	}
 
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(chainID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -125,17 +125,17 @@ func (_m *SlotExporterCacheRepository) GetLatestSlot() (uint64, error) {
 	return r0, r1
 }
 
-// SetEpochAssignments provides a mock function with given fields: epoch, value, expiration
-func (_m *SlotExporterCacheRepository) SetEpochAssignments(epoch uint64, value []byte, expiration time.Duration) error {
-	ret := _m.Called(epoch, value, expiration)
+// SetEpochAssignments provides a mock function with given fields: chainID, epoch, value, expiration
+func (_m *SlotExporterCacheRepository) SetEpochAssignments(chainID uint64, epoch uint64, value []byte, expiration time.Duration) error {
+	ret := _m.Called(chainID, epoch, value, expiration)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetEpochAssignments")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uint64, []byte, time.Duration) error); ok {
-		r0 = rf(epoch, value, expiration)
+	if rf, ok := ret.Get(0).(func(uint64, uint64, []byte, time.Duration) error); ok {
+		r0 = rf(chainID, epoch, value, expiration)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -143,17 +143,17 @@ func (_m *SlotExporterCacheRepository) SetEpochAssignments(epoch uint64, value [
 	return r0
 }
 
-// SetLatestEpoch provides a mock function with given fields: epoch
-func (_m *SlotExporterCacheRepository) SetLatestEpoch(epoch uint64) error {
-	ret := _m.Called(epoch)
+// SetLatestEpoch provides a mock function with given fields: chainID, epoch
+func (_m *SlotExporterCacheRepository) SetLatestEpoch(chainID uint64, epoch uint64) error {
+	ret := _m.Called(chainID, epoch)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetLatestEpoch")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uint64) error); ok {
-		r0 = rf(epoch)
+	if rf, ok := ret.Get(0).(func(uint64, uint64) error); ok {
+		r0 = rf(chainID, epoch)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -161,17 +161,17 @@ func (_m *SlotExporterCacheRepository) SetLatestEpoch(epoch uint64) error {
 	return r0
 }
 
-// SetLatestFinalizedEpoch provides a mock function with given fields: epoch
-func (_m *SlotExporterCacheRepository) SetLatestFinalizedEpoch(epoch uint64) error {
-	ret := _m.Called(epoch)
+// SetLatestFinalizedEpoch provides a mock function with given fields: chainID, epoch
+func (_m *SlotExporterCacheRepository) SetLatestFinalizedEpoch(chainID uint64, epoch uint64) error {
+	ret := _m.Called(chainID, epoch)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetLatestFinalizedEpoch")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uint64) error); ok {
-		r0 = rf(epoch)
+	if rf, ok := ret.Get(0).(func(uint64, uint64) error); ok {
+		r0 = rf(chainID, epoch)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -179,17 +179,17 @@ func (_m *SlotExporterCacheRepository) SetLatestFinalizedEpoch(epoch uint64) err
 	return r0
 }
 
-// SetLatestProposedSlot provides a mock function with given fields: slot
-func (_m *SlotExporterCacheRepository) SetLatestProposedSlot(slot uint64) error {
-	ret := _m.Called(slot)
+// SetLatestProposedSlot provides a mock function with given fields: chainID, slot
+func (_m *SlotExporterCacheRepository) SetLatestProposedSlot(chainID uint64, slot uint64) error {
+	ret := _m.Called(chainID, slot)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetLatestProposedSlot")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uint64) error); ok {
-		r0 = rf(slot)
+	if rf, ok := ret.Get(0).(func(uint64, uint64) error); ok {
+		r0 = rf(chainID, slot)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -197,17 +197,17 @@ func (_m *SlotExporterCacheRepository) SetLatestProposedSlot(slot uint64) error 
 	return r0
 }
 
-// SetLatestSlot provides a mock function with given fields: slot
-func (_m *SlotExporterCacheRepository) SetLatestSlot(slot uint64) error {
-	ret := _m.Called(slot)
+// SetLatestSlot provides a mock function with given fields: chainID, slot
+func (_m *SlotExporterCacheRepository) SetLatestSlot(chainID uint64, slot uint64) error {
+	ret := _m.Called(chainID, slot)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetLatestSlot")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(uint64) error); ok {
-		r0 = rf(slot)
+	if rf, ok := ret.Get(0).(func(uint64, uint64) error); ok {
+		r0 = rf(chainID, slot)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -215,17 +215,17 @@ func (_m *SlotExporterCacheRepository) SetLatestSlot(slot uint64) error {
 	return r0
 }
 
-// SetValidatorMapping provides a mock function with given fields: value, expiration
-func (_m *SlotExporterCacheRepository) SetValidatorMapping(value []byte, expiration time.Duration) error {
-	ret := _m.Called(value, expiration)
+// SetValidatorMapping provides a mock function with given fields: chainID, value, expiration
+func (_m *SlotExporterCacheRepository) SetValidatorMapping(chainID uint64, value []byte, expiration time.Duration) error {
+	ret := _m.Called(chainID, value, expiration)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetValidatorMapping")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func([]byte, time.Duration) error); ok {
-		r0 = rf(value, expiration)
+	if rf, ok := ret.Get(0).(func(uint64, []byte, time.Duration) error); ok {
+		r0 = rf(chainID, value, expiration)
 	} else {
 		r0 = ret.Error(0)
 	}

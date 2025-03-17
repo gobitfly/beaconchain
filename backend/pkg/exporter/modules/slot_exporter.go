@@ -78,46 +78,48 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	// cache handling
 	defer func() {
 		if err == nil {
-			latestEpoch, err := s.cache.GetLatestEpoch()
+			chainID := utils.Config.Chain.ClConfig.DepositChainID
+
+			latestEpoch, err := s.cache.GetLatestEpoch(chainID)
 			if err != nil {
 				log.Error(err, "error retrieving latestEpoch from cache", 0)
 			}
 
 			if s.latestEpoch > 0 && latestEpoch < s.latestEpoch {
-				err := s.cache.SetLatestEpoch(s.latestEpoch)
+				err := s.cache.SetLatestEpoch(chainID, s.latestEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestEpoch in cache", 0)
 				}
 			}
 
-			latestSlot, err := s.cache.GetLatestSlot()
+			latestSlot, err := s.cache.GetLatestSlot(chainID)
 			if err != nil {
 				log.Error(err, "error retrieving latestSlot from cache", 0)
 			}
 			if s.latestSlot > 0 && latestSlot < s.latestSlot {
-				err := s.cache.SetLatestSlot(s.latestSlot)
+				err := s.cache.SetLatestSlot(chainID, s.latestSlot)
 				if err != nil {
 					log.Error(err, "error setting latestSlot in cache", 0)
 				}
 			}
 
-			latestFinalizedEpoch, err := s.cache.GetLatestFinalizedEpoch()
+			latestFinalizedEpoch, err := s.cache.GetLatestFinalizedEpoch(chainID)
 			if err != nil {
 				log.Error(err, "error retrieving latestFinalizedEpoch from cache", 0)
 			}
 			if s.finalizedEpoch > 0 && latestFinalizedEpoch < s.finalizedEpoch {
-				err := s.cache.SetLatestFinalizedEpoch(s.finalizedEpoch)
+				err := s.cache.SetLatestFinalizedEpoch(chainID, s.finalizedEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestFinalizedEpoch in cache", 0)
 				}
 			}
 
-			latestProposedSlot, err := s.cache.GetLatestProposedSlot()
+			latestProposedSlot, err := s.cache.GetLatestProposedSlot(chainID)
 			if err != nil {
 				log.Error(err, "error retrieving latestProposedSlot from cache", 0)
 			}
 			if s.latestProposed > 0 && latestProposedSlot < s.latestProposed {
-				err := s.cache.SetLatestProposedSlot(s.latestProposed)
+				err := s.cache.SetLatestProposedSlot(chainID, s.latestProposed)
 				if err != nil {
 					log.Error(err, "error setting latestProposedSlot in cache", 0)
 				}
@@ -470,6 +472,7 @@ func (s *exporter) exportDuties(block *types.Block) error {
 
 func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
 	epoch := utils.EpochOfSlot(block.Slot)
+	chainID := utils.Config.Chain.ClConfig.DepositChainID
 
 	if epoch > utils.Config.ClConfig.ElectraForkEpoch {
 		log.Infof("checking that events have been loaded for epoch %v", epoch)
@@ -547,7 +550,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	// store epoch assignments in redis
 	g.Go(func() error {
-		return s.saveEpochAssignmentsToRedis(block, epoch, isHeadEpoch)
+		return s.saveEpochAssignmentsToRedis(block, epoch, chainID, isHeadEpoch)
 	})
 
 	// save attestation duties to bigtable
@@ -579,7 +582,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	// if we are exporting the head epoch, update the validator db table
 	if isHeadEpoch {
-		if err := s.exportValidatorData(block, epoch); err != nil {
+		if err := s.exportValidatorData(block, epoch, chainID); err != nil {
 			return err
 		}
 	}
@@ -619,7 +622,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 	return nil
 }
 
-func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64, isHeadEpoch bool) error {
+func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainID uint64, isHeadEpoch bool) error {
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
 		Epoch:       types.Epoch(epoch),
 		Assignments: block.EpochAssignments,
@@ -639,7 +642,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 		log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
 	} else {
 		log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
-		err = s.cache.SetEpochAssignments(epoch, serializedAssignmentsData.Bytes(), expirationDuration)
+		err = s.cache.SetEpochAssignments(chainID, epoch, serializedAssignmentsData.Bytes(), expirationDuration)
 		if err != nil {
 			return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
 		}
@@ -674,7 +677,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch uint64,
 			log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
 		} else {
 			log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
-			err = s.cache.SetEpochAssignments(nextEpoch, serializedAssignmentsData.Bytes(), expirationDuration)
+			err = s.cache.SetEpochAssignments(chainID, nextEpoch, serializedAssignmentsData.Bytes(), expirationDuration)
 			if err != nil {
 				return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
 			}
@@ -795,7 +798,7 @@ func (s *exporter) SaveValidators(validators []*types.Validator) error {
 	return nil
 }
 
-func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
+func (s *exporter) exportValidatorData(block *types.Block, epoch, chainID uint64) error {
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
@@ -976,7 +979,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch uint64) error {
 		// load into redis
 		start = time.Now()
 		log.Infof("writing validator mappping to redis with no TTL")
-		err = s.cache.SetValidatorMapping(compressedValidatorMapping.Bytes(), 0)
+		err = s.cache.SetValidatorMapping(chainID, compressedValidatorMapping.Bytes(), 0)
 		if err != nil {
 			return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
 		}
