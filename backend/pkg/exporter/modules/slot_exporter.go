@@ -695,6 +695,16 @@ func (s *exporter) SaveValidators(validators []*types.Validator) error {
 		return fmt.Errorf("error retrieving current validator state: %w", err)
 	}
 
+	for ; ; time.Sleep(time.Second) { // wait till the last attestation in memory cache has been populated by the exporter
+		s.bt.GetLastAttestationCacheMux().Lock()
+		if s.bt.GetLastAttestationCache() != nil {
+			s.bt.GetLastAttestationCacheMux().Unlock()
+			break
+		}
+		s.bt.GetLastAttestationCacheMux().Unlock()
+		log.Infof("waiting until LastAttestation in memory cache is available")
+	}
+
 	currentStateMap := make(map[uint64]*types.Validator, len(currentState))
 	latestBlock := uint64(0)
 
