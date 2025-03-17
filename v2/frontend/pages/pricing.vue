@@ -55,10 +55,6 @@ const scrollToAddons = () => {
           id="addons"
           :is-payment-yearly
         />
-        <BcFaq
-          class="faq"
-          translation-path="faq.pricing"
-        />
       </div>
       <div
         v-if="promoCode"
@@ -162,10 +158,6 @@ const scrollToAddons = () => {
         gap: 8px;
       }
     }
-  }
-  .faq {
-    width: 100%;
-    margin-top: 51px;
   }
 }
 </style>
