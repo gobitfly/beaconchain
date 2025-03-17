@@ -81,8 +81,8 @@ ALTER TABLE _final_validator_dashboard_data_epoch
     ADD COLUMN IF NOT EXISTS efficiency_proposals_divisor Int64 MATERIALIZED blocks_cl_reward + blocks_cl_missed_median_reward,
     ADD COLUMN IF NOT EXISTS efficiency_sync_dividend Int64 ALIAS sync_reward_rewards_only,
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor Int64 ALIAS sync_localized_max_reward,
-    ADD COLUMN IF NOT EXISTS efficiency_dividend Int64 MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor Int64 MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor,
+    ADD COLUMN IF NOT EXISTS efficiency_dividend Int64 MATERIALIZED attestations_reward_rewards_only + blocks_cl_reward + sync_reward_rewards_only,
+    ADD COLUMN IF NOT EXISTS efficiency_divisor Int64 MATERIALIZED attestations_ideal_reward + efficiency_proposals_divisor + sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS balance_effective_attestations Int64 DEFAULT balance_effective_end,
     ADD COLUMN IF NOT EXISTS sync_reward Int64 MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS roi_dividend Int64 MATERIALIZED balance_end - deposits_amount + withdrawals_amount - consolidations_incoming_amount + consolidations_outgoing_amount,
@@ -98,8 +98,8 @@ ALTER TABLE _final_validator_dashboard_data_hourly
     ADD COLUMN IF NOT EXISTS efficiency_sync_dividend SimpleAggregateFunction(sum, Int64) ALIAS sync_reward_rewards_only,
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
-    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
+    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_reward_rewards_only + blocks_cl_reward + sync_reward_rewards_only,
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_ideal_reward + efficiency_proposals_divisor + sync_localized_max_reward settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_daily
@@ -111,8 +111,8 @@ ALTER TABLE _final_validator_dashboard_data_daily
     ADD COLUMN IF NOT EXISTS efficiency_sync_dividend SimpleAggregateFunction(sum, Int64) ALIAS sync_reward_rewards_only,
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
-    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
+    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_reward_rewards_only + blocks_cl_reward + sync_reward_rewards_only,
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_ideal_reward + efficiency_proposals_divisor + sync_localized_max_reward settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_weekly
@@ -124,8 +124,8 @@ ALTER TABLE _final_validator_dashboard_data_weekly
     ADD COLUMN IF NOT EXISTS efficiency_sync_dividend SimpleAggregateFunction(sum, Int64) ALIAS sync_reward_rewards_only,
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
-    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
+    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_reward_rewards_only + blocks_cl_reward + sync_reward_rewards_only,
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_ideal_reward + efficiency_proposals_divisor + sync_localized_max_reward settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_monthly
@@ -137,8 +137,8 @@ ALTER TABLE _final_validator_dashboard_data_monthly
     ADD COLUMN IF NOT EXISTS efficiency_sync_dividend SimpleAggregateFunction(sum, Int64) ALIAS sync_reward_rewards_only,
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
-    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
+    ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_reward_rewards_only + blocks_cl_reward + sync_reward_rewards_only,
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED attestations_ideal_reward + efficiency_proposals_divisor + sync_localized_max_reward settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_1h
