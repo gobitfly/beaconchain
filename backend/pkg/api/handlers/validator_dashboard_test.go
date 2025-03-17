@@ -2,26 +2,67 @@ package handlers
 
 import (
 	"context"
+	"reflect"
+	"runtime"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
 // ------------------------------------------------------------
-
+type dataAccessor = dataaccess.DataAccessor
 type validatorDashboardDataAccessStub struct {
 	dataaccess.DummyService
-	overridePremiumPerks *types.PremiumPerks
-	overrideGroupCount   *uint64
+	premiumPerks       *types.PremiumPerks
+	groupCount         *uint64
+	groupExists        *bool
+	existingValidators []types.VDBValidator
+	fails              map[string]error // map of function names to errors to return
+}
+
+// returns an error if the calling func should fail, with the specified error to return
+func (d *validatorDashboardDataAccessStub) callerErr() error {
+	// get the name of the calling function
+	pc, _, _, ok := runtime.Caller(1)
+	details := runtime.FuncForPC(pc)
+	if len(d.fails) == 0 || !ok || details == nil {
+		return nil
+	}
+	callerName := details.Name()
+	callerName = callerName[strings.LastIndex(callerName, ".")+1:] // name without package prefix
+	if failingErr, ok := d.fails[callerName]; ok {
+		return failingErr
+	}
+	return nil
+}
+
+// option to set a function to fail with a specific error, e.g. withFailing(dataAccessor.GetUserInfo, errNotFound)
+func withFailing(failingFunc interface{}, err error) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		if d.fails == nil {
+			d.fails = make(map[string]error)
+		}
+		funcName := runtime.FuncForPC(reflect.ValueOf(failingFunc).Pointer()).Name()
+		funcName = funcName[strings.LastIndex(funcName, ".")+1:] // name without package prefix
+		d.fails[funcName] = err
+	}
 }
 
 func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
 	premiumPerks := types.PremiumPerks{
-		ValidatorGroupsPerDashboard: 1,
+		EffectiveBalancePerDashboard: decimal.RequireFromString("100"),
+		ValidatorGroupsPerDashboard:  1,
 		ChartHistorySeconds: types.ChartHistorySeconds{
 			Epoch:  100,
 			Daily:  1000,
@@ -30,8 +71,8 @@ func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id u
 		},
 	}
 
-	if d.overridePremiumPerks != nil {
-		premiumPerks = *d.overridePremiumPerks
+	if d.premiumPerks != nil {
+		premiumPerks = *d.premiumPerks
 	}
 
 	return &types.UserInfo{
@@ -39,31 +80,139 @@ func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id u
 	}, nil
 }
 
+func withUserPremiumPerks(perks types.PremiumPerks) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.premiumPerks = &perks
+	}
+}
+
+func (d *validatorDashboardDataAccessStub) GetFreeTierPerks(ctx context.Context) (*types.PremiumPerks, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return &types.PremiumPerks{
+		AdFree: false, // do not remove, used for testing
+	}, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardUser(ctx context.Context, id types.VDBIdPrimary) (*types.DashboardUser, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return &types.DashboardUser{
+		Id:     id,
+		UserId: uint64(id),
+	}, nil
+}
+
+func withGroupCount(count uint64) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.groupCount = &count
+	}
+}
 func (d *validatorDashboardDataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
+	if err := d.callerErr(); err != nil {
+		return 0, err
+	}
 	var count uint64
-	if d.overrideGroupCount != nil {
-		count = *d.overrideGroupCount
+	if d.groupCount != nil {
+		count = *d.groupCount
 	}
 	return count, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsFromSlices(ctx context.Context, indices []uint64, publicKeys []string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return indices, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsByDepositAddress(ctx context.Context, depositAddress string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+
+	return utils.Uint64Range(0, 9), nil
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorsByWithdrawalCredentials(ctx context.Context, withdrawalCredentials string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return utils.Uint64Range(0, 9), nil
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorsByGraffiti(ctx context.Context, graffiti string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return utils.Uint64Range(0, 9), nil
 }
 
 func (*validatorDashboardDataAccessStub) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
 	return 1000000000, nil // 2001-09-09 01:46:40
 }
 
-type stubOption func(*validatorDashboardDataAccessStub)
+func withGroupExists(exists bool) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.groupExists = &exists
+	}
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64) (bool, error) {
+	if err := d.callerErr(); err != nil {
+		return false, err
+	}
+	if d.groupExists != nil {
+		return *d.groupExists, nil
+	}
+	return true, nil
+}
 
-func withPremiumPerks(perks types.PremiumPerks) stubOption {
+func withExistingValidators(validators []types.VDBValidator) vdbStubOption {
 	return func(d *validatorDashboardDataAccessStub) {
-		d.overridePremiumPerks = &perks
+		d.existingValidators = validators
 	}
 }
-func withGroupCount(count uint64) stubOption {
-	return func(d *validatorDashboardDataAccessStub) {
-		d.overrideGroupCount = &count
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId types.VDBIdPrimary, validators []types.VDBValidator) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
 	}
+	if validators == nil {
+		return d.existingValidators, nil
+	}
+	return slices.DeleteFunc(validators, func(validator types.VDBValidator) bool {
+		return !slices.Contains(d.existingValidators, validator)
+	}), nil
 }
-func validatorDashboardTestSetup(options ...stubOption) (context.Context, *HandlerService) {
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsEffectiveBalances(ctx context.Context, validators []types.VDBValidator, onlyActive bool) (map[types.VDBValidator]uint64, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	// return map of all validators with 1 ETH effective balance
+	response := make(map[types.VDBValidator]uint64, len(validators))
+	for _, validator := range validators {
+		response[validator] = 1
+	}
+	return response, nil
+}
+
+func (d *validatorDashboardDataAccessStub) AddValidatorDashboardValidators(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64, validators []types.VDBValidator) ([]types.VDBPostValidatorsData, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	response := make([]types.VDBPostValidatorsData, len(validators))
+	for i, validator := range validators {
+		response[i] = types.VDBPostValidatorsData{
+			Index:   validator,
+			GroupId: groupId,
+		}
+	}
+	return response, nil
+}
+
+type vdbStubOption = func(*validatorDashboardDataAccessStub)
+
+func validatorDashboardTestSetup(options ...vdbStubOption) (context.Context, *HandlerService) {
 	d := &validatorDashboardDataAccessStub{}
 	for _, option := range options {
 		option(d)
@@ -399,7 +548,7 @@ func TestGetValidatorDashboardSummaryChart_Success(t *testing.T) {
 			Epoch: 100,
 		},
 	}
-	ctx, h := validatorDashboardTestSetup(withPremiumPerks(perks))
+	ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(perks))
 	input := inputGetValidatorDashboardSummaryChart{
 		dashboardId: types.VDBIdPrimary(1),
 		aggregation: enums.ChartAggregations.Epoch,
@@ -449,7 +598,7 @@ func TestGetValidatorDashboardSummaryChart_Failure(t *testing.T) {
 			perks := types.PremiumPerks{
 				ChartHistorySeconds: tt.chartSeconds,
 			}
-			ctx, h := validatorDashboardTestSetup(withPremiumPerks(perks))
+			ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(perks))
 			input := inputGetValidatorDashboardSummaryChart{
 				dashboardId: types.VDBIdPrimary(1),
 				aggregation: tt.aggregation,
