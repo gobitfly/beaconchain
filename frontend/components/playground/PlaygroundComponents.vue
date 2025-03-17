@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  PlaygroundAccordeon,
   PlaygroundDialog,
   PlaygroundDutyStatus,
   PlaygroundIcons,
@@ -15,11 +14,6 @@ const tabs: HashTabs = [
     component: PlaygroundDialog,
     key: 'dialog',
     title: 'Dialog',
-  },
-  {
-    component: PlaygroundAccordeon,
-    key: 'accordeon',
-    title: 'Accordeon',
   },
   {
     component: PlaygroundTags,
