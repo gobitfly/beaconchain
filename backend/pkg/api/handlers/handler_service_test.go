@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -317,108 +316,6 @@ func TestHandleErr_CanceledContext(t *testing.T) {
 		// Validate response body
 		assert.Equal(t, `{"error":"context canceled"}`, rr.Body.String(), "unexpected response body")
 	})
-}
-
-func uintPtr(i uint64) *uint64 {
-	return &i
-}
-func strPtr(s string) *string {
-	return &s
-}
-func TestIntOrStringUnmarshalJSON_ValidCases(t *testing.T) {
-	validTests := []struct {
-		name          string
-		input         string
-		expectedValue intOrString
-	}{
-		{
-			name:          "Valid Integer",
-			input:         `123`,
-			expectedValue: intOrString{intValue: uintPtr(123)},
-		},
-		{
-			name:          "Valid String Number",
-			input:         `"456"`,
-			expectedValue: intOrString{intValue: uintPtr(456)},
-		},
-		{
-			name:          "Valid String",
-			input:         `"hello"`,
-			expectedValue: intOrString{strValue: strPtr("hello")},
-		},
-		{
-			name:          "Valid String with Leading/Trailing Spaces",
-			input:         `"  hello  "`,
-			expectedValue: intOrString{strValue: strPtr("hello")},
-		},
-		{
-			name:          "Valid Number with Leading/Trailing Spaces",
-			input:         `" 789 "`,
-			expectedValue: intOrString{intValue: uintPtr(789)},
-		},
-		{
-			name:          "String with Non-Numeric Content",
-			input:         `"abc123"`,
-			expectedValue: intOrString{strValue: strPtr("abc123")},
-		},
-		{
-			name:          "Empty String",
-			input:         `""`,
-			expectedValue: intOrString{strValue: strPtr("")},
-		},
-	}
-
-	for _, test := range validTests {
-		t.Run(test.name, func(t *testing.T) {
-			var value intOrString
-			err := json.Unmarshal([]byte(test.input), &value)
-
-			assert.NoError(t, err)
-			assert.True(t, value.intValue != nil || value.strValue != nil)
-			assert.False(t, value.intValue != nil && value.strValue != nil)
-
-			assert.Equal(t, test.expectedValue.intValue, value.intValue)
-			assert.Equal(t, test.expectedValue.strValue, value.strValue)
-		})
-	}
-}
-
-func TestIntOrStringUnmarshalJSON_ErrorCases(t *testing.T) {
-	errorTests := []struct {
-		name          string
-		input         string
-		expectedError string
-	}{
-		{
-			name:          "Invalid JSON Format",
-			input:         `{}`,
-			expectedError: "failed to unmarshal intOrString from json: {}",
-		},
-		{
-			name:          "Boolean Value",
-			input:         `true`,
-			expectedError: "failed to unmarshal intOrString from json: true",
-		},
-		{
-			name:          "Random Value",
-			input:         `a`,
-			expectedError: "invalid character 'a' looking for beginning of value",
-		},
-		{
-			name:          "Null Value",
-			input:         `null`,
-			expectedError: "null value not allowed",
-		},
-	}
-
-	for _, test := range errorTests {
-		t.Run(test.name, func(t *testing.T) {
-			var value intOrString
-			err := json.Unmarshal([]byte(test.input), &value)
-			assert.True(t, value.intValue == nil && value.strValue == nil)
-			assert.ErrorContains(t, err, test.expectedError)
-		})
-	}
 }
 
 // ------------------------------------------------------------

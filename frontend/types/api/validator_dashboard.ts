@@ -303,10 +303,6 @@ export interface VDBManageValidatorsTableRow {
   withdrawal_credential: Hash;
 }
 export type GetValidatorDashboardValidatorsResponse = ApiPagingResponse<VDBManageValidatorsTableRow>;
-/**
- * ------------------------------------------------------------
- * Misc.
- */
 export interface VDBPostReturnData {
   id: number /* uint64 */;
   user_id: number /* uint64 */;
@@ -318,13 +314,6 @@ export interface VDBPostCreateGroupData {
   id: number /* uint64 */;
   name: string;
 }
-export interface VDBPostValidatorsData {
-  index: number /* uint64 */;
-  group_id: number /* uint64 */;
-}
-/**
- * helper for frontend
- */
 export interface PostValidatorDashboardValidatorsRequest {
   group_id?: number /* uint64 */;
   validators?: (number | string)[];
@@ -332,6 +321,11 @@ export interface PostValidatorDashboardValidatorsRequest {
   withdrawal_credential?: string;
   graffiti?: string;
 }
+export interface VDBPostValidatorsData {
+  index: number /* uint64 */;
+  group_id: number /* uint64 */;
+}
+export type PostValidatorDashboardValidatorsResponse = ApiDataResponse<VDBPostValidatorsData[]>;
 export interface PostValidatorDashboardGroupsRequest {
   name: string;
 }

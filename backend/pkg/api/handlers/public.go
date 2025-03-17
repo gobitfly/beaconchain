@@ -166,8 +166,8 @@ func (h *HandlerService) PublicPostValidatorDashboards(w http.ResponseWriter, r 
 	}
 
 	type request struct {
-		Name    string      `json:"name"`
-		Network intOrString `json:"network" swaggertype:"string" enums:"ethereum,gnosis"`
+		Name    string            `json:"name"`
+		Network types.IntOrString `json:"network" swaggertype:"string" enums:"ethereum,gnosis"`
 	}
 	var req request
 	if err := v.checkBody(&req, r.Body); err != nil {
@@ -485,14 +485,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroupValidators(w http.Re
 func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	type request struct { // this must align with PostValidatorDashboardValidatorsRequest
-		GroupId              uint64        `json:"group_id,omitempty" x-nullable:"true"`
-		Validators           []intOrString `json:"validators,omitempty"`
-		DepositAddress       string        `json:"deposit_address,omitempty"`
-		WithdrawalCredential string        `json:"withdrawal_credential,omitempty"`
-		Graffiti             string        `json:"graffiti,omitempty"`
-	}
-	req := request{
+	req := types.PostValidatorDashboardValidatorsRequest{
 		GroupId: types.DefaultGroupId, // default value
 	}
 	if err := v.checkBody(&req, r.Body); err != nil {
@@ -730,7 +723,7 @@ func (h *HandlerService) PublicPostValidatorDashboardValidatorBulkDeletions(w ht
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	type request struct {
-		Validators []intOrString `json:"validators"`
+		Validators []types.IntOrString `json:"validators"`
 	}
 	var req request
 	if err := v.checkBody(&req, r.Body); err != nil {
@@ -2453,12 +2446,12 @@ func (h *HandlerService) PublicPutUserNotificationSettingsAccountDashboard(w htt
 		return
 	}
 
-	// uses a different struct due to `subscribed_chain_ids`, which is a slice of intOrString in the payload but a slice of uint64 in the response
+	// uses a different struct due to `subscribed_chain_ids`, which is a slice of types.IntOrString in the payload but a slice of uint64 in the response
 	type request struct {
-		WebhookUrl                      string        `json:"webhook_url"`
-		IsWebhookDiscordEnabled         bool          `json:"is_webhook_discord_enabled"`
-		IsIgnoreSpamTransactionsEnabled bool          `json:"is_ignore_spam_transactions_enabled"`
-		SubscribedChainIds              []intOrString `json:"subscribed_chain_ids"`
+		WebhookUrl                      string              `json:"webhook_url"`
+		IsWebhookDiscordEnabled         bool                `json:"is_webhook_discord_enabled"`
+		IsIgnoreSpamTransactionsEnabled bool                `json:"is_ignore_spam_transactions_enabled"`
+		SubscribedChainIds              []types.IntOrString `json:"subscribed_chain_ids"`
 
 		IsIncomingTransactionsSubscribed  bool    `json:"is_incoming_transactions_subscribed"`
 		IsOutgoingTransactionsSubscribed  bool    `json:"is_outgoing_transactions_subscribed"`

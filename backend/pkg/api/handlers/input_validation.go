@@ -441,7 +441,7 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 	return indexes, publicKeys
 }
 
-func (v *validationError) checkValidators(validators []intOrString, allowEmpty bool) ([]types.VDBValidator, []string) {
+func (v *validationError) checkValidators(validators []types.IntOrString, allowEmpty bool) ([]types.VDBValidator, []string) {
 	if len(validators) == 0 && !allowEmpty {
 		v.add("validators", "list of validators is empty")
 		return nil, nil
@@ -450,14 +450,14 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	var publicKeys []string
 	for _, validator := range validators {
 		switch {
-		case validator.intValue != nil:
-			indexes = append(indexes, *validator.intValue)
-		case validator.strValue != nil:
-			if !reValidatorPublicKey.MatchString(*validator.strValue) {
-				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.strValue))
+		case validator.IntValue != nil:
+			indexes = append(indexes, *validator.IntValue)
+		case validator.StrValue != nil:
+			if !reValidatorPublicKey.MatchString(*validator.StrValue) {
+				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.StrValue))
 				continue
 			}
-			publicKeys = append(publicKeys, *validator.strValue)
+			publicKeys = append(publicKeys, *validator.StrValue)
 		default:
 			v.add("validators", "list contains invalid validator")
 		}
@@ -465,7 +465,7 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 	return indexes, publicKeys
 }
 
-func (v *validationError) checkNetwork(network intOrString) uint64 {
+func (v *validationError) checkNetwork(network types.IntOrString) uint64 {
 	chainId, ok := isValidNetwork(network)
 	if !ok {
 		v.add("network", fmt.Sprintf("given value '%s' is not a valid network", network))
@@ -480,9 +480,9 @@ func (v *validationError) checkNetworkParameter(param string) uint64 {
 			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
 			return 0
 		}
-		return v.checkNetwork(intOrString{intValue: &chainId})
+		return v.checkNetwork(types.IntOrString{IntValue: &chainId})
 	}
-	return v.checkNetwork(intOrString{strValue: &param})
+	return v.checkNetwork(types.IntOrString{StrValue: &param})
 }
 
 func (v *validationError) checkNetworksParameter(param string) []uint64 {
@@ -495,9 +495,9 @@ func (v *validationError) checkNetworksParameter(param string) []uint64 {
 
 // isValidNetwork checks if the given network is a valid network.
 // It returns the chain id of the network and true if it is valid, otherwise 0 and false.
-func isValidNetwork(network intOrString) (uint64, bool) {
+func isValidNetwork(network types.IntOrString) (uint64, bool) {
 	for _, realNetwork := range allNetworks {
-		if (network.intValue != nil && realNetwork.ChainId == *network.intValue) || (network.strValue != nil && realNetwork.Name == *network.strValue) {
+		if (network.IntValue != nil && realNetwork.ChainId == *network.IntValue) || (network.StrValue != nil && realNetwork.Name == *network.StrValue) {
 			return realNetwork.ChainId, true
 		}
 	}

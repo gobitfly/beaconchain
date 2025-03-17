@@ -23,7 +23,6 @@ func TestValidationError_Error(t *testing.T) {
 
 	err := v.AsError()
 
-	assert.Error(t, err)
 	assert.ErrorContains(t, err, "field1: must be a valid email")
 	assert.ErrorContains(t, err, "field2: cannot be empty")
 }
@@ -97,7 +96,6 @@ func runValidationTests[T any](t *testing.T, testCases []validationTestCase[T], 
 			err := v.AsError()
 
 			if tt.errMsg != "" {
-				assert.Error(t, err, "Expected an error but got none")
 				assert.ErrorContains(t, err, tt.errMsg)
 			} else {
 				assert.Nil(t, err, "Expected no errors but found some")
@@ -162,7 +160,6 @@ func TestCheckRegex(t *testing.T) {
 			assert.Equal(t, tt.param, result, "Expected input to be returned unchanged")
 
 			if tt.expectErr {
-				assert.Error(t, err, "Expected an error but got none")
 				assert.ErrorContains(t, err, fmt.Sprintf(`given value '%s' has incorrect format`, tt.param))
 			} else {
 				assert.False(t, v.hasErrors(), "Expected no errors but found some")
@@ -223,7 +220,6 @@ func TestCheckLength(t *testing.T) {
 			assert.Equal(t, tt.param, result, "Expected input to be returned unchanged")
 
 			if tt.errMsg != "" {
-				assert.Error(t, err, "Expected an error but got none")
 				assert.ErrorContains(t, err, tt.errMsg)
 			} else {
 				assert.False(t, v.hasErrors(), "Expected no errors but found some")
@@ -292,7 +288,6 @@ func TestCheckName(t *testing.T) {
 			err := v.AsError()
 
 			if tt.errMsg != "" {
-				assert.Error(t, err, "Expected an error but got none")
 				assert.ErrorContains(t, err, tt.errMsg)
 			} else {
 				assert.Nil(t, err, "Expected no errors but found some")
@@ -1694,7 +1689,7 @@ func TestCheckValidators(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		param        []intOrString
+		param        []types.IntOrString
 		allowEmpty   bool
 		expectedIdx  []types.VDBValidator
 		expectedKeys []string
@@ -1702,7 +1697,7 @@ func TestCheckValidators(t *testing.T) {
 	}{
 		{
 			name:       "Valid single validator index",
-			param:      []intOrString{{intValue: &validInt1}},
+			param:      []types.IntOrString{{IntValue: &validInt1}},
 			allowEmpty: false,
 			expectedIdx: []types.VDBValidator{
 				123,
@@ -1710,7 +1705,7 @@ func TestCheckValidators(t *testing.T) {
 		},
 		{
 			name:       "Valid multiple validator indices",
-			param:      []intOrString{{intValue: &validInt1}, {intValue: &validInt2}},
+			param:      []types.IntOrString{{IntValue: &validInt1}, {IntValue: &validInt2}},
 			allowEmpty: false,
 			expectedIdx: []types.VDBValidator{
 				123, 456,
@@ -1718,19 +1713,19 @@ func TestCheckValidators(t *testing.T) {
 		},
 		{
 			name:         "Valid single public key",
-			param:        []intOrString{{strValue: &validKey1}},
+			param:        []types.IntOrString{{StrValue: &validKey1}},
 			allowEmpty:   false,
 			expectedKeys: []string{validKey1},
 		},
 		{
 			name:         "Valid multiple public keys",
-			param:        []intOrString{{strValue: &validKey1}, {strValue: &validKey2}},
+			param:        []types.IntOrString{{StrValue: &validKey1}, {StrValue: &validKey2}},
 			allowEmpty:   false,
 			expectedKeys: []string{validKey1, validKey2},
 		},
 		{
 			name:       "Mixed indices and public keys",
-			param:      []intOrString{{intValue: &validInt1}, {strValue: &validKey1}, {intValue: &validInt2}},
+			param:      []types.IntOrString{{IntValue: &validInt1}, {StrValue: &validKey1}, {IntValue: &validInt2}},
 			allowEmpty: false,
 			expectedIdx: []types.VDBValidator{
 				123, 456,
@@ -1739,24 +1734,24 @@ func TestCheckValidators(t *testing.T) {
 		},
 		{
 			name:       "Empty list but allowEmpty = true",
-			param:      []intOrString{},
+			param:      []types.IntOrString{},
 			allowEmpty: true,
 		},
 		{
 			name:       "Empty list but allowEmpty = false",
-			param:      []intOrString{},
+			param:      []types.IntOrString{},
 			allowEmpty: false,
 			errMsg:     "list of validators is empty",
 		},
 		{
 			name:       "Invalid public key format",
-			param:      []intOrString{{strValue: new(string)}}, // Empty string as strValue
+			param:      []types.IntOrString{{StrValue: new(string)}}, // Empty string as StrValue
 			allowEmpty: false,
 			errMsg:     "given value '' is not a valid validator",
 		},
 		{
 			name:       "Nil value in list",
-			param:      []intOrString{{}},
+			param:      []types.IntOrString{{}},
 			allowEmpty: false,
 			errMsg:     "list contains invalid validator",
 		},

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -9,13 +8,10 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gorilla/mux"
-	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
 
 	"github.com/alexedwards/scs/v2"
@@ -547,57 +543,4 @@ func mapNetworkNotificationEventNames(data []types.NotificationNetworksTableRow)
 		data[rowIndex].EventType = mapNotificationEventName(row.EventType)
 	}
 	return data
-}
-
-// --------------------------------------
-// intOrString is a custom type that can be unmarshalled from either an int or a string (strings will also be parsed to int if possible).
-// if unmarshaling throws no errors one of the two fields will be set, the other will be nil.
-type intOrString struct {
-	intValue *uint64
-	strValue *string
-}
-
-func (v *intOrString) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(data, []byte("null")) {
-		return fmt.Errorf("null value not allowed")
-	}
-	// Attempt to unmarshal as uint64 first
-	var intValue uint64
-	if err := json.Unmarshal(data, &intValue); err == nil {
-		v.intValue = &intValue
-		return nil
-	}
-
-	// If unmarshalling as uint64 fails, try to unmarshal as string
-	var strValue string
-	if err := json.Unmarshal(data, &strValue); err == nil {
-		strValue = strings.TrimSpace(strValue)
-		if parsedInt, err := strconv.ParseUint(strValue, 10, 64); err == nil {
-			v.intValue = &parsedInt
-		} else {
-			v.strValue = &strValue
-		}
-		return nil
-	}
-
-	// If both unmarshalling attempts fail, return an error
-	return fmt.Errorf("failed to unmarshal intOrString from json: %s", string(data))
-}
-
-func (v intOrString) String() string {
-	if v.intValue != nil {
-		return strconv.FormatUint(*v.intValue, 10)
-	}
-	if v.strValue != nil {
-		return *v.strValue
-	}
-	return ""
-}
-
-func (intOrString) JSONSchema() *jsonschema.Schema {
-	return &jsonschema.Schema{
-		OneOf: []*jsonschema.Schema{
-			{Type: "string"}, {Type: "integer"},
-		},
-	}
 }
