@@ -229,13 +229,14 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 	return userInfo, nil
 }
 
-func premiumLimitNetworkfactor() int64 {
+func premiumLimitNetworkFactor() int64 {
+	// no network-specific premium limits atm, return constant factor
 	return 1
 }
 
 func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
 	freeTierProduct, err := GetFreeTierProduct(ctx)
-	factor := premiumLimitNetworkfactor()
+	factor := premiumLimitNetworkFactor()
 	summary := t.ProductSummary{
 		EffectiveBalancePerDashboardLimit: utils.EtherToWei(big.NewInt(102_000 * 32 * factor)),
 		StripePublicKey:                   utils.Config.Frontend.Stripe.PublicKey,
@@ -439,7 +440,7 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 }
 
 func GetFreeTierProduct(ctx context.Context) (*t.PremiumProduct, error) {
-	factor := premiumLimitNetworkfactor()
+	factor := premiumLimitNetworkFactor()
 
 	return &t.PremiumProduct{
 		ProductName: "Free",
