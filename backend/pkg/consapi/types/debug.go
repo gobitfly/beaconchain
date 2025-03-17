@@ -15,7 +15,6 @@ type ElectraConsolidation struct {
 	Amount               uint64 `db:"amount"`
 }
 
-
 type ElectraExcessBalance struct {
 	ValidatorIndex uint64 `json:"validator_index,string" db:"validator_index"`
 	Amount         uint64 `json:"amount,string" db:"amount"`
