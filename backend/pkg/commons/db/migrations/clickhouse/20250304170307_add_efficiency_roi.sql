@@ -86,7 +86,7 @@ ALTER TABLE _final_validator_dashboard_data_epoch
     ADD COLUMN IF NOT EXISTS balance_effective_attestations Int64 DEFAULT balance_effective_end,
     ADD COLUMN IF NOT EXISTS sync_reward Int64 MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS roi_dividend Int64 MATERIALIZED balance_end - deposits_amount + withdrawals_amount - consolidations_incoming_amount + consolidations_outgoing_amount,
-    ADD COLUMN IF NOT EXISTS roi_divisor Int64 MATERIALIZED balance_start settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor Int64 MATERIALIZED balance_start settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_hourly
@@ -99,7 +99,7 @@ ALTER TABLE _final_validator_dashboard_data_hourly
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_daily
@@ -112,7 +112,7 @@ ALTER TABLE _final_validator_dashboard_data_daily
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_weekly
@@ -125,7 +125,7 @@ ALTER TABLE _final_validator_dashboard_data_weekly
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_monthly
@@ -138,7 +138,7 @@ ALTER TABLE _final_validator_dashboard_data_monthly
     ADD COLUMN IF NOT EXISTS efficiency_sync_divisor SimpleAggregateFunction(sum, Int64) ALIAS sync_localized_max_reward,
     ADD COLUMN IF NOT EXISTS sync_reward SimpleAggregateFunction(sum, Int64) MATERIALIZED sync_reward_rewards_only + sync_reward_penalties_only,
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_dividend + efficiency_proposals_dividend + efficiency_sync_dividend,
-    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64) MATERIALIZED efficiency_attestations_divisor + efficiency_proposals_divisor + efficiency_sync_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_1h
@@ -153,7 +153,7 @@ ALTER TABLE _final_validator_dashboard_rolling_1h
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_1h
@@ -168,7 +168,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_1h
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_24h
@@ -183,7 +183,7 @@ ALTER TABLE _final_validator_dashboard_rolling_24h
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_24h
@@ -198,7 +198,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_24h
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_7d
@@ -213,7 +213,7 @@ ALTER TABLE _final_validator_dashboard_rolling_7d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_7d
@@ -228,7 +228,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_7d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_30d
@@ -243,7 +243,7 @@ ALTER TABLE _final_validator_dashboard_rolling_30d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_30d
@@ -258,7 +258,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_30d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_90d
@@ -273,7 +273,7 @@ ALTER TABLE _final_validator_dashboard_rolling_90d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_90d
@@ -288,7 +288,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_90d
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_total
@@ -303,7 +303,7 @@ ALTER TABLE _final_validator_dashboard_rolling_total
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_total
@@ -318,7 +318,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_total
     ADD COLUMN IF NOT EXISTS efficiency_dividend SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS efficiency_divisor SimpleAggregateFunction(sum, Int64),
     ADD COLUMN IF NOT EXISTS roi_dividend SimpleAggregateFunction(sum, Int128),
-    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2;
+    ADD COLUMN IF NOT EXISTS roi_divisor SimpleAggregateFunction(sum, Int128) settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_hourly
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_hourly
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfMonth(t)
 ORDER BY (toStartOfDay(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_hourly TO _final_validator_dashboard_roi_hourly
@@ -343,7 +343,7 @@ AS SELECT
 FROM _final_validator_dashboard_data_epoch foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2;
+    validator_index settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_daily
@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_daily
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfYear(t)
 ORDER BY (toStartOfMonth(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_daily TO _final_validator_dashboard_roi_daily
@@ -368,7 +368,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_hourly as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2;
+    validator_index settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_weekly
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_weekly
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfInterval(t, INTERVAL 3 YEARS)
 ORDER BY (toStartOfInterval(t, INTERVAL 6 MONTHS), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_weekly TO _final_validator_dashboard_roi_weekly
@@ -393,7 +393,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_daily as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2;
+    validator_index settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_monthly
@@ -405,7 +405,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_monthly
 )
 ENGINE = AggregatingMergeTree
 ORDER BY (toStartOfYear(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_monthly TO _final_validator_dashboard_roi_monthly
@@ -417,7 +417,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_daily as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2;
+    validator_index settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- INSERT INTO _final_validator_dashboard_roi_hourly
 -- SELECT
@@ -428,8 +428,31 @@ GROUP BY
 -- FROM _final_validator_dashboard_data_epoch
 -- GROUP BY
 --     t,
---     validator_index settings mutations_sync=2;
-
+--     validator_index settings mutations_sync=2, alter_sync=1;
+-- +goose StatementBegin
+CREATE OR REPLACE VIEW validator_dashboard_data_epoch
+AS SELECT
+    *,
+    attestations_head_reward_penalties_only + attestations_head_reward_rewards_only AS attestations_head_reward,
+    attestations_source_reward_penalties_only + attestations_source_reward_rewards_only AS attestations_source_reward,
+    attestations_target_reward_penalties_only + attestations_target_reward_rewards_only AS attestations_target_reward,
+    attestations_inclusion_reward_penalties_only + attestations_inclusion_reward_rewards_only AS attestations_inclusion_reward,
+    attestations_inactivity_reward_penalties_only + attestations_inactivity_reward_rewards_only AS attestations_inactivity_reward,
+    attestations_reward_rewards_only,
+    (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
+    attestations_reward,
+    attestations_ideal_reward,
+    efficiency_attestations_dividend,
+    efficiency_attestations_divisor,
+    efficiency_proposals_dividend,
+    efficiency_proposals_divisor,
+    efficiency_sync_dividend,
+    efficiency_sync_divisor,
+    sync_reward,
+    efficiency_dividend,
+    efficiency_divisor
+FROM _final_validator_dashboard_data_epoch settings mutations_sync=2, alter_sync=1
+-- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_hourly
 AS SELECT
@@ -452,7 +475,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_daily
@@ -476,7 +499,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_weekly
@@ -500,7 +523,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_monthly
@@ -524,7 +547,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_1h
@@ -538,7 +561,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward,
-FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_24h
@@ -552,7 +575,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_7d
@@ -566,7 +589,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_30d
@@ -580,7 +603,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_90d
@@ -594,7 +617,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_total
@@ -608,7 +631,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
@@ -625,7 +648,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2 
+FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2, alter_sync=1 
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_24h
@@ -641,7 +664,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_7d
@@ -657,7 +680,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_30d
@@ -673,7 +696,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_90d
@@ -689,7 +712,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_total
@@ -705,7 +728,23 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2, alter_sync=1
+-- +goose StatementEnd
+-- +goose StatementBegin
+CREATE OR REPLACE VIEW validator_dashboard_data_epoch
+AS SELECT
+    * EXCEPT (attestations_reward_rewards_only, sync_reward),
+    attestations_head_reward_penalties_only + attestations_head_reward_rewards_only AS attestations_head_reward,
+    attestations_source_reward_penalties_only + attestations_source_reward_rewards_only AS attestations_source_reward,
+    attestations_target_reward_penalties_only + attestations_target_reward_rewards_only AS attestations_target_reward,
+    attestations_inclusion_reward_penalties_only + attestations_inclusion_reward_rewards_only AS attestations_inclusion_reward,
+    attestations_inactivity_reward_penalties_only + attestations_inactivity_reward_rewards_only AS attestations_inactivity_reward,
+    (((attestations_head_reward_rewards_only + attestations_source_reward_rewards_only) + attestations_target_reward_rewards_only) + attestations_inclusion_reward_rewards_only) + attestations_inactivity_reward_rewards_only AS attestations_reward_rewards_only,
+    (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
+    attestations_reward,
+    attestations_ideal_reward,
+    sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
+FROM _final_validator_dashboard_data_epoch settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_hourly
@@ -721,7 +760,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_daily
@@ -737,7 +776,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_weekly
@@ -753,7 +792,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_monthly
@@ -769,31 +808,31 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2
+FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2, alter_sync=1
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_monthly settings mutations_sync=2;
+DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_monthly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_weekly settings mutations_sync=2;
+DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_weekly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_daily settings mutations_sync=2;
+DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_daily settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_hourly settings mutations_sync=2;
+DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_hourly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS _final_validator_dashboard_roi_monthly settings mutations_sync=2;
+DROP TABLE IF EXISTS _final_validator_dashboard_roi_monthly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS _final_validator_dashboard_roi_weekly settings mutations_sync=2;
+DROP TABLE IF EXISTS _final_validator_dashboard_roi_weekly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS _final_validator_dashboard_roi_daily settings mutations_sync=2;
+DROP TABLE IF EXISTS _final_validator_dashboard_roi_daily settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
-DROP TABLE IF EXISTS _final_validator_dashboard_roi_hourly settings mutations_sync=2;
+DROP TABLE IF EXISTS _final_validator_dashboard_roi_hourly settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_1h
@@ -808,7 +847,7 @@ ALTER TABLE _final_validator_dashboard_rolling_1h
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_1h
@@ -823,7 +862,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_1h
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_24h
@@ -838,7 +877,7 @@ ALTER TABLE _final_validator_dashboard_rolling_24h
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_24h
@@ -853,7 +892,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_24h
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_7d
@@ -868,7 +907,7 @@ ALTER TABLE _final_validator_dashboard_rolling_7d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_7d
@@ -883,7 +922,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_7d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_30d
@@ -898,7 +937,7 @@ ALTER TABLE _final_validator_dashboard_rolling_30d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_30d
@@ -913,7 +952,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_30d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_90d
@@ -928,7 +967,7 @@ ALTER TABLE _final_validator_dashboard_rolling_90d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_90d
@@ -943,7 +982,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_90d
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_rolling_total
@@ -958,7 +997,7 @@ ALTER TABLE _final_validator_dashboard_rolling_total
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_rolling_total
@@ -973,7 +1012,7 @@ ALTER TABLE _unsafe_validator_dashboard_rolling_total
     DROP COLUMN IF EXISTS efficiency_dividend,
     DROP COLUMN IF EXISTS efficiency_divisor,
     DROP COLUMN IF EXISTS roi_dividend,
-    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2;
+    DROP COLUMN IF EXISTS roi_divisor settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_epoch
@@ -989,7 +1028,7 @@ ALTER TABLE _final_validator_dashboard_data_epoch
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_hourly
@@ -1003,7 +1042,7 @@ ALTER TABLE _final_validator_dashboard_data_hourly
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_daily
@@ -1017,7 +1056,7 @@ ALTER TABLE _final_validator_dashboard_data_daily
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_weekly
@@ -1031,7 +1070,7 @@ ALTER TABLE _final_validator_dashboard_data_weekly
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_monthly
@@ -1045,7 +1084,7 @@ ALTER TABLE _final_validator_dashboard_data_monthly
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _unsafe_validator_dashboard_data_epoch
@@ -1059,5 +1098,5 @@ ALTER TABLE _unsafe_validator_dashboard_data_epoch
     DROP COLUMN IF EXISTS efficiency_sync_divisor,
     DROP COLUMN IF EXISTS attestations_reward_rewards_only,
     DROP COLUMN IF EXISTS sync_reward
-settings mutations_sync=2;
+settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
