@@ -185,37 +185,6 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
-// getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
-func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
-	// for guest dashboards, return free tier perks
-	if id.Validators != nil {
-		perk, err := h.daService.GetFreeTierPerks(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error getting free tier perks: %w", err)
-		}
-		return perk, nil
-	}
-	// could be made into a single query if needed
-	dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, id.Id)
-	if err != nil {
-		return nil, fmt.Errorf("error getting dashboard owner: %w", err)
-	}
-	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
-	if err != nil {
-		if errors.Is(err, dataaccess.ErrNotFound) {
-			log.Warn("user not found for dashboard owner, returning free tier perks", log.Fields{"dashboard_id": id.Id, "user_id_of_dashboard": dashboardUser.UserId})
-			perk, err := h.daService.GetFreeTierPerks(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("error getting free tier perks after user not found: %w", err)
-			}
-			return perk, nil
-		}
-		return nil, fmt.Errorf("error getting user info for dashboard owner: %w", err)
-	}
-
-	return &userInfo.PremiumPerks, nil
-}
-
 func isUserAdmin(user *types.UserInfo) bool {
 	if user == nil { // can happen for guest or shared dashboards
 		return false

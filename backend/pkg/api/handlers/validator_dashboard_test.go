@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"runtime"
 	"slices"
@@ -221,6 +222,272 @@ func validatorDashboardTestSetup(options ...vdbStubOption) (context.Context, *Ha
 }
 
 // ------------------------------------------------------------
+// helper functions
+
+func TestGetDashboardPremiumPerks(t *testing.T) {
+	t.Run("guest dashboard returns free tier", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(types.PremiumPerks{
+			AdFree: true, // should not be returned by free tier
+		}))
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		// validator set should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("normal id returns perks", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(types.PremiumPerks{
+			AdFree: true,
+		}))
+		id := types.VDBId{
+			Id: 1,
+		}
+		// normal id should return ad free perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.True(t, perks.AdFree)
+	})
+
+	t.Run("non existent user returns free tier", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetUserInfo, dataaccess.ErrNotFound))
+		id := types.VDBId{
+			Id: 1,
+		}
+		// non existing user id should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("failing user info fetch returns error for normal id", func(t *testing.T) {
+		errToTrigger := errors.New("user info")
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetUserInfo, errToTrigger))
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
+	})
+
+	t.Run("failing free tier fetch returns error for guest dashboard", func(t *testing.T) {
+		errToTrigger := errors.New("free tier perks")
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetFreeTierPerks, errToTrigger))
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
+	})
+
+	t.Run("failing dashboard owner fetch returns error for non-guest dashboard", func(t *testing.T) {
+		errToTrigger := errors.New("dashboard owner")
+		ctx, h := validatorDashboardTestSetup(
+			withFailing(dataAccessor.GetValidatorDashboardUser, errToTrigger),
+		)
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
+	})
+
+	t.Run("failing user info and failing dashboard owner fetch returns no error for guest dashboard", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(
+			withFailing(dataAccessor.GetUserInfo, errInternalServer),
+			withFailing(dataAccessor.GetValidatorDashboardUser, errInternalServer),
+		)
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("failing free tier fetch returns no error for non-guest dashboard", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetFreeTierPerks, errInternalServer))
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+	})
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+func TestResolveAndValidateTimestamps_Success(t *testing.T) {
+	var chartSeconds uint64 = 1000 // -> min timestamp = lastExportedTs - chartSeconds
+	duration := time.Second        // -> max interval = 200s
+	tests := []struct {
+		name             string
+		latestExportedTs uint64
+		givenAfterTs     *uint64
+		givenBeforeTs    *uint64
+		wantAfterTs      uint64
+		wantBeforeTs     uint64
+	}{
+		// no timestams are provided, should resolve to beforeTs = latestExportedTs and afterTs = latestExportedTs - maxAllowedInterval
+		{
+			name:             "no timestamps",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     nil,
+			givenBeforeTs:    nil,
+			wantAfterTs:      999999800,
+			wantBeforeTs:     1000000000,
+		},
+		// no timestamps are provided and latestExportedTs is low, should resolve to beforeTs = latestExportedTs and afterTs = 0
+		{
+			name:             "no timestamps - low latest ts",
+			latestExportedTs: 100,
+			givenAfterTs:     nil,
+			givenBeforeTs:    nil,
+			wantAfterTs:      0,
+			wantBeforeTs:     100,
+		},
+		// afterTs is provided, beforeTs should be afterTs + maxAllowedInterval
+		{
+			name:             "high after ts",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(1000000000)),
+			givenBeforeTs:    nil,
+			wantAfterTs:      1000000000,
+			wantBeforeTs:     1000000200,
+		},
+		// afterTs is provided and lowest possible
+		{
+			name:             "low after ts",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(999999000)),
+			givenBeforeTs:    nil,
+			wantAfterTs:      999999000,
+			wantBeforeTs:     999999200,
+		},
+		// beforeTs is provided, afterTs should be beforeTs - maxAllowedInterval
+		{
+			name:             "high before ts",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     nil,
+			givenBeforeTs:    ptr(uint64(999999800)),
+			wantAfterTs:      999999600,
+			wantBeforeTs:     999999800,
+		},
+		// beforeTs is exactly minAllowedTs + maxAllowedInterval, afterTs should be minAllowedTs
+		{
+			name:             "low before ts - exact",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     nil,
+			givenBeforeTs:    ptr(uint64(999999200)),
+			wantAfterTs:      999999000,
+			wantBeforeTs:     999999200,
+		},
+		// beforeTs is provided and close to minAllowedTs, afterTs should be minAllowedTs
+		{
+			name:             "low before ts",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     nil,
+			givenBeforeTs:    ptr(uint64(999999050)),
+			wantAfterTs:      999999000,
+			wantBeforeTs:     999999050,
+		},
+		// both timestamps are provided
+		{
+			name:             "both timestamps",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(999999950)),
+			givenBeforeTs:    ptr(uint64(1000000000)),
+			wantAfterTs:      999999950,
+			wantBeforeTs:     1000000000,
+		},
+		// both timestamps are provided, high edge case
+		{
+			name:             "both timestamps - high edge",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(1000000000)),
+			givenBeforeTs:    ptr(uint64(1000000200)),
+			wantAfterTs:      1000000000,
+			wantBeforeTs:     1000000200,
+		},
+		// both timestamps are provided, low edge case
+		{
+			name:             "both timestamps - low edge",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(999999000)),
+			givenBeforeTs:    ptr(uint64(999999200)),
+			wantAfterTs:      999999000,
+			wantBeforeTs:     999999200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotAfterTs, gotBeforeTs, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
+			assert.NoError(t, err, "Expected no error, got %v", err)
+			assert.Equal(t, tt.wantAfterTs, gotAfterTs, "Expected afterTs to be %d, got %d", tt.wantAfterTs, gotAfterTs)
+			assert.Equal(t, tt.wantBeforeTs, gotBeforeTs, "Expected beforeTs to be %d, got %d", tt.wantBeforeTs, gotBeforeTs)
+		})
+	}
+}
+
+func TestResolveAndValidateTimestamps_Failure(t *testing.T) {
+	var chartSeconds uint64 = 1000
+	duration := time.Second // -> max interval = 200s
+	tests := []struct {
+		name             string
+		latestExportedTs uint64
+		givenAfterTs     *uint64
+		givenBeforeTs    *uint64
+		errMsg           string
+	}{
+		{
+			name:             "after ts below min allowed",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(999998999)),
+			givenBeforeTs:    nil,
+			errMsg:           "`after_ts` must be greater or equal to 999999000",
+		},
+		{
+			name:             "before ts below min allowed",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     nil,
+			givenBeforeTs:    ptr(uint64(999998999)),
+			errMsg:           "`before_ts` must be greater or equal to 999999000",
+		},
+		{
+			name:             "both timestamps - too high interval",
+			latestExportedTs: 1000000000,
+			givenAfterTs:     ptr(uint64(999999000)),
+			givenBeforeTs:    ptr(uint64(999999201)),
+			errMsg:           "difference between `before_ts` and `after_ts` must be smaller or equal to 200",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
+			assert.Error(t, err, "Expected error, got %v", err)
+			assert.Contains(t, err.Error(), tt.errMsg)
+		})
+	}
+}
+
+// ------------------------------------------------------------
 // POST /validator-dashboards/{dashboard_id}/groups
 
 func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
@@ -385,163 +652,6 @@ func TestInputGetValidatorDashboardSummaryChartValidate(t *testing.T) {
 		assert.Contains(t, err.Error(), "after_ts must be less than before_ts")
 	})
 }
-
-func ptr[T any](v T) *T {
-	return &v
-}
-func TestResolveAndValidateTimestamps_Success(t *testing.T) {
-	var chartSeconds uint64 = 1000 // -> min timestamp = lastExportedTs - chartSeconds
-	duration := time.Second        // -> max interval = 200s
-	tests := []struct {
-		name             string
-		latestExportedTs uint64
-		givenAfterTs     *uint64
-		givenBeforeTs    *uint64
-		wantAfterTs      uint64
-		wantBeforeTs     uint64
-	}{
-		// no timestams are provided, should resolve to beforeTs = latestExportedTs and afterTs = latestExportedTs - maxAllowedInterval
-		{
-			name:             "no timestamps",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    nil,
-			wantAfterTs:      999999800,
-			wantBeforeTs:     1000000000,
-		},
-		// no timestamps are provided and latestExportedTs is low, should resolve to beforeTs = latestExportedTs and afterTs = 0
-		{
-			name:             "no timestamps - low latest ts",
-			latestExportedTs: 100,
-			givenAfterTs:     nil,
-			givenBeforeTs:    nil,
-			wantAfterTs:      0,
-			wantBeforeTs:     100,
-		},
-		// afterTs is provided, beforeTs should be afterTs + maxAllowedInterval
-		{
-			name:             "high after ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(1000000000)),
-			givenBeforeTs:    nil,
-			wantAfterTs:      1000000000,
-			wantBeforeTs:     1000000200,
-		},
-		// afterTs is provided and lowest possible
-		{
-			name:             "low after ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    nil,
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
-		},
-		// beforeTs is provided, afterTs should be beforeTs - maxAllowedInterval
-		{
-			name:             "high before ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999800)),
-			wantAfterTs:      999999600,
-			wantBeforeTs:     999999800,
-		},
-		// beforeTs is exactly minAllowedTs + maxAllowedInterval, afterTs should be minAllowedTs
-		{
-			name:             "low before ts - exact",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999200)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
-		},
-		// beforeTs is provided and close to minAllowedTs, afterTs should be minAllowedTs
-		{
-			name:             "low before ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999050)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999050,
-		},
-		// both timestamps are provided
-		{
-			name:             "both timestamps",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999950)),
-			givenBeforeTs:    ptr(uint64(1000000000)),
-			wantAfterTs:      999999950,
-			wantBeforeTs:     1000000000,
-		},
-		// both timestamps are provided, high edge case
-		{
-			name:             "both timestamps - high edge",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(1000000000)),
-			givenBeforeTs:    ptr(uint64(1000000200)),
-			wantAfterTs:      1000000000,
-			wantBeforeTs:     1000000200,
-		},
-		// both timestamps are provided, low edge case
-		{
-			name:             "both timestamps - low edge",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    ptr(uint64(999999200)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotAfterTs, gotBeforeTs, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
-			assert.NoError(t, err, "Expected no error, got %v", err)
-			assert.Equal(t, tt.wantAfterTs, gotAfterTs, "Expected afterTs to be %d, got %d", tt.wantAfterTs, gotAfterTs)
-			assert.Equal(t, tt.wantBeforeTs, gotBeforeTs, "Expected beforeTs to be %d, got %d", tt.wantBeforeTs, gotBeforeTs)
-		})
-	}
-}
-
-func TestResolveAndValidateTimestamps_Failure(t *testing.T) {
-	var chartSeconds uint64 = 1000
-	duration := time.Second // -> max interval = 200s
-	tests := []struct {
-		name             string
-		latestExportedTs uint64
-		givenAfterTs     *uint64
-		givenBeforeTs    *uint64
-		errMsg           string
-	}{
-		{
-			name:             "after ts below min allowed",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999998999)),
-			givenBeforeTs:    nil,
-			errMsg:           "`after_ts` must be greater or equal to 999999000",
-		},
-		{
-			name:             "before ts below min allowed",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999998999)),
-			errMsg:           "`before_ts` must be greater or equal to 999999000",
-		},
-		{
-			name:             "both timestamps - too high interval",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    ptr(uint64(999999201)),
-			errMsg:           "difference between `before_ts` and `after_ts` must be smaller or equal to 200",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
-			assert.Error(t, err, "Expected error, got %v", err)
-			assert.Contains(t, err.Error(), tt.errMsg)
-		})
-	}
-}
-
 func TestGetValidatorDashboardSummaryChart_Success(t *testing.T) {
 	perks := types.PremiumPerks{
 		ChartHistorySeconds: types.ChartHistorySeconds{
