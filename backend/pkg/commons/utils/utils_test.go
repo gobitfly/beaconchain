@@ -2,6 +2,8 @@ package utils
 
 import (
 	"maps"
+	"slices"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -122,4 +124,64 @@ func TestSliceToMap_CustomType(t *testing.T) {
 	}
 
 	runSliceToMapTests(t, testCases)
+}
+
+func TestUint64Range(t *testing.T) {
+	tests := []struct {
+		name     string
+		start    uint64
+		end      uint64
+		expected []uint64
+	}{
+		{
+			name:     "Normal range",
+			start:    1,
+			end:      5,
+			expected: []uint64{1, 2, 3, 4, 5},
+		},
+		{
+			name:     "Single element range",
+			start:    10,
+			end:      10,
+			expected: []uint64{10},
+		},
+		{
+			name:     "Large range",
+			start:    100,
+			end:      105,
+			expected: []uint64{100, 101, 102, 103, 104, 105},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := Uint64Range(tt.start, tt.end)
+			assert.Equal(t, tt.expected, result, "Uint64Range(%d, %d) = %v, expected %v", tt.start, tt.end, result, tt.expected)
+		})
+	}
+}
+
+func TestIterMap(t *testing.T) {
+	t.Run("add 10 to each in int slice", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		want := []int{11, 12, 13, 14, 15}
+		got := slices.Collect(
+			IterMap(
+				slices.Values(input),
+				func(i int) int { return i + 10 },
+			),
+		)
+		assert.Equal(t, want, got)
+	})
+	t.Run("convert int slice to string slice", func(t *testing.T) {
+		input := []int{1, 2, 3, 4, 5}
+		want := []string{"1", "2", "3", "4", "5"}
+		got := slices.Collect(
+			IterMap(
+				slices.Values(input),
+				func(i int) string { return strconv.Itoa(i) },
+			),
+		)
+		assert.Equal(t, want, got)
+	})
 }
