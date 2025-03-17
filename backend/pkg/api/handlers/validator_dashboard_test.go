@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"errors"
+	"math/big"
 	"reflect"
 	"runtime"
 	"slices"
@@ -529,6 +530,479 @@ func TestPostValidatorDashboardGroups(t *testing.T) {
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, errConflict)
 	})
+}
+
+// ------------------------------------------------------------
+// POST /validator-dashboards/{dashboard_id}/validators
+
+func TestInputPostValidatorDashboardValidatorsValidate(t *testing.T) {
+	params := make(map[string]string)
+	t.Run("success", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"validators":[1,2,"0x8ef6fe20ac0edc364351ed75dd272e127f3d561452bc86fc589e3af893f930cf2e18bc89feba7603e5437380911f90b5"]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.NotNil(t, i.validators)
+		assert.Equal(t, []types.VDBValidator{1, 2}, i.validators.indices)
+		assert.Equal(t, []string{"0x8ef6fe20ac0edc364351ed75dd272e127f3d561452bc86fc589e3af893f930cf2e18bc89feba7603e5437380911f90b5"}, i.validators.publicKeys)
+	})
+	t.Run("empty group_id defaults to default group id", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":[1,2]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(types.DefaultGroupId), i.groupId)
+	})
+	t.Run("index as string succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":["1","2"]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, []types.VDBValidator{1, 2}, i.validators.indices)
+	})
+	t.Run("set deposit address succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"deposit_address":"0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F", i.depositAddress)
+	})
+	t.Run("set withdrawal credential succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"withdrawal_credential":"0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273", i.withdrawalCredential)
+	})
+	t.Run("set graffiti succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"graffiti":"hello world"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "hello world", i.graffiti)
+	})
+	t.Run("set nothing is invalid", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.ErrorContains(t, err, "exactly one")
+	})
+	t.Run("set more than 1 value is invalid", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":[1,2],
+				"deposit_address":"0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.ErrorContains(t, err, "exactly one")
+	})
+}
+
+func TestPostValidatorDashboardValidators_Success(t *testing.T) {
+	errTest := errors.New("this function should not be called")
+	testCases := []struct {
+		name     string
+		input    inputPostValidatorDashboardValidators
+		options  []vdbStubOption
+		expected types.PostValidatorDashboardValidatorsResponse
+	}{
+		{
+			name: "add validators by indices",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			options: []vdbStubOption{
+				withExistingValidators([]types.VDBValidator{}),
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				Data: []types.VDBPostValidatorsData{
+					{Index: 1, GroupId: types.DefaultGroupId},
+					{Index: 2, GroupId: types.DefaultGroupId},
+				},
+			},
+		},
+		{
+			name: "add validators by indices with existing",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			options: []vdbStubOption{
+				withExistingValidators([]types.VDBValidator{1}),
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				Data: []types.VDBPostValidatorsData{
+					{Index: 1, GroupId: types.DefaultGroupId},
+					{Index: 2, GroupId: types.DefaultGroupId},
+				},
+			},
+		},
+		{
+			name: "add validators by deposit",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+		{
+			name: "add validators by withdrawal",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+		{
+			name: "add validators by graffiti",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(tt.options...)
+			response, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, response)
+		})
+	}
+}
+
+func TestPostValidatorDashboardValidators_Failure_BusinessLogic(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       inputPostValidatorDashboardValidators
+		options     []vdbStubOption
+		expectedErr error
+	}{
+		{
+			name: "group does not exist",
+			options: []vdbStubOption{
+				withGroupExists(false),
+			},
+			expectedErr: dataaccess.ErrNotFound,
+		},
+		{
+			name: "setting deposit address with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "setting withdrawal credential with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "setting graffiti with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "adding more validators than allowed with indices",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   false,
+				}),
+				withExistingValidators(utils.Uint64Range(1, 101)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{0}, // adding validator index 0
+				},
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with indices and existing validators",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 2 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+				withExistingValidators(utils.Uint64Range(0, 1)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{0, 1, 2}, // adding validator index 2 with existing validators 0, 1
+				},
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with deposit",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with deposit",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with graffiti",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(tt.options...)
+			_, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+// checks error branches of the PostValidatorDashboardValidators function
+func TestPostValidatorDashboardValidators_Failure_DataAccess(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       inputPostValidatorDashboardValidators
+		failingFunc any
+		err         error
+	}{
+		{
+			name:        "GetValidatorDashboardGroupExists",
+			failingFunc: dataAccessor.GetValidatorDashboardGroupExists,
+			err:         errors.New("group exists"),
+		},
+		{
+			name:        "GetUserInfo",
+			failingFunc: dataAccessor.GetUserInfo,
+			err:         errors.New("user info"),
+		},
+		{
+			name:        "GetValidatorDashboardValidatorsOfList",
+			failingFunc: dataAccessor.GetValidatorDashboardValidatorsOfList,
+			err:         errors.New("validators of list"),
+		},
+		{
+			name:        "GetValidatorsEffectiveBalances",
+			failingFunc: dataAccessor.GetValidatorsEffectiveBalances,
+			err:         errors.New("effective balances"),
+		},
+		{
+			name:        "AddValidatorDashboardValidators",
+			failingFunc: dataAccessor.AddValidatorDashboardValidators,
+			err:         errors.New("add validators"),
+		},
+		{
+			name: "GetValidatorsFromSlices",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			failingFunc: dataAccessor.GetValidatorsFromSlices,
+			err:         errors.New("get validators from slices"),
+		},
+		{
+			name: "GetValidatorsByDepositAddress",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F",
+			},
+			failingFunc: dataAccessor.GetValidatorsByDepositAddress,
+			err:         errors.New("get validators by deposit address"),
+		},
+		{
+			name: "GetValidatorsByWithdrawalCredentials",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273",
+			},
+			failingFunc: dataAccessor.GetValidatorsByWithdrawalCredentials,
+			err:         errors.New("get validators by withdrawal credentials"),
+		},
+		{
+			name: "GetValidatorsByGraffiti",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "hello world",
+			},
+			failingFunc: dataAccessor.GetValidatorsByGraffiti,
+			err:         errors.New("get validators by graffiti"),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(
+				withFailing(tt.failingFunc, tt.err),
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: true, // needed to not fail on bulk adding check
+				}),
+			)
+			_, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.err)
+		})
+	}
 }
 
 // ------------------------------------------------------------
