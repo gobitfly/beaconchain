@@ -2,6 +2,10 @@
  * Get all possible key paths of an object
  * without arrays
  *
+ *  * @warning
+ *
+ * Arrays are removed
+ *
  * @example
  *
  * type Person = {
@@ -14,20 +18,15 @@
  *  }
  * }
  *
- * type Paths = KeyPaths<Person> // "age" | "address.street"
+ * type Paths = GetObjectPaths<Person> // "age" | "address.street"
  *
- * @warning
- *
- * Arrays are removed
  */
-type KeyPaths<T> = {
+export type GetObjectPaths<T extends object> = {
   [K in keyof T]: K extends string
     ? T[K] extends object
       ? T[K] extends Array<any>
         ? never // remove Arrays
-        : `${K}.${KeyPaths<T[K]>}`
+        : `${K}.${GetObjectPaths<T[K]>}`
       : K
     : never;
 }[keyof T]
-
-export type { KeyPaths }

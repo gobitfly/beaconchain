@@ -1,15 +1,14 @@
 <script lang="ts" setup>
-import type { MessageSchema } from '~/i18n/i18n.config'
-import type { KeyPaths } from '~/types/helper'
+import type { TranslationKey } from '~/i18n/i18n.config'
 
 defineProps<{
-  boldpath?: KeyPaths<MessageSchema>,
+  boldpath?: TranslationKey,
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
-  keypath: KeyPaths<MessageSchema>,
-  linkpath?: KeyPaths<MessageSchema>,
-  listpath?: KeyPaths<MessageSchema>,
+  keypath: TranslationKey,
+  linkpath?: TranslationKey,
+  listpath?: TranslationKey,
   tag?: keyof HTMLElementTagNameMap,
   /**
    * URL to link to
