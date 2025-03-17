@@ -861,7 +861,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		divisorColumn = "efficiency_sync_divisor"
 	}
 
-	chartDs := goqu.Dialect("postgres").
+	chartDs := goqu.
 		From(goqu.T(dataTable).As("d")).
 		Select(
 			goqu.I(dateColumn).As("ts"),
@@ -931,6 +931,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 
 		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
+			if row.EfficiencyDivisor.IsZero() {
+				data[row.Timestamp][row.GroupId] = 0
+				continue
+			}
 			data[row.Timestamp][row.GroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
 			if data[row.Timestamp][row.GroupId] > 100 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
@@ -945,8 +949,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 					Timestamp: row.Timestamp,
 				}
 			}
-			totalEfficiencyMap[row.Timestamp].EfficiencyDividend.Add(row.EfficiencyDividend)
-			totalEfficiencyMap[row.Timestamp].EfficiencyDivisor.Add(row.EfficiencyDivisor)
+			totalEfficiencyMap[row.Timestamp].EfficiencyDividend = totalEfficiencyMap[row.Timestamp].EfficiencyDividend.Add(row.EfficiencyDividend)
+			totalEfficiencyMap[row.Timestamp].EfficiencyDivisor = totalEfficiencyMap[row.Timestamp].EfficiencyDivisor.Add(row.EfficiencyDivisor)
 		}
 	}
 
@@ -973,6 +977,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			totalLineGroupId = t.DefaultGroupId
 		}
 		for _, row := range totalEfficiencyMap {
+			if row.EfficiencyDivisor.IsZero() {
+				data[row.Timestamp][totalLineGroupId] = 0
+				continue
+			}
 			data[row.Timestamp][totalLineGroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
 			if data[row.Timestamp][totalLineGroupId] > 100 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
