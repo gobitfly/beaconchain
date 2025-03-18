@@ -475,19 +475,19 @@
         "open": "Close Filter."
     },
     "footer": {
-        "advertise": "Advertise",
-        "api_docs": "API Docs",
-        "api_pricing": "API Pricing",
+        "discord": "Discord",
+        "github": "Github",
+        "github_mobile_app": "Github Mobile App",
         "imprint": "Imprint",
         "legal_notices": "Legal Notices",
         "links": "Links",
         "premium": "beaconcha.in Premium",
-        "press_kit": "Press Kit",
         "privacy": "Privacy",
         "resources": "Resources",
         "shop": "Swag Shop",
         "status": "Site Status",
-        "terms": "Terms"
+        "terms": "Terms",
+        "x": "X"
     },
     "header": {
         "epoch": "Epoch",
