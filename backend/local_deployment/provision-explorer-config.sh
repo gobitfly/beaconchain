@@ -138,9 +138,53 @@ indexer:
   eth1DepositContractFirstBlock: 0
 
 corsAllowedHosts: ["http://local.beaconcha.in:3000"]
+skipDataAccessServiceInitWait: true
 EOL
 
 echo "generated config written to config.yml"
+
+cat <<EOF > grafana/datasources/datasource.yml
+apiVersion: 1
+
+datasources:
+  - name: prometheus
+    uid: feg8abqpp4em8c
+    orgId: 1
+    type: prometheus
+    typeName: Prometheus
+    access: proxy
+    url: http://localhost:9090
+    database:
+    typeLogoUrl: public/app/plugins/datasource/prometheus/img/prometheus_logo.svg
+    user:
+    basicAuth: false
+    readOnly: false
+    jsonData:
+      httpMethod: POST
+    isDefault: true
+  - name: grafana-clickhouse-datasource
+    uid: cegaia2f3h7nkc
+    orgId: 1
+    type: grafana-clickhouse-datasource
+    typeName: ClickHouse
+    access: proxy
+    url:
+    database:
+    typeLogoUrl: public/plugins/grafana-clickhouse-datasource/img/logo.svg
+    user:
+    basicAuth: false
+    readOnly: false
+    jsonData:
+      httpMethod: POST
+      host: 127.0.0.1
+      port: $CLICKHOUSE_PORT
+      protocol: native
+      username: postgres
+      version: 4.8.2
+    secureJsonData:
+      password: pass
+    isDefault: false
+EOF
 
 echo "initializing bigtable schema"
 PROJECT="explorer"

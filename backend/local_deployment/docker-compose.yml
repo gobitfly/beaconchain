@@ -7,6 +7,20 @@ x-service: &default-service
     - /tmp/go-cache:/go
     - /tmp/go-build-cache:/root/.cache/go-build
 services:
+  grafana:
+    image: grafana/grafana:latest
+    network_mode: "host"
+    environment:
+      - GF_SERVER_HTTP_PORT=3005
+      - GF_PLUGINS_PREINSTALL=grafana-clickhouse-datasource
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+  prometheus:
+    image: prom/prometheus:latest
+    network_mode: "host"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
   build-once:
     <<: *default-service
     profiles:
@@ -16,23 +30,37 @@ services:
     <<: *default-service
     command: go run ./cmd exporter -config /app/backend/local_deployment/config.yml
     environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9005
       - INDEXER_ENABLED=true
       - LOG_LEVEL=debug
   eth1indexer:
     <<: *default-service
     command: go run ./cmd eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9006
   rewards-exporter:
     <<: *default-service
     command: go run ./cmd rewards-exporter -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9007
   statistics:
     <<: *default-service
     command: go run ./cmd statistics -config /app/backend/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9008
   # frontend-data-updater:
   #   <<: *default-service
   #   command: go run ./cmd/frontend-data-updater -config /app/local_deployment/config.yml
   api:
     <<: *default-service
     command: go run ./cmd api -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9009
   frontend:
     network_mode: "host"
     # latest staging
