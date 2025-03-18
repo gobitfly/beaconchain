@@ -1,9 +1,9 @@
-input_parser = import_module("github.com/kurtosis-tech/ethereum-package/src/package_io/input_parser.star")
-eth_network_module = import_module("github.com/kurtosis-tech/ethereum-package/main.star")
-transaction_spammer = import_module("github.com/kurtosis-tech/ethereum-package/src/transaction_spammer/transaction_spammer.star")
-blob_spammer = import_module("github.com/kurtosis-tech/ethereum-package/src/blob_spammer/blob_spammer.star")
-genesis_constants = import_module("github.com/kurtosis-tech/ethereum-package/src/prelaunch_data_generator/genesis_constants/genesis_constants.star")
-shared_utils = import_module("github.com/kurtosis-tech/ethereum-package/src/shared_utils/shared_utils.star")
+input_parser = import_module("github.com/ethpandaops/ethereum-package/src/package_io/input_parser.star")
+eth_network_module = import_module("github.com/ethpandaops/ethereum-package/main.star")
+transaction_spammer = import_module("github.com/ethpandaops/ethereum-package/src/transaction_spammer/transaction_spammer.star")
+blob_spammer = import_module("github.com/ethpandaops/ethereum-package/src/blob_spammer/blob_spammer.star")
+genesis_constants = import_module("github.com/ethpandaops/ethereum-package/src/prelaunch_data_generator/genesis_constants/genesis_constants.star")
+shared_utils = import_module("github.com/ethpandaops/ethereum-package/src/shared_utils/shared_utils.star")
 
 POSTGRES_PORT_ID = "postgres"
 POSTGRES_DB = "db"

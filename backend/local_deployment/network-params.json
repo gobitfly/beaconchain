@@ -26,6 +26,8 @@
       "electra_fork_epoch": 999999999
     },
     "global_log_level": "info",
-    "start_tx_spammer": true,
-    "start_blob_spammer": false
-  }
+    "tx_spammer_params": {
+      "image": "ethpandaops/tx-fuzz:master",
+      "tx_spammer_extra_args": []
+    }
+}
