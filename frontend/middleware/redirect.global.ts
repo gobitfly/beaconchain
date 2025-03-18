@@ -14,6 +14,9 @@ export default function ({
   function redirectToV1(path: `/${string}`) {
     return navigateTo(`${v1Domain}${path}`, { external: true })
   }
+  function redirect(url: string) {
+    return navigateTo(`${url}`, { external: true })
+  }
   switch (name) {
     case 'address':
       return redirectToV1(`/address/${params.id || params.slug?.[1]}`)
@@ -35,8 +38,16 @@ export default function ({
         }
       }
       break
+    case 'discord':
+      return redirect('https://dsc.gg/beaconchain')
     case 'epoch':
       return redirectToV1(`/epoch/${params.id || params.slug?.[1]}`)
+    case 'github-beaconchain':
+      return redirect('https://github.com/gobitfly/beaconchain')
+    case 'github-mobile-app':
+      return redirect('https://github.com/gobitfly/eth2-beaconchain-explorer-app')
+    case 'imprint':
+      return redirectToV1('/imprint')
     case 'mobile':
       return redirectToV1('/mobile')
     case 'notifications':
@@ -48,8 +59,14 @@ export default function ({
       return redirectToV1('/register')
     case 'requestReset':
       return redirectToV1('/requestReset')
+    case 'shop':
+      return redirect('https://shop.beaconcha.in')
     case 'slot':
       return redirectToV1(`/slot/${params.id || params.slug?.[1]}`)
+    case 'status':
+      return redirect('https://status.beaconcha.in/')
+    case 'terms':
+      return redirect('https://storage.googleapis.com/legal.beaconcha.in/tos.pdf')
     case 'tx':
       return redirectToV1(`/tx/${params.id || params.slug?.[1]}`)
     case 'user-settings':
@@ -60,5 +77,7 @@ export default function ({
     case 'validator':
     case 'validator-id':
       return redirectToV1(`/validator/${params.id || params.slug?.[1]}`)
+    case 'x':
+      return redirect('https://x.com/beaconcha_in')
   }
 }
