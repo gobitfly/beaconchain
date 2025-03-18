@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 10s
+scrape_configs:
+ - job_name: indexer
+   static_configs:
+    - targets:
+       - 127.0.0.1:9005
+ - job_name: eth1indexer
+   static_configs:
+    - targets:
+       - 127.0.0.1:9006
+ - job_name: rewards-exporter
+   static_configs:
+    - targets:
+       - 127.0.0.1:9007
+ - job_name: statistics
+   static_configs:
+    - targets:
+       - 127.0.0.1:9008
+ - job_name: api
+   static_configs:
+    - targets:
+       - 127.0.0.1:9009
