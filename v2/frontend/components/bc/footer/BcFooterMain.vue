@@ -1,14 +1,129 @@
 <script setup lang="ts">
 const year = new Date().getFullYear()
 const version = useRuntimeConfig().public.gitVersion
+const { t: $t } = useTranslation()
 </script>
 
 <template>
-  <div class="main-footer">
-    <div class="main-footer__links">
-      <BcFooterLinkList />
-    </div>
-    <div class="main-footer__meta">
+  <footer class="main-footer">
+    <nav class="main-footer__links">
+      <section>
+        <BcText
+          variant="md"
+          tag="h4"
+          class="main-footer__headline"
+        >
+          {{ $t('footer.legal_notices') }}
+        </BcText>
+        <ul class="main-footer__list">
+          <li>
+            <BcLink
+              to="/imprint"
+              class="link"
+            >
+              {{ $t('footer.imprint') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              to="/terms"
+              class="link"
+            >
+              {{ $t('footer.terms') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              to="/privacy"
+              class="link"
+            >
+              {{ $t('footer.privacy') }}
+            </BcLink>
+          </li>
+        </ul>
+      </section>
+      <section
+        class="main-footer__section"
+      >
+        <BcText
+          variant="md"
+          tag="h4"
+        >
+          {{ $t('footer.resources') }}
+        </BcText>
+        <ul class="main-footer__list">
+          <li>
+            <BcLink
+              class="link"
+              to="/pricing"
+            >
+              {{ $t('footer.premium') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              class="link"
+              to="/shop"
+            >
+              {{ $t('footer.shop') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              class="link"
+              to="/status"
+            >
+              {{ $t('footer.status') }}
+            </BcLink>
+          </li>
+        </ul>
+      </section>
+      <section
+        class="main-footer__section"
+      >
+        <BcText
+          variant="md"
+          tag="h4"
+        >
+          {{ $t('footer.links') }}
+        </BcText>
+        <ul class="main-footer__list">
+          <li>
+            <BcLink
+              class="link"
+              to="/discord"
+            >
+              {{ $t('footer.discord') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              class="link"
+              to="/x"
+            >
+              {{ $t('footer.x') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              class="link"
+              to="/github-beaconchain"
+            >
+              {{ $t('footer.github') }}
+            </BcLink>
+          </li>
+          <li>
+            <BcLink
+              class="link"
+              to="/github-mobile-app"
+            >
+              {{ $t('footer.github_mobile_app') }}
+            </BcLink>
+          </li>
+        </ul>
+      </section>
+    </nav>
+    <p class="main-footer__meta">
       <span>
         © bitfly explorer GmbH {{ year }}
       </span>
@@ -22,8 +137,8 @@ const version = useRuntimeConfig().public.gitVersion
         |
       </span>
       <BcThemeToggle />
-    </div>
-  </div>
+    </p>
+  </footer>
 </template>
 
 <style lang="scss" scoped>
@@ -34,11 +149,13 @@ const version = useRuntimeConfig().public.gitVersion
   position: relative;
   box-sizing: border-box;
   width: 100%;
+
   flex-direction: column;
   gap: var(--padding-large);
-  padding-block: var(--padding-large);
+  padding: var(--padding-large);
   margin-top: 64px;
   background-color: var(--container-background);
+  align-items: center;
 
   @media (min-width: 600px) {
     // large screen
@@ -53,21 +170,23 @@ const version = useRuntimeConfig().public.gitVersion
 
   .main-footer__links {
     display: flex;
-    position: relative;
+    flex-direction: column;
+    gap: var(--padding-large);
+    width: $breakpoint-sm;
 
-    @media (min-width: 600px) {
-      // large screen
-      justify-content: center;
+    @media (min-width: $breakpoint-md) {
       flex-direction: row;
-      gap: 130px;
+      justify-content: space-between;
     }
+  }
 
-    @media (max-width: 599.9px) {
-      // mobile
-      justify-content: flex-start;
-      align-items: flex-start;
-      flex-direction: column;
-    }
+  .main-footer__list {
+    margin-top: var(--padding-medium);
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--padding);
   }
 
   .main-footer__meta {
