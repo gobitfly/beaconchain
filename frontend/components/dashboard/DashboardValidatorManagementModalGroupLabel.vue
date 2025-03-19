@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import {
-  faCheck, faEdit,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 interface Props {
   canBeEmpty?: boolean,
   disabled?: boolean,
   label?: string, // used if not in edit mode, defaults to value,
   maxlength?: number,
   pattern?: RegExp,
-  trimInput?: boolean,
   value?: string,
 }
 
@@ -23,12 +17,6 @@ const isEditing = ref(false)
 const editValue = ref<string>(props.value ?? '')
 
 const iconClick = () => {
-  if (props.trimInput) {
-    editValue.value = editValue.value.trim()
-  }
-  if (icon.value.disabled) {
-    return
-  }
   if (!isEditing.value) {
     isEditing.value = true
     return
@@ -42,16 +30,6 @@ const iconClick = () => {
 
   isEditing.value = false
 }
-
-const icon = computed(() => ({
-  disabled:
-    props.disabled
-    || (isEditing.value && !editValue.value && !props.canBeEmpty)
-    || (props.pattern && !props.pattern.test(editValue.value))
-      ? true
-      : null,
-  icon: isEditing.value ? faCheck : faEdit,
-}))
 
 watch(
   () => props.value,
@@ -81,7 +59,7 @@ watch([
     >
       <InputText
         ref="inputRef"
-        v-model="editValue"
+        v-model.trim="editValue"
         :maxlength
         @keypress.enter="iconClick"
       />
@@ -92,10 +70,16 @@ watch([
     >
       {{ label || value }}
     </span>
-    <FontAwesomeIcon
-      class="link"
-      :icon="icon.icon"
-      :disabled="icon.disabled"
+    <BcButtonIcon
+      :screenreader-text="{
+        key: 'dashboard.validator.group_management.edit_group_name',
+        interpolation: { groupName: props.value },
+      }"
+      :disabled="props.disabled
+        || (isEditing && !editValue && !props.canBeEmpty)
+        || (props.pattern && !props.pattern.test(editValue))"
+      class="edit-button"
+      :name="isEditing ? 'check' : 'edit'"
       @click="iconClick"
     />
   </div>
@@ -125,7 +109,8 @@ watch([
     @include utils.truncate-text;
   }
 
-  .link {
+  .edit-button {
+    color: var(--blue);
     margin-right: var(--padding);
   }
 
