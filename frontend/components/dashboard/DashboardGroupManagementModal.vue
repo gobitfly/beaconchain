@@ -276,7 +276,7 @@ const isMobile = computed(() => {
               :header="$t('dashboard.validator.group_management.col.name')"
             >
               <template #body="slotProps">
-                <BcInputLabel
+                <DashboardValidatorManagementModalGroupLabel
                   class="edit-group truncate-text"
                   :value="slotProps.data.name"
                   :default="
@@ -287,7 +287,6 @@ const isMobile = computed(() => {
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isGuestDashboard"
                   :pattern="REGEXP_VALID_NAME"
-                  :trim-input="true"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
