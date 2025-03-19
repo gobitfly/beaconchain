@@ -15,7 +15,7 @@ services:
       - GF_PLUGINS_PREINSTALL=grafana-clickhouse-datasource
     volumes:
       - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
   prometheus:
     image: prom/prometheus:latest
     network_mode: "host"

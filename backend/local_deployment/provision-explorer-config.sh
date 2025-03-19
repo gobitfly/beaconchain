@@ -143,7 +143,7 @@ EOL
 
 echo "generated config written to config.yml"
 
-cat <<EOF > grafana/datasources/datasource.yml
+cat <<EOF > grafana/datasource.yml
 apiVersion: 1
 
 datasources:
