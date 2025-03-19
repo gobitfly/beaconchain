@@ -5,7 +5,6 @@ blob_spammer = import_module("github.com/ethpandaops/ethereum-package/src/blob_s
 genesis_constants = import_module("github.com/ethpandaops/ethereum-package/src/prelaunch_data_generator/genesis_constants/genesis_constants.star")
 shared_utils = import_module("github.com/ethpandaops/ethereum-package/src/shared_utils/shared_utils.star")
 
-POSTGRES_DB = "db"
 ALLOY_PORT_ID = "alloy"
 ALLOY_DB = "alloy"
 CLICKHOUSE_PORT_ID = "clickhouse"

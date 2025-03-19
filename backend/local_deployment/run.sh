@@ -29,7 +29,7 @@ fn_main() {
 }
 
 fn_sql() {
-    PGPASSWORD=pass psql -h localhost -p$POSTGRES_PORT -U postgres -d db
+    PGPASSWORD=pass psql -h localhost -p $POSTGRES_PORT -U postgres -d alloy
 }
 
 fn_start() {
