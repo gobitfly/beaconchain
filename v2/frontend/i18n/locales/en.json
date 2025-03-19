@@ -267,6 +267,7 @@
                     "id": "Group Id",
                     "name": "Name"
                 },
+                "edit_group_name": "Edit group name: {groupName}",
                 "new_group_placeholder": "New group name",
                 "remove_text": "Do you want to remove group {group} from your dashboard?",
                 "remove_title": "Remove Groups",
