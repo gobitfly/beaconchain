@@ -41,9 +41,9 @@ func TestBalanceUpdater(t *testing.T) {
 		Value: expectedBalance,
 	}
 	updates := newStubUpdatesStore([]db2.Pair{expected.Pair})
-	updater := NewBalanceUpdater(fmt.Sprintf("%d", backend.ChainID), updates, store, batcher)
+	updater := NewBalanceUpdater(updates, store, batcher)
 
-	balances, err := updater.UpdateBalances(1)
+	balances, err := updater.UpdateBalances(fmt.Sprintf("%d", backend.ChainID), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -125,8 +125,8 @@ func TestBalanceUpdater_UpdateBalancesErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := NewBalanceUpdater("", tt.store, tt.store, tt.batcher)
-			_, err := u.UpdateBalances(0)
+			u := NewBalanceUpdater(tt.store, tt.store, tt.batcher)
+			_, err := u.UpdateBalances("", 0)
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Fatalf("UpdateBalances() expected an error")

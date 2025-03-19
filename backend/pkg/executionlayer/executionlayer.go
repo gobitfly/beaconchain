@@ -19,98 +19,56 @@ import (
 var logger = log.Logger.WithField("service", "el_indexer")
 
 type Config struct {
-	TokenPriceExportFrequency time.Duration
-	BalanceUpdaterBatchSize   int64
-	ENSImportBatchSize        int64
-	Bulk                      uint64
+	TokenPriceFrequency time.Duration
+	BlockFrequency      time.Duration
 }
 
 var defaultConfig = Config{
-	TokenPriceExportFrequency: time.Hour,
-	BalanceUpdaterBatchSize:   1000,
-	ENSImportBatchSize:        200,
-	Bulk:                      8000,
+	TokenPriceFrequency: time.Hour,
+	BlockFrequency:      14 * time.Second,
 }
 
 func (config *Config) validate() {
-	if config.TokenPriceExportFrequency == 0 {
-		config.TokenPriceExportFrequency = defaultConfig.TokenPriceExportFrequency
+	if config.TokenPriceFrequency == 0 {
+		config.TokenPriceFrequency = defaultConfig.TokenPriceFrequency
 	}
-	if config.BalanceUpdaterBatchSize == 0 {
-		config.BalanceUpdaterBatchSize = defaultConfig.BalanceUpdaterBatchSize
-	}
-	if config.ENSImportBatchSize == 0 {
-		config.ENSImportBatchSize = defaultConfig.ENSImportBatchSize
-	}
-	if config.Bulk == 0 {
-		config.Bulk = defaultConfig.Bulk
+	if config.BlockFrequency == 0 {
+		config.BlockFrequency = defaultConfig.BlockFrequency
 	}
 }
 
 type IndexerService struct {
-	chainID string
-
-	client         *ethclient.Client
-	lastBlockStore db2.LastBlocksStore
-
-	balanceUpdater *BalanceUpdater
-	tokenPricer    *TokenPricer
-	indexer        *Indexer
-	reorgWatcher   *ReorgWatcher
-	cache          db2.CachedBalanceUpdates
-	store          db2.StoreV1
-	ensImporter    *ENSImporter
-
-	muBalance sync.Mutex
-	muENS     sync.Mutex
+	tokenPricer  *TokenPricer
+	indexer      *Indexer
+	stateReader  StateReader
+	reorgWatcher *ReorgWatcher
 
 	config Config
 }
 
-func NewIndexerService(chainID string, client *ethclient.Client, balanceUpdater *BalanceUpdater, reorgWatcher *ReorgWatcher, lastBlockStore db2.LastBlocksStore, tokenPricer *TokenPricer, indexer *Indexer, cache db2.CachedBalanceUpdates, store db2.StoreV1, ensImporter *ENSImporter, config Config) *IndexerService {
+func NewIndexerService(stateReader StateReader, indexer *Indexer, reorgWatcher *ReorgWatcher, tokenPricer *TokenPricer, config Config) *IndexerService {
 	config.validate()
 	return &IndexerService{
-		chainID:        chainID,
-		client:         client,
-		lastBlockStore: lastBlockStore,
-		balanceUpdater: balanceUpdater,
-		tokenPricer:    tokenPricer,
-		indexer:        indexer,
-		reorgWatcher:   reorgWatcher,
-		cache:          cache,
-		store:          store,
-		ensImporter:    ensImporter,
-		muBalance:      sync.Mutex{},
-		muENS:          sync.Mutex{},
-		config:         config,
+		tokenPricer:  tokenPricer,
+		indexer:      indexer,
+		stateReader:  stateReader,
+		reorgWatcher: reorgWatcher,
+		config:       config,
 	}
 }
 
 func (service *IndexerService) SyncRange(start, end uint64, skipNode, skipData bool) error {
-	if !skipNode {
-		if err := service.indexer.IndexNode(service.chainID, start, end); err != nil {
-			return fmt.Errorf("error indexing blocks from node: %v", err)
-		}
+	state, err := service.stateReader.state()
+	if err != nil {
+		return fmt.Errorf("cannot not get state: %w", err)
 	}
-	if !skipData {
-		if err := service.indexer.IndexEvents(service.chainID, start, end); err != nil {
-			return fmt.Errorf("error indexing events from node: %v", err)
-		}
-	}
-	if service.balanceUpdater != nil {
-		state, err := service.state()
-		if err != nil {
-			return fmt.Errorf("cannot get state: %v", err)
-		}
-
-		service.indexBalances(state)
-	}
-	return nil
+	logger.WithFields(state.Fields()).Info("last blocks")
+	return service.indexer.Range(state, start, end, skipNode, skipData)
 }
 
 func (service *IndexerService) SyncLive() {
-	for ; ; time.Sleep(time.Second * 14) {
-		state, err := service.state()
+	for ; ; time.Sleep(service.config.BlockFrequency) {
+		state, err := service.stateReader.state()
 		if err != nil {
 			logger.WithField("error", err).Error("cannot get state")
 			continue
@@ -122,14 +80,14 @@ func (service *IndexerService) SyncLive() {
 			continue
 		}
 
-		if err := service.indexFromHead(state); err != nil {
+		if err := service.indexer.FromHead(state); err != nil {
 			logger.WithField("error", err).Error("indexing from head")
 			continue
 		}
 
-		go service.indexBalances(state)
+		go service.indexer.Balances(state)
 
-		go service.indexENS(state)
+		go service.indexer.ENS(state)
 	}
 }
 
@@ -149,18 +107,118 @@ func (service *IndexerService) SyncTokenPrice(path string) {
 			"duration": time.Since(start),
 			"tokens":   tokenList.Names(),
 		}).Info("token prices updated")
-		time.Sleep(service.config.TokenPriceExportFrequency)
+		time.Sleep(service.config.TokenPriceFrequency)
 	}
 }
 
-func (service *IndexerService) indexFromHead(state syncState) error {
+type StateReader struct {
+	chainID        string
+	client         *ethclient.Client
+	lastBlockStore db2.LastBlocksStore
+}
+
+func NewStateReader(chainID string, client *ethclient.Client, lastBlockStore db2.LastBlocksStore) StateReader {
+	return StateReader{
+		chainID:        chainID,
+		client:         client,
+		lastBlockStore: lastBlockStore,
+	}
+}
+
+func (r StateReader) state() (syncState, error) {
+	lastBlock, err := r.client.BlockNumber(context.Background())
+	if err != nil {
+		return syncState{}, fmt.Errorf("get chain head: %w", err)
+	}
+	lastBlockFromBlocksTable, err := r.lastBlockStore.GetInBlocksTable(r.chainID)
+	if err != nil {
+		return syncState{}, fmt.Errorf("get last block from blocks table: %w", err)
+	}
+	lastBlockFromDataTable, err := r.lastBlockStore.GetInDataTable(r.chainID)
+	if err != nil {
+		return syncState{}, fmt.Errorf("get last block from data table: %w", err)
+	}
+	return syncState{
+		chainID: r.chainID,
+		node:    lastBlock,
+		blocks:  lastBlockFromBlocksTable,
+		data:    lastBlockFromDataTable,
+	}, nil
+}
+
+type syncState struct {
+	chainID string
+	node    uint64
+	blocks  uint64
+	data    uint64
+}
+
+func (state syncState) Fields() map[string]interface{} {
+	return map[string]interface{}{
+		"chainID": state.chainID,
+		"node":    state.node,
+		"blocks":  state.blocks,
+		"data":    state.data,
+	}
+}
+
+type IndexerConfig struct {
+	BalanceUpdaterBatchSize int64
+	ENSImportBatchSize      int64
+	Bulk                    uint64
+}
+
+var defaultIndexerConfig = IndexerConfig{
+	BalanceUpdaterBatchSize: 1000,
+	ENSImportBatchSize:      200,
+	Bulk:                    8000,
+}
+
+func (c *IndexerConfig) validate() {
+	if c.BalanceUpdaterBatchSize == 0 {
+		c.BalanceUpdaterBatchSize = defaultIndexerConfig.BalanceUpdaterBatchSize
+	}
+	if c.ENSImportBatchSize == 0 {
+		c.ENSImportBatchSize = defaultIndexerConfig.ENSImportBatchSize
+	}
+	if c.Bulk == 0 {
+		c.Bulk = defaultIndexerConfig.Bulk
+	}
+}
+
+type Indexer struct {
+	balanceCache   db2.CachedBalanceUpdates
+	indexer        *BlockIndexer
+	balanceUpdater *BalanceUpdater
+	store          db2.StoreV1
+	ensImporter    *ENSImporter
+
+	config IndexerConfig
+
+	muBalance sync.Mutex
+	muENS     sync.Mutex
+}
+
+func NewIndexer(cache db2.CachedBalanceUpdates, blockIndexer *BlockIndexer, balanceUpdater *BalanceUpdater, store db2.StoreV1, ensImporter *ENSImporter, config IndexerConfig) *Indexer {
+	config.validate()
+	return &Indexer{
+		balanceCache:   cache,
+		indexer:        blockIndexer,
+		balanceUpdater: balanceUpdater,
+		store:          store,
+		ensImporter:    ensImporter,
+		config:         config,
+	}
+}
+
+func (service *Indexer) FromHead(state syncState) error {
 	start := time.Now()
 	logger := logger.WithFields(logrus.Fields{
 		"blocksRange": fmt.Sprintf("%d-%d", state.blocks+1, state.node),
 		"dataRange":   fmt.Sprintf("%d-%d", state.data+1, state.node),
 	})
 	// clear balance cache
-	defer service.cache.Clear(service.chainID)
+	defer service.balanceCache.Clear(state.chainID)
 
 	// get the real last block processed by taking the smallest block between state.data and state.blocks
 	startBlock := max(min(state.data, state.blocks)+1, 0)
@@ -173,11 +231,11 @@ func (service *IndexerService) indexFromHead(state syncState) error {
 			"start": startBlock,
 			"end":   endBlock,
 		})
-		if err := service.indexer.Index(service.chainID, startBlock, endBlock); err != nil {
+		if err := service.indexer.Index(state.chainID, startBlock, endBlock); err != nil {
 			logger.WithFields(logrus.Fields{
 				"error": err,
 			}).Error("error indexing")
-			continue
+			return err
 		}
 		logger.WithFields(logrus.Fields{
 			"elapsed": time.Since(start),
@@ -190,7 +248,7 @@ func (service *IndexerService) indexFromHead(state syncState) error {
 	return nil
 }
 
-func (service *IndexerService) indexBalances(state syncState) {
+func (service *Indexer) Balances(state syncState) {
 	service.muBalance.Lock()
 	defer service.muBalance.Unlock()
 
@@ -198,7 +256,7 @@ func (service *IndexerService) indexBalances(state syncState) {
 		logger := logger.WithFields(state.Fields())
 		start := time.Now()
 
-		total, err := service.store.CountBalanceUpdates(service.chainID)
+		total, err := service.store.CountBalanceUpdates(state.chainID)
 		if err != nil {
 			logger.WithField("error", err).Error("error while updating balances")
 			continue
@@ -208,7 +266,7 @@ func (service *IndexerService) indexBalances(state syncState) {
 			logger.Info("finished updating balances")
 			return
 		}
-		balances, err := service.balanceUpdater.UpdateBalances(service.config.BalanceUpdaterBatchSize)
+		balances, err := service.balanceUpdater.UpdateBalances(state.chainID, service.config.BalanceUpdaterBatchSize)
 		if err != nil {
 			logger.WithField("error", err).Error("error while updating balances")
 			return
@@ -221,7 +279,7 @@ func (service *IndexerService) indexBalances(state syncState) {
 	}
 }
 
-func (service *IndexerService) indexENS(state syncState) {
+func (service *Indexer) ENS(state syncState) {
 	if service.ensImporter == nil {
 		return
 	}
@@ -232,7 +290,7 @@ func (service *IndexerService) indexENS(state syncState) {
 		logger := logger.WithFields(state.Fields())
 		start := time.Now()
 
-		total, err := service.store.CountEnsUpdates(service.chainID)
+		total, err := service.store.CountEnsUpdates(state.chainID)
 		if err != nil {
 			logger.WithField("error", err).Error("error while importing ens")
 			continue
@@ -242,7 +300,7 @@ func (service *IndexerService) indexENS(state syncState) {
 			logger.Info("finished importing ens")
 			return
 		}
-		res, err := service.ensImporter.Import(service.chainID, service.config.ENSImportBatchSize)
+		res, err := service.ensImporter.Import(state.chainID, service.config.ENSImportBatchSize)
 		if err != nil {
 			logger.WithField("error", err).Error("error while importing balances")
 			continue
@@ -256,38 +314,21 @@ func (service *IndexerService) indexENS(state syncState) {
 	}
 }
 
-func (service *IndexerService) state() (syncState, error) {
-	lastBlock, err := service.client.BlockNumber(context.Background())
-	if err != nil {
-		return syncState{}, fmt.Errorf("get chain head: %w", err)
+func (service *Indexer) Range(state syncState, start, end uint64, skipNode, skipData bool) error {
+	if !skipNode {
+		if err := service.indexer.IndexNode(state.chainID, start, end); err != nil {
+			return fmt.Errorf("error indexing blocks from node: %v", err)
+		}
 	}
-	lastBlockFromBlocksTable, err := service.lastBlockStore.GetInBlocksTable(service.chainID)
-	if err != nil {
-		return syncState{}, fmt.Errorf("get last block from blocks table: %w", err)
+	if !skipData {
+		if err := service.indexer.IndexEvents(state.chainID, start, end); err != nil {
+			return fmt.Errorf("error indexing events from node: %v", err)
+		}
 	}
-	lastBlockFromDataTable, err := service.lastBlockStore.GetInDataTable(service.chainID)
-	if err != nil {
-		return syncState{}, fmt.Errorf("get last block from data table: %w", err)
+	if service.balanceUpdater != nil {
+		service.Balances(state)
 	}
-	return syncState{
-		node:   lastBlock,
-		blocks: lastBlockFromBlocksTable,
-		data:   lastBlockFromDataTable,
-	}, nil
-}
-
-type syncState struct {
-	node   uint64
-	blocks uint64
-	data   uint64
-}
-
-func (state syncState) Fields() map[string]interface{} {
-	return map[string]interface{}{
-		"node":   state.node,
-		"blocks": state.blocks,
-		"data":   state.data,
-	}
+	return nil
 }
 
 func readTokenListFile(path string) (erc20.ERC20TokenList, error) {

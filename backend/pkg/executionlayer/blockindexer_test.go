@@ -134,10 +134,10 @@ func TestIndexerWithBigTable(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() { _ = bt.Clear() }()
 			store := db2.NewStoreV1FromBigtable(bt, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
-			indexer := NewIndexer(
+			indexer := NewBlockIndexer(
 				store,
 				db2.NewCachedLastBlocks(&database.MemCache{}, store),
-				IndexerConfig{},
+				BlockIndexerConfig{},
 				client,
 				tt.transformers...,
 			)

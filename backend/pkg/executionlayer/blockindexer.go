@@ -23,36 +23,36 @@ type Store interface {
 	SaveBlock(chainID string, block *types.Eth1Block) error
 }
 
-type IndexerConfig struct {
+type BlockIndexerConfig struct {
 	Concurrency uint64
 	TraceMode   string
 }
 
-var defaultIndexerConfig = IndexerConfig{
+var defaultBlockIndexerConfig = BlockIndexerConfig{
 	Concurrency: 30,
 	TraceMode:   "geth",
 }
 
-func (config *IndexerConfig) validate() {
+func (config *BlockIndexerConfig) validate() {
 	if config.Concurrency == 0 {
-		config.Concurrency = defaultIndexerConfig.Concurrency
+		config.Concurrency = defaultBlockIndexerConfig.Concurrency
 	}
 	if config.TraceMode == "" {
-		config.TraceMode = defaultIndexerConfig.TraceMode
+		config.TraceMode = defaultBlockIndexerConfig.TraceMode
 	}
 }
 
-type Indexer struct {
+type BlockIndexer struct {
 	store          Store
 	lastBlockStore db2.LastBlocksStore
 	transformers   []TransformFunc
 	client         Client
-	config         IndexerConfig
+	config         BlockIndexerConfig
 }
 
-func NewIndexer(store Store, lastBlockStore db2.LastBlocksStore, config IndexerConfig, client Client, transformers ...TransformFunc) *Indexer {
+func NewBlockIndexer(store Store, lastBlockStore db2.LastBlocksStore, config BlockIndexerConfig, client Client, transformers ...TransformFunc) *BlockIndexer {
 	config.validate()
-	return &Indexer{
+	return &BlockIndexer{
 		store:          store,
 		lastBlockStore: lastBlockStore,
 		transformers:   transformers,
@@ -62,7 +62,7 @@ func NewIndexer(store Store, lastBlockStore db2.LastBlocksStore, config IndexerC
 }
 
 // IndexNode retrieve types.Eth1Block from the client and save them into the store
-func (indexer *Indexer) IndexNode(chainID string, start, end uint64) error {
+func (indexer *BlockIndexer) IndexNode(chainID string, start, end uint64) error {
 	g, gCtx := errgroup.WithContext(context.Background())
 	g.SetLimit(int(indexer.config.Concurrency))
 
@@ -112,7 +112,7 @@ func (indexer *Indexer) IndexNode(chainID string, start, end uint64) error {
 }
 
 // IndexEvents retrieve read the types.Eth1Block from the store and apply the transformers to them
-func (indexer *Indexer) IndexEvents(chainID string, start, end uint64) error {
+func (indexer *BlockIndexer) IndexEvents(chainID string, start, end uint64) error {
 	retrieval := new(errgroup.Group)
 	retrieval.SetLimit(int(indexer.config.Concurrency))
 
@@ -169,7 +169,7 @@ func (indexer *Indexer) IndexEvents(chainID string, start, end uint64) error {
 }
 
 // Index retrieve the types.Eth1Block from the client and apply the transformers to them
-func (indexer *Indexer) Index(chainID string, start, end uint64) error {
+func (indexer *BlockIndexer) Index(chainID string, start, end uint64) error {
 	if err := indexer.IndexNode(chainID, start, end); err != nil {
 		return fmt.Errorf("blocks from node: %w", err)
 	}
@@ -179,7 +179,7 @@ func (indexer *Indexer) Index(chainID string, start, end uint64) error {
 	return nil
 }
 
-func (indexer *Indexer) indexBlock(chainID string, block *types.Eth1Block) error {
+func (indexer *BlockIndexer) indexBlock(chainID string, block *types.Eth1Block) error {
 	res := db2.IndexedBlock{
 		ChainID: chainID,
 		Number:  block.Number,

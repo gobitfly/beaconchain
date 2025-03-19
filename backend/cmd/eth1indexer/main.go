@@ -169,11 +169,11 @@ func Run() {
 	batcher := evm.NewBatcher(nodeChainID, client.GetNativeClient(), batcherConfig)
 
 	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
-	indexer := executionlayer.NewIndexer(store, lastBlockStore, executionlayer.IndexerConfig{
+	blockIndexer := executionlayer.NewBlockIndexer(store, lastBlockStore, executionlayer.BlockIndexerConfig{
 		Concurrency: *concurrency,
 		TraceMode:   *traceMode,
 	}, client, executionlayer.AllTransformers...)
-	balanceUpdater := executionlayer.NewBalanceUpdater(chainID, store, store, batcher)
+	balanceUpdater := executionlayer.NewBalanceUpdater(store, store, batcher)
 	reorgWatcher := executionlayer.NewReorgWatcher(client.GetNativeClient(), store, *reorgDepth, chainID, lastBlockStore)
 
 	pricer := executionlayer.NewTokenPricer(
@@ -183,9 +183,9 @@ func Run() {
 		batcher,
 	)
 
-	var importer *executionlayer.ENSImporter
+	var ensImporter *executionlayer.ENSImporter
 	if *enableEnsUpdater {
-		importer = executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
+		ensImporter = executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
 	}
 
 	start, end := uint64(0), uint64(0)
@@ -198,23 +198,26 @@ func Run() {
 	if endBlocks != nil {
 		end = *endBlocks
 	}
-
-	service := executionlayer.NewIndexerService(
-		nodeChainID.String(),
-		client.GetNativeClient(),
-		&balanceUpdater,
-		reorgWatcher,
-		lastBlockStore,
-		pricer,
-		indexer,
+	indexer := executionlayer.NewIndexer(
 		db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}},
+		blockIndexer,
+		&balanceUpdater,
 		store,
-		importer,
+		ensImporter,
+		executionlayer.IndexerConfig{
+			BalanceUpdaterBatchSize: *balanceUpdaterBatchSize,
+			ENSImportBatchSize:      *ensBatchSize,
+			Bulk:                    *bulk,
+		},
+	)
+	service := executionlayer.NewIndexerService(
+		executionlayer.NewStateReader(chainID, client.GetNativeClient(), lastBlockStore),
+		indexer,
+		reorgWatcher,
+		pricer,
 		executionlayer.Config{
-			TokenPriceExportFrequency: *tokenPriceExportFrequency,
-			BalanceUpdaterBatchSize:   *balanceUpdaterBatchSize,
-			ENSImportBatchSize:        *ensBatchSize,
-			Bulk:                      *bulk,
+			TokenPriceFrequency: *tokenPriceExportFrequency,
+			BlockFrequency:      12 * time.Second,
 		},
 	)
 	if *tokenPriceExport {

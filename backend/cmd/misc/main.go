@@ -1635,7 +1635,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		ReadTimeout: time.Second * 20,
 	})
 	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
-	indexer := executionlayer.NewIndexer(store, lastBlockStore, executionlayer.IndexerConfig{
+	indexer := executionlayer.NewBlockIndexer(store, lastBlockStore, executionlayer.BlockIndexerConfig{
 		Concurrency: concurrency,
 	}, client, transforms...)
 	chainID := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)

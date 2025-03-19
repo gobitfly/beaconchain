@@ -161,10 +161,10 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	indexer := NewIndexer(
+	indexer := NewBlockIndexer(
 		store,
 		lastBlockStore,
-		IndexerConfig{},
+		BlockIndexerConfig{},
 		client,
 		AllTransformers...,
 	)
@@ -213,7 +213,7 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	}
 }
 
-func indexLastBlock(t *testing.T, backend *th.BlockchainBackend, indexer *Indexer) *gethtypes.Block {
+func indexLastBlock(t *testing.T, backend *th.BlockchainBackend, indexer *BlockIndexer) *gethtypes.Block {
 	lastBlock, err := backend.Client().BlockByNumber(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
