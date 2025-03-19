@@ -3,13 +3,13 @@ chain:
   clConfigPath: 'node'
   elConfigPath: '' # Works for well known public networks like mainnet, prater, holesky, sepolia. Specify a file for custom chains
 readerDatabase:
-  name: db
+  name: alloy
   host: {{.DBHost}}
   port: {{.DBPort}}
   user: postgres
   password: "pass"
 writerDatabase:
-  name: db
+  name: alloy
   host: {{.DBHost}}
   port: {{.DBPort}}
   user: postgres
@@ -45,13 +45,13 @@ frontend:
     host: '0.0.0.0' # Address to listen on
     port: '8080' # Port to listen on
   readerDatabase:
-    name: db
+    name: alloy
     host: {{.DBHost}}
     port: {{.DBPort}}
     user: postgres
     password: "pass"
   writerDatabase:
-    name: db
+    name: alloy
     host: {{.DBHost}}
     port: {{.DBPort}}
     user: postgres
