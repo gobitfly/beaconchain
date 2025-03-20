@@ -230,40 +230,43 @@ type GetValidatorDashboardGroupHeatmapResponse ApiDataResponse[VDBHeatmapTooltip
 // ------------------------------------------------------------
 // Deposits Tab
 type VDBExecutionDepositsTableRow struct {
-	PublicKey            PubKey          `json:"public_key"`
+	PublicKey            PubKey          `json:"public_key" faker:"pubkey"`
 	Index                *uint64         `json:"index,omitempty"`
 	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
-	Timestamp            int64           `json:"timestamp"`
-	From                 Address         `json:"from"`
+	Timestamp            int64           `json:"timestamp" faker:"past_timestamp"`
+	From                 Address         `json:"-"` // TODO enable again
 	Depositor            Address         `json:"depositor"`
-	TxHash               Hash            `json:"tx_hash"`
-	WithdrawalCredential Hash            `json:"withdrawal_credential"`
-	Amount               decimal.Decimal `json:"amount"`
-	Valid                bool            `json:"valid"`
+	TxHash               Hash            `json:"tx_hash" faker:"tx_hash"`
+	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`
+	Amount               decimal.Decimal `json:"amount" faker:"eth"`
+	Validity             string          `json:"validity" tstype:"'valid' | 'invalid' | 'invalid_skipped'" faker:"oneof: valid, invalid, invalid_skipped"`
 }
 type GetValidatorDashboardExecutionLayerDepositsResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
 type VDBConsensusDepositsTableRow struct {
-	PublicKey            PubKey          `json:"public_key"`
+	PublicKey            PubKey          `json:"public_key" faker:"pubkey"`
 	Index                uint64          `json:"index"`
 	GroupId              uint64          `json:"group_id"`
-	Epoch                uint64          `json:"epoch"`
-	Slot                 uint64          `json:"slot"`
-	WithdrawalCredential Hash            `json:"withdrawal_credential"`
-	Amount               decimal.Decimal `json:"amount"`
+	SlotQueued           uint64          `json:"slot_queued"`
+	SlotProcessed        uint64          `json:"slot_processed"`
+	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`
+	Amount               decimal.Decimal `json:"amount" faker:"eth"`
 	Signature            Hash            `json:"signature"`
+	Type                 string          `json:"type" tstype:"'manual' | 'auto'" faker:"oneof: manual, auto"`
+	Status               string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
+	RejectReason         *string         `json:"reject_reason,omitempty" tstype:"'invalid_signature'" faker:"oneof: invalid_signature"`
 }
 type GetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
 type VDBTotalExecutionDepositsData struct {
-	TotalAmount decimal.Decimal `json:"total_amount"`
+	TotalAmount decimal.Decimal `json:"total_amount" faker:"eth"`
 }
 
 type GetValidatorDashboardTotalExecutionDepositsResponse ApiDataResponse[VDBTotalExecutionDepositsData]
 
 type VDBTotalConsensusDepositsData struct {
-	TotalAmount decimal.Decimal `json:"total_amount"`
+	TotalAmount decimal.Decimal `json:"total_amount" faker:"eth"`
 }
 
 type GetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTotalConsensusDepositsData]
