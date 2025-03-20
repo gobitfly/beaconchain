@@ -61,6 +61,18 @@ services:
     environment:
       - METRICS_ENABLED=true
       - METRICS_ADDRESS=127.0.0.1:9009
+  notification-collector:
+    <<: *default-service
+    command: go run ./cmd notification-collector -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9010
+  notification-sender:
+    <<: *default-service
+    command: go run ./cmd notification-sender -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9011
   frontend:
     network_mode: "host"
     # latest staging
