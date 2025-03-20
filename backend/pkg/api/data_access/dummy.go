@@ -369,19 +369,19 @@ func (*DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dash
 	return getDummyStruct[t.VDBHeatmapTooltipData](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsElColumn], search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBExecutionDepositsTableRow](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsClColumn], search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBConsensusDepositsTableRow](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+func (*DummyService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalExecutionDepositsData, error) {
 	return getDummyStruct[t.VDBTotalExecutionDepositsData](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+func (*DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalConsensusDepositsData, error) {
 	return getDummyStruct[t.VDBTotalConsensusDepositsData](ctx)
 }
 
