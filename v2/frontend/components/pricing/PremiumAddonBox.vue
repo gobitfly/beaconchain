@@ -228,8 +228,8 @@ const handleSubmitPurchase = async () => {
           class="premium-addon-box__subscription-form-count-row"
         >
           <BcScreenreaderOnly
+            is="legend"
             id="subscription-count-row-label"
-            tag="legend"
           >
             {{ $t('pricing.addons.select_quantity') }}
           </BcScreenreaderOnly>

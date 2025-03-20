@@ -58,9 +58,9 @@ const emit = defineEmits<{
         class="content"
       >
         <BcScreenreaderOnly
+          is="h2"
           :id="idScreenreaderHeading"
           tabindex="-1"
-          tag="h2"
         >
           {{ props.screenreaderHeading }}
         </BcScreenreaderOnly>
