@@ -151,6 +151,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "hoodi":
+			cfg.Chain.GenesisTimestamp = 1742213400
 		case "pectra-devnet-5":
 			cfg.Chain.GenesisTimestamp = 1737034260
 		case "pectra-devnet-6":
@@ -174,6 +176,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisValidatorsRoot = "0xf5dcb5564e829aab27264b9becd5dfaa017085611224cb3036f573368dbb9d47"
 		case "holesky":
 			cfg.Chain.GenesisValidatorsRoot = "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1"
+		case "hoodi":
+			cfg.Chain.GenesisValidatorsRoot = "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f"
 		default:
 			return fmt.Errorf("tried to set known genesis-validators-root, but unknown chain-name")
 		}
@@ -255,6 +259,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.Id = 5
 		case "holesky":
 			cfg.Chain.Id = 17000
+		case "hoodi":
+			cfg.Chain.Id = 560048
 		case "sepolia":
 			cfg.Chain.Id = 11155111
 		case "gnosis":
@@ -337,6 +343,8 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &minimalCfg)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg)
+		case "hoodi":
+			err = yaml.Unmarshal([]byte(config.HoodiChainYml), &minimalCfg)
 		case "mekong":
 			err = yaml.Unmarshal([]byte(config.MekongChainYml), &minimalCfg)
 		case "pectra-devnet-5":
@@ -395,6 +403,8 @@ func setCLConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &cfg.Chain.ClConfig)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &cfg.Chain.ClConfig)
+		case "hoodi":
+			err = yaml.Unmarshal([]byte(config.HoodiChainYml), &cfg.Chain.ClConfig)
 		case "pectra-devnet-5":
 			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &cfg.Chain.ClConfig)
 		case "pectra-devnet-6":

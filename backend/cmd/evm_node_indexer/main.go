@@ -44,6 +44,7 @@ const GOERLI_CHAINID = 5
 const OPTIMISM_CHAINID = 10
 const GNOSIS_CHAINID = 100
 const HOLESKY_CHAINID = 17000
+const HOODI_CHAINID = 560048
 const ARBITRUM_CHAINID = 42161
 const ARBITRUM_NITRO_BLOCKNUMBER = 22207815
 const SEPOLIA_CHAINID = 11155111
@@ -678,6 +679,8 @@ func getChainNamePretty() string {
 		return "<:gnosis:1184470353947398155> GNOSIS mainnet"
 	case HOLESKY_CHAINID:
 		return "HOLESKY testnet"
+	case HOODI_CHAINID:
+		return "HOODI testnet"
 	case ARBITRUM_CHAINID:
 		return "<:arbitrum:1184470344506036334> ARBITRUM mainnet"
 	case SEPOLIA_CHAINID:
