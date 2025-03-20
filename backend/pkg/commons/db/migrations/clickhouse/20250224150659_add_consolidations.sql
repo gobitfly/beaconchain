@@ -575,7 +575,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_1h FINAL 
+FROM _final_validator_dashboard_rolling_1h FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_24h
