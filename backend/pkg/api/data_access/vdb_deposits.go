@@ -11,6 +11,7 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -19,7 +20,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsElColumn], search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	// TODO: add default sorting
 	var err error
 	var currentCursor t.ELDepositsCursor
@@ -135,8 +136,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
-			Valid:                row.Valid,
-			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
+			// Valid:                row.Valid,
+			From: t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 		}
 		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
@@ -220,7 +221,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsClColumn], search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	// TODO: add default sorting
 	var err error
 	var currentCursor t.CLDepositsCursor
@@ -371,10 +372,10 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	responseData := make([]t.VDBConsensusDepositsTableRow, len(data))
 	for i, row := range data {
 		responseData[i] = t.VDBConsensusDepositsTableRow{
-			PublicKey:            t.PubKey(pubkeys[i]),
-			Index:                indices[i],
-			Epoch:                utils.EpochOfSlot(uint64(row.Slot)),
-			Slot:                 uint64(row.Slot),
+			PublicKey: t.PubKey(pubkeys[i]),
+			Index:     indices[i],
+			// Epoch:                utils.EpochOfSlot(uint64(row.Slot)),
+			// Slot:                 uint64(row.Slot),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Signature:            t.Hash(hexutil.Encode(row.Signature)),
@@ -416,7 +417,8 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	return responseData, p, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalExecutionDepositsData, error) {
+	// TODO add filter
 	responseData := t.VDBTotalExecutionDepositsData{
 		TotalAmount: decimal.Zero,
 	}
@@ -456,7 +458,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Con
 	return &responseData, nil
 }
 
-func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalConsensusDepositsData, error) {
+	// TODO add filter
 	responseData := t.VDBTotalConsensusDepositsData{
 		TotalAmount: decimal.Zero,
 	}
