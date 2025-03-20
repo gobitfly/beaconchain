@@ -260,13 +260,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		return nil
 	})
 
-	investedAmount, err := d.GetValidatorDashboardEffectiveBalanceTotal(ctx, t.VDBId{Id: dashboardId}, true)
-	if err != nil {
-		return nil, err
-	}
 	retrieveApr := func(hours int, apr *float64) {
 		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours, investedAmount)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}
@@ -277,7 +273,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 	retrieveRewards := func(hours int, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours, investedAmount)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
 			if err != nil {
 				return err
 			}

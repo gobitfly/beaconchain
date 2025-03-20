@@ -116,7 +116,7 @@ type IncomeInfo struct {
 	Apr t.ClElValue[float64]
 }
 
-func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int, investedAmount uint64) (rewardsApr IncomeInfo, err error) {
+func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (rewardsApr IncomeInfo, err error) {
 	result := IncomeInfo{}
 	table := ""
 
@@ -136,13 +136,13 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	}
 
 	type RewardsResult struct {
-		EpochStart     uint64        `db:"epoch_start"`
-		EpochEnd       uint64        `db:"epoch_end"`
-		ValidatorCount uint64        `db:"validator_count"`
-		Reward         sql.NullInt64 `db:"reward"`
+		EpochStart     uint64   `db:"epoch_start"`
+		EpochEnd       uint64   `db:"epoch_end"`
+		ValidatorCount uint64   `db:"validator_count"`
+		RoiDividend    *big.Int `db:"roi_dividend"`
+		RoiDivisor     *big.Int `db:"roi_divisor"`
 	}
 
-	var rewardsResultTable RewardsResult
 	var rewardsResultTotal RewardsResult
 
 	rewardsDs := goqu.Dialect("postgres").
@@ -152,7 +152,8 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
 			goqu.L("COUNT(*) AS validator_count"),
-			goqu.L(d.getTotalRewardsColumns()).As("reward"),
+			goqu.L("SUM(roi_dividend)").As("roi_dividend"),
+			goqu.L("SUM(roi_divisor)").As("roi_divisor"),
 		)
 	if len(dashboardId.Validators) > 0 {
 		rewardsDs = rewardsDs.
@@ -168,13 +169,8 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		}
 	}
 
-	query, args, err := rewardsDs.Prepared(true).ToSQL()
+	rewardsResultTable, err := runQuery[RewardsResult](ctx, d.clickhouseReader, rewardsDs)
 	if err != nil {
-		return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
-	if err != nil || !rewardsResultTable.Reward.Valid {
 		return IncomeInfo{}, err
 	}
 
@@ -182,34 +178,23 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return IncomeInfo{}, nil
 	}
 
-	aprDivisor := hours
-	if hours == -1 { // for all time APR
-		aprDivisor = 90 * 24
-	}
-
-	// invested amount is wrong if the effective balance changed during the period (because of auto compound, consolidation, partial withdrawal etc.)
-	// would need to split at eb changes and weigh results
-	investedAmountDec := d.convertClToMain(decimal.NewFromUint64(investedAmount))
-
-	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromInt(rewardsResultTable.Reward.Int64)), investedAmountDec, aprDivisor)
-
-	result.Rewards.Cl = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+	aprDivisor := d.config.Chain.ClConfig.SecondsPerSlot * d.config.Chain.ClConfig.SlotsPerEpoch
+	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDividend, 0)), d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)), aprDivisor)
+	rewards := big.Int{}
+	rewards.Sub(rewardsResultTable.RoiDividend, rewardsResultTable.RoiDivisor)
+	result.Rewards.Cl = decimal.NewFromBigInt(&rewards, 0).Mul(decimal.NewFromInt(1e9))
 
 	if hours == -1 {
 		rewardsDs = rewardsDs.
 			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
 
-		query, args, err = rewardsDs.Prepared(true).ToSQL()
+		rewardsResultTotal, err = runQuery[RewardsResult](ctx, d.clickhouseReader, rewardsDs)
 		if err != nil {
-			return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
-		}
-
-		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
-		if err != nil || !rewardsResultTotal.Reward.Valid {
 			return IncomeInfo{}, err
 		}
 
-		result.Rewards.Cl = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
+		rewards.Sub(rewardsResultTotal.RoiDividend, rewardsResultTotal.RoiDivisor)
+		result.Rewards.Cl = decimal.NewFromBigInt(&rewards, 0).Mul(decimal.NewFromInt(1e9))
 	}
 
 	elDs := goqu.Dialect("postgres").
@@ -233,28 +218,19 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	elTableDs := elDs.
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTable.EpochStart, rewardsResultTable.EpochEnd))
 
-	query, args, err = elTableDs.Prepared(true).ToSQL()
-	if err != nil {
-		return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.alloyReader.GetContext(ctx, &result.Rewards.El, query, args...)
+	result.Rewards.El, err = runQuery[decimal.Decimal](ctx, d.alloyReader, elTableDs)
 	if err != nil {
 		return IncomeInfo{}, err
 	}
 
-	result.Apr.El = calcAPR(d.convertElToMain(result.Rewards.El), investedAmountDec, aprDivisor)
+	roiDividendEl := d.convertElToMain(result.Rewards.El).Add(d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)))
+	result.Apr.El = calcAPR(roiDividendEl, d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)), aprDivisor)
 
 	if hours == -1 {
 		elTotalDs := elDs.
 			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
 
-		query, args, err = elTotalDs.Prepared(true).ToSQL()
-		if err != nil {
-			return IncomeInfo{}, fmt.Errorf("error preparing query: %w", err)
-		}
-
-		err = d.alloyReader.GetContext(ctx, &result.Rewards.El, query, args...)
+		result.Rewards.El, err = runQuery[decimal.Decimal](ctx, d.alloyReader, elTotalDs)
 		if err != nil {
 			return IncomeInfo{}, err
 		}
@@ -264,11 +240,11 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 }
 
 // precondition: invested amount and rewards are in the same currency
-func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor int) float64 {
+func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor uint64) float64 {
 	if rewards.IsZero() || investedAmount.IsZero() {
 		return 0
 	}
-	return (rewards.Div(decimal.NewFromInt(int64(aprDivisor))).Div(investedAmount).Mul(decimal.NewFromInt(24 * 365 * 100))).InexactFloat64()
+	return (rewards.Div(investedAmount).Sub(decimal.NewFromInt(1)).Mul(decimal.NewFromInt(100 * 365 * 24 * 60 * 60).Div(decimal.NewFromInt(int64(aprDivisor))))).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
