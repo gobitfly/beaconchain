@@ -1,6 +1,6 @@
 <script setup lang="ts">
-defineProps<{
-  tag?:
+const { is = 'span' } = defineProps<{
+  is?:
     'div'
     | 'h1'
     | 'h2'
@@ -16,7 +16,7 @@ defineProps<{
 
 <template>
   <component
-    :is="tag ?? 'span'"
+    :is
     class="bc-screenreader-only"
   >
     <slot />
