@@ -501,3 +501,163 @@ func (h *HandlerService) GetValidatorDashboardTotalConsensusLayerWithdrawals(ctx
 	r.Data = *data
 	return r, nil
 }
+
+// GetValidatorDashboardExecutionLayerDeposits godoc
+//
+//	@Description	Get execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(block, amount)
+//	@Param			search			query		string	false	"Search for Index, Block, Address, Group."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-deposits [get]
+func (i *inputGetValidatorDashboardExecutionLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.Paging = v.checkPagingMap(params)
+	i.sort = checkSort[enums.VDBDepositsElColumn](&v, params["sort"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardExecutionLayerDeposits struct {
+	Paging
+	sort             types.Sort[enums.VDBDepositsElColumn]
+	dashboardIdParam interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardExecutionLayerDeposits(ctx context.Context, input inputGetValidatorDashboardExecutionLayerDeposits) (types.GetValidatorDashboardExecutionLayerDepositsResponse, error) {
+	var r types.GetValidatorDashboardExecutionLayerDepositsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
+	if err != nil {
+		return r, err
+	}
+
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardElDeposits(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
+// GetValidatorDashboardExecutionLayerDeposits godoc
+//
+//	@Description	Get consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(slot_processed, amount)
+//	@Param			search			query		string	false	"Search for Index, Slot, Address, Group."
+//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-deposits [get]
+func (i *inputGetValidatorDashboardConsensusLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.Paging = v.checkPagingMap(params)
+	i.sort = checkSort[enums.VDBDepositsClColumn](&v, params["sort"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardConsensusLayerDeposits struct {
+	Paging
+	sort             types.Sort[enums.VDBDepositsClColumn]
+	dashboardIdParam interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardConsensusLayerDeposits(ctx context.Context, input inputGetValidatorDashboardConsensusLayerDeposits) (types.GetValidatorDashboardConsensusLayerDepositsResponse, error) {
+	var r types.GetValidatorDashboardConsensusLayerDepositsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
+	if err != nil {
+		return r, err
+	}
+
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardClDeposits(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
+// GetValidatorDashboardTotalExecutionLayerDeposits godoc
+//
+//	@Description	Get total execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			search			query		string	false	"Search for Index, Block, Address, Group."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-execution-layer-deposits [get]
+func (i *inputGetValidatorDashboardTotalExecutionLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.search = params["search"]
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardTotalExecutionLayerDeposits struct {
+	search           string
+	dashboardIdParam interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardTotalExecutionLayerDeposits(ctx context.Context, input inputGetValidatorDashboardTotalExecutionLayerDeposits) (types.GetValidatorDashboardTotalExecutionDepositsResponse, error) {
+	var r types.GetValidatorDashboardTotalExecutionDepositsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
+	if err != nil {
+		return r, err
+	}
+
+	data, err := h.getDataAccessor(ctx).GetValidatorDashboardTotalElDeposits(ctx, *dashboardId, input.search)
+	if err != nil {
+		return r, err
+	}
+	r.Data = *data
+	return r, nil
+}
+
+// GetValidatorDashboardTotalExecutionLayerDeposits godoc
+//
+//	@Description	Get total consensus layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			search			query		string	false	"Search for Index, Slot, Address, Group."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits [get]
+func (i *inputGetValidatorDashboardTotalConsensusLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.search = params["search"]
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardTotalConsensusLayerDeposits struct {
+	search           string
+	dashboardIdParam interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardTotalConsensusLayerDeposits(ctx context.Context, input inputGetValidatorDashboardTotalConsensusLayerDeposits) (types.GetValidatorDashboardTotalConsensusDepositsResponse, error) {
+	var r types.GetValidatorDashboardTotalConsensusDepositsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
+	if err != nil {
+		return r, err
+	}
+
+	data, err := h.getDataAccessor(ctx).GetValidatorDashboardTotalClDeposits(ctx, *dashboardId, input.search)
+	if err != nil {
+		return r, err
+	}
+	r.Data = *data
+	return r, nil
+}
