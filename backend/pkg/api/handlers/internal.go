@@ -451,22 +451,6 @@ func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWrit
 	h.PublicGetValidatorDashboardBlocks(w, r)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardExecutionLayerDeposits(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardConsensusLayerDeposits(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardTotalConsensusLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardTotalConsensusLayerDeposits(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardTotalExecutionLayerDeposits(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardRocketPool(w, r)
 }
