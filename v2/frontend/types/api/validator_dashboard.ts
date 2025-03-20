@@ -203,23 +203,25 @@ export interface VDBExecutionDepositsTableRow {
   group_id: number /* uint64 */;
   block: number /* uint64 */;
   timestamp: number /* int64 */;
-  from: Address;
   depositor: Address;
   tx_hash: Hash;
   withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
-  valid: boolean;
+  validity: 'valid' | 'invalid' | 'invalid_skipped';
 }
 export type GetValidatorDashboardExecutionLayerDepositsResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
 export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
   index: number /* uint64 */;
   group_id: number /* uint64 */;
-  epoch: number /* uint64 */;
-  slot: number /* uint64 */;
+  slot_queued: number /* uint64 */;
+  slot_processed: number /* uint64 */;
   withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
   signature: Hash;
+  type: 'manual' | 'auto';
+  status: 'queued' | 'completed' | 'rejected';
+  reject_reason?: 'invalid_signature';
 }
 export type GetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
 export interface VDBTotalExecutionDepositsData {
