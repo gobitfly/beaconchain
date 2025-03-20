@@ -249,6 +249,56 @@ var VDBWithdrawalsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard Consolidations Table
+
+type VDBConsolidationsColumn int
+
+var _ EnumFactory[VDBConsolidationsColumn] = VDBConsolidationsColumn(0)
+
+const (
+	VDBConsolidationEpoch VDBConsolidationsColumn = iota
+	VDBConsolidationSlot
+	VDBConsolidationSource
+	VDBConsolidationTarget
+	VDBConsolidationAmount
+)
+
+func (c VDBConsolidationsColumn) Int() int {
+	return int(c)
+}
+
+func (VDBConsolidationsColumn) NewFromString(s string) VDBConsolidationsColumn {
+	switch s {
+	case "epoch":
+		return VDBConsolidationEpoch
+	case "slot":
+		return VDBConsolidationSlot
+	case "source":
+		return VDBConsolidationSource
+	case "target":
+		return VDBConsolidationTarget
+	case "amount":
+		return VDBConsolidationAmount
+	default:
+		return VDBConsolidationsColumn(-1)
+	}
+}
+
+var VDBConsolidationsColumns = struct {
+	Epoch  VDBConsolidationsColumn
+	Slot   VDBConsolidationsColumn
+	Source VDBConsolidationsColumn
+	Target VDBConsolidationsColumn
+	Amount VDBConsolidationsColumn
+}{
+	VDBConsolidationEpoch,
+	VDBConsolidationSlot,
+	VDBConsolidationSource,
+	VDBConsolidationTarget,
+	VDBConsolidationAmount,
+}
+
+// ----------------
 // Validator Dashboard Manage Validators Table
 
 type VDBManageValidatorsColumn int
