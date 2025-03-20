@@ -28,6 +28,11 @@ func TestGetAllNetworks(t *testing.T) {
 			NotificationsName: "holesky",
 		})
 		assert.Contains(t, networks, types.NetworkInfo{
+			ChainId:           560048,
+			Name:              "hoodi",
+			NotificationsName: "hoodi",
+		})
+		assert.Contains(t, networks, types.NetworkInfo{
 			ChainId:           11155111,
 			Name:              "sepolia",
 			NotificationsName: "sepolia",

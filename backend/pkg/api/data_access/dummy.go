@@ -422,6 +422,11 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 			Name:              "holesky",
 			NotificationsName: "holesky",
 		},
+		{
+			ChainId:           560048,
+			Name:              "hoodi",
+			NotificationsName: "hoodi",
+		},
 	}, nil
 }
 
