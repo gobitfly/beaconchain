@@ -1264,11 +1264,10 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 		sum(efficiency_sync_divisor) AS efficiency_sync_divisor,
 		sum(sync_reward) AS sync_reward,
 		sum(efficiency_dividend) AS efficiency_dividend,
-		sum(efficiency_divisor) AS efficiency_divisor,
-		sum(roi_dividend::Int128) AS roi_dividend,
-		sum(roi_divisor::Int128) AS roi_divisor
+		sum(efficiency_divisor) AS efficiency_divisor
 	`
-	join := fmt.Sprintf("left join (select * from _final_validator_dashboard_roi_%[1]s where %[2]s >= $1 and %[2]s <= $2) roi on roi.validator_index = foo.validator_index", source, column)
+	join := fmt.Sprintf("left join (select * from _final_validator_dashboard_roi_%[1]s final where %[2]s >= $1 and %[2]s <= $2) roi on roi.validator_index = a.validator_index", source, column)
+	extraSelect := ", roi.roi_dividend::Int128 AS roi_dividend, roi.roi_divisor::Int128 AS roi_divisor"
 
 	if source == RollingSourceEpochly {
 		column = "epoch_timestamp"
@@ -1367,20 +1366,25 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 			sum(roi_divisor::Int128) AS roi_divisor
 		`
 		join = ""
+		extraSelect = ""
 	}
 	err := db.ClickHouseNativeWriter.Exec(ctx,
 		fmt.Sprintf(`
 		insert into _unsafe_%[1]s
-		select
+		with a as (select
 			%[2]s
-		from
-			_final_validator_dashboard_data_%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
-		%[5]s
-		where
-			foo.%[4]s >= $1 and foo.%[4]s <= $2
-		group by 
-			validator_index
-	`, rolling, selector, source, column, join), *minMax.Min, *minMax.Max)
+			from
+				_final_validator_dashboard_data_%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
+			where
+				foo.%[4]s >= $1 and foo.%[4]s <= $2
+			group by 
+				validator_index
+		)
+		select
+			a.*%[5]s
+		from a 
+		%[6]s
+	`, rolling, selector, source, column, extraSelect, join), *minMax.Min, *minMax.Max)
 	if err != nil {
 		return fmt.Errorf("error transferring epochs: %w", err)
 	}
@@ -1534,8 +1538,8 @@ func ElectraGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
 }
 
 func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, error) {
-	startSlot := (epoch) * utils.Config.ClConfig.SlotsPerEpoch
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
 	var deposits []struct {
 		Amount uint64 `db:"amount"`
 		Pubkey string `db:"pubkey"`
@@ -1574,8 +1578,8 @@ func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, erro
 }
 
 func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsolidation, error) {
-	startSlot := (epoch) * utils.Config.ClConfig.SlotsPerEpoch
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
 	var consolidations []constypes.ElectraConsolidation
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'amount'").As("amount"),
@@ -1600,8 +1604,8 @@ func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsoli
 }
 
 func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExcessBalance, error) {
-	startSlot := (epoch) * utils.Config.ClConfig.SlotsPerEpoch
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
 	var excessBalanceEvents []constypes.ElectraExcessBalance
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'validator_index'").As("validator_index"),
