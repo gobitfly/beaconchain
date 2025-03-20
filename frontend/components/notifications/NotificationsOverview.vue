@@ -118,7 +118,7 @@ const emit = defineEmits<{
         </h3>
         <div class="lists-container">
           <div class="lists-container-column">
-            <BcScreenreaderOnly tag="h4">
+            <BcScreenreaderOnly is="h4">
               {{ $t('notifications.overview.headers.validator_groups') }}
             </BcScreenreaderOnly>
             <ol class="icon-list">
@@ -136,7 +136,7 @@ const emit = defineEmits<{
           </div>
           <BcFeatureFlag feature="feature-account_dashboards">
             <div class="lists-container-column">
-              <BcScreenreaderOnly tag="h4">
+              <BcScreenreaderOnly is="h4">
                 {{ $t('notifications.overview.headers.account_groups') }}
               </BcScreenreaderOnly>
               <ol class="icon-list">
