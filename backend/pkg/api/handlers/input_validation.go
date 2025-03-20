@@ -348,6 +348,24 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	return paging
 }
 
+func (v *validationError) checkPagingMap(params map[string]string) Paging {
+	paging := Paging{
+		cursor: params["cursor"],
+		limit:  defaultReturnLimit,
+		search: params["search"],
+	}
+
+	if limitStr := params["limit"]; limitStr != "" {
+		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
+	}
+
+	if paging.cursor != "" {
+		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
+	}
+
+	return paging
+}
+
 // checkEnum validates the given enum string and returns the corresponding enum value.
 func checkEnum[T enums.EnumFactory[T]](v *validationError, enumString string, name string) T {
 	var e T

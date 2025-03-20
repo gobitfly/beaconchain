@@ -436,7 +436,7 @@ func (d *DataAccessService) calculateValidatorDashboardBalance(ctx context.Conte
 	wg.Go(func() error {
 		// Get the total cl deposits for non-rocketpool validators
 		if len(nonRpDashboardId.Validators) > 0 {
-			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
+			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId, "")
 			if err != nil {
 				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
 			}
