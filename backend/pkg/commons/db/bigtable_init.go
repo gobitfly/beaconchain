@@ -48,7 +48,7 @@ func InitBigtableSchema() error {
 		METADATA_UPDATES_FAMILY_BLOCKS: gcp_bigtable.MaxAgeGCPolicy(utils.Day),
 		DEFAULT_FAMILY:                 nil,
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*600)
 	defer cancel()
 
 	if utils.Config.Bigtable.Emulator {
