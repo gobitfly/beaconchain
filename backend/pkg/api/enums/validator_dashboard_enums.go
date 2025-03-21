@@ -275,11 +275,7 @@ type VDBConsolidationsElColumn int
 var _ EnumFactory[VDBConsolidationsElColumn] = VDBConsolidationsElColumn(0)
 
 const (
-	VDBConsolidationElEpoch VDBConsolidationsElColumn = iota
-	VDBConsolidationElSlot
-	VDBConsolidationElSource
-	VDBConsolidationElTarget
-	VDBConsolidationElAmount
+	VDBConsolidationElBlockProcessed VDBConsolidationsElColumn = iota
 )
 
 func (c VDBConsolidationsElColumn) Int() int {
@@ -288,16 +284,8 @@ func (c VDBConsolidationsElColumn) Int() int {
 
 func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColumn {
 	switch s {
-	case "epoch":
-		return VDBConsolidationElEpoch
-	case "slot":
-		return VDBConsolidationElSlot
-	case "source":
-		return VDBConsolidationElSource
-	case "target":
-		return VDBConsolidationElTarget
-	case "amount":
-		return VDBConsolidationElAmount
+	case "", "block_processed", "age":
+		return VDBConsolidationElBlockProcessed
 	default:
 		return VDBConsolidationsElColumn(-1)
 	}
@@ -305,27 +293,17 @@ func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColu
 
 func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 	switch c {
-	case VDBConsolidationElSlot:
+	case VDBConsolidationElBlockProcessed:
 		return goqu.C("block_slot")
-	case VDBConsolidationElAmount:
-		return goqu.C("amount_consolidated")
 	default:
 		return nil
 	}
 }
 
 var VDBConsolidationsColumns = struct {
-	Epoch  VDBConsolidationsElColumn
-	Slot   VDBConsolidationsElColumn
-	Source VDBConsolidationsElColumn
-	Target VDBConsolidationsElColumn
-	Amount VDBConsolidationsElColumn
+	BlockProcessed VDBConsolidationsElColumn
 }{
-	VDBConsolidationElEpoch,
-	VDBConsolidationElSlot,
-	VDBConsolidationElSource,
-	VDBConsolidationElTarget,
-	VDBConsolidationElAmount,
+	VDBConsolidationElBlockProcessed,
 }
 
 // ----------------
@@ -336,10 +314,7 @@ type VDBConsolidationsClColumn int
 var _ EnumFactory[VDBConsolidationsClColumn] = VDBConsolidationsClColumn(0)
 
 const (
-	VDBConsolidationClEpoch VDBConsolidationsClColumn = iota
-	VDBConsolidationClSlot
-	VDBConsolidationClSource
-	VDBConsolidationClTarget
+	VDBConsolidationClSlotProcessed VDBConsolidationsClColumn = iota
 	VDBConsolidationClAmount
 )
 
@@ -349,32 +324,18 @@ func (c VDBConsolidationsClColumn) Int() int {
 
 func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColumn {
 	switch s {
-	case "epoch":
-		return VDBConsolidationClEpoch
-	case "slot":
-		return VDBConsolidationClSlot
-	case "source":
-		return VDBConsolidationClSource
-	case "target":
-		return VDBConsolidationClTarget
-	case "amount":
-		return VDBConsolidationClAmount
+	case "", "slot_processed", "age":
+		return VDBConsolidationClSlotProcessed
 	default:
 		return VDBConsolidationsClColumn(-1)
 	}
 }
 
 var VDBConsolidationsClColumns = struct {
-	Epoch  VDBConsolidationsClColumn
-	Slot   VDBConsolidationsClColumn
-	Source VDBConsolidationsClColumn
-	Target VDBConsolidationsClColumn
-	Amount VDBConsolidationsClColumn
+	SlotProcessed VDBConsolidationsClColumn
+	Amount        VDBConsolidationsClColumn
 }{
-	VDBConsolidationClEpoch,
-	VDBConsolidationClSlot,
-	VDBConsolidationClSource,
-	VDBConsolidationClTarget,
+	VDBConsolidationClSlotProcessed,
 	VDBConsolidationClAmount,
 }
 
