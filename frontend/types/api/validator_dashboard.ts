@@ -294,7 +294,7 @@ export interface VDBConsolidationsClTableRow {
   slot_queued: number /* uint64 */;
   slot_processed: number /* uint64 */;
   status: 'queued' | 'completed' | 'rejected';
-  reject_reason?: string;
+  reject_reason?: 'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_wrong_withdrawal_credentials' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals';
   amount: string /* decimal.Decimal */;
 }
 export type GetValidatorDashboardConsensusLayerConsolidationsResponse = ApiPagingResponse<VDBConsolidationsClTableRow>;
