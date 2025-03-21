@@ -309,7 +309,7 @@ type VDBConsolidationsClTableRow struct {
 	SlotQueued    uint64          `json:"slot_queued"`
 	SlotProcessed uint64          `json:"slot_processed"`
 	Status        string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
-	RejectReason  *string         `json:"reject_reason,omitempty"`
+	RejectReason  *string         `json:"reject_reason,omitempty" tstype:"'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_wrong_withdrawal_credentials' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals'" faker:"oneof: source_equals_target, full_queue, insufficient_consolidation_churn, source_unknown_pubkey, target_unknown_pubkey, source_wrong_withdrawal_credentials, target_not_compounding, source_inactive, target_inactive, source_exiting, target_exiting, source_too_young, source_pending_withdrawals"`
 	Amount        decimal.Decimal `json:"amount"`
 }
 type GetValidatorDashboardConsensusLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsClTableRow]
