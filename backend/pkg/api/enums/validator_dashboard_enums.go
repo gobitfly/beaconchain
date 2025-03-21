@@ -249,53 +249,46 @@ var VDBWithdrawalsColumns = struct {
 }
 
 // ----------------
-// Validator Dashboard Consolidations Table
+// Validator Dashboard EL Consolidations Table
 
-type VDBConsolidationsColumn int
+type VDBConsolidationsElColumn int
 
-var _ EnumFactory[VDBConsolidationsColumn] = VDBConsolidationsColumn(0)
+var _ EnumFactory[VDBConsolidationsElColumn] = VDBConsolidationsElColumn(0)
 
 const (
-	VDBConsolidationEpoch VDBConsolidationsColumn = iota
-	VDBConsolidationSlot
-	VDBConsolidationIndex
-	VDBConsolidationSource
-	VDBConsolidationTarget
-	VDBConsolidationAmount
+	VDBConsolidationElEpoch VDBConsolidationsElColumn = iota
+	VDBConsolidationElSlot
+	VDBConsolidationElSource
+	VDBConsolidationElTarget
+	VDBConsolidationElAmount
 )
 
-func (c VDBConsolidationsColumn) Int() int {
+func (c VDBConsolidationsElColumn) Int() int {
 	return int(c)
 }
 
-func (VDBConsolidationsColumn) NewFromString(s string) VDBConsolidationsColumn {
+func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColumn {
 	switch s {
 	case "epoch":
-		return VDBConsolidationEpoch
+		return VDBConsolidationElEpoch
 	case "slot":
-		return VDBConsolidationSlot
+		return VDBConsolidationElSlot
 	case "source":
-		return VDBConsolidationSource
+		return VDBConsolidationElSource
 	case "target":
-		return VDBConsolidationTarget
+		return VDBConsolidationElTarget
 	case "amount":
-		return VDBConsolidationAmount
+		return VDBConsolidationElAmount
 	default:
-		return VDBConsolidationsColumn(-1)
+		return VDBConsolidationsElColumn(-1)
 	}
 }
 
-func (c VDBConsolidationsColumn) ToExpr() OrderableSortable {
+func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 	switch c {
-	case VDBConsolidationSlot:
+	case VDBConsolidationElSlot:
 		return goqu.C("block_slot")
-	case VDBConsolidationIndex:
-		return goqu.C("request_index")
-	case VDBConsolidationSource:
-		return goqu.C("source_index")
-	case VDBConsolidationTarget:
-		return goqu.C("target_index")
-	case VDBConsolidationAmount:
+	case VDBConsolidationElAmount:
 		return goqu.C("amount_consolidated")
 	default:
 		return nil
@@ -303,19 +296,67 @@ func (c VDBConsolidationsColumn) ToExpr() OrderableSortable {
 }
 
 var VDBConsolidationsColumns = struct {
-	Epoch  VDBConsolidationsColumn
-	Slot   VDBConsolidationsColumn
-	Index  VDBConsolidationsColumn
-	Source VDBConsolidationsColumn
-	Target VDBConsolidationsColumn
-	Amount VDBConsolidationsColumn
+	Epoch  VDBConsolidationsElColumn
+	Slot   VDBConsolidationsElColumn
+	Source VDBConsolidationsElColumn
+	Target VDBConsolidationsElColumn
+	Amount VDBConsolidationsElColumn
 }{
-	VDBConsolidationEpoch,
-	VDBConsolidationSlot,
-	VDBConsolidationIndex,
-	VDBConsolidationSource,
-	VDBConsolidationTarget,
-	VDBConsolidationAmount,
+	VDBConsolidationElEpoch,
+	VDBConsolidationElSlot,
+	VDBConsolidationElSource,
+	VDBConsolidationElTarget,
+	VDBConsolidationElAmount,
+}
+
+// ----------------
+// Validator Dashboard CL Consolidations Table
+
+type VDBConsolidationsClColumn int
+
+var _ EnumFactory[VDBConsolidationsClColumn] = VDBConsolidationsClColumn(0)
+
+const (
+	VDBConsolidationClEpoch VDBConsolidationsClColumn = iota
+	VDBConsolidationClSlot
+	VDBConsolidationClSource
+	VDBConsolidationClTarget
+	VDBConsolidationClAmount
+)
+
+func (c VDBConsolidationsClColumn) Int() int {
+	return int(c)
+}
+
+func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColumn {
+	switch s {
+	case "epoch":
+		return VDBConsolidationClEpoch
+	case "slot":
+		return VDBConsolidationClSlot
+	case "source":
+		return VDBConsolidationClSource
+	case "target":
+		return VDBConsolidationClTarget
+	case "amount":
+		return VDBConsolidationClAmount
+	default:
+		return VDBConsolidationsClColumn(-1)
+	}
+}
+
+var VDBConsolidationsClColumns = struct {
+	Epoch  VDBConsolidationsClColumn
+	Slot   VDBConsolidationsClColumn
+	Source VDBConsolidationsClColumn
+	Target VDBConsolidationsClColumn
+	Amount VDBConsolidationsClColumn
+}{
+	VDBConsolidationClEpoch,
+	VDBConsolidationClSlot,
+	VDBConsolidationClSource,
+	VDBConsolidationClTarget,
+	VDBConsolidationClAmount,
 }
 
 // ----------------

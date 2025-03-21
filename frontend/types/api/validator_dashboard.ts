@@ -249,6 +249,31 @@ export interface VDBTotalWithdrawalsData {
 export type GetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
 /**
  * ------------------------------------------------------------
+ * Consolidations Tab
+ */
+export interface VDBConsolidationsElTableRow {
+  sender: Address;
+  source: number /* uint64 */;
+  target: number /* uint64 */;
+  block_queued: number /* uint64 */;
+  status: 'queued' | 'processed';
+  block_processed: number /* uint64 */;
+  tx_hash: Hash;
+  fee: string /* decimal.Decimal */;
+}
+export type GetValidatorDashboardExecutionLayerConsolidationsResponse = ApiPagingResponse<VDBConsolidationsElTableRow>;
+export interface VDBConsolidationsClTableRow {
+  source: number /* uint64 */;
+  target: number /* uint64 */;
+  slot_queued: number /* uint64 */;
+  slot_processed: number /* uint64 */;
+  status: 'queued' | 'completed' | 'rejected';
+  reject_reason?: string;
+  amount: string /* decimal.Decimal */;
+}
+export type GetValidatorDashboardConsensusLayerConsolidationsResponse = ApiPagingResponse<VDBConsolidationsClTableRow>;
+/**
+ * ------------------------------------------------------------
  * Rocket Pool Tab
  */
 export interface VDBRocketPoolTableRow {
