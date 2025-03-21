@@ -184,6 +184,26 @@ datasources:
     secureJsonData:
       password: pass
     isDefault: false
+  - name: grafana-postgresql-datasource
+    uid: l3zduf9b1p2xmt
+    orgId: 1
+    type: postgres
+    access: proxy
+    url: localhost:$ALLOY_PORT
+    typeLogoUrl: public/app/plugins/datasource/grafana-postgresql-datasource/img/postgresql_logo.svg
+    user: postgres
+    basicAuth: false
+    readOnly: false
+    jsonData:
+      httpMethod: POST
+      host: 127.0.0.1
+      port: $ALLOY_PORT
+      user: postgres
+      database: alloy
+      sslmode: disable
+    secureJsonData:
+      password: pass
+    isDefault: false
 EOF
 
 echo "initializing bigtable schema"
