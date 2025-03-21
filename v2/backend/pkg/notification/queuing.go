@@ -736,19 +736,17 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 								}
 								if len(notifications) > 0 {
 									// reset Retries
-									if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-										_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
-										if err != nil {
-											log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-											continue
-										}
-									} else if w.Retries > 5 && !w.LastSent.Valid {
-										log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
-										continue
-									}
-
 									if w.Retries >= 5 {
-										// early return
+										if !w.LastSent.Valid {
+											log.Warnf("webhook '%v' has 5 retries and does not have a valid last_sent timestamp", w.Url)
+										} else if w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+											_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+											if err != nil {
+												log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+											} else {
+												log.Infof("webhook '%v' has 5 retries and has been reset", w.Url)
+											}
+										}
 										continue
 									}
 								}
@@ -836,19 +834,17 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 				w := dashboardWebhookMap[userID][dashboardId][dashboardGroupId]
 
 				// reset Retries
-				if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = 0 WHERE id = $1 AND dashboard_id = $2;`, dashboardGroupId, dashboardId)
-					if err != nil {
-						log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-						continue
-					}
-				} else if w.Retries > 5 && !w.LastSent.Valid {
-					log.Warnf("webhook '%v' for dashboard %d and group %d has more than 5 retries and does not have a valid last_sent timestamp", w.Url, dashboardId, dashboardGroupId)
-					continue
-				}
-
 				if w.Retries >= 5 {
-					// early return
+					if !w.LastSent.Valid {
+						log.Warnf("webhook '%v' for dashboard %d and group %d has more than 5 retries and does not have a valid last_sent timestamp", w.Url, dashboardId, dashboardGroupId)
+					} else if w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+						_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = 0 WHERE id = $1 AND dashboard_id = $2;`, dashboardGroupId, dashboardId)
+						if err != nil {
+							log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+						} else {
+							log.Infof("webhook '%v' for dashboard %d and group %d has 5 retries and has been reset", w.Url, dashboardId, dashboardGroupId)
+						}
+					}
 					continue
 				}
 
