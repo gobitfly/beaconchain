@@ -236,9 +236,9 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 	// set name depending on dashboard id
 	var name string
 	ctx := r.Context()
-	if reInteger.MatchString(dashboardIdParam) {
+	if types.ReInteger.MatchString(dashboardIdParam) {
 		name, err = h.getDataAccessor(ctx).GetValidatorDashboardName(ctx, dashboardId.Id)
-	} else if reValidatorDashboardPublicId.MatchString(dashboardIdParam) {
+	} else if types.ReValidatorDashboardPublicId.MatchString(dashboardIdParam) {
 		var publicIdInfo *types.VDBPublicId
 		publicIdInfo, err = h.getDataAccessor(ctx).GetValidatorDashboardPublicId(ctx, types.VDBIdPublic(dashboardIdParam))
 		name = publicIdInfo.Name
@@ -562,13 +562,13 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, requestedValidators, nil)
 
 	case req.DepositAddress != "":
-		requestedValidators, err = h.getValidatorDashboardValidators(r, req.DepositAddress, "deposit_address", reEthereumAddress, h.getDataAccessor(ctx).GetValidatorsByDepositAddress)
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.DepositAddress, "deposit_address", types.ReEthereumAddress, h.getDataAccessor(ctx).GetValidatorsByDepositAddress)
 
 	case req.WithdrawalCredential != "":
-		requestedValidators, err = h.getValidatorDashboardValidators(r, req.WithdrawalCredential, "withdrawal_credential", reWithdrawalCredential, h.getDataAccessor(ctx).GetValidatorsByWithdrawalCredentials)
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.WithdrawalCredential, "withdrawal_credential", types.ReWithdrawalCredential, h.getDataAccessor(ctx).GetValidatorsByWithdrawalCredentials)
 
 	case req.Graffiti != "":
-		requestedValidators, err = h.getValidatorDashboardValidators(r, req.Graffiti, "graffiti", reGraffiti, h.getDataAccessor(ctx).GetValidatorsByGraffiti)
+		requestedValidators, err = h.getValidatorDashboardValidators(r, req.Graffiti, "graffiti", types.ReGraffiti, h.getDataAccessor(ctx).GetValidatorsByGraffiti)
 	}
 	if err != nil {
 		handleErr(w, r, err)

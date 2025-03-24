@@ -267,19 +267,19 @@ func (i *inputGetValidatorDashboardExecutionLayerDeposits) Validate(params map[s
 	var v validationError
 	i.Paging = v.checkPagingMap(params)
 	i.sort = *checkSort[enums.VDBDepositsElColumn](&v, params["sort"])
-	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
 	return v.AsError()
 }
 
 type inputGetValidatorDashboardExecutionLayerDeposits struct {
 	Paging
-	sort        types.Sort[enums.VDBDepositsElColumn]
-	dashboardId interface{}
+	sort             types.Sort[enums.VDBDepositsElColumn]
+	dashboardIdParam interface{}
 }
 
 func (h *HandlerService) GetValidatorDashboardExecutionLayerDeposits(ctx context.Context, input inputGetValidatorDashboardExecutionLayerDeposits) (types.GetValidatorDashboardExecutionLayerDepositsResponse, error) {
 	var r types.GetValidatorDashboardExecutionLayerDepositsResponse
-	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
 		return r, err
 	}
@@ -310,19 +310,19 @@ func (i *inputGetValidatorDashboardConsensusLayerDeposits) Validate(params map[s
 	var v validationError
 	i.Paging = v.checkPagingMap(params)
 	i.sort = *checkSort[enums.VDBDepositsClColumn](&v, params["sort"])
-	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
 	return v.AsError()
 }
 
 type inputGetValidatorDashboardConsensusLayerDeposits struct {
 	Paging
-	sort        types.Sort[enums.VDBDepositsClColumn]
-	dashboardId interface{}
+	sort             types.Sort[enums.VDBDepositsClColumn]
+	dashboardIdParam interface{}
 }
 
 func (h *HandlerService) GetValidatorDashboardConsensusLayerDeposits(ctx context.Context, input inputGetValidatorDashboardConsensusLayerDeposits) (types.GetValidatorDashboardConsensusLayerDepositsResponse, error) {
 	var r types.GetValidatorDashboardConsensusLayerDepositsResponse
-	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
 		return r, err
 	}
@@ -349,18 +349,18 @@ func (h *HandlerService) GetValidatorDashboardConsensusLayerDeposits(ctx context
 func (i *inputGetValidatorDashboardTotalExecutionLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.search = params["search"]
-	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
 	return v.AsError()
 }
 
 type inputGetValidatorDashboardTotalExecutionLayerDeposits struct {
-	search      string
-	dashboardId interface{}
+	search           string
+	dashboardIdParam interface{}
 }
 
 func (h *HandlerService) GetValidatorDashboardTotalExecutionLayerDeposits(ctx context.Context, input inputGetValidatorDashboardTotalExecutionLayerDeposits) (types.GetValidatorDashboardTotalExecutionDepositsResponse, error) {
 	var r types.GetValidatorDashboardTotalExecutionDepositsResponse
-	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
 		return r, err
 	}
@@ -386,18 +386,18 @@ func (h *HandlerService) GetValidatorDashboardTotalExecutionLayerDeposits(ctx co
 func (i *inputGetValidatorDashboardTotalConsensusLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.search = params["search"]
-	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
 	return v.AsError()
 }
 
 type inputGetValidatorDashboardTotalConsensusLayerDeposits struct {
-	search      string
-	dashboardId interface{}
+	search           string
+	dashboardIdParam interface{}
 }
 
 func (h *HandlerService) GetValidatorDashboardTotalConsensusLayerDeposits(ctx context.Context, input inputGetValidatorDashboardTotalConsensusLayerDeposits) (types.GetValidatorDashboardTotalConsensusDepositsResponse, error) {
 	var r types.GetValidatorDashboardTotalConsensusDepositsResponse
-	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
 	if err != nil {
 		return r, err
 	}
