@@ -23,26 +23,6 @@ import (
 
 // --------------------------------------
 
-var (
-	// Subject to change, just examples
-	reName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
-	reInteger                      = regexp.MustCompile(`^[0-9]+$`)
-	reValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
-	reValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
-	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
-	reValidatorList                = regexp.MustCompile(`^(0x[0-9a-fA-F]{96}|[0-9]+)(,\s*(0x[0-9a-fA-F]{96}|[0-9]+)\s*)+$`)
-	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
-	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[012])?[0-9a-fA-F]{62}$`)
-	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
-	reGraffiti                     = regexp.MustCompile(`^.{2,32}$`) // at least 2 characters, so that queries won't time out
-	reGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){32}$`)
-	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
-	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
-	rePassword                     = regexp.MustCompile(`^.{5,}$`)
-	reEmailUserToken               = regexp.MustCompile(`^[a-z0-9]{40}$`)
-	reJsonContentType              = regexp.MustCompile(`^application\/json(;.*)?$`)
-)
-
 const (
 	maxNameLength                     = 50
 	maxQueryLimit              uint64 = 100
@@ -122,7 +102,7 @@ func (v *validationError) checkLength(name, paramName string, minLength int) str
 
 func (v *validationError) checkName(name string, minLength int) string {
 	name = v.checkLength(name, "name", minLength)
-	return v.checkRegex(reName, name, "name")
+	return v.checkRegex(types.ReName, name, "name")
 }
 
 func (v *validationError) checkNameNotEmpty(name string) string {
@@ -131,19 +111,19 @@ func (v *validationError) checkNameNotEmpty(name string) string {
 
 func (v *validationError) checkKeyNotEmpty(key string) string {
 	key = v.checkLength(key, "key", 1)
-	return v.checkRegex(reName, key, "key")
+	return v.checkRegex(types.ReName, key, "key")
 }
 
 func (v *validationError) checkEmail(email string) string {
-	return v.checkRegex(reEmail, strings.ToLower(email), "email")
+	return v.checkRegex(types.ReEmail, strings.ToLower(email), "email")
 }
 
 func (v *validationError) checkPassword(password string) string {
-	return v.checkRegex(rePassword, password, "password")
+	return v.checkRegex(types.RePassword, password, "password")
 }
 
 func (v *validationError) checkUserEmailToken(token string) string {
-	return v.checkRegex(reEmailUserToken, token, "token")
+	return v.checkRegex(types.ReEmailUserToken, token, "token")
 }
 
 // check request structure (body contains valid json and all required parameters are present)
@@ -210,7 +190,7 @@ func (v *validationError) checkUint(param, paramName string) uint64 {
 func (v *validationError) checkWeiDecimal(param, paramName string) decimal.Decimal {
 	dec := decimal.Zero
 	// check if only numbers are contained in the string with regex
-	if !reInteger.MatchString(param) {
+	if !types.ReInteger.MatchString(param) {
 		v.add(paramName, fmt.Sprintf("given value '%s' is not a wei string (must be positive integer)", param))
 		return dec
 	}
@@ -254,7 +234,7 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	var keys []string
 	for _, key := range splitParameters(keysString, ',') {
 		key = strings.TrimSpace(key)
-		keys = append(keys, v.checkRegex(reName, key, "keys"))
+		keys = append(keys, v.checkRegex(types.ReName, key, "keys"))
 	}
 	return keys
 }
@@ -303,7 +283,7 @@ func (v *validationError) checkGroupIdList(groupIds string) []int64 {
 }
 
 func (v *validationError) checkValidatorDashboardPublicId(publicId string) types.VDBIdPublic {
-	return types.VDBIdPublic(v.checkRegex(reValidatorDashboardPublicId, publicId, "public_dashboard_id"))
+	return types.VDBIdPublic(v.checkRegex(types.ReValidatorDashboardPublicId, publicId, "public_dashboard_id"))
 }
 
 func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, paramName string) T {
@@ -317,7 +297,7 @@ func checkMinMax[T cmp.Ordered](v *validationError, param T, min T, max T, param
 }
 
 func (v *validationError) checkAddress(publicId string) string {
-	return v.checkRegex(reEthereumAddress, publicId, "address")
+	return v.checkRegex(types.ReEthereumAddress, publicId, "address")
 }
 
 func (v *validationError) checkUintMinMax(param string, min uint64, max uint64, paramName string) uint64 {
@@ -342,7 +322,7 @@ func (v *validationError) checkPagingParams(q url.Values) Paging {
 	}
 
 	if paging.cursor != "" {
-		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
+		paging.cursor = v.checkRegex(types.ReCursor, paging.cursor, "cursor")
 	}
 
 	return paging
@@ -360,7 +340,7 @@ func (v *validationError) checkPagingMap(params map[string]string) Paging {
 	}
 
 	if paging.cursor != "" {
-		paging.cursor = v.checkRegex(reCursor, paging.cursor, "cursor")
+		paging.cursor = v.checkRegex(types.ReCursor, paging.cursor, "cursor")
 	}
 
 	return paging
@@ -443,9 +423,9 @@ func (v *validationError) checkValidatorList(validators string, allowEmpty bool)
 	var publicKeys []string
 	for _, validator := range validatorsSlice {
 		validator = strings.TrimSpace(validator)
-		if reInteger.MatchString(validator) {
+		if types.ReInteger.MatchString(validator) {
 			indexes = append(indexes, v.checkUint(validator, "validators"))
-		} else if reValidatorPublicKeyWithPrefix.MatchString(validator) {
+		} else if types.ReValidatorPublicKeyWithPrefix.MatchString(validator) {
 			_, err := hexutil.Decode(validator)
 			if err != nil {
 				v.add("validators", fmt.Sprintf("invalid value '%s' in list of validators", v))
@@ -471,7 +451,7 @@ func (v *validationError) checkValidators(validators []intOrString, allowEmpty b
 		case validator.intValue != nil:
 			indexes = append(indexes, *validator.intValue)
 		case validator.strValue != nil:
-			if !reValidatorPublicKey.MatchString(*validator.strValue) {
+			if !types.ReValidatorPublicKey.MatchString(*validator.strValue) {
 				v.add("validators", fmt.Sprintf("given value '%s' is not a valid validator", *validator.strValue))
 				continue
 			}
@@ -492,7 +472,7 @@ func (v *validationError) checkNetwork(network intOrString) uint64 {
 }
 
 func (v *validationError) checkNetworkParameter(param string) uint64 {
-	if reInteger.MatchString(param) {
+	if types.ReInteger.MatchString(param) {
 		chainId, err := strconv.ParseUint(param, 10, 64)
 		if err != nil {
 			v.add("network", fmt.Sprintf("given value '%s' is not a valid network", param))
@@ -523,12 +503,12 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 }
 
 func (v *validationError) checkDashboardId(id string) interface{} {
-	if reInteger.MatchString(id) {
+	if types.ReInteger.MatchString(id) {
 		// given id is a normal id
 		id := v.checkUint(id, "dashboard_id")
 		return types.VDBIdPrimary(id)
 	}
-	if reValidatorDashboardPublicId.MatchString(id) {
+	if types.ReValidatorDashboardPublicId.MatchString(id) {
 		// given id is a public id
 		return types.VDBIdPublic(id)
 	}

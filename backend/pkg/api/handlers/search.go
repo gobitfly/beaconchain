@@ -36,43 +36,43 @@ const (
 // source of truth for all possible search types and their regex
 var searchTypeMap = map[searchTypeKey]searchType{
 	validatorByIndex: {
-		regex:        reInteger,
+		regex:        types.ReInteger,
 		responseType: "validator",
 	},
 	validatorByPublicKey: {
-		regex:        reValidatorPublicKey,
+		regex:        types.ReValidatorPublicKey,
 		responseType: "validator",
 	},
 	validatorList: {
-		regex:        reValidatorList,
+		regex:        types.ReValidatorList,
 		responseType: string(validatorList),
 	},
 	validatorsByDepositAddress: {
-		regex:        reEthereumAddress,
+		regex:        types.ReEthereumAddress,
 		responseType: string(validatorsByDepositAddress),
 	},
 	validatorsByDepositEnsName: {
-		regex:        reEnsName,
+		regex:        types.ReEnsName,
 		responseType: string(validatorsByDepositAddress),
 	},
 	validatorsByWithdrawalCredential: {
-		regex:        reWithdrawalCredential,
+		regex:        types.ReWithdrawalCredential,
 		responseType: string(validatorsByWithdrawalCredential),
 	},
 	validatorsByWithdrawalAddress: {
-		regex:        reEthereumAddress,
+		regex:        types.ReEthereumAddress,
 		responseType: string(validatorsByWithdrawalCredential),
 	},
 	validatorsByWithdrawalEns: {
-		regex:        reEnsName,
+		regex:        types.ReEnsName,
 		responseType: string(validatorsByWithdrawalCredential),
 	},
 	validatorsByGraffiti: {
-		regex:        reGraffiti,
+		regex:        types.ReGraffiti,
 		responseType: string(validatorsByGraffiti),
 	},
 	validatorsByGraffitiHex: {
-		regex:        reGraffitiHex,
+		regex:        types.ReGraffitiHex,
 		responseType: string(validatorsByGraffiti),
 	},
 }
