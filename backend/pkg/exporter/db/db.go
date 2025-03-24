@@ -109,7 +109,7 @@ func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx 
 func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlotUpdate bool) error {
 	start := time.Now()
 	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_blocks").Observe(time.Since(start).Seconds())
+		metrics.TaskDuration.WithLabelValues("slot_exporter_db_save_blocks").Observe(time.Since(start).Seconds())
 	}()
 
 	domain, err := utils.GetSigningDomain()

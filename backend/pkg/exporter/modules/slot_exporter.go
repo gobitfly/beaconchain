@@ -419,6 +419,8 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 		}
 	}
 
+	metrics.TaskDuration.WithLabelValues("slot_exporter_export_slot").Observe(time.Since(start).Seconds())
+
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		if err := s.exportEpochAssignments(block, headEpoch); err != nil {
 			return err
@@ -436,6 +438,11 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 }
 
 func (s *exporter) exportDuties(block *types.Block) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_duties").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
