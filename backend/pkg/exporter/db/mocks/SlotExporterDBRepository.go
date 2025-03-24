@@ -406,24 +406,6 @@ func (_m *SlotExporterDBRepository) SaveValidatorQueue(validators *types.Validat
 	return r0
 }
 
-// SaveValidatorsFieldsUpdate provides a mock function with given fields: queries, totalUpdates, tx
-func (_m *SlotExporterDBRepository) SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error {
-	ret := _m.Called(queries, totalUpdates, tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for SaveValidatorsFieldsUpdate")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(string, int, *sqlx.Tx) error); ok {
-		r0 = rf(queries, totalUpdates, tx)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
 // SetSlotFinalizationAndStatus provides a mock function with given fields: slot, finalized, status, tx
 func (_m *SlotExporterDBRepository) SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
 	ret := _m.Called(slot, finalized, status, tx)
@@ -601,6 +583,24 @@ func (_m *SlotExporterDBRepository) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*sqlx.Tx) error); ok {
 		r0 = rf(tx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateValidators provides a mock function with given fields: queries, totalUpdates, tx
+func (_m *SlotExporterDBRepository) UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error {
+	ret := _m.Called(queries, totalUpdates, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateValidators")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, int, *sqlx.Tx) error); ok {
+		r0 = rf(queries, totalUpdates, tx)
 	} else {
 		r0 = ret.Error(0)
 	}

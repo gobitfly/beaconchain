@@ -13,7 +13,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -520,32 +519,6 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	log.Infof("exporting duties & balances for epoch %v", epoch)
 
-	// prepare the duties for export to bigtable
-	syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
-	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
-		if syncDutiesEpoch[types.Slot(slot)] == nil {
-			syncDutiesEpoch[types.Slot(slot)] = make(map[types.ValidatorIndex]bool)
-		}
-		for _, validatorIndex := range block.EpochAssignments.SyncAssignments {
-			syncDutiesEpoch[types.Slot(slot)][types.ValidatorIndex(validatorIndex)] = false
-		}
-	}
-
-	attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
-	for key, validatorIndex := range block.EpochAssignments.AttestorAssignments {
-		keySplit := strings.Split(key, "-")
-		attestedSlot, err := strconv.ParseUint(keySplit[0], 10, 64)
-		if err != nil {
-			return fmt.Errorf("error parsing attested slot from attestation key: %w", err)
-		}
-
-		if attDutiesEpoch[types.Slot(attestedSlot)] == nil {
-			attDutiesEpoch[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
-		}
-
-		attDutiesEpoch[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
-	}
-
 	g := errgroup.Group{}
 
 	// store epoch assignments in redis
@@ -555,20 +528,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	// save attestation duties to bigtable
 	g.Go(func() error {
-		err := s.bt.SaveAttestationDuties(attDutiesEpoch)
-		if err != nil {
-			return fmt.Errorf("error exporting attestation assignments to bigtable for slot %v: %w", block.Slot, err)
-		}
-		return nil
-	})
-
-	// save sync committee duties to bigtable
-	g.Go(func() error {
-		err := s.bt.SaveSyncCommitteeDuties(syncDutiesEpoch)
-		if err != nil {
-			return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
-		}
-		return nil
+		return s.saveEpochAssigmentsToBigtable(block, epoch)
 	})
 
 	// save the validator balances to bigtable
@@ -617,6 +577,48 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint64) error {
+	// prepare the duties for export to bigtable
+	syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
+	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
+		if syncDutiesEpoch[types.Slot(slot)] == nil {
+			syncDutiesEpoch[types.Slot(slot)] = make(map[types.ValidatorIndex]bool)
+		}
+		for _, validatorIndex := range block.EpochAssignments.SyncAssignments {
+			syncDutiesEpoch[types.Slot(slot)][types.ValidatorIndex(validatorIndex)] = false
+		}
+	}
+
+	attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
+	for key, validatorIndex := range block.EpochAssignments.AttestorAssignments {
+		keySplit := strings.Split(key, "-")
+		attestedSlot, err := strconv.ParseUint(keySplit[0], 10, 64)
+		if err != nil {
+			return fmt.Errorf("error parsing attested slot from attestation key: %w", err)
+		}
+
+		if attDutiesEpoch[types.Slot(attestedSlot)] == nil {
+			attDutiesEpoch[types.Slot(attestedSlot)] = make(map[types.ValidatorIndex][]types.Slot)
+		}
+
+		attDutiesEpoch[types.Slot(attestedSlot)][types.ValidatorIndex(validatorIndex)] = []types.Slot{}
+	}
+
+	// save attestation duties to bigtable
+	err := s.bt.SaveAttestationDuties(attDutiesEpoch)
+	if err != nil {
+		return fmt.Errorf("error exporting attestation assignments to bigtable for slot %v: %w", block.Slot, err)
+	}
+
+	// save sync committee duties to bigtable
+	err = s.bt.SaveSyncCommitteeDuties(syncDutiesEpoch)
+	if err != nil {
+		return fmt.Errorf("error exporting sync committee assignments to bigtable for slot %v: %w", block.Slot, err)
 	}
 
 	return nil
@@ -688,8 +690,6 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainI
 }
 
 func (s *exporter) SaveValidators(validators []*types.Validator) error {
-	start := time.Now()
-
 	currentState, err := s.db.GetValidatorsCurrentState(s.dbTx)
 	if err != nil {
 		return fmt.Errorf("error retrieving current validator state: %w", err)
@@ -796,13 +796,12 @@ func (s *exporter) SaveValidators(validators []*types.Validator) error {
 	}
 
 	if updates > 0 {
-		err := s.db.SaveValidatorsFieldsUpdate(queries.String(), updates, s.dbTx)
+		err := s.db.UpdateValidators(queries.String(), updates, s.dbTx)
 		if err != nil {
 			return fmt.Errorf("error saving validators update: %w", err)
 		}
 	}
 
-	metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
 	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
 	return nil

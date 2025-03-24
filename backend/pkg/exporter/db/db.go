@@ -57,7 +57,7 @@ type SlotExporterDBRepository interface {
 	GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error)
 	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
 	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error)
-	SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error
+	UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error
 	HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error)
 	TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
 	TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
@@ -747,7 +747,7 @@ func (s *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, 
 	return updates, queries.String(), nil
 }
 
-func (s *SlotExporterDB) SaveValidatorsFieldsUpdate(queries string, totalUpdates int, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error {
 	log.Infof("applying %v validator table update queries", totalUpdates)
 	updateStart := time.Now()
 
