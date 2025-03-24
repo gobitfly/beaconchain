@@ -11,6 +11,7 @@ type IDGetter struct {
 	Optimistic *big.Int
 	Arbitrum   *big.Int
 	Holesky    *big.Int
+	Hoodi      *big.Int
 }
 
 var DefaultIDs = IDGetter{
@@ -20,6 +21,7 @@ var DefaultIDs = IDGetter{
 	Optimistic: big.NewInt(10),
 	Arbitrum:   big.NewInt(42161),
 	Holesky:    big.NewInt(17000),
+	Hoodi:      big.NewInt(560048),
 }
 
 // IDs is a global variable containing all the chain ids

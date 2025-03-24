@@ -28,6 +28,7 @@ var multicallerFor = map[string]common.Address{
 	chain.IDs.Optimistic.String(): common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	chain.IDs.Arbitrum.String():   common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
 	chain.IDs.Holesky.String():    common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"),
+	// chain.IDs.Hoodi.String():    common.HexToAddress("0xcA11bde05977b3631167028862bE2a173976CA11"), // TODO hoodi
 }
 
 // Batcher only supports eth_getBalance and eth_call for now
