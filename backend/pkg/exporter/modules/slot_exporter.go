@@ -340,14 +340,27 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		}
 	}
 
+	g := errgroup.Group{}
+
 	// save sync & attestation duties to bigtable
-	err = db.BigtableClient.SaveAttestationDuties(attDuties)
+	g.Go(func() error {
+		err = db.BigtableClient.SaveAttestationDuties(attDuties)
+		if err != nil {
+			return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+	g.Go(func() error {
+		err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
+		if err != nil {
+			return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+
+	err = g.Wait()
 	if err != nil {
-		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
-	}
-	err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
-	if err != nil {
-		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
+		return err
 	}
 
 	// save the block data to the db
