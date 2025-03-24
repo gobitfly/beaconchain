@@ -1512,21 +1512,21 @@ func TestParseSortOrder(t *testing.T) {
 }
 
 func TestCheckSort(t *testing.T) {
-	tests := []validationTestCase[*types.Sort[TestEnum]]{
+	tests := []validationTestCase[types.Sort[TestEnum]]{
 		{
 			name:     "Valid sort with default order",
 			param:    "one",
-			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
+			expected: types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
 		},
 		{
 			name:     "Valid sort with ascending order",
 			param:    "one:asc",
-			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: false},
+			expected: types.Sort[TestEnum]{Column: TestEnumOne, Desc: false},
 		},
 		{
 			name:     "Valid sort with descending order",
 			param:    "two:desc",
-			expected: &types.Sort[TestEnum]{Column: TestEnumTwo, Desc: true},
+			expected: types.Sort[TestEnum]{Column: TestEnumTwo, Desc: true},
 		},
 		{
 			name:   "Invalid column name",
@@ -1546,11 +1546,11 @@ func TestCheckSort(t *testing.T) {
 		{
 			name:     "Empty string (should return default enum and order)",
 			param:    "",
-			expected: &types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
+			expected: types.Sort[TestEnum]{Column: TestEnumOne, Desc: defaultDesc},
 		},
 	}
 
-	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[*types.Sort[TestEnum]]) *types.Sort[TestEnum] {
+	runValidationTests(t, tests, func(v *validationError, tt validationTestCase[types.Sort[TestEnum]]) types.Sort[TestEnum] {
 		return checkSort[TestEnum](v, tt.param)
 	})
 }
