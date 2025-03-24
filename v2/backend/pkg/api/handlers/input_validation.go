@@ -361,19 +361,19 @@ func (v *validationError) parseSortOrder(order string) bool {
 	}
 }
 
-func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
+func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) types.Sort[T] {
 	var c T
 	if sortString == "" {
 		sortCol := c.NewFromString(sortString)
 		if enums.IsInvalidEnum(sortCol) {
 			sortCol = c
 		}
-		return &types.Sort[T]{Column: sortCol, Desc: defaultDesc}
+		return types.Sort[T]{Column: sortCol, Desc: defaultDesc}
 	}
 	sortSplit := splitParameters(sortString, ':')
 	if len(sortSplit) > 2 {
 		v.add("sort", fmt.Sprintf("given value '%s' for parameter 'sort' is not valid, expected format is '<column_name>[:(asc|desc)]'", sortString))
-		return nil
+		return types.Sort[T]{}
 	}
 	var desc bool
 	if len(sortSplit) == 1 {
@@ -382,7 +382,7 @@ func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *t
 		desc = v.parseSortOrder(sortSplit[1])
 	}
 	sortCol := checkEnum[T](v, sortSplit[0], "sort")
-	return &types.Sort[T]{Column: sortCol, Desc: desc}
+	return types.Sort[T]{Column: sortCol, Desc: desc}
 }
 
 func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProtocolModes {

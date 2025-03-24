@@ -243,11 +243,10 @@ export interface VDBWithdrawalsElTableRow {
   tx_hash: Hash;
   group_id: number /* uint64 */;
   sender: Address;
-  executer: Address;
+  executor: Address;
   amount: string /* decimal.Decimal */;
   status: 'queued' | 'processed';
   fee: string /* decimal.Decimal */;
-  is_missing_estimate: boolean;
 }
 export type GetValidatorDashboardExecutionLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsElTableRow>;
 export interface VDBWithdrawalsClTableRow {
