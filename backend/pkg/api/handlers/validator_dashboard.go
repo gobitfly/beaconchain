@@ -268,7 +268,7 @@ func (i *inputGetValidatorDashboardExecutionLayerWithdrawals) Validate(params ma
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
 	i.protocolModes = v.checkProtocolModes(params["modes"])
-	i.sort = *checkSort[enums.VDBWithdrawalsElColumn](&v, params["sort"])
+	i.sort = checkSort[enums.VDBWithdrawalsElColumn](&v, params["sort"])
 	return v.AsError()
 }
 
@@ -312,7 +312,7 @@ func (i *inputGetValidatorDashboardConsensusLayerWithdrawals) Validate(params ma
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
 	i.protocolModes = v.checkProtocolModes(params["modes"])
-	i.sort = *checkSort[enums.VDBWithdrawalsClColumn](&v, params["sort"])
+	i.sort = checkSort[enums.VDBWithdrawalsClColumn](&v, params["sort"])
 	return v.AsError()
 }
 

@@ -675,7 +675,7 @@ func (h *HandlerService) PublicGetValidatorDashboardValidators(w http.ResponseWr
 		return
 	}
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardValidators(ctx, *dashboardId, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardValidators(ctx, *dashboardId, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1079,7 +1079,7 @@ func (h *HandlerService) PublicGetValidatorDashboardSummary(w http.ResponseWrite
 		return
 	}
 
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardSummary(ctx, *dashboardId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardSummary(ctx, *dashboardId, period, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1181,7 +1181,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRewards(w http.ResponseWrite
 		return
 	}
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRewards(ctx, *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRewards(ctx, *dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1307,7 +1307,7 @@ func (h *HandlerService) PublicGetValidatorDashboardDuties(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardDuties(ctx, *dashboardId, epoch, groupId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardDuties(ctx, *dashboardId, epoch, groupId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1350,7 +1350,7 @@ func (h *HandlerService) PublicGetValidatorDashboardBlocks(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardBlocks(ctx, *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit, protocolModes)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardBlocks(ctx, *dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit, protocolModes)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1524,7 +1524,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPool(w http.ResponseWr
 	}
 
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRocketPool(ctx, *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRocketPool(ctx, *dashboardId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1604,7 +1604,7 @@ func (h *HandlerService) PublicGetValidatorDashboardRocketPoolMinipools(w http.R
 	}
 
 	ctx := r.Context()
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRocketPoolMinipools(ctx, *dashboardId, nodeAddress, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardRocketPoolMinipools(ctx, *dashboardId, nodeAddress, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1677,7 +1677,7 @@ func (h *HandlerService) PublicGetUserNotificationDashboards(w http.ResponseWrit
 		return
 	}
 
-	data, paging, err := h.getDataAccessor(ctx).GetDashboardNotifications(ctx, userId, chainIds, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetDashboardNotifications(ctx, userId, chainIds, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1790,7 +1790,7 @@ func (h *HandlerService) PublicGetUserNotificationMachines(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
-	data, paging, err := h.getDataAccessor(ctx).GetMachineNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetMachineNotifications(ctx, userId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1831,7 +1831,7 @@ func (h *HandlerService) PublicGetUserNotificationClients(w http.ResponseWriter,
 		handleErr(w, r, err)
 		return
 	}
-	data, paging, err := h.getDataAccessor(ctx).GetClientNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetClientNotifications(ctx, userId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -1870,7 +1870,7 @@ func (h *HandlerService) PublicGetUserNotificationNetworks(w http.ResponseWriter
 		handleErr(w, r, err)
 		return
 	}
-	data, paging, err := h.getDataAccessor(ctx).GetNetworkNotifications(ctx, userId, pagingParams.cursor, *sort, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetNetworkNotifications(ctx, userId, pagingParams.cursor, sort, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -2252,7 +2252,7 @@ func (h *HandlerService) PublicGetUserNotificationSettingsDashboards(w http.Resp
 		handleErr(w, r, err)
 		return
 	}
-	data, paging, err := h.getDataAccessor(ctx).GetNotificationSettingsDashboards(ctx, userId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetNotificationSettingsDashboards(ctx, userId, pagingParams.cursor, sort, pagingParams.search, pagingParams.limit)
 	if err != nil {
 		handleErr(w, r, err)
 		return
