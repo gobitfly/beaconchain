@@ -44,7 +44,8 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 	// we split whatever batches we do into 5 concurrent batches to amplify the write throughput
 	errGroup := errgroup.Group{}
 	errGroup.SetLimit(amplificationFactor)
-	_batchSize := min(numMutations/amplificationFactor, length)
+	_batchSize := max(min(numMutations/amplificationFactor, length), MIN_BATCH_MUTATIONS)
+	log.Debugf("WriteBulk: using batchSize %v", _batchSize)
 
 	for offset := 0; offset < numMutations; offset += _batchSize {
 		start := offset
