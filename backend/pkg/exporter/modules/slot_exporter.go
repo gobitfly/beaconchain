@@ -13,6 +13,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -477,6 +478,11 @@ func (s *exporter) exportDuties(block *types.Block) error {
 }
 
 func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	epoch := utils.EpochOfSlot(block.Slot)
 	chainID := utils.Config.Chain.ClConfig.DepositChainID
 
@@ -590,6 +596,11 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 }
 
 func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint64) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_bigtable").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	// prepare the duties for export to bigtable
 	syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
@@ -632,6 +643,11 @@ func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint6
 }
 
 func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainID uint64, isHeadEpoch bool) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_redis").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
 		Epoch:       types.Epoch(epoch),
 		Assignments: block.EpochAssignments,
@@ -815,6 +831,11 @@ func (s *exporter) SaveValidators(validators []*types.Validator) error {
 }
 
 func (s *exporter) exportValidatorData(block *types.Block, epoch, chainID uint64) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_validators_data").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
@@ -846,7 +867,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch, chainID uint64
 	balanceCache := make(map[uint64]map[uint64]uint64) // cache balances by epoch
 	currentActivationEpoch := uint64(0)
 
-	timeStart := time.Now()
+	balanceStart := time.Now()
 	for _, validator := range validators {
 		if validator.ActivationEpoch > epoch {
 			continue
@@ -891,7 +912,7 @@ func (s *exporter) exportValidatorData(block *types.Block, epoch, chainID uint64
 			return fmt.Errorf("error saving activation epoch balance for validator %v: %w", validator.ValidatorIndex, err)
 		}
 	}
-	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(balanceStart))
 
 	err = s.db.AnalyzeValidatorsTable(s.dbTx)
 	if err != nil {
