@@ -111,14 +111,10 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 	}
 	defer stmtAttesterSlashing.Close()
 
-	stmtAttestations, err := tx.Prepare(`
+	stmtAttestations := `
 		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root, committeebits)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`)
-	if err != nil {
-		return fmt.Errorf("error preparing stmtAttestations: %w", err)
-	}
-	defer stmtAttestations.Close()
+		VALUES (:block_slot, :block_index, :block_root, :aggregationbits, :validators, :signature, :slot, :committeeindex, :beaconblockroot, :source_epoch, :source_root, :target_epoch, :target_root, :committeebits)
+		ON CONFLICT (block_slot, block_index) DO NOTHING`
 
 	stmtDeposits, err := tx.Prepare(`
 		INSERT INTO blocks_deposits (block_slot, block_index, block_root, proof, publickey, withdrawalcredentials, amount, signature, valid_signature)
@@ -330,11 +326,47 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					return fmt.Errorf("error executing stmtAttesterSlashing for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
+			type insertData struct {
+				BlockSlot       uint64      `db:"block_slot"`
+				BlockIndex      int         `db:"block_index"`
+				BlockRoot       []byte      `db:"block_root"`
+				AggregationBits []byte      `db:"aggregationbits"`
+				Validators      sql.Scanner `db:"validators"`
+				Signature       []byte      `db:"signature"`
+				Slot            uint64      `db:"slot"`
+				CommitteeIndex  uint16      `db:"committeeindex"`
+				BeaconBlockRoot []byte      `db:"beaconblockroot"`
+				SourceEpoch     uint64      `db:"source_epoch"`
+				SourceRoot      []byte      `db:"source_root"`
+				TargetEpoch     uint64      `db:"target_epoch"`
+				TargetRoot      []byte      `db:"target_root"`
+				CommitteeBits   []byte      `db:"committeebits"`
+			}
+
+			payloads := make([]*insertData, 0)
 
 			for i, a := range b.Attestations {
-				_, err = stmtAttestations.Exec(b.Slot, i, b.BlockRoot, a.AggregationBits, pq.Array(a.Attesters), a.Signature, a.Data.Slot, a.Data.CommitteeIndex, a.Data.BeaconBlockRoot, a.Data.Source.Epoch, a.Data.Source.Root, a.Data.Target.Epoch, a.Data.Target.Root, a.CommitteeBits)
+				payloads = append(payloads, &insertData{
+					BlockSlot:       b.Slot,
+					BlockIndex:      i,
+					BlockRoot:       b.BlockRoot,
+					AggregationBits: a.AggregationBits,
+					Validators:      pq.Array(a.Attesters),
+					Signature:       a.Signature,
+					Slot:            a.Data.Slot,
+					CommitteeIndex:  a.Data.CommitteeIndex,
+					BeaconBlockRoot: a.Data.BeaconBlockRoot,
+					SourceEpoch:     a.Data.Source.Epoch,
+					SourceRoot:      a.Data.Source.Root,
+					TargetEpoch:     a.Data.Target.Epoch,
+					TargetRoot:      a.Data.Target.Root,
+					CommitteeBits:   a.CommitteeBits,
+				})
+			}
+			if len(payloads) > 0 {
+				_, err = tx.NamedExec(stmtAttestations, payloads)
 				if err != nil {
-					return fmt.Errorf("error executing stmtAttestations for block %v index %v: %w", b.Slot, i, err)
+					return fmt.Errorf("error executing stmtAttestations for block %v: %w", b.Slot, err)
 				}
 			}
 
