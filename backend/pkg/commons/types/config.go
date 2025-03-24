@@ -19,25 +19,26 @@ type Bigtable struct {
 
 // Config is a struct to hold the configuration data
 type Config struct {
-	JustV2                    bool              `yaml:"justV2" env:"JUST_V2"` // temp, remove at some point
-	DeploymentType            string            `yaml:"deploymentType" env:"DEPLOYMENT_TYPE"`
-	ReaderDatabase            DatabaseConfig    `yaml:"readerDatabase" env:", prefix=READER_"`
-	WriterDatabase            DatabaseConfig    `yaml:"writerDatabase" env:", prefix=WRITER_"`
-	AlloyReader               DatabaseConfig    `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
-	AlloyWriter               DatabaseConfig    `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
-	Bigtable                  Bigtable          `yaml:"bigtable" env:", prefix=BIGTABLE_"`
-	RawBigtable               Bigtable          `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`
-	BlobIndexer               BlobIndexerConfig `yaml:"blobIndexer" env:", prefix=BLOB_INDEXER_"`
-	Chain                     `yaml:"chain"`
-	Eth1ErigonEndpoint        string `yaml:"eth1ErigonEndpoint" env:"ETH1_ERIGON_ENDPOINT"`
-	Eth1GethEndpoint          string `yaml:"eth1GethEndpoint" env:"ETH1_GETH_ENDPOINT"`
-	EtherscanAPIKey           string `yaml:"etherscanApiKey" env:"ETHERSCAN_API_KEY"`
-	EtherscanAPIBaseURL       string `yaml:"etherscanApiBaseUrl" env:"ETHERSCAN_API_BASEURL"`
-	RedisCacheEndpoint        string `yaml:"redisCacheEndpoint" env:"REDIS_CACHE_ENDPOINT"`
-	RedisSessionStoreEndpoint string `yaml:"redisSessionStoreEndpoint" env:"REDIS_SESSION_STORE_ENDPOINT"`
-	TieredCacheProvider       string `yaml:"tieredCacheProvider" env:"CACHE_PROVIDER"`
-	ReportServiceStatus       bool   `yaml:"reportServiceStatus" env:"REPORT_SERVICE_STATUS"`
-	ClickHouse                struct {
+	JustV2                     bool              `yaml:"justV2" env:"JUST_V2"` // temp, remove at some point
+	DeploymentType             string            `yaml:"deploymentType" env:"DEPLOYMENT_TYPE"`
+	ReaderDatabase             DatabaseConfig    `yaml:"readerDatabase" env:", prefix=READER_"`
+	WriterDatabase             DatabaseConfig    `yaml:"writerDatabase" env:", prefix=WRITER_"`
+	AlloyReader                DatabaseConfig    `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
+	AlloyWriter                DatabaseConfig    `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
+	Bigtable                   Bigtable          `yaml:"bigtable" env:", prefix=BIGTABLE_"`
+	BigTableWriteAmplification int               `yaml:"bigTableWriteAmplification" env:"BIGTABLE_WRITE_AMPLIFICATION"`
+	RawBigtable                Bigtable          `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`
+	BlobIndexer                BlobIndexerConfig `yaml:"blobIndexer" env:", prefix=BLOB_INDEXER_"`
+	Chain                      `yaml:"chain"`
+	Eth1ErigonEndpoint         string `yaml:"eth1ErigonEndpoint" env:"ETH1_ERIGON_ENDPOINT"`
+	Eth1GethEndpoint           string `yaml:"eth1GethEndpoint" env:"ETH1_GETH_ENDPOINT"`
+	EtherscanAPIKey            string `yaml:"etherscanApiKey" env:"ETHERSCAN_API_KEY"`
+	EtherscanAPIBaseURL        string `yaml:"etherscanApiBaseUrl" env:"ETHERSCAN_API_BASEURL"`
+	RedisCacheEndpoint         string `yaml:"redisCacheEndpoint" env:"REDIS_CACHE_ENDPOINT"`
+	RedisSessionStoreEndpoint  string `yaml:"redisSessionStoreEndpoint" env:"REDIS_SESSION_STORE_ENDPOINT"`
+	TieredCacheProvider        string `yaml:"tieredCacheProvider" env:"CACHE_PROVIDER"`
+	ReportServiceStatus        bool   `yaml:"reportServiceStatus" env:"REPORT_SERVICE_STATUS"`
+	ClickHouse                 struct {
 		ReaderDatabase DatabaseConfig `yaml:"readerDatabase" env:", prefix=READER_"`
 		WriterDatabase DatabaseConfig `yaml:"writerDatabase" env:", prefix=WRITER_"`
 	} `yaml:"clickhouse" env:", prefix=CLICKHOUSE_"`

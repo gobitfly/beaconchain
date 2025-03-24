@@ -12,6 +12,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_bigtable.Table, batchSize int) error {
@@ -35,40 +36,37 @@ func (bigtable *Bigtable) WriteBulk(mutations *types.BulkMutations, table *gcp_b
 		length = MAX_BATCH_MUTATIONS
 	}
 
-	iterations := numKeys / length
+	amplificationFactor := utils.Config.BigTableWriteAmplification
+	if amplificationFactor < 1 {
+		amplificationFactor = 5
+		log.Warnf("Bigtable WriteBulk: using default amplification factor %v", amplificationFactor)
+	}
+	// we split whatever batches we do into 5 concurrent batches to amplify the write throughput
+	errGroup := errgroup.Group{}
+	errGroup.SetLimit(amplificationFactor)
+	_batchSize := min(numMutations/amplificationFactor, length)
 
-	for offset := 0; offset < iterations; offset++ {
-		start := offset * length
-		end := offset*length + length
-
-		startTime := time.Now()
-		errs, err := table.ApplyBulk(ctx, mutations.Keys[start:end], mutations.Muts[start:end])
-		for _, e := range errs {
-			if e != nil {
-				return e
+	for offset := 0; offset < numMutations; offset += _batchSize {
+		start := offset
+		end := min(offset+_batchSize, numMutations)
+		errGroup.Go(func() error {
+			startTime := time.Now()
+			errs, err := table.ApplyBulk(ctx, mutations.Keys[start:end], mutations.Muts[start:end])
+			if err != nil {
+				return err
 			}
-		}
-		if err != nil {
-			return err
-		}
-		log.Infof("%s: wrote from %v to %v rows to bigtable in %.1f s", callingFunctionName, start, end, time.Since(startTime).Seconds())
+			for _, e := range errs {
+				if e != nil {
+					return e
+				}
+			}
+			log.Infof("%s: wrote from %v to %v rows to bigtable in %.1f s", callingFunctionName, start, end, time.Since(startTime).Seconds())
+			return nil
+		})
 	}
 
-	if (iterations * length) < numKeys {
-		start := iterations * length
-		startTime := time.Now()
-		errs, err := table.ApplyBulk(ctx, mutations.Keys[start:], mutations.Muts[start:])
-		if err != nil {
-			return err
-		}
-		for _, e := range errs {
-			if e != nil {
-				return e
-			}
-		}
-		log.Infof("%s: wrote from %v to %v rows to bigtable in %.1fs", callingFunctionName, start, numKeys, time.Since(startTime).Seconds())
-
-		return nil
+	if err := errGroup.Wait(); err != nil {
+		return fmt.Errorf("error writing bulk mutations: %v", err)
 	}
 
 	return nil
