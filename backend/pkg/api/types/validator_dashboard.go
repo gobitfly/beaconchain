@@ -279,11 +279,10 @@ type VDBWithdrawalsElTableRow struct {
 	TxHash             Hash            `json:"tx_hash"`
 	GroupId            uint64          `json:"group_id"`
 	Sender             Address         `json:"sender"`
-	Executer           Address         `json:"executer"`
+	Executor           Address         `json:"executor"`
 	Amount             decimal.Decimal `json:"amount"`
 	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
 	Fee                decimal.Decimal `json:"fee"`
-	IsMissingEstimate  bool            `json:"is_missing_estimate"`
 }
 type GetValidatorDashboardExecutionLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsElTableRow]
 
