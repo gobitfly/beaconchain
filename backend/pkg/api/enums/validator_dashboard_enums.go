@@ -216,7 +216,7 @@ func (c VDBWithdrawalsElColumn) Int() int {
 
 func (VDBWithdrawalsElColumn) NewFromString(s string) VDBWithdrawalsElColumn {
 	switch s {
-	case "", "block_processed", "age":
+	case "", "block_processed", "timestamp":
 		return VDBWithdrawalBlockProcessed
 	case "amount":
 		return VDBWithdrawalAmount
@@ -251,7 +251,7 @@ func (c VDBWithdrawalsClColumn) Int() int {
 
 func (VDBWithdrawalsClColumn) NewFromString(s string) VDBWithdrawalsClColumn {
 	switch s {
-	case "", "slot_processed", "age":
+	case "", "slot_processed", "timestamp":
 		return VDBWithdrawalClSlotProcessed
 	case "amount":
 		return VDBWithdrawalClAmount

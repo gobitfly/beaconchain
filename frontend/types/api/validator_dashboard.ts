@@ -241,8 +241,7 @@ export interface VDBWithdrawalsElTableRow {
   index: number /* uint64 */;
   tx_hash: Hash;
   group_id: number /* uint64 */;
-  sender: Address;
-  executor: Address;
+  withdrawer: Address;
   amount: string /* decimal.Decimal */;
   status: 'queued' | 'processed';
   fee: string /* decimal.Decimal */;
