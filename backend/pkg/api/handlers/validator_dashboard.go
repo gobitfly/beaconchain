@@ -294,6 +294,48 @@ func (h *HandlerService) GetValidatorDashboardExecutionLayerWithdrawals(ctx cont
 	return r, nil
 }
 
+// PublicGetValidatorDashboardConsolidations godoc
+//
+//	@Description	Get consolidations information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Address."
+//	@Success		200				{object}	types.GetValidatorDashboardConsolidationsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consolidations [get]
+func (i *inputGetValidatorDashboardConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
+	var v validationError
+	i.Paging = v.checkPagingMap(params)
+	i.sort = checkSort[enums.VDBConsolidationsColumn](&v, params["sort"])
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardConsolidations struct {
+	Paging
+	sort        types.Sort[enums.VDBConsolidationsColumn]
+	dashboardId interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardConsolidations(ctx context.Context, input inputGetValidatorDashboardConsolidations) (types.GetValidatorDashboardConsolidationsResponse, error) {
+	var r types.GetValidatorDashboardConsolidationsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardConsolidations(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
 // GetValidatorDashboardConsensusLayerWithdrawals godoc
 //
 //	@Description	Get withdrawals information (CL) for a specified dashboard

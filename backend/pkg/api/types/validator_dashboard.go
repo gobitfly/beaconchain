@@ -317,6 +317,18 @@ type VDBTotalConsensusWithdrawalsData struct {
 type GetValidatorDashboardTotalConsensusWithdrawalsResponse ApiDataResponse[VDBTotalConsensusWithdrawalsData]
 
 // ------------------------------------------------------------
+// Consolidations Tab
+type VDBConsolidationsTableRow struct {
+	Sender Address         `json:"sender"`
+	Source uint64          `json:"source"`
+	Target uint64          `json:"target"`
+	Epoch  uint64          `json:"epoch"`
+	Slot   uint64          `json:"slot"`
+	Amount decimal.Decimal `json:"amount"`
+}
+type GetValidatorDashboardConsolidationsResponse ApiPagingResponse[VDBConsolidationsTableRow]
+
+// ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
 	Address                []byte                             `json:"-"`
