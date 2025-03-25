@@ -1,19 +1,6 @@
 <script setup lang="ts">
-import {
-  faArrowUpRightFromSquare,
-  faSigma,
-  faSnooze,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  DashboardValidatorEpochDutiesModal,
-  IconSlotBlockProposal,
-  IconSlotHeadAttestation,
-  IconSlotSlashing,
-  IconSlotSourceAttestation,
-  IconSlotSync,
-  IconSlotTargetAttestation,
-} from '#components'
+import { DashboardValidatorEpochDutiesModal } from '#components'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 
 interface Props {
@@ -83,31 +70,31 @@ const data = computed(() => {
 
   const rewards = [
     {
+      icon: 'attestaion-source' as Icon,
       label: $t('dashboard.validator.rewards.attestation_source'),
-      svg: IconSlotSourceAttestation,
       value: details.value.attestations_source,
     },
     {
+      icon: 'attestaion-target' as Icon,
       label: $t('dashboard.validator.rewards.attestation_target'),
-      svg: IconSlotTargetAttestation,
       value: details.value.attestations_target,
     },
     {
+      icon: 'attestaion-head' as Icon,
       label: $t('dashboard.validator.rewards.attestation_head'),
-      svg: IconSlotHeadAttestation,
       value: details.value.attestations_head,
     },
     {
+      icon: 'cube' as Icon,
       label: $t('dashboard.validator.rewards.block'),
-      svg: IconSlotBlockProposal,
       value: {
         income: proposerTotal.value,
         status_count: details.value.proposal_status_count,
       },
     },
     {
+      icon: 'sync' as Icon,
       label: $t('dashboard.validator.rewards.sync'),
-      svg: IconSlotSync,
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.sync',
@@ -116,8 +103,8 @@ const data = computed(() => {
       value: details.value.sync,
     },
     {
+      icon: 'user-slash' as Icon,
       label: $t('dashboard.validator.rewards.slashing'),
-      svg: IconSlotSlashing,
       tooltip: formatMultiPartSpan(
         $t,
         'dashboard.validator.rewards.tooltip.slashing',
@@ -129,7 +116,7 @@ const data = computed(() => {
       value: details.value.slashing,
     },
     {
-      icon: faSnooze,
+      icon: 'snooze' as Icon,
       label: $t('dashboard.validator.rewards.inactivity'),
       value: details.value.inactivity,
     },
@@ -194,20 +181,16 @@ const openDuties = () => {
               class="row"
               :class="item.className"
             >
-              <component
-                :is="item.svg"
-                v-if="item.svg"
-              />
-              <FontAwesomeIcon
+              <BcIcon
                 v-if="item.icon"
-                :icon="item.icon"
+                :name="item.icon"
               />
             </div>
             <div
               class="row"
             >
-              <FontAwesomeIcon
-                :icon="faSigma"
+              <BcIcon
+                name="sigma"
               />
             </div>
           </div>
@@ -249,9 +232,10 @@ const openDuties = () => {
               </div>
             </BcTooltip>
             <div>
-              <FontAwesomeIcon
+              <BcButtonIcon
+                screenreader-text="dashboard.validator.rewards.open_duties_details"
                 class="link popout"
-                :icon="faArrowUpRightFromSquare"
+                name="arrow-upright-from-square"
                 @click="openDuties"
               />
             </div>

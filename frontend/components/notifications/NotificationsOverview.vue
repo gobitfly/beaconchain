@@ -1,10 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faDesktop, faUser,
-} from '@fortawesome/pro-solid-svg-icons'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const {
@@ -69,7 +63,7 @@ const emit = defineEmits<{
             tooltip-width="220px"
             :text="tooltipEmail"
           >
-            <FontAwesomeIcon :icon="faInfoCircle" />
+            <BcIcon name="circle-info" />
           </BcTooltip>
           <BcPremiumGem class="gem" />
         </div>
@@ -118,16 +112,17 @@ const emit = defineEmits<{
         </h3>
         <div class="lists-container">
           <div class="lists-container-column">
-            <BcScreenreaderOnly is="h4">
-              {{ $t('notifications.overview.headers.validator_groups') }}
-            </BcScreenreaderOnly>
+            <BcScreenreaderOnly
+              is="h4"
+              screenreader-text="notifications.overview.headers.validator_groups"
+            />
             <ol class="icon-list">
               <li
                 v-for="(group, index) in vdbMostNotifiedGroups"
                 :key="group"
                 class="small_text list-item"
               >
-                <FontAwesomeIcon :icon="faDesktop" />
+                <BcIcon name="desktop" />
                 <span class="list-text">
                   {{ index + 1 }}. {{ group || '-' }}
                 </span>
@@ -136,16 +131,17 @@ const emit = defineEmits<{
           </div>
           <BcFeatureFlag feature="feature-account_dashboards">
             <div class="lists-container-column">
-              <BcScreenreaderOnly is="h4">
-                {{ $t('notifications.overview.headers.account_groups') }}
-              </BcScreenreaderOnly>
+              <BcScreenreaderOnly
+                is="h4"
+                screenreader-text="notifications.overview.headers.account_groups"
+              />
               <ol class="icon-list">
                 <li
                   v-for="(group, index) in adbMostNotifiedGroups"
                   :key="group"
                   class="small_text list-item"
                 >
-                  <FontAwesomeIcon :icon="faUser" />
+                  <BcIcon name="user" />
                   <span class="list-text">
                     {{ index + 1 }}. {{ group || '-' }}
                   </span>

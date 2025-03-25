@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import BcIcon from '~/components/bc/icon/BcIcon.vue'
 import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
@@ -19,8 +18,8 @@ const iconColor = computed(() => {
 
 <template>
   <div class="wrapper">
-    <FontAwesomeIcon
-      :icon="faPowerOff"
+    <BcIcon
+      name="power-off"
       :class="iconColor"
     />
     <span

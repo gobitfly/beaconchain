@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { ClElValue } from '~/types/api/common'
 
 const { reward } = defineProps<{
@@ -25,7 +23,7 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
       v-if="hasReward"
       :fit-content="true"
     >
-      <FontAwesomeIcon :icon="faInfoCircle" />
+      <BcIcon name="circle-info" />
       <template #tooltip>
         <div>
           <div>

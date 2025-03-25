@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import BcTooltip from '../BcTooltip.vue'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   disabled?: boolean,
-  falseIcon?: IconDefinition,
-  icon?: IconDefinition,
+  falseIcon?: Icon,
+  icon?: Icon,
   readonlyClass?: string,
   tooltip?: string,
 }
@@ -58,9 +57,9 @@ const icon = computed(() => {
           name="icon"
           v-bind="slotProps"
         >
-          <FontAwesomeIcon
+          <BcIcon
             v-if="icon"
-            :icon
+            :name="icon"
           />
         </slot>
       </template>

@@ -6,8 +6,7 @@ WORKDIR /usr/src/nuxt-app
 COPY . .
 
 WORKDIR /usr/src/nuxt-app
-RUN --mount=type=secret,id=NPMRC_FILE,target=/usr/src/nuxt-app/.npmrc \
-    npm ci && npm cache clean --force
+RUN npm ci && npm cache clean --force
 RUN npm run build
 
 FROM gcr.io/distroless/nodejs22-debian12

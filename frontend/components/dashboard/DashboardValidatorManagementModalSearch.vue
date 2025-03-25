@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { faGem } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import BcIcon from '~/components/bc/icon/BcIcon.vue'
 import type { InternalPostSearchResponse } from '~/types/api/search'
 
 const props = defineProps<{
@@ -93,14 +92,14 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) =>
         class="dashboard-validator-management-modal-search__item"
         :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
-        <IconDatatypeValidatorIcon
-          width="16px"
+        <BcIcon
+          name="desktop"
         />
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           1 {{ $t('common.validator', 1) }}
-          <FontAwesomeIcon
+          <BcIcon
             v-if="isDisabled(item.type)"
-            :icon="faGem"
+            name="gem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
         </span>
@@ -116,14 +115,14 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) =>
         class="dashboard-validator-management-modal-search__item"
         :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
-        <IconDatatypeValidatorIcon
-          width="16px"
+        <BcIcon
+          name="desktop"
         />
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           {{ item.value.count }} {{ $t('common.validator', item.value.count) }}
-          <FontAwesomeIcon
+          <BcIcon
             v-if="isDisabled(item.type)"
-            :icon="faGem"
+            name="gem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
         </span>
@@ -139,14 +138,14 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) =>
         class="dashboard-validator-management-modal-search__item"
         :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
-        <IconDatatypeValidatorIcon
-          width="16px"
+        <BcIcon
+          name="desktop"
         />
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           {{ item.value.validators.length }} {{ $t('common.validator', item.value.validators.length) }}
-          <FontAwesomeIcon
+          <BcIcon
             v-if="isDisabled(item.type)"
-            :icon="faGem"
+            name="gem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
         </span>
@@ -162,14 +161,14 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) =>
         class="dashboard-validator-management-modal-search__item"
         :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
-        <IconDatatypeValidatorIcon
-          width="16px"
+        <BcIcon
+          name="desktop"
         />
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           {{ item.value.count }} {{ $t('common.validator', item.value.count) }}
-          <FontAwesomeIcon
+          <BcIcon
             v-if="isDisabled(item.type)"
-            :icon="faGem"
+            name="gem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
         </span>
@@ -185,14 +184,14 @@ const isDisabled = (type: InternalPostSearchResponse['data'][number]['type']) =>
         class="dashboard-validator-management-modal-search__item"
         :class="{ 'dashboard-validator-management-modal-search__item--disabled': isDisabled(item.type) }"
       >
-        <IconDatatypeValidatorIcon
-          width="16px"
+        <BcIcon
+          name="desktop"
         />
         <span class="dashboard-validator-management-modal-search__item-validator_info">
           {{ item.value.count }} {{ $t('common.validator', item.value.count) }}
-          <FontAwesomeIcon
+          <BcIcon
             v-if="isDisabled(item.type)"
-            :icon="faGem"
+            name="gem"
             class="dashboard-validator-management-modal-search__item-gem"
           />
         </span>

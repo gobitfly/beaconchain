@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
@@ -202,7 +200,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 >
                   {{ $t("dashboard.validator.withdrawals.pending") }}
                   <BcTooltip>
-                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <BcIcon name="circle-info" />
                     <template #tooltip>
                       {{
                         $t("dashboard.validator.withdrawals.pending_tooltip")
@@ -365,7 +363,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                     has-tooltip
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
-                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <BcIcon name="circle-info" />
                     <template #tooltip>
                       {{ $t("dashboard.validator.withdrawals.future_tooltip") }}
                     </template>

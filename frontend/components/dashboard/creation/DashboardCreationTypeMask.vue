@@ -1,8 +1,6 @@
 <script lang="ts" setup>
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 import type { DashboardType } from '~/types/dashboard'
-import {
-  IconAccount, IconValidator,
-} from '#components'
 
 const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
@@ -16,14 +14,14 @@ const type = defineModel<'' | DashboardType>('type', { required: true })
 
 const typeButtons = [
   {
-    component: IconValidator,
     disabled: props.validatorsDisabled,
+    icon: 'desktop' as Icon,
     text: $t('dashboard.creation.type.validators'),
     value: 'validator',
   },
   {
-    component: IconAccount,
     disabled: true,
+    icon: 'user' as Icon,
     subText: $t('common.coming_soon'),
     text: $t('dashboard.creation.type.accounts'),
     value: 'account',

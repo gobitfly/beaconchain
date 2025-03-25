@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { useValidatorSlotVizStore } from '~/stores/dashboard/useValidatorSlotVizStore'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 
@@ -104,7 +102,7 @@ watch(
           target="_blank"
           class="link"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
         </BcLink>
       </BcTooltip>
 

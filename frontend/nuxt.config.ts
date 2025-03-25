@@ -43,7 +43,6 @@ export default defineNuxtConfig({
   css: [
     '~/assets/css/main.scss',
     '~/assets/css/prime.scss',
-    '@fortawesome/fontawesome-svg-core/styles.css',
   ],
   colorMode: {
     fallback: 'dark',

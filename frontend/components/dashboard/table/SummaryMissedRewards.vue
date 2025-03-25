@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBGroupSummaryMissedRewards } from '~/types/api/validator_dashboard'
 
 const { missedRewards } = defineProps<{
@@ -30,7 +28,7 @@ const { missedRewards } = defineProps<{
       target-unit-crypto="auto"
     />
     <BcTooltip :fit-content="true">
-      <FontAwesomeIcon :icon="faInfoCircle" />
+      <BcIcon name="circle-info" />
       <template #tooltip>
         <div>
           <div class="tt-row">

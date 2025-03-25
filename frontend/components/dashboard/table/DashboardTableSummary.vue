@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { useStorage } from '@vueuse/core'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
@@ -238,7 +236,7 @@ watch(
                     :text="$t('dashboard.validator.summary.tooltip.live')"
                     @click.stop.prevent="() => {}"
                   >
-                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <BcIcon name="circle-info" />
                   </BcTooltip>
                 </div>
               </template>

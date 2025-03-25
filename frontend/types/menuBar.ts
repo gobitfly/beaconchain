@@ -1,4 +1,4 @@
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 export interface MenuBarButton {
   active?: boolean,
@@ -6,7 +6,7 @@ export interface MenuBarButton {
   command?: () => void,
   component?: Component,
   disabledTooltip?: string,
-  faIcon?: IconDefinition,
+  faIcon?: Icon,
   highlight?: boolean,
   label?: string,
   route?: string,

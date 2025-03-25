@@ -1,10 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-  faMinus,
-  faPlus,
-} from '@fortawesome/pro-regular-svg-icons'
 import {
   type ExtraDashboardValidatorsPremiumAddon,
   ProductCategoryPremiumAddon,
@@ -199,7 +193,7 @@ const handleSubmitPurchase = async () => {
           position="top"
           :fit-content="true"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
           <template #tooltip>
             <div class="premium-addon-box__info-tooltip">
               {{
@@ -230,16 +224,17 @@ const handleSubmitPurchase = async () => {
           <BcScreenreaderOnly
             is="legend"
             id="subscription-count-row-label"
-          >
-            {{ $t('pricing.addons.select_quantity') }}
-          </BcScreenreaderOnly>
+            screenreader-text="pricing.addons.select_quantity"
+          />
           <BcButton
             class="premium-addon-box__subscription-counter-button"
             :is-disabled="quantity <= 1"
             @click="quantity -= 1"
           >
-            <FontAwesomeIcon :icon="faMinus" />
-            <BcScreenreaderOnly>{{ $t('pricing.addons.button.decrease_quantity') }}</BcScreenreaderOnly>
+            <BcIcon name="minus" />
+            <BcScreenreaderOnly
+              screenreader-text="pricing.addons.button.decrease_quantity"
+            />
           </BcButton>
           <BcInputNumber
             v-model="quantity"
@@ -254,8 +249,10 @@ const handleSubmitPurchase = async () => {
             :is-disabled="isQuantityLimitReached"
             @click="quantity += 1"
           >
-            <FontAwesomeIcon :icon="faPlus" />
-            <BcScreenreaderOnly>{{ $t('pricing.addons.button.increase_quantity') }}</BcScreenreaderOnly>
+            <BcIcon name="plus" />
+            <BcScreenreaderOnly
+              screenreader-text="pricing.addons.button.increase_quantity"
+            />
           </BcButton>
         </fieldset>
 

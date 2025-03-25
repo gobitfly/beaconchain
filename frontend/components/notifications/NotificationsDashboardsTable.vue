@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
-import IconValidator from '../icon/IconValidator.vue'
-import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
 import type { ChainId } from '~/types/network'
@@ -131,9 +127,8 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork
-                    colored
-                    :chain-id="slotProps.data.chain_id"
+                  <BcNetworkIcon
+                    :id="slotProps.data.chain_id"
                     class="icon-network"
                   />
                 </div>
@@ -193,7 +188,9 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
               <template #body="slotProps">
                 <div class="entity">
                   <template v-if="!slotProps.data.is_account_dashboard">
-                    <IconValidator class="icon-dashboard-type" />
+                    <BcIcon
+                      name="desktop"
+                    />
                     {{ slotProps.data.entity_count }}
                     <span>
                       {{
@@ -205,7 +202,9 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
                     </span>
                   </template>
                   <template v-else>
-                    <IconAccount class="icon-dashboard-type" />
+                    <BcIcon
+                      name="user"
+                    />
                     {{ slotProps.data.entity_count }}
                     <span>
                       {{
@@ -217,14 +216,11 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
                     </span>
                   </template>
                   <BcButtonIcon
-                    screenreader-text="Open notification details"
+                    screenreader-text="notifications.dashboards.dialog.entity.open_notification_details"
+                    name="arrow-upright-from-square"
+                    class="link"
                     @click="showDialog(slotProps.data)"
-                  >
-                    <FontAwesomeIcon
-                      class="link"
-                      :icon="faArrowUpRightFromSquare"
-                    />
-                  </BcButtonIcon>
+                  />
                 </div>
               </template>
             </Column>

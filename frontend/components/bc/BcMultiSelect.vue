@@ -3,7 +3,9 @@
 </script>
 
 <template>
-  <MultiSelect>
+  <MultiSelect
+    class="bc-multitselect"
+  >
     <template #header>
       <slot name="header" />
     </template>
@@ -11,7 +13,16 @@
       <slot name="value" />
     </template>
     <template #dropdownicon>
-      <IconChevron direction="bottom" />
+      <BcIcon
+        name="chevron-down"
+      />
     </template>
   </MultiSelect>
 </template>
+
+<style lang="scss" scoped>
+div.bc-multitselect {
+  padding-inline: var(--padding);
+  gap: var(--padding-small);
+}
+</style>

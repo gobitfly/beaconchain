@@ -9,7 +9,10 @@ defineProps<{
     to="/"
     :class="`${layoutAdaptability}-adaptability`"
   >
-    <IconBeaconchainLogo alt="Beaconcha.in logo" />
+    <BcScreenreaderOnly
+      screenreader-text="beaconchain_homepage"
+    />
+    <TheLogo />
     <span class="name">beaconcha.in</span>
   </NuxtLink>
 </template>

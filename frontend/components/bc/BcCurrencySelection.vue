@@ -23,7 +23,7 @@ const availableCurrencies = computed(
         <span
           class="icon"
         >
-          <BcIconCurrency :currency-code="selectedCurrencyMain" />
+          <BcCurrencyIcon :currency-code="selectedCurrencyMain" />
         </span>
         {{ selectedCurrencyMain }}
       </span>
@@ -31,7 +31,7 @@ const availableCurrencies = computed(
     <template #option="{ code }">
       <span class="item">
         <span class="icon">
-          <BcIconCurrency :currency-code="code" />
+          <BcCurrencyIcon :currency-code="code" />
         </span>
         <span class="currency">{{ code }}</span>
         <span class="label">({{ getCurrencyName(code) }})</span>
@@ -64,11 +64,6 @@ const availableCurrencies = computed(
     display: flex;
     justify-content: flex-end;
 
-    :deep(img),
-    :deep(svg) {
-      max-height: 100%;
-      width: auto;
-    }
   }
 
   &:not(.in-header) {

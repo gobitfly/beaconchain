@@ -167,13 +167,32 @@ export default withNuxt({
     },
   )
   .append({
+    files: [
+      'components/**/*.vue',
+      'composables/**/*.ts',
+    ],
     rules: {
       'no-restricted-syntax': [
         'error',
         {
-          message: 'Please use `useBcCookie()` instead.',
+          message: 'Use `useBcCookie()` instead.',
           selector:
           'CallExpression[callee.name="useCookie"]',
+        },
+      ],
+    },
+  },
+  )
+  .append({
+    files: [ 'components/**/*.vue' ],
+    ignores: [ '**/BcIcon.vue' ],
+    rules: {
+      'vue/no-restricted-syntax': [
+        'error',
+        {
+          message: 'Use BcIcon instead.',
+          // match BcIconSomethingThatComesAfter and LazyBcIconAnything but not BcIcon
+          selector: 'VElement[name=/^(lazy)?bcicon(?!$)[a-z]+$/]',
         },
       ],
     },

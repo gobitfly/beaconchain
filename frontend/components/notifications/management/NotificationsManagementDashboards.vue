@@ -1,9 +1,4 @@
 <script lang="ts" setup>
-import {
-  faDesktop, faTrash, faUser,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 import type { ApiPagingResponse } from '~/types/api/common'
 import type {
   NotificationSettingsAccountDashboard,
@@ -213,12 +208,6 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
   }
 }
 
-function getTypeIcon(type: DashboardType) {
-  if (type === 'validator') {
-    return faDesktop
-  }
-  return faUser
-}
 const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0]) => {
   deleteDashboardNotifications(payload).then(() => refreshOverview())
 }
@@ -267,8 +256,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               class="disabled-text"
               :text="$t('notifications.dashboards.archived')"
             >
-              <FontAwesomeIcon
-                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+              <BcIcon
+                :name="slotProps.data.dashboard_type === 'validator' ? 'desktop' : 'user'"
                 class="type-icon"
               />
               {{ slotProps.data.dashboard_name }}
@@ -276,8 +265,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
             <span
               v-else
             >
-              <FontAwesomeIcon
-                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+              <BcIcon
+                :name="slotProps.data.dashboard_type === 'validator' ? 'desktop' : 'user'"
                 class="type-icon"
               />
               {{ slotProps.data.dashboard_name }}
@@ -339,18 +328,15 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
           <template #body="slotProps">
             <div class="action-row">
               <BcButtonIcon
-                :screenreader-text="
-                  $t('notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
-                     { dashboard_id: slotProps.data.dashboard_name },
-                  )"
+                :screenreader-text="{
+                  key: 'notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
+                  interpolation: { dashboard_id: slotProps.data.dashboard_name },
+                }"
                 :disabled="isDeleteButtonDisabled(slotProps.data)"
                 class="link"
+                name="trash"
                 @click="onEdit('delete', slotProps.data)"
-              >
-                <FontAwesomeIcon
-                  :icon="faTrash"
-                />
-              </BcButtonIcon>
+              />
             </div>
           </template>
         </Column>

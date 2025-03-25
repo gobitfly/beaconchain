@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 import type {
   TagColor, TagSize,
 } from '~/types/tag'
 
 interface Props {
   color?: TagColor,
-  icon?: IconDefinition,
+  icon?: Icon,
   label?: string,
   size?: TagSize,
   tooltip?: string,
@@ -24,9 +23,9 @@ defineProps<Props>()
     :fit-content="true"
   >
     {{ label }}
-    <FontAwesomeIcon
+    <BcIcon
       v-if="icon"
-      :icon
+      :name="icon"
     />
   </BcTooltip>
 </template>

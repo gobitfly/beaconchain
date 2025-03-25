@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faBars, faCircleUser,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
@@ -133,11 +129,9 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
           v-if="hasExchangeRates"
           class="currency-info"
         >
-          <BcIconCrypto
-            width="20"
+          <BcCurrencyIcon
             :currency-code="displayCurrencyDefault.main"
             class="network-icon"
-            color-mode="currentColor"
           />
           {{ displayCurrencyDefault.main }}:
           <span
@@ -182,17 +176,18 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             @select="handleUserMenuSelect"
           >
             <template #value>
-              <FontAwesomeIcon
+              <BcIcon
                 class="menu-icon"
-                :icon="faCircleUser"
+                name="circle-user"
               />
             </template>
           </BcDropdown>
         </div>
-        <FontAwesomeIcon
-          :icon="faBars"
+        <BcButtonIcon
           class="burger"
-          @click.stop.prevent="toggleMegaMenu"
+          name="bars"
+          screenreader-text="header.open_navigation"
+          @click.stop="toggleMegaMenu"
         />
       </div>
 
@@ -382,6 +377,7 @@ $smallHeaderThreshold: 1024px;
         }
       }
       .burger {
+        color: var(--header-top-font-color);
         height: 24px;
         cursor: pointer;
         @media (min-width: $smallHeaderThreshold) {

@@ -12,12 +12,15 @@ const emit = defineEmits<{ (e: 'select', value: SelectChangeEvent['value']): voi
 
 <template>
   <Select
+    class="bc-dropdown"
     :class="variant"
     :panel-class="[variant, panelClass]"
     @change="emit('select', $event.value)"
   >
     <template #dropdownicon>
-      <IconChevron direction="bottom" />
+      <BcIcon
+        name="chevron-down"
+      />
     </template>
     <template #value="slotProps">
       <slot
@@ -41,3 +44,10 @@ const emit = defineEmits<{ (e: 'select', value: SelectChangeEvent['value']): voi
     </template>
   </Select>
 </template>
+
+<style lang="scss" scoped>
+div.bc-dropdown {
+  padding-inline: var(--padding);
+  gap: var(--padding-small);
+}
+</style>

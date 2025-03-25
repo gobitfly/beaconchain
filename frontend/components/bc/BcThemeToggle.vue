@@ -21,8 +21,16 @@ onMounted(() => {
       @change="colorMode.preference = switchPosition"
     >
     <span class="slider" />
-    <IconColorToggleMoon id="moon" />
-    <IconColorToggleSun id="sun" />
+    <BcIcon
+      id="moon"
+      size="sm"
+      name="moon"
+    />
+    <BcIcon
+      id="sun"
+      size="sm"
+      name="sun"
+    />
   </label>
 </template>
 
@@ -30,9 +38,9 @@ onMounted(() => {
 .darklight-switch {
   position: relative;
   display: inline-block;
-  width: 36px;
-  height: 19px;
-  border-radius: 9.5px;
+  width: 2.25rem;
+  height: 1.1875rem;
+  border-radius: .5938rem;
   background-color: #c0adad;
 }
 
@@ -51,10 +59,10 @@ input {
 
 .slider {
   position: absolute;
-  height: 16px;
-  width: 16px;
-  left: 1.5px;
-  bottom: 1.5px;
+  height: 1rem;
+  width: 1rem;
+  left: .0938rem;
+  bottom: .0938rem;
   border-radius: 50%;
   background-color: var(--primary-color);
   -webkit-transition: 0.2s;
@@ -62,22 +70,21 @@ input {
 }
 
 input:checked + .slider {
-  -webkit-transform: translateX(17px);
-  -ms-transform: translateX(17px);
-  transform: translateX(17px);
+  transform: translateX(1.0625rem);
 }
 
 #moon {
   position: absolute;
-  left: 4.5px;
-  top: 4.5px;
+  left: .2188rem;
+  top: .2188rem;
   color: var(--light-grey-3);
 }
 
 #sun {
   position: absolute;
-  left: 21.2px;
-  top: 4px;
+  right: .1875rem;
+  translate: -0.025rem -0.025rem;
+  top: .25rem;
   color: var(--light-grey);
 }
 
