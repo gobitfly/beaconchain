@@ -1,10 +1,10 @@
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { Component } from 'vue'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 export type HashTab = {
   component?: Component,
   disabled?: boolean,
-  icon?: IconDefinition,
+  icon?: Icon,
   key: string,
   placeholder?: string,
   title?: string,

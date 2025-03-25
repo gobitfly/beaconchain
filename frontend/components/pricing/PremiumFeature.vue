@@ -1,7 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { Feature } from '~/types/pricing'
 
 interface Props {
@@ -26,7 +23,7 @@ defineProps<Props>()
             class="tooltip"
             fit-content
           >
-            <FontAwesomeIcon :icon="faInfoCircle" />
+            <BcIcon name="circle-info" />
             <template #tooltip>
               <div class="tooltip-content">
                 {{ feature.tooltip }}
@@ -49,9 +46,9 @@ defineProps<Props>()
         :to="feature.link"
         target="_blank"
       >
-        <FontAwesomeIcon
+        <BcIcon
           class="popout"
-          :icon="faArrowUpRightFromSquare"
+          name="arrow-upright-from-square"
         />
       </BcLink>
     </div>

@@ -2,7 +2,11 @@
 withDefaults(
   defineProps<{
     isDimmed?: boolean,
-    tag?: 'h2' | 'p' | 'span',
+    tag?:
+      | 'h2'
+      | 'h4'
+      | 'p'
+      | 'span',
     variant?: 'base' | 'lg' | 'md' | 'sm',
   }>(), {
     tag: 'span',

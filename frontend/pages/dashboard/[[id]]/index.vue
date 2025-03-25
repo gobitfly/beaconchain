@@ -1,14 +1,5 @@
 <script setup lang="ts">
 import {
-  faArrowDown,
-  faChartLineUp,
-  faCube,
-  faCubes, faFire,
-  faMoneyBill,
-  faWallet,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
   DashboardCreationController, DashboardTableBlocks, DashboardTableEmpty, DashboardTableRewards, DashboardTableSummary,
   DashboardTableWithdrawals,
 } from '#components'
@@ -28,19 +19,19 @@ const { t: $t } = useTranslation()
 const tabs: HashTabs = [
   {
     component: DashboardTableSummary,
-    icon: faChartLineUp,
+    icon: 'chart-line-up',
     key: 'summary',
     title: $t('dashboard.validator.tabs.summary'),
   },
   {
     component: DashboardTableRewards,
-    icon: faCubes,
+    icon: 'cubes',
     key: 'rewards',
     title: $t('dashboard.validator.tabs.rewards'),
   },
   {
     component: DashboardTableBlocks,
-    icon: faCube,
+    icon: 'cube',
     key: 'blocks',
     title: $t('dashboard.validator.tabs.blocks'),
 
@@ -48,18 +39,18 @@ const tabs: HashTabs = [
   {
     component: DashboardTableEmpty,
     disabled: !showInDevelopment,
-    icon: faFire,
+    icon: 'fire',
     key: 'heatmap',
     title: $t('dashboard.validator.tabs.heatmap'),
   },
   {
-    icon: faWallet,
+    icon: 'wallet',
     key: 'deposits',
     title: $t('dashboard.validator.tabs.deposits'),
   },
   {
     component: DashboardTableWithdrawals,
-    icon: faMoneyBill,
+    icon: 'money-bill',
     key: 'withdrawals',
     title: $t('dashboard.validator.tabs.withdrawals'),
   },
@@ -258,8 +249,8 @@ watch(
         <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits />
-            <FontAwesomeIcon
-              :icon="faArrowDown"
+            <BcIcon
+              name="arrow-down"
               class="down_icon"
             />
             <DashboardTableClDeposits />

@@ -1,6 +1,5 @@
 <!-- eslint-disable vue/max-len -- TODO:   plz fix this -->
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { MultiBarItem } from '~/types/multiBar'
 
 interface Props {
@@ -75,9 +74,9 @@ const readonlyClass = computed(() => (props.readonlyMode ? 'read-only' : ''))
             v-bind="button.componentProps"
             :class="button.componentClass"
           />
-          <FontAwesomeIcon
+          <BcIcon
             v-else-if="button.icon"
-            :icon="button.icon"
+            :name="button.icon"
           />
         </slot>
       </template>

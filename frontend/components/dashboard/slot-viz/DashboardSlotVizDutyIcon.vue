@@ -8,11 +8,32 @@ const props = defineProps<Props>()
 </script>
 
 <template>
-  <IconSlotAttestation v-if="props.icon === 'attestation'" />
-  <IconSlotHeadAttestation v-else-if="props.icon === 'head_attestation'" />
-  <IconSlotSourceAttestation v-else-if="props.icon === 'source_attestation'" />
-  <IconSlotTargetAttestation v-else-if="props.icon === 'target_attestation'" />
-  <IconSlotBlockProposal v-else-if="props.icon === 'proposal'" />
-  <IconSlotSlashing v-else-if="props.icon === 'slashing'" />
-  <IconSlotSync v-else-if="props.icon === 'sync'" />
+  <BcIcon
+    v-if="props.icon === 'attestation'"
+    name="file-signature"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'head_attestation'"
+    name="attestaion-head"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'source_attestation'"
+    name="attestaion-source"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'target_attestation'"
+    name="attestaion-target"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'proposal'"
+    name="cube"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'slashing'"
+    name="user-slash"
+  />
+  <BcIcon
+    v-else-if="props.icon === 'sync'"
+    name="sync"
+  />
 </template>

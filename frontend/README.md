@@ -22,12 +22,6 @@ On your console, navigate to folder `beaconchain/frontend`.
 
 Type
 
-```bash
-cp .npmrc-example .npmrc
-```
-
-In your `.npmrc` file, replace `FA_TOKEN` with an actual key for Font Awesome.
-
 Then type:
 
 ```bash

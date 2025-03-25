@@ -1,11 +1,6 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 interface Props {
   disabled?: boolean,
-  falseIcon?: IconDefinition,
-  trueIcon?: IconDefinition,
 }
 
 const props = defineProps<Props>()
@@ -31,20 +26,10 @@ const toggle = () => {
     @click="toggle"
   >
     <div class="icon true-icon">
-      <slot name="trueIcon">
-        <FontAwesomeIcon
-          v-if="trueIcon"
-          :icon="trueIcon"
-        />
-      </slot>
+      <slot name="trueIcon" />
     </div>
     <div class="icon false-icon">
-      <slot name="falseIcon">
-        <FontAwesomeIcon
-          v-if="falseIcon"
-          :icon="falseIcon"
-        />
-      </slot>
+      <slot name="falseIcon" />
     </div>
     <span class="slider" />
     <div class="bg" />

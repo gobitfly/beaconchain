@@ -10,10 +10,12 @@ defineProps<{
   <span
     class="validator-status"
   >
-    <BcIconValidatorStatus
-      :color
-      width="0.875rem"
-    />
+    <BcColor :color>
+      <BcIcon
+        name="circle-power-off"
+        size="sm"
+      />
+    </BcColor>
     <BaseFormatPercent
       v-if="base"
       :color

@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { PremiumProduct } from '~/types/api/user'
 import type { Feature } from '~/types/pricing'
 
@@ -294,7 +292,7 @@ const minorFeatures = computed<Feature[]>(() => {
           position="top"
           :fit-content="true"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
           <template #tooltip>
             <div class="saving-tooltip-container">
               {{

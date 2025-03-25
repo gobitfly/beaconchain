@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   header?: string,
-  icon?: IconDefinition,
+  icon?: Icon,
 }
 
 const props = defineProps<Props>()
@@ -13,9 +12,9 @@ const props = defineProps<Props>()
 <template>
   <div class="tab-header">
     <slot name="icon">
-      <FontAwesomeIcon
+      <BcIcon
         v-if="props.icon"
-        :icon="props.icon"
+        :name="props.icon"
       />
     </slot>
     <span v-if="props.header">{{ props.header }}</span>

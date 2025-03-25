@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import {
-  faBolt,
-  faGaugeSimpleMax,
-  faMonitorWaveform,
-  faNetworkWired,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
 import type { HashTabs } from '~/types/hashTabs'
@@ -22,22 +16,22 @@ const tabKey = {
 }
 const tabs: HashTabs = [
   {
-    icon: faGaugeSimpleMax,
+    icon: 'gauge-simple-max',
     key: tabKey.dashboards,
     title: $t('notifications.tabs.dashboards'),
   },
   {
-    icon: faMonitorWaveform,
+    icon: 'monitor-wave-form',
     key: tabKey.machines,
     title: $t('notifications.tabs.machines'),
   },
   {
-    icon: faBolt,
+    icon: 'bolt',
     key: tabKey.clients,
     title: $t('notifications.tabs.clients'),
   },
   {
-    icon: faNetworkWired,
+    icon: 'network-wired',
     key: tabKey.networks,
     title: $t('notifications.tabs.networks'),
   },

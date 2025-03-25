@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Color } from '~/components/base/BaseFormat.vue'
+import type { Color } from '~/components/bc/BcColor.vue'
 
 defineProps<{
   color?: Color,
@@ -10,12 +10,12 @@ defineProps<{
 </script>
 
 <template>
-  <BaseFormat :color>
+  <BcColor :color>
     {{ formatNumber(value, {
       maximumFractionDigits,
       minimumFractionDigits,
     }) }}
-  </BaseFormat>
+  </BcColor>
 </template>
 
 <style scoped lang="scss">

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DashboardValidatorSubsetModal } from '#components'
 
@@ -104,12 +102,12 @@ const aprInfos = [
         {{ validatorsOffline }}
       </span>
       <BcButtonIcon
-        :screenreader-text="$t('dashboard.validator.overview.open_validator_overview_modal')"
+        screenreader-text="dashboard.validator.overview.open_validator_overview_modal"
         @click="openValidatorModal"
       >
-        <FontAwesomeIcon
+        <BcIcon
           class="link optical-correction"
-          :icon="faArrowUpRightFromSquare"
+          name="arrow-upright-from-square"
         />
       </BcButtonIcon>
       <template #additionalInfo>

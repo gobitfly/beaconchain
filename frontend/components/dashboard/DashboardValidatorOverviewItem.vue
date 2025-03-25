@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { NumberOrString } from '~/types/value'
 
 const props = defineProps<{
@@ -31,7 +29,7 @@ const props = defineProps<{
       class="info"
     >
       <BcTooltip :fit-content="true">
-        <FontAwesomeIcon :icon="faInfoCircle" />
+        <BcIcon name="circle-info" />
         <template #tooltip>
           <div class="info-label-list">
             <slot name="tooltip">

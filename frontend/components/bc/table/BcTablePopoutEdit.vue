@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { faEdit } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 const emit = defineEmits<{ (e: 'onEdit'): void }>()
 
 defineProps<{
@@ -9,8 +6,6 @@ defineProps<{
   label?: string,
   truncateText?: boolean,
 }>()
-
-const { t: $t } = useTranslation()
 </script>
 
 <template>
@@ -32,15 +27,12 @@ const { t: $t } = useTranslation()
     </slot>
     <div class="icon">
       <BcButtonIcon
-        :screenreader-text="$t('common.edit')"
+        screenreader-text="common.edit"
+        name="edit"
         :is-disabled
         class="link"
         @click="() => emit('onEdit')"
-      >
-        <FontAwesomeIcon
-          :icon="faEdit"
-        />
-      </BcButtonIcon>
+      />
     </div>
   </div>
 </template>

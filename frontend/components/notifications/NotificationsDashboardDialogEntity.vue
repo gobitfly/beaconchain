@@ -1,18 +1,6 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faAlarmSnooze,
-  faArrowsRotate,
-  faChartLineUp,
-  faCube,
-  faFileSignature,
-  faGlobe,
-  faMoneyBill,
-  faPowerOff,
-  faRocket,
-  faUserSlash,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
+import BcIcon from '~/components/bc/icon/BcIcon.vue'
 
 const { t: $t } = useTranslation()
 
@@ -76,8 +64,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_offline')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faPowerOff"
+          <BcIcon
+            name="power-off"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -99,8 +87,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.proposal_missed')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faCube"
+          <BcIcon
+            name="cube"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -132,8 +120,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.proposal_done')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faCube"
+          <BcIcon
+            name="cube"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
@@ -165,8 +153,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.slashed')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faUserSlash"
+          <BcIcon
+            name="user-slash"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -188,8 +176,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.sync_committee')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faArrowsRotate"
+          <BcIcon
+            name="rotate"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
@@ -214,8 +202,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           {{ $t('notifications.dashboards.dialog.entity.attestation_missed') }} ({{ details?.attestation_missed?.length ?? 0 }})
         </template>
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faFileSignature"
+          <BcIcon
+            name="file-signature"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -244,8 +232,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           {{ $t('notifications.dashboards.dialog.entity.withdrawal') }} ({{ details?.withdrawal?.length ?? 0 }})
         </template>
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faMoneyBill"
+          <BcIcon
+            name="money-bill"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
@@ -270,8 +258,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_back_online')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faGlobe"
+          <BcIcon
+            name="globe"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
@@ -295,8 +283,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :item="details?.group_efficiency_below"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faChartLineUp"
+          <BcIcon
+            name="chart-line-up"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -321,8 +309,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.validator_offline_reminder')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faAlarmSnooze"
+          <BcIcon
+            name="alarm-snooze"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -344,8 +332,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.upcoming_proposal')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faCube"
+          <BcIcon
+            name="cube"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>
@@ -377,8 +365,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.min_collateral')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faRocket"
+          <BcIcon
+            name="rocket"
             class="notifications-dashboard-dialog-entity__icon__red"
           />
         </template>
@@ -403,8 +391,8 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         :info-copy="$t('notifications.dashboards.dialog.entity.max_collateral')"
       >
         <template #headingIcon>
-          <FontAwesomeIcon
-            :icon="faRocket"
+          <BcIcon
+            name="rocket"
             class="notifications-dashboard-dialog-entity__icon__green"
           />
         </template>

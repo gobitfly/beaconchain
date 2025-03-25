@@ -1,5 +1,8 @@
 <script setup lang="ts">
-const { is = 'span' } = defineProps<{
+const {
+  is = 'span',
+  screenreaderText,
+} = defineProps<{
   is?:
     'div'
     | 'h1'
@@ -11,7 +14,17 @@ const { is = 'span' } = defineProps<{
     | 'legend'
     | 'p'
     | 'span',
+  screenreaderText: TranslationInput,
 }>()
+
+const { t: $t } = useTranslation()
+
+const translation = computed(() => {
+  if (typeof screenreaderText === 'string') return $t(screenreaderText)
+  if (typeof screenreaderText.interpolation === 'number') return $t(screenreaderText.key, screenreaderText.interpolation)
+  if (Array.isArray(screenreaderText.interpolation)) return $t(screenreaderText.key, screenreaderText.interpolation)
+  return $t(screenreaderText.key, screenreaderText.interpolation)
+})
 </script>
 
 <template>
@@ -19,7 +32,7 @@ const { is = 'span' } = defineProps<{
     :is
     class="bc-screenreader-only"
   >
-    <slot />
+    {{ translation }}
   </component>
 </template>
 

@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import BcTooltip from '../BcTooltip.vue'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   disabled?: boolean,
-  icon?: IconDefinition,
+  icon?: Icon,
   layout: 'gaudy' | 'minimal',
   selected: boolean,
   subText?: string,
@@ -53,9 +51,9 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
           name="icon"
           v-bind="slotProps"
         >
-          <FontAwesomeIcon
+          <BcIcon
             v-if="icon"
-            :icon
+            :name="icon"
           />
         </slot>
         <div

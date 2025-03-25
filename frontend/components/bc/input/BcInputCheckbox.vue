@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { BcInputError } from '~/components/bc/input/BcInputError.vue'
 
 const props = defineProps<{
@@ -28,7 +26,7 @@ const input = defineModel<boolean>()
         tooltip-width="220px"
         tooltip-text-align="left"
       >
-        <FontAwesomeIcon :icon="faInfoCircle" />
+        <BcIcon name="circle-info" />
         <template #tooltip>
           {{ infoText }}
           <slot name="tooltip" />

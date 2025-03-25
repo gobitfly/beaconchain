@@ -116,18 +116,13 @@ const items = computed<MenuBarEntry[]>(() => {
       class="menu-bar"
       :buttons="items"
     />
-    <BcButton
+    <BcButtonIcon
       v-if="!isSharedDashboard"
-      variant="secondary"
-      class="p-button-icon-only"
+      name="plus"
+      screenreader-text="dashboard.title"
+      variant="flat"
       @click="emit('showCreation')"
-    >
-      <IconPlus
-        title="Add new dashboard"
-        width="100%"
-        height="100%"
-      />
-    </BcButton>
+    />
   </div>
 </template>
 

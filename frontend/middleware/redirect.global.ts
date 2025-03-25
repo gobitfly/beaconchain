@@ -20,6 +20,14 @@ export default function ({
   switch (name) {
     case 'address':
       return redirectToV1(`/address/${params.id || params.slug?.[1]}`)
+    case 'beaconchain-dashboard-mobile-app-on-github':
+      return redirect('https://github.com/gobitfly/eth2-beaconchain-explorer-app')
+    case 'beaconchain-on-discord':
+      return redirect('https://dsc.gg/beaconchain')
+    case 'beaconchain-on-github':
+      return redirect('https://github.com/gobitfly/beaconchain')
+    case 'beaconchain-on-x':
+      return redirect('https://x.com/beaconcha_in')
     case 'block':
       return redirectToV1(`/block/${params.id || params.slug?.[1]}`)
     case 'dashboard':
@@ -38,14 +46,8 @@ export default function ({
         }
       }
       break
-    case 'discord':
-      return redirect('https://dsc.gg/beaconchain')
     case 'epoch':
       return redirectToV1(`/epoch/${params.id || params.slug?.[1]}`)
-    case 'github-beaconchain':
-      return redirect('https://github.com/gobitfly/beaconchain')
-    case 'github-mobile-app':
-      return redirect('https://github.com/gobitfly/eth2-beaconchain-explorer-app')
     case 'imprint':
       return redirectToV1('/imprint')
     case 'mobile':
@@ -77,7 +79,5 @@ export default function ({
     case 'validator':
     case 'validator-id':
       return redirectToV1(`/validator/${params.id || params.slug?.[1]}`)
-    case 'x':
-      return redirect('https://x.com/beaconcha_in')
   }
 }

@@ -1,10 +1,4 @@
 <script lang="ts" setup>
-import {
-  faArrowUpRightFromSquare,
-  faPaperPlane,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
@@ -202,11 +196,15 @@ watchDebounced(() => store.settings.general_settings, async () => {
     >
       <div>
         {{ $t("notifications.general.push_notifications") }}
-        <span v-if="pairedDevicesCount > 0">
+        <span
+          v-if="pairedDevicesCount > 0"
+          class="paired-devices-count"
+        >
           ({{ pairedDevicesCount }})
-          <FontAwesomeIcon
+          <BcButtonIcon
+            screenreader-text="notifications.general.manage_paired_devices"
             class="link popout"
-            :icon="faArrowUpRightFromSquare"
+            name="arrow-upright-from-square"
             @click="openPairdeDevicesModal"
           />
         </span>
@@ -248,7 +246,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
       >
         {{ $t("common.send") }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />
+          <BcIcon name="paper-plane" />
         </template>
       </BcButton>
     </div>
@@ -264,7 +262,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
       >
         {{ $t("common.send") }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />
+          <BcIcon name="paper-plane" />
         </template>
       </BcButton>
     </div>
@@ -314,6 +312,11 @@ watchDebounced(() => store.settings.general_settings, async () => {
         @include fonts.tiny_text;
         color: var(--text-color-discreet);
       }
+    }
+
+    .paired-devices-count {
+      display: inline-flex;
+      align-items: center;
     }
 
     .font-default {

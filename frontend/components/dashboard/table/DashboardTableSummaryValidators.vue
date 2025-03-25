@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import type {
   DashboardValidatorContext,
   SummaryTimeFrame,
@@ -139,14 +137,11 @@ const hasValidators = computed(
       </template>
     </BcTooltip>
     <BcButtonIcon
-      :screenreader-text="$t('dashboard.validator.summary.validator_status_popout')"
-    >
-      <FontAwesomeIcon
-        class="link popout"
-        :icon="faArrowUpRightFromSquare"
-        @click="openValidatorModal"
-      />
-    </BcButtonIcon>
+      screenreader-text="dashboard.validator.summary.validator_status_popout"
+      name="arrow-upright-from-square"
+      class="link popout"
+      @click="openValidatorModal"
+    />
   </div>
   <div v-else>
     -

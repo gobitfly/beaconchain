@@ -1,4 +1,5 @@
 {
+    "beaconchain_homepage": "Beaconchain Homepage",
     "block": {
         "col": {
             "graffiti": "Graffiti",
@@ -15,12 +16,18 @@
         "status_might_change_on_reorg": "This block's status may change if a chain reorganization occurs."
     },
     "clipboard": {
-        "copied": "Copied!",
-        "copied_to_clipboard": "Copied to clipboard!",
-        "copy": "Copy to clipboard"
+        "action": {
+            "copied_to_clipboard": "Copied to clipboard!",
+            "copy_list_to_clipboard": "Copy list to clipboard",
+            "copy_to_clipboard": "Copy to clipboard"
+        },
+        "copied": "Copied!"
     },
     "common": {
         "account": "Account | Accounts",
+        "action": {
+            "open_details": "Open details"
+        },
         "active": "Active",
         "address": "Address | Addresses",
         "age": "Age",
@@ -201,6 +208,12 @@
             "template": "This dashboard exceeds your maximum stake limit, so you can't add more validators. {_link}"
         },
         "subsciprion_limit_reached_title": "Maximum stake exceeded",
+        "table": {
+            "action": {
+                "toggle_all_row_details": "Toggle all row details",
+                "toggle_row_detail": "Toggle row detail"
+            }
+        },
         "title": "Dashboard",
         "validator": {
             "blocks": {
@@ -257,6 +270,7 @@
                 "new_group_placeholder": "New group name",
                 "remove_text": "Do you want to remove group {group} from your dashboard?",
                 "remove_title": "Remove Groups",
+                "remove_validator": "Remove Group: {groupName}",
                 "search_placeholder": "Name, Id",
                 "sub_title": "Add or remove validator groups for {dashboardName}",
                 "title": "Manage Groups",
@@ -267,6 +281,7 @@
             "management": {
                 "remove_text": "Do you want to remove validator {validator} from your dashboard? | Do you want to remove {count} validators from your dashboard?",
                 "remove_title": "Remove Validators",
+                "remove_validator":"Remove Validator with Index: {validatorIndex}",
                 "search": {
                     "add_validators": "Add the following validators to your dashbard",
                     "by_index_or_public_key": "By Index or Public key",
@@ -306,6 +321,8 @@
                     "total": "Total Rewards"
                 },
                 "inactivity": "Inactivity Leak",
+                "open_duties_details": "Open duties details",
+                "open_validator_details": "Open validator details",
                 "proposal": "Proposal",
                 "proposer_rewards_cl_att": "Proposer Att. Reward (CL)",
                 "proposer_rewards_cl_slash": "Proposer Slashing Reward (CL)",
@@ -446,28 +463,6 @@
         "multiple_times": "The error {error} happened {count} times",
         "ws_error": "Webservice error"
     },
-    "faq": {
-        "playground": {
-            "0": {
-                "answer": [
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-                    "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-                ],
-                "link": {
-                    "label": "...more infos",
-                    "path": "https://beaconcha.in/"
-                },
-                "question": "What is your first question"
-            },
-            "1": {
-                "answer": [
-                    "Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-                    "sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-                ],
-                "question": "This is a second question"
-            }
-        }
-    },
     "filter": {
         "close": "Open Filter.",
         "disabled": "Filter disabled.",
@@ -487,7 +482,7 @@
         "shop": "Swag Shop",
         "status": "Site Status",
         "terms": "Terms",
-        "x": "X"
+        "x": "X.com (formerly twitter)"
     },
     "header": {
         "epoch": "Epoch",
@@ -544,6 +539,7 @@
             "webhooks": "Webhooks",
             "withdrawals": "Withdrawals"
         },
+        "open_navigation": "Open navigation",
         "register": "Sign up",
         "settings": "Account Settings",
         "slot": "Slot"
@@ -605,7 +601,6 @@
                 "other_clients": "Others Clients",
                 "screenreader": {
                     "delete_notifications_for_dashboard_id": "Delete all notifications for {dashboard_id}",
-                    "edit_notifications": "Edit Notifications for {0} {1}",
                     "empty_clients": "0 clients to edit."
                 }
             },
@@ -638,6 +633,7 @@
                     "group_efficiency_text": "efficiency below {percentage}",
                     "max_collateral":"Maximum collateral reached",
                     "min_collateral":"Minimum collateral reached",
+                    "open_notification_details": "Open notification details",
                     "proposal_done": "Proposal done",
                     "proposal_missed": "Proposal missed",
                     "slashed": "Slashed",
@@ -702,6 +698,7 @@
                     "validators_shortened": "Validators ({count} Sub) |Validators ({count} Subs)"
                 }
             },
+            "open_dashboard_settings": "Open dashboard settings",
             "search_placeholder": "Dashboard, Group",
             "title": "Dashboards",
             "toast": {
@@ -723,6 +720,7 @@
                 "global_settings": "Global Settings.",
                 "global_settings_subtext": "Adjusting your notification preferences here will update them across all networks."
             },
+            "manage_paired_devices": "Manage paired devices",
             "mute": {
                 "all": "Mutes all notifications",
                 "hours": "{count} hour|{count} hours",

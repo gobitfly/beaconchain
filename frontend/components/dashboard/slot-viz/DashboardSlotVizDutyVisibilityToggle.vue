@@ -1,13 +1,6 @@
 <script setup lang="ts">
-import { faEye } from '@fortawesome/pro-solid-svg-icons'
 import { useStorage } from '@vueuse/core'
 import type { MultiBarItem } from '~/types/multiBar'
-import {
-  IconSlotAttestation,
-  IconSlotBlockProposal,
-  IconSlotSlashing,
-  IconSlotSync,
-} from '#components'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 
 type SlotVizCategoriesStorage = {
@@ -46,28 +39,28 @@ const selectedCategories = computed(() => {
 })
 const icons: MultiBarItem[] = [
   {
-    component: IconSlotBlockProposal,
+    icon: 'cube',
     tooltip: $t('slot_viz.filter.proposal'),
     value: 'proposal',
   },
   {
-    component: IconSlotAttestation,
+    icon: 'file-signature',
     tooltip: $t('slot_viz.filter.attestation'),
     value: 'attestation',
   },
   {
-    component: IconSlotSync,
+    icon: 'sync',
     tooltip: $t('slot_viz.filter.sync'),
     value: 'sync',
   },
   {
-    component: IconSlotSlashing,
+    icon: 'user-slash',
     tooltip: $t('slot_viz.filter.slashing'),
     value: 'slashing',
   },
   {
     className: 'visible-icon',
-    icon: faEye,
+    icon: 'eye',
     tooltip: $t('slot_viz.filter.visible'),
     value: 'visible',
   },

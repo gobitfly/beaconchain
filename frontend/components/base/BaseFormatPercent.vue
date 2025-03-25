@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Color } from '~/components/base/BaseFormat.vue'
+import type { Color } from '~/components/bc/BcColor.vue'
 
 const {
   base = 1,
@@ -22,14 +22,14 @@ const ratio = computed(() => {
 </script>
 
 <template>
-  <BaseFormat :color>
+  <BcColor :color>
     <slot :value>
       {{ formatPercent(ratio, {
         maximumFractionDigits,
         minimumFractionDigits,
       }) }}
     </slot>
-  </BaseFormat>
+  </BcColor>
 </template>
 
 <style scoped lang="scss">

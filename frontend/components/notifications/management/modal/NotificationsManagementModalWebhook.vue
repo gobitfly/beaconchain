@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faPaperPlane } from '@fortawesome/pro-solid-svg-icons'
 import { useForm } from 'vee-validate'
 import { warn } from 'vue'
 
@@ -160,7 +158,7 @@ const id = useId()
       >
         {{ $t("notifications.dashboards.dialog.button_webhook_test") }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />
+          <BcIcon name="paper-plane" />
         </template>
       </BcButton>
       <BcButton

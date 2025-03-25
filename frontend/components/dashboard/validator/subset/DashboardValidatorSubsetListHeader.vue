@@ -1,18 +1,9 @@
 <script lang="ts" setup>
-import {
-  faDesktop,
-  faMoneyBill,
-  faPowerOff,
-} from '@fortawesome/pro-solid-svg-icons'
-import {
-  faClock,
-  type IconDefinition,
-} from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorSubsetCategory } from '~/types/validator'
 import type { VDBSummaryValidator } from '~/types/api/validator_dashboard'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 import { countSummaryValidatorDuties } from '~/utils/dashboard/validator'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   category: ValidatorSubsetCategory,
@@ -23,7 +14,7 @@ const props = defineProps<Props>()
 const { t: $t } = useTranslation()
 
 const icon = computed(() => {
-  let icon: IconDefinition | undefined
+  let icon: Icon | undefined
   let className = ''
   let slotVizCategory: SlotVizCategories | undefined
   switch (props.category) {
@@ -31,7 +22,7 @@ const icon = computed(() => {
     case 'exited':
     case 'exited_withdrawing':
     case 'exited_withdrawn':
-      icon = faMoneyBill
+      icon = 'money-bill'
       break
     case 'got_slashed':
       className = 'negative'
@@ -43,14 +34,14 @@ const icon = computed(() => {
       break
     case 'offline':
       className = 'negative'
-      icon = faPowerOff
+      icon = 'power-off'
       break
     case 'online':
       className = 'positive'
-      icon = faPowerOff
+      icon = 'power-off'
       break
     case 'pending':
-      icon = faClock
+      icon = 'clock'
       break
     case 'proposal_missed':
       className = 'negative'
@@ -77,7 +68,7 @@ const icon = computed(() => {
       slotVizCategory = 'sync'
       break
     default:
-      icon = faDesktop
+      icon = 'desktop'
       break
   }
 
@@ -95,9 +86,9 @@ const count = computed(() =>
 
 <template>
   <div class="subset--list-header">
-    <FontAwesomeIcon
+    <BcIcon
       v-if="icon.icon"
-      :icon="icon.icon"
+      :name="icon.icon"
       :class="icon.className"
     />
     <DashboardSlotVizDutyIcon

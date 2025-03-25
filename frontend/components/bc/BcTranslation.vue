@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type { TranslationKey } from '~/i18n/i18n.config'
-
 defineProps<{
   boldpath?: TranslationKey,
   /**
