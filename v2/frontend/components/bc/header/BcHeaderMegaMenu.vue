@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCaretRight } from '@fortawesome/pro-solid-svg-icons'
-
 import type { MenuItem } from 'primevue/menuitem'
-import MegaMenu from 'primevue/megamenu'
 
 import {
   mobileHeaderThreshold, smallHeaderThreshold,
@@ -85,24 +81,8 @@ defineExpose({
       :model="items"
       :breakpoint
     >
-      <template #item="{ item, hasSubmenu }">
+      <template #item="{ item }">
         <span class="p-menuitem-link">
-          <span
-            v-if="item.svg || item.icon"
-            class="p-menuitem-icon iconSpacing"
-            data-pc-section="icon"
-          >
-            <component
-              :is="item.svg"
-              v-if="item.svg"
-              class="monochromatic"
-            />
-            <FontAwesomeIcon
-              v-else-if="item.icon"
-              class="icon"
-              :icon="item.icon"
-            />
-          </span>
           <BcLink
             v-if="item.url"
             :to="item.url"
@@ -123,11 +103,6 @@ defineExpose({
           >
             {{ item.label }}
           </div>
-          <FontAwesomeIcon
-            v-if="hasSubmenu"
-            :icon="faCaretRight"
-            class="p-icon p-submenu-icon"
-          />
         </span>
       </template>
     </MegaMenu>

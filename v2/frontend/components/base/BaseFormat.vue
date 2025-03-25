@@ -1,30 +1,18 @@
 <script setup lang="ts">
-export type Color = 'gray' | 'green' | 'red'
+import type { Color } from '~/components/bc/BcColor.vue'
+
 defineProps<{
   color?: Color,
 }>()
 </script>
 
 <template>
-  <span
-    :class="{
-      green: color === 'green',
-      red: color === 'red',
-      gray: color === 'gray',
-    }"
+  <BcColor
+    :color
   >
     <slot />
-  </span>
+  </BcColor>
 </template>
 
 <style scoped lang="scss">
-  .green {
-    color: var(--positive-color);
-  }
-  .red {
-    color: var(--negative-color);
-  }
-  .gray {
-    color: var(--grey);
-  }
 </style>

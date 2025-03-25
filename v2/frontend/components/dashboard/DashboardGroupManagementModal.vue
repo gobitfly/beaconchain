@@ -1,8 +1,4 @@
 <script lang="ts" setup>
-import {
-  faAdd, faTrash,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { orderBy } from 'lodash-es'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import {
@@ -256,7 +252,7 @@ const isMobile = computed(() => {
             :disabled="newGroupDisabled"
             @click="addGroup"
           >
-            <FontAwesomeIcon :icon="faAdd" />
+            <BcIcon name="plus" />
           </Button>
         </div>
       </template>
@@ -323,9 +319,13 @@ const isMobile = computed(() => {
             <Column field="action">
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon
+                  <BcButtonIcon
                     v-if="slotProps.data.id"
-                    :icon="faTrash"
+                    :screenreader-text="{
+                      interpolation: { groupName: slotProps.data.name },
+                      key: 'dashboard.validator.group_management.remove_validator',
+                    }"
+                    name="trash"
                     class="link"
                     @click="removeGroup(slotProps.data)"
                   />

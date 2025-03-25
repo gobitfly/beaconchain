@@ -1,7 +1,4 @@
 <script setup lang="ts" generic="T">
-import { faCopy } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 const props = defineProps<{
   infoCopy?: string,
   item?: T,
@@ -31,7 +28,7 @@ const { t: $t } = useTranslation()
 const copyText = async () => {
   await copy(textToCopy.value).then(() => {
     toast.showInfo({
-      detail: $t('clipboard.copied_to_clipboard'),
+      detail: $t('clipboard.action.copied_to_clipboard'),
       summary: props.infoCopy ?? '',
     })
   })
@@ -48,8 +45,9 @@ const copyText = async () => {
       @click="isOpen = !isOpen"
     >
       <span class="bc-accordion__heading">
-        <IconChevron
-          :direction="isOpen ? 'bottom' : 'right'"
+        <BcIcon
+          name="chevron-right"
+          :rotation="isOpen ? '90deg' : '0deg'"
         />
         <slot name="headingIcon" />
         <slot name="heading" />
@@ -80,15 +78,11 @@ const copyText = async () => {
       <template #floating-action-button>
         <BcButtonIcon
           v-if="isSupported"
-          screenreader-text="Copy list to clipboard"
+          name="copy"
+          screenreader-text="clipboard.action.copied_to_clipboard"
           class="bc-accordion__button"
           @click="copyText"
-        >
-          <FontAwesomeIcon
-            :icon="faCopy"
-            class="bc-accordion__button-icon"
-          />
-        </BcButtonIcon>
+        />
       </template>
     </BcCard>
   </details>

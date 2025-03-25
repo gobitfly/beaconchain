@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faArrowDown,
-  faArrowsLeftRight,
-  faArrowUp,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { CompareResult } from '~/types/value'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 /**
 * @deprecated This component is outdated. Use BaseFormatPercent instead.
@@ -50,7 +44,7 @@ const data = computed(() => {
       label: '100%',
     }
   }
-  let leadingIcon: IconDefinition | undefined
+  let leadingIcon: Icon | undefined
   if (percent === undefined && !base) {
     if (!hideEmptyValue) {
       label = '0%'
@@ -78,17 +72,17 @@ const data = computed(() => {
     const thresholdToDifferenciateUnderperformerAndOverperformer = 0.25
     if (Math.abs(comparePercent - localPercent) <= thresholdToDifferenciateUnderperformerAndOverperformer) {
       className = 'text-equal'
-      leadingIcon = faArrowsLeftRight
+      leadingIcon = 'arrow-left-right'
       compareResult = 'equal'
     }
     else if (localPercent > comparePercent) {
       className = 'text-positive'
-      leadingIcon = faArrowUp
+      leadingIcon = 'arrow-up'
       compareResult = 'higher'
     }
     else {
       className = 'text-negative'
-      leadingIcon = faArrowDown
+      leadingIcon = 'arrow-down'
       compareResult = 'lower'
     }
   }
@@ -127,7 +121,10 @@ const data = computed(() => {
           v-bind="{ compare: data.compareResult }"
         />
       </template>
-      <FontAwesomeIcon :icon="data.leadingIcon" />
+      <BcIcon
+        :name="data.leadingIcon"
+        size="sm"
+      />
     </BcTooltip>
     <BcFormatNumber
       v-if="data.label"

@@ -91,7 +91,7 @@ const { t: $t } = useTranslation()
           <li>
             <BcLink
               class="link"
-              to="/discord"
+              to="/beaconchain-on-discord"
             >
               {{ $t('footer.discord') }}
             </BcLink>
@@ -99,7 +99,7 @@ const { t: $t } = useTranslation()
           <li>
             <BcLink
               class="link"
-              to="/x"
+              to="/beaconchain-on-x"
             >
               {{ $t('footer.x') }}
             </BcLink>
@@ -107,7 +107,7 @@ const { t: $t } = useTranslation()
           <li>
             <BcLink
               class="link"
-              to="/github-beaconchain"
+              to="/beaconchain-on-github"
             >
               {{ $t('footer.github') }}
             </BcLink>
@@ -115,7 +115,7 @@ const { t: $t } = useTranslation()
           <li>
             <BcLink
               class="link"
-              to="/github-mobile-app"
+              to="/beaconchain-dashboard-mobile-app-on-github"
             >
               {{ $t('footer.github_mobile_app') }}
             </BcLink>
@@ -149,7 +149,6 @@ const { t: $t } = useTranslation()
   position: relative;
   box-sizing: border-box;
   width: 100%;
-
   flex-direction: column;
   gap: var(--padding-large);
   padding: var(--padding-large);

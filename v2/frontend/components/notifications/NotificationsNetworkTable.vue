@@ -75,9 +75,8 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork
-                    colored
-                    :chain-id="slotProps.data.chain_id"
+                  <BcNetworkIcon
+                    :id="slotProps.data.chain_id"
                     class="icon-network"
                   />
                 </div>

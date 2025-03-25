@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import type { Component } from 'vue'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   // if true, clicking the selected button will deselect it causing the whole SingleBar not to have a value
@@ -11,7 +10,7 @@ interface Props {
     componentClass?: string,
     componentProps?: any,
     disabled?: boolean,
-    icon?: IconDefinition,
+    icon?: Icon,
     subText?: string,
     text?: string,
     tooltip?: string,

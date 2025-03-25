@@ -20,6 +20,9 @@ export function useNetworkStore() {
     slotsPerEpoch,
     timeStampSlot0,
   } = networkInfo.value
+
+  const getNetworkName = (chainId: ChainId) => ChainInfo[chainId].name
+
   const secondsPerEpoch = computed(() => slotsPerEpoch * secondsPerSlot)
   const epochsPerDay = computed(() => (24 * 60 * 60) / secondsPerEpoch.value)
 
@@ -58,6 +61,7 @@ export function useNetworkStore() {
     epochsPerDay,
     getEpochFromSlot,
     getEpochFromTimestamp,
+    getNetworkName,
     getSlotFromTimestamp,
     getTimestampFromEpoch,
     getTimestampFromSlot,

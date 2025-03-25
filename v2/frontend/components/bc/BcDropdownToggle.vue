@@ -4,8 +4,7 @@ const props = defineProps<{
   optionLabel: string,
   options: any[],
   optionValue: string,
-  screenreaderHeading?: string,
-  screenreaderText: string,
+  screenreaderHeading: TranslationInput,
   text: string,
 }>()
 
@@ -36,14 +35,14 @@ const emit = defineEmits<{
     <button
       type="button"
       class="bc-dropdown-toggle__button"
-      :aria-label="screenreaderText"
       @click="hasOptions && toggle($event)"
     >
       <span>{{ text }}</span>
-      <IconChevron
+      <BcIcon
         v-if="hasOptions"
-        width="0.5rem"
-        :direction="isVisible ? 'left' : 'bottom'"
+        name="chevron-down"
+        size="sm"
+        :rotation="isVisible ? '90deg' : '0deg'"
       />
     </button>
 
@@ -60,10 +59,9 @@ const emit = defineEmits<{
         <BcScreenreaderOnly
           is="h2"
           :id="idScreenreaderHeading"
+          :screenreader-text="props.screenreaderHeading"
           tabindex="-1"
-        >
-          {{ props.screenreaderHeading }}
-        </BcScreenreaderOnly>
+        />
         <li
           v-for="option in props.options"
           :key="option[props.optionIdentifier]"

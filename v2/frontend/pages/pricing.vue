@@ -1,7 +1,4 @@
 <script lang="ts" setup>
-import { faArrowDown } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 const { t: $t } = useTranslation()
 
 useBcSeo('pricing.seo_title')
@@ -48,7 +45,7 @@ const scrollToAddons = () => {
           @click="scrollToAddons()"
         >
           {{ $t("pricing.view_addons") }}
-          <FontAwesomeIcon :icon="faArrowDown" />
+          <BcIcon name="arrow-down" />
         </BcButton>
         <PricingPremiumCompare />
         <PricingPremiumAddons

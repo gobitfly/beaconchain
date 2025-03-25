@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
 import type {
   DashboardValidatorContext,
   SummaryTimeFrame,
@@ -75,10 +73,11 @@ const groupName = computed(() => {
     <span v-else>
       {{ validatorCount }} {{ $t('common.validator', validatorCount) }}
     </span>
-    <FontAwesomeIcon
+    <BcButtonIcon
       v-if="validators?.length"
+      screenreader-text="common.action.open_details"
       class="link popout"
-      :icon="faArrowUpRightFromSquare"
+      name="arrow-upright-from-square"
       @click="openValidatorModal"
     />
   </div>
@@ -101,9 +100,6 @@ const groupName = computed(() => {
   }
 
   .popout {
-    width: 14px;
-    height: auto;
-    margin-left: var(--padding-small);
     flex-shrink: 0;
   }
 }

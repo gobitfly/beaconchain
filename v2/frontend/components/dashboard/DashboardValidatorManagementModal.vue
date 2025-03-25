@@ -1,8 +1,4 @@
 <script lang="ts" setup>
-import {
-  faEdit, faTrash,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import {
@@ -501,17 +497,21 @@ const inputValidator = ref('')
                   @click.stop.prevent="editSelected()"
                 >
                   <span class="edit-label">{{ $t("common.edit") }}</span>
-                  <FontAwesomeIcon
+                  <BcIcon
                     class="edit-icon"
-                    :icon="faEdit"
+                    name="edit"
                   />
                 </Button>
               </template>
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon
-                    :icon="faTrash"
-                    class="link"
+                  <BcButtonIcon
+                    class="remove-button"
+                    :screenreader-text="{
+                      key: 'dashboard.validator.management.remove_validator',
+                      interpolation: { validatorIndex: slotProps.data.index },
+                    }"
+                    name="trash"
                     @click="removeRow(slotProps.data)"
                   />
                 </div>
@@ -639,6 +639,10 @@ const inputValidator = ref('')
   @include fonts.big_text;
 }
 
+.remove-button {
+  color: var(--blue);
+}
+
 .group-selection {
   width: 6rem;
   @media (min-width: $breakpoint-md) {
@@ -695,10 +699,6 @@ const inputValidator = ref('')
   .gem {
     color: var(--primary-color);
   }
-}
-
-.public-key {
-  width: 134px;
 }
 
 .edit-icon {

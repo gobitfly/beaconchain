@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { faCopy } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { warn } from 'vue'
 import BcTooltip from './BcTooltip.vue'
 
@@ -14,7 +12,7 @@ const {
   bounce,
   instant,
   value: tooltip,
-} = useDebounceValue<string>($t('clipboard.copy'), 2000)
+} = useDebounceValue<string>($t('clipboard.action.copy_to_clipboard'), 2000)
 
 function copyToClipboard(): void {
   if (!props.value) {
@@ -28,7 +26,7 @@ function copyToClipboard(): void {
     })
     .then(() => {
       instant($t('clipboard.copied'))
-      bounce($t('clipboard.copy'))
+      bounce($t('clipboard.action.copy_to_clipboard'))
     })
 }
 </script>
@@ -40,9 +38,10 @@ function copyToClipboard(): void {
     position="top"
     tooltip-class="tooltip"
   >
-    <FontAwesomeIcon
-      :icon="faCopy"
+    <BcButtonIcon
+      name="copy"
       class="pointer"
+      screenreader-text="clipboard.action.copy_to_clipboard"
       @click.stop.prevent="copyToClipboard"
     />
   </BcTooltip>

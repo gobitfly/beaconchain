@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import {
-  faArrowUpRightFromSquare,
-  faCube,
-  faSync,
-} from '@fortawesome/pro-solid-svg-icons'
 import {
   type DashboardValidatorContext,
   type SummaryDetailsEfficiencyCombinedProp,
@@ -253,15 +246,16 @@ const openValidatorModal = () => {
       :text="data.tooltip?.text"
       :title="data.tooltip?.title"
     >
-      <FontAwesomeIcon
+      <BcIcon
         v-if="data.tooltip?.title"
-        :icon="faInfoCircle"
+        name="circle-info"
       />
     </BcTooltip>
-    <FontAwesomeIcon
+    <BcButtonIcon
       v-if="data?.context"
+      screenreader-text="dashboard.validator.rewards.open_validator_details"
       class="link popout"
-      :icon="faArrowUpRightFromSquare"
+      name="arrow-upright-from-square"
       @click="openValidatorModal"
     />
   </div>
@@ -289,7 +283,7 @@ const openValidatorModal = () => {
       :text="data.tooltip?.text"
       :title="data.tooltip?.title"
     >
-      <FontAwesomeIcon :icon="faInfoCircle" />
+      <BcIcon name="circle-info" />
     </BcTooltip>
   </div>
   <div
@@ -298,7 +292,7 @@ const openValidatorModal = () => {
   >
     <BcFormatPercent :percent="data.apr.total" />
     <BcTooltip position="top">
-      <FontAwesomeIcon :icon="faInfoCircle" />
+      <BcIcon name="circle-info" />
       <template #tooltip>
         <div class="row">
           <b>{{ $t("common.execution_layer") }}:</b>
@@ -322,18 +316,17 @@ const openValidatorModal = () => {
     v-else-if="data?.luck"
     class="info_row"
   >
-    <span>
-      <span class="no-wrap">
-        <FontAwesomeIcon :icon="faCube" />
+    <span class="info_row">
+      <span class="no-wrap info_row-group">
+        <BcIcon name="cube" />
         <BcFormatPercent
           class="space_before"
           :percent="data.luck.proposal.percent"
           :maximum-fraction-digits="0"
         />
       </span>
-      <span> | </span>
-      <span class="no-wrap">
-        <FontAwesomeIcon :icon="faSync" />
+      <span class="no-wrap info_row-group">
+        <BcIcon name="sync" />
         <BcFormatPercent
           class="space_before"
           :percent="data.luck.sync.percent"
@@ -342,7 +335,7 @@ const openValidatorModal = () => {
       </span>
     </span>
     <BcTooltip position="top">
-      <FontAwesomeIcon :icon="faInfoCircle" />
+      <BcIcon name="circle-info" />
       <template #tooltip>
         <div class="row">
           <b>
@@ -430,6 +423,14 @@ const openValidatorModal = () => {
 
 .info_row {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--padding-small);
+}
+.info_row-group {
+  display: flex;
+  width: fit-content;
+  gap: var(--padding-small);
   justify-content: space-between;
   align-items: center;
 }

@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCaretRight } from '@fortawesome/pro-solid-svg-icons'
 import { uniqBy } from 'lodash-es'
 import type {
   DashboardValidatorContext,
@@ -258,7 +256,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
         :key="subset.category"
       >
         <template #headericon>
-          <FontAwesomeIcon :icon="faCaretRight" />
+          <BcIcon name="chevron-right" />
         </template>
         <template #header>
           <DashboardValidatorSubsetListHeader

@@ -1,9 +1,6 @@
 <script lang="ts" setup>
-import { faGem } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 defineProps<{
-  screenreaderText?: string,
+  screenreaderText?: TranslationInput,
   toolTipText?: string,
   tooltipWidth?: `${number}%` | `${number}px`,
 }>()
@@ -20,12 +17,13 @@ defineProps<{
       class="link"
     >
       <span>
-        <LazyBcScreenreaderOnly v-if="screenreaderText">
-          {{ screenreaderText }}
-        </LazyBcScreenreaderOnly>
-        <FontAwesomeIcon
-          :icon="faGem"
+        <LazyBcScreenreaderOnly
+          v-if="screenreaderText"
+          :screenreader-text
+        />
+        <BcIcon
           class="gem"
+          name="gem"
         />
       </span>
     </BcLink>

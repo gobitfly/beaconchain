@@ -125,17 +125,18 @@ const data = computed(() => {
         class="inner"
         :class="data.inner"
       >
-        <IconPlus
-          v-show="data.icons?.length > 2"
+        <LazyBcIcon
+          v-if="data.icons?.length > 2"
+          name="plus"
           class="plus"
         />
-        <DashboardSlotVizDutyIcon
+        <LazyDashboardSlotVizDutyIcon
           v-if="data.icons?.length"
           :icon="data.icons[0]"
           class="first_icon"
           :class="data.firstIconClass"
         />
-        <DashboardSlotVizDutyIcon
+        <LazyDashboardSlotVizDutyIcon
           v-if="data.icons?.length === 2"
           :icon="data.icons[1]"
           class="second_icon"

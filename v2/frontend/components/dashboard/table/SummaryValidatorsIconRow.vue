@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faPowerOff } from '@fortawesome/pro-solid-svg-icons'
 import type { SummaryValidatorsIconRowInfo } from '~/types/validator'
 
 interface Props {
@@ -24,7 +22,7 @@ const combinedTotal = computed<number>(
     :class="status.key"
   >
     <div class="icon">
-      <FontAwesomeIcon :icon="faPowerOff" />
+      <BcIcon name="power-off" />
     </div>
     <BcFormatNumber
       v-if="absolute"

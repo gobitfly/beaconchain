@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 defineProps<{
   hasBorderTop?: boolean,
   hasPremiumGem?: boolean,
@@ -30,7 +27,8 @@ const input = defineModel<string>('input')
         tooltip-width="220px"
         tooltip-text-align="left"
       >
-        <FontAwesomeIcon :icon="faInfoCircle" />
+
+        <BcIcon name="circle-info" />
         <template #tooltip>
           <slot name="info">
             {{ info }}

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { MenuBarEntry } from '~/types/menuBar'
 
 interface Props {
@@ -41,10 +40,10 @@ defineProps<Props>()
           :class="[item.class]"
         >
           <span class="text">{{ item.label }}</span>
-          <IconChevron
+          <BcIcon
             v-if="item.dropdown"
+            name="chevron-down"
             class="toggle"
-            direction="bottom"
           />
         </span>
       </BcLink>
@@ -54,19 +53,19 @@ defineProps<Props>()
         :class="[item.class, { 'p-active': item.active }]"
         :highlight="item.highlight || null"
       >
-        <FontAwesomeIcon
+        <BcIcon
           v-if="item.faIcon"
-          :icon="item.faIcon"
+          :name="item.faIcon"
           class="icon"
         />
         <span
           v-if="item.label"
           class="text"
         >{{ item.label }}</span>
-        <IconChevron
+        <BcIcon
           v-if="item.dropdown && (!item.faIcon || item.label)"
+          name="chevron-down"
           class="toggle"
-          direction="bottom"
         />
       </span>
     </template>

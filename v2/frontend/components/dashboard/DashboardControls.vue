@@ -1,14 +1,4 @@
 <script lang="ts" setup>
-import {
-  faDesktop,
-  faEdit,
-  faGear,
-  faPeopleGroup,
-  faShare,
-  faTrash,
-  faUsers,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import {
   BcDialogConfirm,
@@ -22,6 +12,7 @@ import type {
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   dashboardTitle?: string,
@@ -71,7 +62,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
       manageGroupsModalVisisble.value = true
     },
     dropdown: false,
-    faIcon: isMobile.value ? faPeopleGroup : undefined,
+    faIcon: isMobile.value ? 'people-group' : undefined,
     label: $t('dashboard.validator.manage_groups'),
   })
 
@@ -81,7 +72,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
         manageValidatorsModalVisisble.value = true
       },
       dropdown: false,
-      faIcon: isMobile.value ? faDesktop : undefined,
+      faIcon: isMobile.value ? 'desktop' : undefined,
       highlight: !isMobile.value,
       label: $t('dashboard.validator.manage_validators'),
     })
@@ -116,7 +107,7 @@ const shareButtonOptions = computed(() => {
     : !edit
         ? $t('dashboard.shared')
         : $t('dashboard.share')
-  const icon = !edit ? faUsers : faShare
+  const icon: Icon = !edit ? 'people-group' : 'share'
   const disabled = isSharedDashboard.value || !dashboardKey.value
   return {
     disabled,
@@ -132,7 +123,7 @@ const editButtons = computed<MenuBarEntry[]>(() => {
   if (isPrivateDashboard.value) {
     buttons.push({
       command: editDashboard,
-      faIcon: faEdit,
+      faIcon: 'edit',
       label: $t('dashboard.rename_dashboard'),
     })
   }
@@ -140,7 +131,7 @@ const editButtons = computed<MenuBarEntry[]>(() => {
   if (!shareButtonOptions.value.disabled) {
     buttons.push({
       command: share,
-      faIcon: shareButtonOptions.value.icon,
+      faIcon: shareButtonOptions.value.icon as Icon,
       label: shareButtonOptions.value.edit
         ? $t('dashboard.share_dashboard')
         : $t('dashboard.shared_dashboard'),
@@ -150,14 +141,14 @@ const editButtons = computed<MenuBarEntry[]>(() => {
   if (!isSharedDashboard.value && dashboardKey.value) {
     buttons.push({
       command: onDelete,
-      faIcon: faTrash,
+      faIcon: 'trash',
       label: $t('dashboard.delete_dashboard'),
     })
   }
 
   return [ {
     dropdown: true,
-    faIcon: faGear,
+    faIcon: 'gear',
     items: buttons,
   } ]
 })
@@ -368,7 +359,7 @@ const editDashboard = () => {
         @click="share()"
       >
         {{ shareButtonOptions.label }}
-        <FontAwesomeIcon :icon="shareButtonOptions.icon" />
+        <BcIcon :name="shareButtonOptions.icon" />
       </Button>
       <BcMenuBar
         :buttons="editButtons"

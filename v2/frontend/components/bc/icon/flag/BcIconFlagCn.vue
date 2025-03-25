@@ -2,49 +2,16 @@
   <!-- https://github.com/lipis/flag-icons -->
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    xmlns:xlink="http://www.w3.org/1999/xlink"
-    viewBox="0 0 640 480"
+    fill="none"
+    viewBox="0 0 24 24"
   >
-    <defs>
-      <path
-        id="a"
-        fill="#ff0"
-        d="M-.6.8 0-1 .6.8-1-.3h2z"
-      />
-    </defs>
     <path
-      fill="#ee1c25"
-      d="M0 0h640v480H0z"
+      fill="#EE1C25"
+      d="M0 3h24v18H0V3Z"
     />
-    <use
-      xlink:href="#a"
-      width="30"
-      height="20"
-      transform="matrix(71.9991 0 0 72 120 120)"
-    />
-    <use
-      xlink:href="#a"
-      width="30"
-      height="20"
-      transform="matrix(-12.33562 -20.5871 20.58684 -12.33577 240.3 48)"
-    />
-    <use
-      xlink:href="#a"
-      width="30"
-      height="20"
-      transform="matrix(-3.38573 -23.75998 23.75968 -3.38578 288 95.8)"
-    />
-    <use
-      xlink:href="#a"
-      width="30"
-      height="20"
-      transform="matrix(6.5991 -23.0749 23.0746 6.59919 288 168)"
-    />
-    <use
-      xlink:href="#a"
-      width="30"
-      height="20"
-      transform="matrix(14.9991 -18.73557 18.73533 14.99929 240 216)"
+    <path
+      fill="#FF0"
+      d="M2.88 9.66 4.5 4.8l1.62 4.86L1.8 6.69h5.4L2.88 9.66ZM9.9 4.9l-1.66.36 1.11-1.3-.1 1.75-.93-1.54 1.59.72Zm1.7 2.13-1.7-.31 1.53-.76-.78 1.56-.25-1.78 1.18 1.29Zm-.25 2.99-1.41-.97 1.7-.07-1.35 1.11.5-1.73.56 1.66Zm-2.12 1.95-.93-1.43 1.6.59-1.67.5 1.12-1.4-.12 1.74Z"
     />
   </svg>
 </template>

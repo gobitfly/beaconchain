@@ -1,7 +1,5 @@
 <script lang="ts" setup>
 import { get } from 'lodash-es'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
 const { t: $t } = useTranslation()
@@ -234,7 +232,7 @@ const rows = computed(() => {
             :text="value.tooltip"
             class="info-icon"
           >
-            <FontAwesomeIcon :icon="faInfoCircle" />
+            <BcIcon name="circle-info" />
           </BcTooltip>
         </div>
       </div>

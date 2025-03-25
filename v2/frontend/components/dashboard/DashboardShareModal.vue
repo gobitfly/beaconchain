@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
 interface Props {
@@ -149,7 +147,7 @@ const shareGroupTooltip = computed(() => {
           :text="shareGroupTooltip"
           :render-text-as-html="true"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
         </BcTooltip>
         <BcPremiumGem v-if="!isPremiumUser" />
       </div>

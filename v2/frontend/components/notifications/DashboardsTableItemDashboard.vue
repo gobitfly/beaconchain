@@ -26,13 +26,9 @@ const entityLink = computed(() => {
       class="link link-dashboard"
       target="_blank"
     >
-      <IconValidator
+      <BcIcon
         v-if="props.type === 'validator'"
-        class="icon-dashboard-type"
-      />
-      <IconAccount
-        v-if="props.type === 'account'"
-        class="icon-dashboard-type"
+        name="desktop"
       />
       <span class="truncate-text">
         {{ props.dashboardName }}

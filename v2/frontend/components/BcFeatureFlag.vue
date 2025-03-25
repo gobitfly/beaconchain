@@ -10,5 +10,3 @@ const { has } = useFeatureFlag()
 <template>
   <slot v-if="has(props.feature)" />
 </template>
-
-<style scoped></style>

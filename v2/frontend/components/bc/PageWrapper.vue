@@ -14,13 +14,13 @@ defineProps<{
     />
     <BcMaintenanceBanner />
     <slot name="banner" />
-    <div class="content">
+    <main class="content">
       <slot name="top" />
       <!-- <BcAdControl /> -->
       <slot />
       <div id="bottom_banner" />
       <slot name="bottom" />
-    </div>
+    </main>
     <BcFooterMain />
   </div>
 </template>
