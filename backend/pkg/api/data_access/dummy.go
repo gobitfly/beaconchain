@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	mathrand "math/rand"
@@ -84,7 +83,7 @@ func addTagFromRegex(name string, regex *regexp.Regexp, format func(string) inte
 		if err != nil {
 			return nil, err
 		}
-		gen.SetSeed(currentGeneratorSeed)
+		gen.SetSeed(source.Int63())
 		s := gen.Generate(10)
 		return format(s), nil
 	})
@@ -97,8 +96,7 @@ func randomEthDecimal() decimal.Decimal {
 }
 
 func randomIntFromSeed(max int64) int64 {
-	r := rand.New(rand.NewPCG(uint64(currentGeneratorSeed), uint64(currentGeneratorSeed))) //nolint:gosec
-	return r.Int64N(max) + 1
+	return source.Int63() % max
 }
 
 // generate random timestamp between two dates
@@ -110,20 +108,16 @@ func randomTimestamp(t1, t2 time.Time) int64 {
 	return randomIntFromSeed(max-min) + min
 }
 
-var currentGeneratorSeed int64
-var mockLock sync.Mutex = sync.Mutex{}
+var source mathrand.Source
 
 // must pass a pointer to the data
 func populateWithFakeData(ctx context.Context, a interface{}) error {
-	if seed, ok := ctx.Value(t.CtxMockSeedKey).(int64); ok {
-		mockLock.Lock()
-		defer mockLock.Unlock()
-		faker.SetRandomSource(mathrand.NewSource(seed))
-		currentGeneratorSeed = seed
-	} else {
-		currentGeneratorSeed = rand.Int64() //nolint:gosec
+	seed, ok := ctx.Value(t.CtxMockSeedKey).(int64)
+	if !ok {
+		seed = time.Now().UnixNano()
 	}
-
+	source = faker.NewSafeSource(mathrand.NewSource(seed))
+	faker.SetRandomSource(source)
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(10), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
@@ -147,11 +141,12 @@ func getDummyStruct[T any](ctx context.Context) (*T, error) {
 
 // used for any table data that should be returned with paging
 func getDummyWithPaging[T any](ctx context.Context) ([]T, *t.Paging, error) {
-	r := []T{}
-	p := t.Paging{}
-	_ = populateWithFakeData(ctx, &r)
-	err := populateWithFakeData(ctx, &p)
-	return r, &p, err
+	r := struct {
+		Data   []T
+		Paging t.Paging
+	}{}
+	err := populateWithFakeData(ctx, &r)
+	return r.Data, &r.Paging, err
 }
 
 func (*DummyService) Close() {
