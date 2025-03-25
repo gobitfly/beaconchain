@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"regexp"
@@ -30,7 +31,61 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
+var (
+	MaxSqlNumber   = uint64(9223372036854775807)
+	FarFutureEpoch = uint64(18446744073709551615)
+)
+
+type SlotExporterDBRepository interface {
+	BeginTx() (*sqlx.Tx, error)
+	RollbackTx(tx *sqlx.Tx)
+	CommitTx(tx *sqlx.Tx) error
+
+	SaveBlock(block *types.Block, isHeadEpoch bool, tx *sqlx.Tx) error
+	UpdateQueueDeposits(tx *sqlx.Tx) error
+	CacheBlockDepositLookup() error
+	CacheBlockDepositRequestsLookup() error
+	SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, tx *sqlx.Tx) error
+	UpdateEpochStatus(epochParticipationStats *types.ValidatorParticipation, tx *sqlx.Tx) error
+	GetAllSlots(tx *sqlx.Tx) ([]uint64, error)
+	GetLastSlot(tx *sqlx.Tx) (uint64, error)
+	SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error
+	GetAllNonFinalizedSlots() ([]*NonFinalizedSlotsRow, error)
+	SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Client, activationBalanceBatchSize int, tx *sqlx.Tx) error
+	SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error
+	HasEventsForEpoch(epoch uint64) (bool, error)
+	TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+	TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
+}
+
+type SlotExporterDB struct {
+	WriterDb *sqlx.DB
+}
+
+func NewSlotExporterDB(writerDb *sqlx.DB) *SlotExporterDB {
+	return &SlotExporterDB{
+		WriterDb: writerDb,
+	}
+}
+
+func (s *SlotExporterDB) BeginTx() (*sqlx.Tx, error) {
+	return db.WriterDb.Beginx()
+}
+
+func (s *SlotExporterDB) RollbackTx(tx *sqlx.Tx) {
+	err := tx.Rollback()
+	if err != nil && !errors.Is(err, sql.ErrTxDone) {
+		log.Error(err, "error rolling back transaction", 1)
+	}
+}
+
+func (s *SlotExporterDB) CommitTx(tx *sqlx.Tx) error {
+	return tx.Commit()
+}
+
+func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 	blocksMap := make(map[uint64]map[string]*types.Block)
 	if blocksMap[block.Slot] == nil {
 		blocksMap[block.Slot] = make(map[string]*types.Block)
@@ -58,95 +113,259 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 	}
 
 	stmtExecutionPayload, err := tx.Prepare(`
-		INSERT INTO execution_payloads (block_hash)
+		INSERT INTO execution_payloads (
+			block_hash
+		)
 		VALUES ($1)
-		ON CONFLICT (block_hash) DO NOTHING`)
+		ON CONFLICT 
+			(block_hash) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtExecutionPayload: %w", err)
 	}
 	defer stmtExecutionPayload.Close()
 
 	stmtBlock, err := tx.Prepare(`
-		INSERT INTO blocks (epoch, slot, blockroot, parentroot, stateroot, signature, randaoreveal, graffiti, graffiti_text, eth1data_depositroot, eth1data_depositcount, eth1data_blockhash, syncaggregate_bits, syncaggregate_signature, proposerslashingscount, attesterslashingscount, attestationscount, depositscount, withdrawalcount, voluntaryexitscount, syncaggregate_participation, proposer, status, exec_parent_hash, exec_fee_recipient, exec_state_root, exec_receipts_root, exec_logs_bloom, exec_random, exec_block_number, exec_gas_limit, exec_gas_used, exec_timestamp, exec_extra_data, exec_base_fee_per_gas, exec_block_hash, exec_transactions_count, exec_blob_gas_used, exec_excess_blob_gas, exec_blob_transactions_count)
+		INSERT INTO blocks (
+			epoch, 
+			slot, 
+			blockroot, 
+			parentroot, 
+			stateroot, 
+			signature, 
+			randaoreveal, 
+			graffiti, 
+			graffiti_text, 
+			eth1data_depositroot, 
+			eth1data_depositcount, 
+			eth1data_blockhash, 
+			syncaggregate_bits, 
+			syncaggregate_signature, 
+			proposerslashingscount, 
+			attesterslashingscount, 
+			attestationscount, 
+			depositscount, 
+			withdrawalcount, 
+			voluntaryexitscount, 
+			syncaggregate_participation, 
+			proposer, 
+			status, 
+			exec_parent_hash, 
+			exec_fee_recipient, 
+			exec_state_root, 
+			exec_receipts_root, 
+			exec_logs_bloom, 
+			exec_random, 
+			exec_block_number, 
+			exec_gas_limit, 
+			exec_gas_used, 
+			exec_timestamp, 
+			exec_extra_data, 
+			exec_base_fee_per_gas, 
+			exec_block_hash, 
+			exec_transactions_count, 
+			exec_blob_gas_used, 
+			exec_excess_blob_gas, 
+			exec_blob_transactions_count
+		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
-		ON CONFLICT (slot, blockroot) DO NOTHING`)
+		ON CONFLICT 
+			(slot, blockroot) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtBlock: %w", err)
 	}
 	defer stmtBlock.Close()
 
 	stmtWithdrawals, err := tx.Prepare(`
-		INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validatorindex, address, amount)
+		INSERT INTO blocks_withdrawals (
+			block_slot, 
+			block_root, 
+			withdrawalindex, 
+			validatorindex, 
+			address, 
+			amount
+		)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_slot, block_root, withdrawalindex) DO NOTHING`)
+		ON CONFLICT 
+			(block_slot, block_root, withdrawalindex) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtWithdrawals: %w", err)
 	}
 	defer stmtWithdrawals.Close()
 
 	stmtBLSChange, err := tx.Prepare(`
-		INSERT INTO blocks_bls_change (block_slot, block_root, validatorindex, signature, pubkey, address)
+		INSERT INTO blocks_bls_change (
+			block_slot, 
+			block_root, 
+			validatorindex, 
+			signature, 
+			pubkey, 
+			address
+		)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_slot, block_root, validatorindex) DO NOTHING`)
+		ON CONFLICT 
+			(block_slot, block_root, validatorindex) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtBLSChange: %w", err)
 	}
 	defer stmtBLSChange.Close()
 
 	stmtProposerSlashing, err := tx.Prepare(`
-		INSERT INTO blocks_proposerslashings (block_slot, block_index, block_root, proposerindex, header1_slot, header1_parentroot, header1_stateroot, header1_bodyroot, header1_signature, header2_slot, header2_parentroot, header2_stateroot, header2_bodyroot, header2_signature)
+		INSERT INTO blocks_proposerslashings (
+			block_slot, 
+			block_index, 
+			block_root, 
+			proposerindex, 
+			header1_slot, 
+			header1_parentroot, 
+			header1_stateroot, 
+			header1_bodyroot, 
+			header1_signature, 
+			header2_slot, 
+			header2_parentroot, 
+			header2_stateroot, 
+			header2_bodyroot, 
+			header2_signature
+		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`)
+		ON CONFLICT 
+			(block_slot, block_index) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtProposerSlashing: %w", err)
 	}
 	defer stmtProposerSlashing.Close()
 
 	stmtAttesterSlashing, err := tx.Prepare(`
-		INSERT INTO blocks_attesterslashings (block_slot, block_index, block_root, attestation1_indices, attestation1_signature, attestation1_slot, attestation1_index, attestation1_beaconblockroot, attestation1_source_epoch, attestation1_source_root, attestation1_target_epoch, attestation1_target_root, attestation2_indices, attestation2_signature, attestation2_slot, attestation2_index, attestation2_beaconblockroot, attestation2_source_epoch, attestation2_source_root, attestation2_target_epoch, attestation2_target_root)
+		INSERT INTO blocks_attesterslashings (
+			block_slot, 
+			block_index, 
+			block_root, 
+			attestation1_indices, 
+			attestation1_signature, 
+			attestation1_slot, 
+			attestation1_index, 
+			attestation1_beaconblockroot, 
+			attestation1_source_epoch, 
+			attestation1_source_root, 
+			attestation1_target_epoch, 
+			attestation1_target_root, 
+			attestation2_indices, 
+			attestation2_signature, 
+			attestation2_slot, 
+			attestation2_index, 
+			attestation2_beaconblockroot, 
+			attestation2_source_epoch, 
+			attestation2_source_root, 
+			attestation2_target_epoch, 
+			attestation2_target_root
+		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
-		ON CONFLICT (block_slot, block_index) DO UPDATE SET attestation1_indices = excluded.attestation1_indices, attestation2_indices = excluded.attestation2_indices`)
+		ON CONFLICT 
+			(block_slot, block_index) 
+		DO UPDATE SET 
+			attestation1_indices = excluded.attestation1_indices, 
+			attestation2_indices = excluded.attestation2_indices
+		`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtAttesterSlashing: %w", err)
 	}
 	defer stmtAttesterSlashing.Close()
 
 	stmtAttestations := `
-		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root, committeebits)
+		INSERT INTO blocks_attestations (
+			block_slot, 
+			block_index, 
+			block_root, 
+			aggregationbits, 
+			validators, 
+			signature, 
+			slot, 
+			committeeindex, 
+			beaconblockroot, 
+			source_epoch, 
+			source_root, 
+			target_epoch, 
+			target_root,
+			committeebits
+		)
 		VALUES (:block_slot, :block_index, :block_root, :aggregationbits, :validators, :signature, :slot, :committeeindex, :beaconblockroot, :source_epoch, :source_root, :target_epoch, :target_root, :committeebits)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`
+		ON CONFLICT 
+			(block_slot, block_index) 
+		DO NOTHING`
 
 	stmtDeposits, err := tx.Prepare(`
-		INSERT INTO blocks_deposits (block_slot, block_index, block_root, proof, publickey, withdrawalcredentials, amount, signature, valid_signature)
+		INSERT INTO blocks_deposits (
+			block_slot, 
+			block_index, 
+			block_root, 
+			proof, 
+			publickey, 
+			withdrawalcredentials, 
+			amount, 
+			signature, 
+			valid_signature
+		)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`)
+		ON CONFLICT 
+			(block_slot, block_index) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtDeposits: %w", err)
 	}
 	defer stmtDeposits.Close()
 
 	stmtBlobs, err := tx.Prepare(`
-		INSERT INTO blocks_blob_sidecars (block_slot, block_root, index, kzg_commitment, kzg_proof, blob_versioned_hash)
+		INSERT INTO blocks_blob_sidecars (
+		block_slot, 
+		block_root, 
+		index, 
+		kzg_commitment, 
+		kzg_proof, 
+		blob_versioned_hash
+		)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_root, index) DO NOTHING`)
+		ON CONFLICT 
+			(block_root, index) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtBlobs: %w", err)
 	}
 	defer stmtBlobs.Close()
 
 	stmtVoluntaryExits, err := tx.Prepare(`
-		INSERT INTO blocks_voluntaryexits (block_slot, block_index, block_root, epoch, validatorindex, signature)
+		INSERT INTO blocks_voluntaryexits (
+			block_slot, 
+			block_index, 
+			block_root, 
+			epoch, 
+			validatorindex, 
+			signature
+		)
 		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`)
+		ON CONFLICT 
+			(block_slot, block_index) 
+		DO NOTHING`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtVoluntaryExits: %w", err)
 	}
 	defer stmtVoluntaryExits.Close()
 
 	stmtProposalAssignments, err := tx.Prepare(`
-		INSERT INTO proposal_assignments (epoch, validatorindex, proposerslot, status)
+		INSERT INTO proposal_assignments (
+			epoch, 
+			validatorindex, 
+			proposerslot, 
+			status
+		)
 		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (epoch, validatorindex, proposerslot) DO UPDATE SET status = excluded.status`)
+		ON CONFLICT 
+			(epoch, validatorindex, proposerslot)
+		DO UPDATE SET 
+			status = excluded.status`)
 	if err != nil {
 		return fmt.Errorf("error preparing stmtProposalAssignments: %w", err)
 	}
@@ -308,20 +527,64 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				}
 			}
 			for i, ps := range b.ProposerSlashings {
-				_, err := stmtProposerSlashing.Exec(b.Slot, i, b.BlockRoot, ps.ProposerIndex, ps.Header1.Slot, ps.Header1.ParentRoot, ps.Header1.StateRoot, ps.Header1.BodyRoot, ps.Header1.Signature, ps.Header2.Slot, ps.Header2.ParentRoot, ps.Header2.StateRoot, ps.Header2.BodyRoot, ps.Header2.Signature)
+				_, err := stmtProposerSlashing.Exec(
+					b.Slot,
+					i,
+					b.BlockRoot,
+					ps.ProposerIndex,
+					ps.Header1.Slot,
+					ps.Header1.ParentRoot,
+					ps.Header1.StateRoot,
+					ps.Header1.BodyRoot,
+					ps.Header1.Signature,
+					ps.Header2.Slot,
+					ps.Header2.ParentRoot,
+					ps.Header2.StateRoot,
+					ps.Header2.BodyRoot,
+					ps.Header2.Signature,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtProposerSlashing for block at slot %v index %v: %w", b.Slot, i, err)
 				}
 			}
 			for i, bls := range b.SignedBLSToExecutionChange {
-				_, err := stmtBLSChange.Exec(b.Slot, b.BlockRoot, bls.Message.Validatorindex, bls.Signature, bls.Message.BlsPubkey, bls.Message.Address)
+				_, err := stmtBLSChange.Exec(
+					b.Slot,
+					b.BlockRoot,
+					bls.Message.Validatorindex,
+					bls.Signature,
+					bls.Message.BlsPubkey,
+					bls.Message.Address,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtBLSChange for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
 
 			for i, as := range b.AttesterSlashings {
-				_, err := stmtAttesterSlashing.Exec(b.Slot, i, b.BlockRoot, pq.Array(as.Attestation1.AttestingIndices), as.Attestation1.Signature, as.Attestation1.Data.Slot, as.Attestation1.Data.CommitteeIndex, as.Attestation1.Data.BeaconBlockRoot, as.Attestation1.Data.Source.Epoch, as.Attestation1.Data.Source.Root, as.Attestation1.Data.Target.Epoch, as.Attestation1.Data.Target.Root, pq.Array(as.Attestation2.AttestingIndices), as.Attestation2.Signature, as.Attestation2.Data.Slot, as.Attestation2.Data.CommitteeIndex, as.Attestation2.Data.BeaconBlockRoot, as.Attestation2.Data.Source.Epoch, as.Attestation2.Data.Source.Root, as.Attestation2.Data.Target.Epoch, as.Attestation2.Data.Target.Root)
+				_, err := stmtAttesterSlashing.Exec(
+					b.Slot,
+					i,
+					b.BlockRoot,
+					pq.Array(as.Attestation1.AttestingIndices),
+					as.Attestation1.Signature,
+					as.Attestation1.Data.Slot,
+					as.Attestation1.Data.CommitteeIndex,
+					as.Attestation1.Data.BeaconBlockRoot,
+					as.Attestation1.Data.Source.Epoch,
+					as.Attestation1.Data.Source.Root,
+					as.Attestation1.Data.Target.Epoch,
+					as.Attestation1.Data.Target.Root,
+					pq.Array(as.Attestation2.AttestingIndices),
+					as.Attestation2.Signature,
+					as.Attestation2.Data.Slot,
+					as.Attestation2.Data.CommitteeIndex,
+					as.Attestation2.Data.BeaconBlockRoot,
+					as.Attestation2.Data.Source.Epoch,
+					as.Attestation2.Data.Source.Root,
+					as.Attestation2.Data.Target.Epoch,
+					as.Attestation2.Data.Target.Root,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtAttesterSlashing for block %v index %v: %w", b.Slot, i, err)
 				}
@@ -417,18 +680,20 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 
 	stmtGraffitiwall, err := tx.Prepare(`
 		INSERT INTO graffitiwall (
-            x,
-            y,
-            color,
-            slot,
-            validator
-        )
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (slot) DO UPDATE SET
-            x = EXCLUDED.x,
-            y = EXCLUDED.y,
-            color = EXCLUDED.color,
-            validator = EXCLUDED.validator;
+			x,
+			y,
+			color,
+			slot,
+			validator
+		)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT 
+			(slot)
+		DO UPDATE SET
+			x = EXCLUDED.x,
+			y = EXCLUDED.y,
+			color = EXCLUDED.color,
+			validator = EXCLUDED.validator;
 		`)
 	if err != nil {
 		return err
@@ -469,7 +734,7 @@ func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	return nil
 }
 
-func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Client, activationBalanceBatchSize int, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Client, activationBalanceBatchSize int, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_validators").Observe(time.Since(start).Seconds())
@@ -572,17 +837,17 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	updates := 0
 	for _, v := range validators {
 		// exchange farFutureEpoch with the corresponding max sql value
-		if v.WithdrawableEpoch == db.FarFutureEpoch {
-			v.WithdrawableEpoch = db.MaxSqlNumber
+		if v.WithdrawableEpoch == FarFutureEpoch {
+			v.WithdrawableEpoch = MaxSqlNumber
 		}
-		if v.ExitEpoch == db.FarFutureEpoch {
-			v.ExitEpoch = db.MaxSqlNumber
+		if v.ExitEpoch == FarFutureEpoch {
+			v.ExitEpoch = MaxSqlNumber
 		}
-		if v.ActivationEligibilityEpoch == db.FarFutureEpoch {
-			v.ActivationEligibilityEpoch = db.MaxSqlNumber
+		if v.ActivationEligibilityEpoch == FarFutureEpoch {
+			v.ActivationEligibilityEpoch = MaxSqlNumber
 		}
-		if v.ActivationEpoch == db.FarFutureEpoch {
-			v.ActivationEpoch = db.MaxSqlNumber
+		if v.ActivationEpoch == FarFutureEpoch {
+			v.ActivationEpoch = MaxSqlNumber
 		}
 
 		c := currentStateMap[v.Index]
@@ -638,7 +903,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				v.Status = string(constypes.DbSlashed)
 			} else if v.ExitEpoch <= latestEpoch {
 				v.Status = string(constypes.DbExited)
-			} else if v.ActivationEligibilityEpoch == db.MaxSqlNumber {
+			} else if v.ActivationEligibilityEpoch == MaxSqlNumber {
 				v.Status = string(constypes.DbDeposited)
 			} else if v.ActivationEpoch > latestEpoch {
 				v.Status = string(constypes.DbPending)
@@ -646,9 +911,9 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				v.Status = string(constypes.DbSlashingOffline)
 			} else if v.Slashed {
 				v.Status = string(constypes.DbSlashingOnline)
-			} else if v.ExitEpoch < db.MaxSqlNumber && offline {
+			} else if v.ExitEpoch < MaxSqlNumber && offline {
 				v.Status = string(constypes.DbExitingOffline)
-			} else if v.ExitEpoch < db.MaxSqlNumber {
+			} else if v.ExitEpoch < MaxSqlNumber {
 				v.Status = string(constypes.DbExitingOnline)
 			} else if v.ActivationEpoch < latestEpoch && offline {
 				v.Status = string(constypes.DbActiveOffline)
@@ -759,7 +1024,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	}
 	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
-	s := time.Now()
+	timeStart := time.Now()
 	newValidators := []struct {
 		Validatorindex  uint64
 		ActivationEpoch uint64
@@ -819,10 +1084,10 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			return fmt.Errorf("error updating activation epoch balance for validator %v: %w", newValidator.Validatorindex, err)
 		}
 	}
-	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(s))
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
 
 	log.Infof("updating validator status counts")
-	s = time.Now()
+	timeStart = time.Now()
 	_, err = tx.Exec("TRUNCATE TABLE validators_status_counts;")
 	if err != nil {
 		return fmt.Errorf("error truncating validators_status_counts table: %w", err)
@@ -833,20 +1098,20 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 			return fmt.Errorf("error updating validator status counts: %w", err)
 		}
 	}
-	log.Infof("updating validator status counts completed, took %v", time.Since(s))
+	log.Infof("updating validator status counts completed, took %v", time.Since(timeStart))
 
-	s = time.Now()
+	timeStart = time.Now()
 	_, err = tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
 	if err != nil {
 		return fmt.Errorf("analyzing validators table: %w", err)
 	}
-	log.Infof("analyze of validators table completed, took %v", time.Since(s))
+	log.Infof("analyze of validators table completed, took %v", time.Since(timeStart))
 
 	return nil
 }
 
 // SaveEpoch will save the epoch data into the database
-func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
@@ -959,6 +1224,43 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 		return fmt.Errorf("error cleaning up blocks table: %w", err)
 	}
 	return nil
+}
+
+// SaveValidatorQueue will save the validator queue into the database
+func (s *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		INSERT INTO queue (
+			ts, 
+			entering_validators_count, 
+			exiting_validators_count
+		)
+		VALUES (date_trunc('hour', now()), $1, $2)
+		ON CONFLICT (ts) DO UPDATE SET
+			entering_validators_count = excluded.entering_validators_count,
+			exiting_validators_count = excluded.exiting_validators_count`,
+		validators.Activating, validators.Exiting)
+	return err
+}
+
+// UpdateEpochStatus will update the epoch status in the database
+func (s *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		UPDATE epochs SET
+			eligibleether = $1,
+			globalparticipationrate = $2,
+			votedether = $3,
+			finalized = $4,
+			blockscount = (SELECT COUNT(*) FROM blocks WHERE epoch = $5 AND status = '1'),
+			proposerslashingscount = (SELECT COALESCE(SUM(proposerslashingscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
+			attesterslashingscount = (SELECT COALESCE(SUM(attesterslashingscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
+			attestationscount = (SELECT COALESCE(SUM(attestationscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
+			depositscount = (SELECT COALESCE(SUM(depositscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
+			withdrawalcount = (SELECT COALESCE(SUM(withdrawalcount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
+			voluntaryexitscount = (SELECT COALESCE(SUM(voluntaryexitscount),0) FROM blocks WHERE epoch = $5 AND status = '1')
+		WHERE epoch = $5`,
+		stats.EligibleEther, stats.GlobalParticipationRate, stats.VotedEther, stats.Finalized, stats.Epoch)
+
+	return err
 }
 
 type EpochMetadata struct {
@@ -1111,6 +1413,198 @@ func GetLatestUnsafeEpoch() (int64, error) {
 		return 0, fmt.Errorf("error fetching latest unsafe epoch: %w", err)
 	}
 	return epoch, nil
+}
+
+func (s *SlotExporterDB) GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
+	var slots []uint64
+	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving all slots from the DB: %w", err)
+	}
+
+	return slots, nil
+}
+
+func (s *SlotExporterDB) GetLastSlot(tx *sqlx.Tx) (uint64, error) {
+	var slot uint64
+	err := tx.Get(&slot, "SELECT slot FROM blocks ORDER BY slot DESC LIMIT 1")
+	if err != nil {
+		return 0, err
+	}
+	return slot, nil
+}
+
+func (s *SlotExporterDB) SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
+	_, err := tx.Exec(`
+		UPDATE blocks
+		SET finalized = $1, status = $2
+		WHERE slot = $3
+	`, finalized, status, slot)
+
+	return err
+}
+
+type NonFinalizedSlotsRow struct {
+	Slot      uint64 `db:"slot"`
+	BlockRoot []byte `db:"blockroot"`
+	Finalized bool   `db:"finalized"`
+	Status    string `db:"status"`
+}
+
+func (s *SlotExporterDB) GetAllNonFinalizedSlots() ([]*NonFinalizedSlotsRow, error) {
+	var slots []*NonFinalizedSlotsRow
+	err := s.WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot")
+
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving all non finalized slots from the DB: %w", err)
+	}
+
+	return slots, nil
+}
+
+func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
+		metrics.TaskDuration.WithLabelValues("update_queue_deposits").Observe(time.Since(start).Seconds())
+	}()
+
+	// first we remove any validator that isn't queued anymore
+	_, err := tx.Exec(`
+		DELETE FROM validator_queue_deposits
+		WHERE 
+			validator_queue_deposits.validatorindex NOT IN (
+			SELECT validatorindex
+			FROM validators
+			WHERE 
+				activationepoch=9223372036854775807 AND status='pending'
+			)`)
+	if err != nil {
+		log.Error(err, "error removing queued publickeys from validator_queue_deposits", 0)
+		return err
+	}
+
+	// then we add any new ones that are queued
+	_, err = tx.Exec(`
+		INSERT INTO validator_queue_deposits
+		SELECT 
+			validatorindex 
+		FROM validators 
+		WHERE 
+			activationepoch=$1 AND status='pending' 
+		ON CONFLICT DO NOTHING
+	`, MaxSqlNumber)
+	if err != nil {
+		log.Error(err, "error adding queued publickeys to validator_queue_deposits", 0)
+		return err
+	}
+
+	// now we add the activationeligibilityepoch where it is missing
+	_, err = tx.Exec(`
+		UPDATE validator_queue_deposits
+		SET
+			activationeligibilityepoch=validators.activationeligibilityepoch
+		FROM validators
+		WHERE
+			validator_queue_deposits.activationeligibilityepoch IS NULL AND
+			validator_queue_deposits.validatorindex = validators.validatorindex
+	`)
+	if err != nil {
+		log.Error(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
+		return err
+	}
+
+	// efficiently collect the tnx that pushed each validator over 32 ETH.
+	_, err = tx.Exec(`
+		UPDATE validator_queue_deposits
+		SET
+			block_slot=data.block_slot,
+			block_index=data.block_index
+		FROM (
+			WITH CumSum AS
+			(
+				SELECT publickey, block_slot, block_index,
+					/* generate partion per publickey ordered by newest to oldest. store cum sum of deposits */
+					SUM(amount) OVER (partition BY publickey ORDER BY (block_slot, block_index) ASC) AS cumTotal
+				FROM blocks_deposits
+				WHERE publickey IN (
+					/* get the pubkeys of the indexes */
+					select pubkey from validators where validators.validatorindex in (
+						/* get the indexes we need to update */
+						select validatorindex from validator_queue_deposits where block_slot is null or block_index is null
+					)
+				)
+				ORDER BY block_slot, block_index ASC
+			)
+			/* we only care about one deposit per vali */
+			SELECT DISTINCT ON(publickey) validators.validatorindex, block_slot, block_index
+			FROM CumSum
+			/* join so we can retrieve the validator index again */
+			left join validators on validators.pubkey = CumSum.publickey
+			/* we want the deposit that pushed the cum sum over 32 ETH */
+			WHERE cumTotal>=32000000000
+			ORDER BY publickey, cumTotal asc
+		) AS data
+		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
+	if err != nil {
+		log.Error(err, "error updating validator_queue_deposits: %v", 0)
+		return err
+	}
+	return nil
+}
+
+func (s *SlotExporterDB) CacheBlockDepositLookup() error {
+	err := CacheQuery(`
+		SELECT
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			bd.block_slot,
+			bd.block_index,
+			bd.amount
+		FROM
+			blocks_deposits bd
+			INNER JOIN validators v ON bd.publickey = v.pubkey
+			INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+		ORDER BY
+			uvdv.dashboard_id DESC,
+			bd.block_slot DESC,
+			bd.block_index DESC;
+		`, "cached_blocks_deposits_lookup",
+		[]string{"dashboard_id", "block_slot", "block_index"},
+		[]string{"dashboard_id", "amount"})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *SlotExporterDB) CacheBlockDepositRequestsLookup() error {
+	err := CacheQuery(`
+		SELECT
+			uvdv.dashboard_id,
+			uvdv.group_id,
+			bdr.block_slot,
+			bdr.request_index,
+			bdr.amount
+		FROM
+			blocks_deposit_requests bdr
+			INNER JOIN validators v ON bdr.pubkey = v.pubkey
+			INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+			INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
+		ORDER BY
+			uvdv.dashboard_id DESC,
+			bdr.block_slot DESC,
+			bdr.request_index DESC;
+		`, "cached_blocks_deposit_requests_lookup",
+		[]string{"dashboard_id", "block_slot", "request_index"},
+		[]string{"dashboard_id", "amount"})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // enum for rollings (hourly, daily, weekly, monthly, total)
@@ -1684,6 +2178,239 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 		return nil, fmt.Errorf("error fetching electra excess balance events for epoch %v: %w", epoch, err)
 	}
 	return excessBalanceEvents, nil
+}
+
+func (s *SlotExporterDB) HasEventsForEpoch(epoch uint64) (bool, error) {
+	if epoch == 0 {
+		return true, nil
+	}
+
+	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+	var count uint64
+	err := db.ReaderDb.Get(&count, `
+		SELECT 
+			COUNT(*) 
+		FROM 
+			consensus_layer_events 
+		WHERE 
+			slot >= $1 AND slot <= $2`, firstSlot, lastSlot)
+	if err != nil {
+		return false, fmt.Errorf("error checking for events for epoch: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_switch_to_compounding_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		address, 
+		validator_index
+	)
+	SELECT
+		slot AS slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		decode((data->>'address'), 'base64') AS address,
+		(data->>'index')::int AS validator_index
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_consolidation_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		source_index, 
+		target_index, 
+		amount_consolidated
+	)
+	SELECT
+		slot AS slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		(data->>'source_index')::int AS source_index,
+		(data->>'target_index')::int AS target_index,
+		(data->>'amount')::bigint AS amount_consolidated
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_deposit_requests (
+		block_slot, 
+		block_root, 
+		request_index, 
+		pubkey, 
+		withdrawal_credentials, 
+		amount, 
+		signature
+	)
+	SELECT
+		slot AS block_slot,
+		block_root AS block_root,
+		event_index AS request_index,
+		decode((data->>'pubkey'), 'base64') AS pubkey,
+		decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
+		(data->>'amount')::bigint AS amount,
+		decode((data->>'signature'), 'base64')::bytea AS signature
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
+	}
+
+	depositRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
+	}
+
+	return depositRequestsProcessed, nil
+}
+
+func (s *SlotExporterDB) TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
+	res, err := tx.Exec(`
+	INSERT INTO blocks_withdrawals (
+		block_slot, 
+		block_root, 
+		withdrawalindex, 
+		validatorindex, 
+		address, 
+		amount
+	)
+	SELECT
+		slot AS block_slot,
+		block_root AS block_root,
+		-20000 + event_index AS withdrawalindex,
+		(data->>'validator_index')::int AS validatorindex,
+		''::bytea as address,
+		(data->>'amount')::bigint AS amount
+	FROM 
+		consensus_layer_events 
+	WHERE 
+		event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 
+	ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
+	}
+
+	excessBalanceRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed excess balance requests: %w", err)
+	}
+
+	return excessBalanceRequestsProcessed, nil
+}
+
+func CacheQuery(query string, viewName string, indexes ...[]string) error {
+	tmpViewName := "_tmp_" + viewName
+	trashViewName := "_trash_" + viewName
+	tx, err := db.AlloyWriter.Beginx()
+	if err != nil {
+		return fmt.Errorf("error starting tx: %w", err)
+	}
+	defer utils.Rollback(tx)
+
+	// pre-cleanup
+	_, err = tx.Exec(fmt.Sprintf(`drop materialized view if exists %s`, tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", tmpViewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
+	}
+	// create the new view
+	_, err = tx.Exec(fmt.Sprintf(`CREATE MATERIALIZED VIEW %s AS %s`, tmpViewName, query))
+	if err != nil {
+		return fmt.Errorf("error creating %s materialized view: %w", tmpViewName, err)
+	}
+	tmpIndexNames := make([]string, len(indexes))
+	for i, index := range indexes {
+		tmpIndexNames[i] = fmt.Sprintf("%s_%d_idx", tmpViewName, i)
+		_, err = tx.Exec(fmt.Sprintf("CREATE INDEX %s ON %s (%s)", tmpIndexNames[i], tmpViewName, strings.Join(index, ",")))
+		if err != nil {
+			return fmt.Errorf("error creating index %s over columns %v: %w", tmpIndexNames[i], index, err)
+		}
+	}
+	// fix permissions
+	_, err = tx.Exec(fmt.Sprintf("GRANT SELECT ON %s TO readaccess;", tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error granting select on %s materialized view: %w", tmpViewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf("GRANT ALL ON %s TO alloydbsuperuser;", tmpViewName))
+	if err != nil {
+		return fmt.Errorf("error granting all on %s materialized view: %w", tmpViewName, err)
+	}
+
+	// swap views
+	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW if exists %s RENAME TO %s;`, viewName, trashViewName))
+	if err != nil {
+		return fmt.Errorf("error renaming existing %s materialized view: %w", viewName, err)
+	}
+	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW %s RENAME TO %s;`, tmpViewName, viewName))
+	if err != nil {
+		return fmt.Errorf("error renaming %s materialized view: %w", tmpViewName, err)
+	}
+	// drop old view
+	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
+	if err != nil {
+		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
+	}
+	// rename indexes
+	for i := range indexes {
+		indexName := fmt.Sprintf("%s_%d_idx", viewName, i)
+		_, err = tx.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", tmpIndexNames[i], indexName))
+		if err != nil {
+			return fmt.Errorf("error renaming index %s: %w", tmpIndexNames[i], err)
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return fmt.Errorf("error committing tx: %w", err)
+	}
+	return nil
 }
 
 const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil

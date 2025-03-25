@@ -52,9 +52,6 @@ var ClickHouseWriter *sqlx.DB
 
 var PersistentRedisDbClient *redis.Client
 
-var FarFutureEpoch = uint64(18446744073709551615)
-var MaxSqlNumber = uint64(9223372036854775807)
-
 const WithdrawalsQueryLimit = 10000
 const BlsChangeQueryLimit = 10000
 const MaxSqlInteger = 2147483647
@@ -597,43 +594,16 @@ func GetSlashingCount() (uint64, error) {
 	return slashings, nil
 }
 
-func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
-	var slots []uint64
-	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")
+// GetLatestEpoch will return the latest epoch from the database
+func GetLatestEpoch() (uint64, error) {
+	var epoch uint64
+	err := WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
 
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving all slots from the DB: %w", err)
+		return 0, fmt.Errorf("error retrieving latest epoch from DB: %w", err)
 	}
 
-	return slots, nil
-}
-
-func SetSlotFinalizationAndStatus(slot uint64, finalized bool, status string, tx *sqlx.Tx) error {
-	_, err := tx.Exec("UPDATE blocks SET finalized = $1, status = $2 WHERE slot = $3", finalized, status, slot)
-
-	if err != nil {
-		return fmt.Errorf("error setting slot finalization and status: %w", err)
-	}
-
-	return nil
-}
-
-type GetAllNonFinalizedSlotsRow struct {
-	Slot      uint64 `db:"slot"`
-	BlockRoot []byte `db:"blockroot"`
-	Finalized bool   `db:"finalized"`
-	Status    string `db:"status"`
-}
-
-func GetAllNonFinalizedSlots() ([]*GetAllNonFinalizedSlotsRow, error) {
-	var slots []*GetAllNonFinalizedSlotsRow
-	err := WriterDb.Select(&slots, "SELECT slot, blockroot, finalized, status FROM blocks WHERE NOT finalized ORDER BY slot")
-
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving all non finalized slots from the DB: %w", err)
-	}
-
-	return slots, nil
+	return epoch, nil
 }
 
 // Get latest finalized epoch
@@ -743,44 +713,6 @@ func SetBlockStatus(blocks []*types.CanonBlock) error {
 	return tx.Commit()
 }
 
-// SaveValidatorQueue will save the validator queue into the database
-func SaveValidatorQueue(validators *types.ValidatorQueue, tx *sqlx.Tx) error {
-	_, err := tx.Exec(`
-		INSERT INTO queue (ts, entering_validators_count, exiting_validators_count)
-		VALUES (date_trunc('hour', now()), $1, $2)
-		ON CONFLICT (ts) DO UPDATE SET
-			entering_validators_count = excluded.entering_validators_count,
-			exiting_validators_count = excluded.exiting_validators_count`,
-		validators.Activating, validators.Exiting)
-	return err
-}
-
-// UpdateEpochStatus will update the epoch status in the database
-func UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_update_epochs_status").Observe(time.Since(start).Seconds())
-	}()
-
-	_, err := tx.Exec(`
-		UPDATE epochs SET
-			eligibleether = $1,
-			globalparticipationrate = $2,
-			votedether = $3,
-			finalized = $4,
-			blockscount = (SELECT COUNT(*) FROM blocks WHERE epoch = $5 AND status = '1'),
-			proposerslashingscount = (SELECT COALESCE(SUM(proposerslashingscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
-			attesterslashingscount = (SELECT COALESCE(SUM(attesterslashingscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
-			attestationscount = (SELECT COALESCE(SUM(attestationscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
-			depositscount = (SELECT COALESCE(SUM(depositscount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
-			withdrawalcount = (SELECT COALESCE(SUM(withdrawalcount),0) FROM blocks WHERE epoch = $5 AND status = '1'),
-			voluntaryexitscount = (SELECT COALESCE(SUM(voluntaryexitscount),0) FROM blocks WHERE epoch = $5 AND status = '1')
-		WHERE epoch = $5`,
-		stats.EligibleEther, stats.GlobalParticipationRate, stats.VotedEther, stats.Finalized, stats.Epoch)
-
-	return err
-}
-
 func GetRelayDataForIndexedBlocks(blocks []*types.Eth1BlockIndexed) (map[common.Hash]types.RelaysData, error) {
 	var execBlockHashes [][]byte
 	var relaysData []types.RelaysData
@@ -823,128 +755,6 @@ func GetActiveValidatorCount() (uint64, error) {
 	var count uint64
 	err := ReaderDb.Get(&count, "select count(*) from validators where status in ('active_offline', 'active_online');")
 	return count, err
-}
-
-func UpdateQueueDeposits(tx *sqlx.Tx) error {
-	start := time.Now()
-	defer func() {
-		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
-		metrics.TaskDuration.WithLabelValues("update_queue_deposits").Observe(time.Since(start).Seconds())
-	}()
-
-	// first we remove any validator that isn't queued anymore
-	_, err := tx.Exec(`
-		DELETE FROM validator_queue_deposits
-		WHERE validator_queue_deposits.validatorindex NOT IN (
-			SELECT validatorindex
-			FROM validators
-			WHERE activationepoch=9223372036854775807 and status='pending')`)
-	if err != nil {
-		log.Error(err, "error removing queued publickeys from validator_queue_deposits", 0)
-		return err
-	}
-
-	// then we add any new ones that are queued
-	_, err = tx.Exec(`
-		INSERT INTO validator_queue_deposits
-		SELECT validatorindex FROM validators WHERE activationepoch=$1 and status='pending' ON CONFLICT DO NOTHING
-	`, MaxSqlNumber)
-	if err != nil {
-		log.Error(err, "error adding queued publickeys to validator_queue_deposits", 0)
-		return err
-	}
-
-	// now we add the activationeligibilityepoch where it is missing
-	_, err = tx.Exec(`
-		UPDATE validator_queue_deposits
-		SET
-			activationeligibilityepoch=validators.activationeligibilityepoch
-		FROM validators
-		WHERE
-			validator_queue_deposits.activationeligibilityepoch IS NULL AND
-			validator_queue_deposits.validatorindex = validators.validatorindex
-	`)
-	if err != nil {
-		log.Error(err, "error updating activationeligibilityepoch on validator_queue_deposits", 0)
-		return err
-	}
-
-	// efficiently collect the tnx that pushed each validator over 32 ETH.
-	_, err = tx.Exec(`
-		UPDATE validator_queue_deposits
-		SET
-			block_slot=data.block_slot,
-			block_index=data.block_index
-		FROM (
-			WITH CumSum AS
-			(
-				SELECT publickey, block_slot, block_index,
-					/* generate partion per publickey ordered by newest to oldest. store cum sum of deposits */
-					SUM(amount) OVER (partition BY publickey ORDER BY (block_slot, block_index) ASC) AS cumTotal
-				FROM blocks_deposits
-				WHERE publickey IN (
-					/* get the pubkeys of the indexes */
-					select pubkey from validators where validators.validatorindex in (
-						/* get the indexes we need to update */
-						select validatorindex from validator_queue_deposits where block_slot is null or block_index is null
-					)
-				)
-				ORDER BY block_slot, block_index ASC
-			)
-			/* we only care about one deposit per vali */
-			SELECT DISTINCT ON(publickey) validators.validatorindex, block_slot, block_index
-			FROM CumSum
-			/* join so we can retrieve the validator index again */
-			left join validators on validators.pubkey = CumSum.publickey
-			/* we want the deposit that pushed the cum sum over 32 ETH */
-			WHERE cumTotal>=32000000000
-			ORDER BY publickey, cumTotal asc
-		) AS data
-		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
-	if err != nil {
-		log.Error(err, "error updating validator_queue_deposits: %v", 0)
-		return err
-	}
-	return nil
-}
-
-func GetQueueAheadOfValidator(validatorIndex uint64) (uint64, error) {
-	var res uint64
-	var selected struct {
-		BlockSlot                  uint64 `db:"block_slot"`
-		BlockIndex                 uint64 `db:"block_index"`
-		ActivationEligibilityEpoch uint64 `db:"activationeligibilityepoch"`
-	}
-	err := ReaderDb.Get(&selected, `
-		SELECT
-			COALESCE(block_index, 0) as block_index,
-			COALESCE(block_slot, 0) as block_slot,
-			COALESCE(activationeligibilityepoch, $2) as activationeligibilityepoch
-		FROM validator_queue_deposits
-		WHERE
-			validatorindex = $1
-		`, validatorIndex, MaxSqlNumber)
-	if err == sql.ErrNoRows {
-		// If we did not find our validator in the queue it is most likly that he has not yet been added so we put him as last
-		err = ReaderDb.Get(&res, `
-			SELECT count(*)
-			FROM validator_queue_deposits
-		`)
-		if err == nil {
-			return res, nil
-		}
-	}
-	if err != nil {
-		return res, err
-	}
-	err = ReaderDb.Get(&res, `
-	SELECT count(*)
-	FROM validator_queue_deposits
-	WHERE
-		COALESCE(activationeligibilityepoch, 0) < $1 OR
-		block_slot < $2 OR
-		block_slot = $2 AND block_index < $3`, selected.ActivationEligibilityEpoch, selected.BlockSlot, selected.BlockIndex)
-	return res, err
 }
 
 func GetValidatorNames() (map[uint64]string, error) {
@@ -2409,76 +2219,6 @@ func GetValidatorAttestationHistoryForNotifications(startEpoch uint64, endEpoch 
 	return epochParticipation, nil
 }
 
-func CacheQuery(query string, viewName string, indexes ...[]string) error {
-	tmpViewName := "_tmp_" + viewName
-	trashViewName := "_trash_" + viewName
-	tx, err := AlloyWriter.Beginx()
-	if err != nil {
-		return fmt.Errorf("error starting tx: %w", err)
-	}
-	defer utils.Rollback(tx)
-
-	// pre-cleanup
-	_, err = tx.Exec(fmt.Sprintf(`drop materialized view if exists %s`, tmpViewName))
-	if err != nil {
-		return fmt.Errorf("error dropping %s materialized view: %w", tmpViewName, err)
-	}
-	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
-	if err != nil {
-		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
-	}
-	// create the new view
-	_, err = tx.Exec(fmt.Sprintf(`CREATE MATERIALIZED VIEW %s AS %s`, tmpViewName, query))
-	if err != nil {
-		return fmt.Errorf("error creating %s materialized view: %w", tmpViewName, err)
-	}
-	tmpIndexNames := make([]string, len(indexes))
-	for i, index := range indexes {
-		tmpIndexNames[i] = fmt.Sprintf("%s_%d_idx", tmpViewName, i)
-		_, err = tx.Exec(fmt.Sprintf("CREATE INDEX %s ON %s (%s)", tmpIndexNames[i], tmpViewName, strings.Join(index, ",")))
-		if err != nil {
-			return fmt.Errorf("error creating index %s over columns %v: %w", tmpIndexNames[i], index, err)
-		}
-	}
-	// fix permissions
-	_, err = tx.Exec(fmt.Sprintf("GRANT SELECT ON %s TO readaccess;", tmpViewName))
-	if err != nil {
-		return fmt.Errorf("error granting select on %s materialized view: %w", tmpViewName, err)
-	}
-	_, err = tx.Exec(fmt.Sprintf("GRANT ALL ON %s TO alloydbsuperuser;", tmpViewName))
-	if err != nil {
-		return fmt.Errorf("error granting all on %s materialized view: %w", tmpViewName, err)
-	}
-
-	// swap views
-	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW if exists %s RENAME TO %s;`, viewName, trashViewName))
-	if err != nil {
-		return fmt.Errorf("error renaming existing %s materialized view: %w", viewName, err)
-	}
-	_, err = tx.Exec(fmt.Sprintf(`ALTER MATERIALIZED VIEW %s RENAME TO %s;`, tmpViewName, viewName))
-	if err != nil {
-		return fmt.Errorf("error renaming %s materialized view: %w", tmpViewName, err)
-	}
-	// drop old view
-	_, err = tx.Exec(fmt.Sprintf("drop materialized view if exists %s", trashViewName))
-	if err != nil {
-		return fmt.Errorf("error dropping %s materialized view: %w", trashViewName, err)
-	}
-	// rename indexes
-	for i := range indexes {
-		indexName := fmt.Sprintf("%s_%d_idx", viewName, i)
-		_, err = tx.Exec(fmt.Sprintf("ALTER INDEX %s RENAME TO %s;", tmpIndexNames[i], indexName))
-		if err != nil {
-			return fmt.Errorf("error renaming index %s: %w", tmpIndexNames[i], err)
-		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("error committing tx: %w", err)
-	}
-	return nil
-}
-
 // copy from utils func
 func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 	conn, err := WriterDb.Conn(context.Background())
@@ -2520,123 +2260,4 @@ func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 		return fmt.Errorf("error copying data to %s: %w", tableName, err)
 	}
 	return nil
-}
-
-func HasEventsForEpoch(epoch uint64) (bool, error) {
-	if epoch == 0 {
-		return true, nil
-	}
-
-	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
-	var count uint64
-	err := ReaderDb.Get(&count, `
-		SELECT 
-			COUNT(*) 
-		FROM 
-			consensus_layer_events 
-		WHERE 
-			slot >= $1 AND slot <= $2`, firstSlot, lastSlot)
-	if err != nil {
-		return false, fmt.Errorf("error checking for events for epoch: %w", err)
-	}
-
-	return count > 0, nil
-}
-
-func TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
-	res, err := tx.Exec(`
-	INSERT INTO blocks_switch_to_compounding_requests (block_slot, block_root, request_index, address, validator_index)
-		SELECT
-				slot AS slot,
-				block_root AS block_root,
-				event_index AS request_index,
-				decode((data->>'address'), 'base64') AS address,
-				(data->>'index')::int AS validator_index
-			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-	`, firstSlot, lastSlot)
-	if err != nil {
-		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
-	}
-
-	consolidationRequestsProcessed, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
-	}
-
-	return consolidationRequestsProcessed, nil
-}
-
-func TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
-	res, err := tx.Exec(`
-	INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
-		SELECT
-				slot AS slot,
-				block_root AS block_root,
-				event_index AS request_index,
-				(data->>'source_index')::int AS source_index,
-				(data->>'target_index')::int AS target_index,
-				(data->>'amount')::bigint AS amount_consolidated
-			FROM consensus_layer_events WHERE event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-	`, firstSlot, lastSlot)
-	if err != nil {
-		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
-	}
-
-	consolidationRequestsProcessed, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
-	}
-
-	return consolidationRequestsProcessed, nil
-}
-
-func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
-	res, err := tx.Exec(`
-	INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature)
-		SELECT
-				slot AS block_slot,
-				block_root AS block_root,
-				event_index AS request_index,
-				decode((data->>'pubkey'), 'base64') AS pubkey,
-				decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
-				(data->>'amount')::bigint AS amount,
-				decode((data->>'signature'), 'base64')::bytea AS signature
-		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-`, firstSlot, lastSlot)
-	if err != nil {
-		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
-	}
-
-	depositRequestsProcessed, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
-	}
-
-	return depositRequestsProcessed, nil
-}
-
-func TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
-	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
-	res, err := tx.Exec(`
-	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validatorindex, address, amount)
-		SELECT
-				slot AS block_slot,
-				block_root AS block_root,
-				-20000 + event_index AS withdrawalindex,
-				(data->>'validator_index')::int AS validatorindex,
-				''::bytea as address,
-				(data->>'amount')::bigint AS amount
-		FROM consensus_layer_events WHERE event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-`, firstSlot, lastSlot)
-	if err != nil {
-		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
-	}
-
-	excessBalanceRequestsProcessed, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error getting the amount of processed excess balance requests: %w", err)
-	}
-
-	return excessBalanceRequestsProcessed, nil
 }
