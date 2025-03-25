@@ -22,7 +22,7 @@ const onInput = (value: string) => {
   <slot name="bc-table-header">
     <div class="bc-table-header">
       <div class="side left">
-        <BcIconToggle
+        <BcToggleIcon
           v-if="$slots.chart"
           v-model="tableIsShown"
           :disabled="chartDisabled"
@@ -39,8 +39,8 @@ const onInput = (value: string) => {
               size="sm"
             />
           </template>
-        </BcIconToggle>
-        <BcIconToggle
+        </BcToggleIcon>
+        <BcToggleIcon
           v-if="useAbsoluteValues !== null && tableIsShown"
           v-model="useAbsoluteValues"
         >
@@ -56,7 +56,7 @@ const onInput = (value: string) => {
               name="percent"
             />
           </template>
-        </BcIconToggle>
+        </BcToggleIcon>
         <slot name="header-left" />
       </div>
 
