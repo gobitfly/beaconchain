@@ -199,53 +199,73 @@ var VDBBlocksColumns = struct {
 }
 
 // ----------------
-// Validator Dashboard Withdrawals Table
+// Validator Dashboard Withdrawals EL Table
 
-type VDBWithdrawalsColumn int
+type VDBWithdrawalsElColumn int
 
-var _ EnumFactory[VDBWithdrawalsColumn] = VDBWithdrawalsColumn(0)
+var _ EnumFactory[VDBWithdrawalsElColumn] = VDBWithdrawalsElColumn(0)
 
 const (
-	VDBWithdrawalEpoch VDBWithdrawalsColumn = iota
-	VDBWithdrawalSlot
-	VDBWithdrawalIndex
-	VDBWithdrawalRecipient
+	VDBWithdrawalBlockProcessed VDBWithdrawalsElColumn = iota
 	VDBWithdrawalAmount
 )
 
-func (c VDBWithdrawalsColumn) Int() int {
+func (c VDBWithdrawalsElColumn) Int() int {
 	return int(c)
 }
 
-func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
+func (VDBWithdrawalsElColumn) NewFromString(s string) VDBWithdrawalsElColumn {
 	switch s {
-	case "epoch":
-		return VDBWithdrawalEpoch
-	case "", "slot":
-		return VDBWithdrawalSlot
-	case "index":
-		return VDBWithdrawalIndex
-	case "recipient":
-		return VDBWithdrawalRecipient
+	case "", "block_processed", "age":
+		return VDBWithdrawalBlockProcessed
 	case "amount":
 		return VDBWithdrawalAmount
 	default:
-		return VDBWithdrawalsColumn(-1)
+		return VDBWithdrawalsElColumn(-1)
 	}
 }
 
 var VDBWithdrawalsColumns = struct {
-	Epoch     VDBWithdrawalsColumn
-	Slot      VDBWithdrawalsColumn
-	Index     VDBWithdrawalsColumn
-	Recipient VDBWithdrawalsColumn
-	Amount    VDBWithdrawalsColumn
+	BlockProcessed VDBWithdrawalsElColumn
+	Amount         VDBWithdrawalsElColumn
 }{
-	VDBWithdrawalEpoch,
-	VDBWithdrawalSlot,
-	VDBWithdrawalIndex,
-	VDBWithdrawalRecipient,
+	VDBWithdrawalBlockProcessed,
 	VDBWithdrawalAmount,
+}
+
+// ----------------
+// Validator Dashboard Withdrawals CL Table
+
+type VDBWithdrawalsClColumn int
+
+var _ EnumFactory[VDBWithdrawalsClColumn] = VDBWithdrawalsClColumn(0)
+
+const (
+	VDBWithdrawalClSlotProcessed VDBWithdrawalsClColumn = iota
+	VDBWithdrawalClAmount
+)
+
+func (c VDBWithdrawalsClColumn) Int() int {
+	return int(c)
+}
+
+func (VDBWithdrawalsClColumn) NewFromString(s string) VDBWithdrawalsClColumn {
+	switch s {
+	case "", "slot_processed", "age":
+		return VDBWithdrawalClSlotProcessed
+	case "amount":
+		return VDBWithdrawalClAmount
+	default:
+		return VDBWithdrawalsClColumn(-1)
+	}
+}
+
+var VDBWithdrawalsClColumns = struct {
+	SlotProcessed VDBWithdrawalsClColumn
+	Amount        VDBWithdrawalsClColumn
+}{
+	VDBWithdrawalClSlotProcessed,
+	VDBWithdrawalClAmount,
 }
 
 // ----------------
