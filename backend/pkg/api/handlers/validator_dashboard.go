@@ -294,40 +294,82 @@ func (h *HandlerService) GetValidatorDashboardExecutionLayerWithdrawals(ctx cont
 	return r, nil
 }
 
-// PublicGetValidatorDashboardConsolidations godoc
+// GetValidatorDashboardExecutionLayerConsolidations godoc
 //
-//	@Description	Get consolidations information for a specified dashboard
+//	@Description	Get consolidations information (EL) for a specified dashboard
 //	@Tags			Validator Dashboard
 //	@Produce		json
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
 //	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
-//	@Param			search			query		string	false	"Search for Index, Public Key, Address."
-//	@Success		200				{object}	types.GetValidatorDashboardConsolidationsResponse
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(block_processed)
+//	@Param			search			query		string	false	"Search for Index, Block, Address."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerConsolidationsResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/consolidations [get]
-func (i *inputGetValidatorDashboardConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-consolidations [get]
+func (i *inputGetValidatorDashboardExecutionLayerConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
 	var v validationError
 	i.Paging = v.checkPagingMap(params)
-	i.sort = checkSort[enums.VDBConsolidationsColumn](&v, params["sort"])
+	i.sort = checkSort[enums.VDBConsolidationsElColumn](&v, params["sort"])
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
 	return v.AsError()
 }
 
-type inputGetValidatorDashboardConsolidations struct {
+type inputGetValidatorDashboardExecutionLayerConsolidations struct {
 	Paging
-	sort        types.Sort[enums.VDBConsolidationsColumn]
+	sort        types.Sort[enums.VDBConsolidationsElColumn]
 	dashboardId interface{}
 }
 
-func (h *HandlerService) GetValidatorDashboardConsolidations(ctx context.Context, input inputGetValidatorDashboardConsolidations) (types.GetValidatorDashboardConsolidationsResponse, error) {
-	var r types.GetValidatorDashboardConsolidationsResponse
+func (h *HandlerService) GetValidatorDashboardExecutionLayerConsolidations(ctx context.Context, input inputGetValidatorDashboardExecutionLayerConsolidations) (types.GetValidatorDashboardExecutionLayerConsolidationsResponse, error) {
+	var r types.GetValidatorDashboardExecutionLayerConsolidationsResponse
 	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
 	if err != nil {
 		return r, err
 	}
-	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardConsolidations(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardExecutionLayerConsolidations(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
+// GetValidatorDashboardConsensusLayerConsolidations godoc
+//
+//	@Description	Get consolidations information (CL) for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(slot_processed, amount)
+//	@Param			search			query		string	false	"Search for Index, Slot, Address."
+//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerConsolidationsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-consolidations [get]
+func (i *inputGetValidatorDashboardConsensusLayerConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
+	var v validationError
+	i.Paging = v.checkPagingMap(params)
+	i.sort = checkSort[enums.VDBConsolidationsClColumn](&v, params["sort"])
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardConsensusLayerConsolidations struct {
+	Paging
+	sort        types.Sort[enums.VDBConsolidationsClColumn]
+	dashboardId interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardConsensusLayerConsolidations(ctx context.Context, input inputGetValidatorDashboardConsensusLayerConsolidations) (types.GetValidatorDashboardConsensusLayerConsolidationsResponse, error) {
+	var r types.GetValidatorDashboardConsensusLayerConsolidationsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardConsensusLayerConsolidations(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
 	if err != nil {
 		return r, err
 	}
