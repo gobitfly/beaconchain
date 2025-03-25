@@ -440,12 +440,20 @@ func (*DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, d
 	return getDummyStruct[t.VDBTotalConsensusDepositsData](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	return []t.VDBWithdrawalsTableRow{}, &t.Paging{}, nil
+func (*DummyService) GetValidatorDashboardElWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsElColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsElTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBWithdrawalsElTableRow](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
-	return getDummyStruct[t.VDBTotalWithdrawalsData](ctx)
+func (*DummyService) GetValidatorDashboardClWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsClColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsClTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBWithdrawalsClTableRow](ctx)
+}
+
+func (*DummyService) GetValidatorDashboardTotalElWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalExecutionWithdrawalsData, error) {
+	return getDummyStruct[t.VDBTotalExecutionWithdrawalsData](ctx)
+}
+
+func (*DummyService) GetValidatorDashboardTotalClWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalConsensusWithdrawalsData, error) {
+	return getDummyStruct[t.VDBTotalConsensusWithdrawalsData](ctx)
 }
 
 func (*DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {

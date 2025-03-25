@@ -233,20 +233,46 @@ export type GetValidatorDashboardTotalConsensusDepositsResponse = ApiDataRespons
  * ------------------------------------------------------------
  * Withdrawals Tab
  */
-export interface VDBWithdrawalsTableRow {
-  epoch: number /* uint64 */;
-  slot: number /* uint64 */;
+export interface VDBWithdrawalsElTableRow {
+  block_queued: number /* uint64 */;
+  timestamp_queued: number /* int64 */;
+  block_processed: number /* uint64 */;
+  timestamp_processed: number /* int64 */;
   index: number /* uint64 */;
+  tx_hash: Hash;
+  group_id: number /* uint64 */;
+  sender: Address;
+  executer: Address;
+  amount: string /* decimal.Decimal */;
+  status: 'queued' | 'processed';
+  fee: string /* decimal.Decimal */;
+  is_missing_estimate: boolean;
+}
+export type GetValidatorDashboardExecutionLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsElTableRow>;
+export interface VDBWithdrawalsClTableRow {
+  slot_queued?: number /* uint64 */; // does not exist pre-pectra
+  slot_processed: number /* uint64 */;
+  index: number /* uint64 */;
+  public_key: PubKey;
+  withdrawal_credentials: Hash;
+  signature: Hash;
   group_id: number /* uint64 */;
   recipient: Address;
   amount: string /* decimal.Decimal */;
+  type: 'auto' | 'manual';
+  status: 'queued' | 'completed' | 'rejected';
+  reject_reason?: 'full_queue' | 'unknown_pubkey' | 'wrong_withdrawal_credentials' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding';
   is_missing_estimate: boolean;
 }
-export type GetValidatorDashboardWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsTableRow>;
-export interface VDBTotalWithdrawalsData {
+export type GetValidatorDashboardConsensusLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsClTableRow>;
+export interface VDBTotalExecutionWithdrawalsData {
   total_amount: string /* decimal.Decimal */;
 }
-export type GetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBTotalWithdrawalsData>;
+export type GetValidatorDashboardTotalExecutionWithdrawalsResponse = ApiDataResponse<VDBTotalExecutionWithdrawalsData>;
+export interface VDBTotalConsensusWithdrawalsData {
+  total_amount: string /* decimal.Decimal */;
+}
+export type GetValidatorDashboardTotalConsensusWithdrawalsResponse = ApiDataResponse<VDBTotalConsensusWithdrawalsData>;
 /**
  * ------------------------------------------------------------
  * Rocket Pool Tab

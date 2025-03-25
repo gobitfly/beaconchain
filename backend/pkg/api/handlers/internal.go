@@ -467,14 +467,6 @@ func (h *HandlerService) InternalGetValidatorDashboardTotalExecutionLayerDeposit
 	h.PublicGetValidatorDashboardTotalExecutionLayerDeposits(w, r)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardWithdrawals(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardWithdrawals(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardTotalWithdrawals(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardTotalWithdrawals(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardRocketPool(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardRocketPool(w, r)
 }
