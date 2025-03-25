@@ -46,10 +46,10 @@ func NewReorgWatcher(client EthClient, store ReorgStore, config ReorgConfig, cha
 	}
 }
 
-func (r *ReorgWatcher) LookForReorg() error {
+func (r *ReorgWatcher) LookForReorg() (uint64, error) {
 	head, err := r.client.HeaderByNumber(context.Background(), nil)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// ensure we will not try to retrieve blocks that do not exist
@@ -59,32 +59,34 @@ func (r *ReorgWatcher) LookForReorg() error {
 	}
 
 	ctx := context.Background()
-
+	var reorgDepth uint64
 	// for each block check if block node hash and block db hash match
 	for i := head.Number.Uint64() - depth; i <= head.Number.Uint64(); i++ {
 		nodeBlock, err := r.client.HeaderByNumber(ctx, big.NewInt(int64(i)))
 		if err != nil {
-			return err
+			return 0, err
 		}
 		dbBlock, err := r.store.GetBlock(r.chainID, i)
 		if err != nil {
 			// exit if we hit a block that is not yet in the db
 			// it means that we never processed that block or that we revert that block
 			if errors.Is(err, database.ErrNotFound) {
-				return nil
+				break
 			}
-			return err
+			return 0, err
 		}
 
 		if bytes.Equal(nodeBlock.Hash().Bytes(), dbBlock.Hash) {
+			// block was not reorg, continue
 			continue
 		}
+		reorgDepth = head.Number.Uint64() - i + 1
 		log.Warnf("found incosistency at height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)
 		if err := r.handleReorg(i, head.Number.Uint64()); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return reorgDepth, nil
 }
 
 func (r *ReorgWatcher) handleReorg(number uint64, head uint64) error {

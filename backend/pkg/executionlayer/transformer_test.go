@@ -126,7 +126,7 @@ func TestTransformTX(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformTx("", tt.block, &res); err != nil {
+			if err := transformTx("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Transactions), len(tt.want); got != want {
@@ -192,7 +192,7 @@ func TestTransformERC20(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformERC20("", tt.block, &res); err != nil {
+			if err := transformERC20("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.ERC20Transfer), len(tt.want); got != want {
@@ -255,7 +255,7 @@ func TestTransformERC721(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformERC721("", tt.block, &res); err != nil {
+			if err := transformERC721("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.ERC721Transfer), len(tt.want); got != want {
@@ -325,7 +325,7 @@ func TestTransformERC1155(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformERC1155("", tt.block, &res); err != nil {
+			if err := transformERC1155("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.ERC1155Transfer), len(tt.want); got != want {
@@ -381,7 +381,7 @@ func TestBlob(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformBlob("", tt.block, &res); err != nil {
+			if err := transformBlob("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Blobs), len(tt.want); got != want {
@@ -540,7 +540,7 @@ func TestTransformITx(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformITx("", tt.block, &res); err != nil {
+			if err := transformITx("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Internals), len(tt.want); got != want {
@@ -670,7 +670,7 @@ func TestTransformContracts(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformContract("", tt.block, &res); err != nil {
+			if err := transformContract("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Contracts), len(tt.want); got != want {
@@ -781,7 +781,7 @@ func TestTransformBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformBlock("", tt.block, &res); err != nil {
+			if err := transformBlock("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := res.Block.Number, tt.want.Number; got != want {
@@ -835,7 +835,7 @@ func TestTransformUncle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformUncle("", tt.block, &res); err != nil {
+			if err := transformUncle("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Uncles), len(tt.want); got != want {
@@ -890,7 +890,7 @@ func TestTransformWithdrawal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformWithdrawal("", tt.block, &res); err != nil {
+			if err := transformWithdrawal("", tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.Withdrawals), len(tt.want); got != want {
@@ -1193,7 +1193,7 @@ func TestTransformENS(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var res db2.IndexedBlock
-			if err := TransformEnsNameRegistered(chainID.String(), tt.block, &res); err != nil {
+			if err := transformEnsNameRegistered(chainID.String(), tt.block, &res); err != nil {
 				t.Fatal(err)
 			}
 			if got, want := len(res.ENS), len(tt.want); got != want {
@@ -1237,7 +1237,7 @@ func rightPad(b []byte) []byte {
 func TestTransformer_FromList(t *testing.T) {
 	tests := []struct {
 		name    string
-		want    TransformFunc
+		want    Transformer
 		wantErr bool
 	}{
 		{
@@ -1250,11 +1250,11 @@ func TestTransformer_FromList(t *testing.T) {
 		},
 		{
 			name: "TransformBlobTx",
-			want: TransformBlob,
+			want: TransformBlobTx,
 		},
 		{
 			name: "TransformItx",
-			want: TransformITx,
+			want: TransformItx,
 		},
 		{
 			name: "TransformERC20",
@@ -1270,7 +1270,7 @@ func TestTransformer_FromList(t *testing.T) {
 		},
 		{
 			name: "TransformWithdrawals",
-			want: TransformWithdrawal,
+			want: TransformWithdrawals,
 		},
 		{
 			name: "TransformUncle",
