@@ -2,7 +2,6 @@ package modules
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/gob"
 	"sort"
@@ -11,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -22,7 +20,6 @@ import (
 
 	"fmt"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
@@ -35,15 +32,17 @@ import (
 type slotExporterData struct {
 	ModuleContext
 	Client   rpc.Client
+	cache    edb.SlotExporterCacheRepository
 	db       edb.SlotExporterDBRepository
 	bt       edb.SlotExporterBTRepository
 	FirstRun bool
 }
 
-func NewSlotExporter(moduleContext ModuleContext, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
 	return &slotExporterData{
 		ModuleContext: moduleContext,
 		Client:        moduleContext.ConsClient,
+		cache:         cache,
 		db:            db,
 		bt:            bt,
 		FirstRun:      true,
@@ -65,26 +64,48 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	// cache handling
 	defer func() {
 		if err == nil {
-			if latestEpoch > 0 && cache.LatestEpoch.Get() < latestEpoch {
-				err := cache.LatestEpoch.Set(latestEpoch)
+			chainID := utils.Config.Chain.ClConfig.DepositChainID
+
+			cacheLatestEpoch, err := d.cache.GetLatestEpoch(chainID)
+			if err != nil {
+				log.Error(err, "error retrieving latestEpoch from cache", 0)
+			}
+
+			if latestEpoch > 0 && cacheLatestEpoch < latestEpoch {
+				err := d.cache.SetLatestEpoch(chainID, latestEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestEpoch in cache", 0)
 				}
 			}
-			if latestSlot > 0 && cache.LatestSlot.Get() < latestSlot {
-				err := cache.LatestSlot.Set(latestSlot)
+
+			cacheLatestSlot, err := d.cache.GetLatestSlot(chainID)
+			if err != nil {
+				log.Error(err, "error retrieving latestSlot from cache", 0)
+			}
+			if latestSlot > 0 && cacheLatestSlot < latestSlot {
+				err := d.cache.SetLatestSlot(chainID, latestSlot)
 				if err != nil {
 					log.Error(err, "error setting latestSlot in cache", 0)
 				}
 			}
-			if finalizedEpoch > 0 && cache.LatestFinalizedEpoch.Get() < finalizedEpoch {
-				err := cache.LatestFinalizedEpoch.Set(finalizedEpoch)
+
+			cacheLatestFinalizedEpoch, err := d.cache.GetLatestFinalizedEpoch(chainID)
+			if err != nil {
+				log.Error(err, "error retrieving latestFinalizedEpoch from cache", 0)
+			}
+			if finalizedEpoch > 0 && cacheLatestFinalizedEpoch < finalizedEpoch {
+				err := d.cache.SetLatestFinalizedEpoch(chainID, finalizedEpoch)
 				if err != nil {
 					log.Error(err, "error setting latestFinalizedEpoch in cache", 0)
 				}
 			}
-			if latestProposed > 0 && cache.LatestProposedSlot.Get() < latestProposed {
-				err := cache.LatestProposedSlot.Set(latestProposed)
+
+			cacheLatestProposedSlot, err := d.cache.GetLatestProposedSlot(chainID)
+			if err != nil {
+				log.Error(err, "error retrieving latestProposedSlot from cache", 0)
+			}
+			if latestProposed > 0 && cacheLatestProposedSlot < latestProposed {
+				err := d.cache.SetLatestProposedSlot(chainID, latestProposed)
 				if err != nil {
 					log.Error(err, "error setting latestProposedSlot in cache", 0)
 				}
@@ -117,7 +138,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 		if len(dbSlots) > 0 {
 			if dbSlots[0] != 0 {
 				log.Infof("exporting genesis slot as it is missing in the database")
-				err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, d.db, d.bt, tx)
+				err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, d.cache, d.db, d.bt, tx)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", 0, err)
 				}
@@ -138,7 +159,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 				if previousSlot != currentSlot-1 {
 					log.Infof("slots between %v and %v are missing, exporting them", previousSlot, currentSlot)
 					for slot := previousSlot + 1; slot <= currentSlot-1; slot++ {
-						err := ExportSlot(d.Client, slot, false, d.db, d.bt, tx)
+						err := ExportSlot(d.Client, slot, false, d.cache, d.db, d.bt, tx)
 
 						if err != nil {
 							return fmt.Errorf("error exporting slot %v: %w", slot, err)
@@ -156,7 +177,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Infof("db is empty, export genesis slot")
-			err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, d.db, d.bt, tx)
+			err := ExportSlot(d.Client, 0, utils.EpochOfSlot(0) == head.HeadEpoch, d.cache, d.db, d.bt, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", 0, err)
 			}
@@ -170,7 +191,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	if lastDbSlot != head.HeadSlot {
 		slotsExported := 0
 		for slot := lastDbSlot + 1; slot <= head.HeadSlot; slot++ { // export any new slots
-			err := ExportSlot(d.Client, slot, utils.EpochOfSlot(slot) == head.HeadEpoch, d.db, d.bt, tx)
+			err := ExportSlot(d.Client, slot, utils.EpochOfSlot(slot) == head.HeadEpoch, d.cache, d.db, d.bt, tx)
 			if err != nil {
 				return fmt.Errorf("error exporting slot %v: %w", slot, err)
 			}
@@ -240,7 +261,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 				if err != nil {
 					return fmt.Errorf("error setting block %v as finalized (orphaned): %w", dbSlot.Slot, err)
 				}
-				err = ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, d.db, d.bt, tx)
+				err = ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, d.cache, d.db, d.bt, tx)
 				if err != nil {
 					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 				}
@@ -281,7 +302,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 			if utils.Config.Chain.Id != 17000 {
 				if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
 					log.Infof("exporting new slot %v", dbSlot.Slot)
-					err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, d.db, d.bt, tx)
+					err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, d.cache, d.db, d.bt, tx)
 					if err != nil {
 						return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
 					}
@@ -303,9 +324,10 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	return nil
 }
 
-func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
+func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, cache edb.SlotExporterCacheRepository, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
+	chainID := utils.Config.Chain.ClConfig.DepositChainID
 
 	if isFirstSlotOfEpoch {
 		log.Infof("exporting slot %v (epoch transition into epoch %v)", slot, epoch)
@@ -464,15 +486,13 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, exporterdb edb
 				return fmt.Errorf("error serializing assignments to gob for slot %v: %w", block.Slot, err)
 			}
 
-			key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", epoch)
-
 			expirationTime := utils.EpochToTime(epoch + 7) // keep it for at least 7 epochs in the cache
 			expirationDuration := time.Until(expirationTime)
 			if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
 				log.Warnf("NOT writing assignments data for epoch %v to redis because a TTL < 0 or TTL > 2h: %v", epoch, expirationDuration)
 			} else {
 				log.Infof("writing assignments data for epoch %v to redis with a TTL of %v", epoch, expirationDuration)
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+				err = cache.SetEpochAssignments(chainID, epoch, serializedAssignmentsData.Bytes(), expirationDuration)
 				if err != nil {
 					return fmt.Errorf("error writing assignments data to redis for epoch %v: %w", epoch, err)
 				}
@@ -501,15 +521,13 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, exporterdb edb
 					return fmt.Errorf("error serializing assignments to gob for head+1 epoch %v: %w", block.Slot, err)
 				}
 
-				key := fmt.Sprintf("%d:%s:%d", utils.Config.Chain.ClConfig.DepositChainID, "ea", nextEpoch)
-
 				expirationTime := utils.EpochToTime(nextEpoch + 7) // keep it for at least 7 epochs in the cache
 				expirationDuration := time.Until(expirationTime)
 				if expirationDuration.Seconds() < 0 || expirationDuration.Hours() > 2 {
 					log.Warnf("NOT writing assignments data for head+1 epoch (%v) to redis because a TTL < 0 or TTL > 2h: %v", nextEpoch, expirationDuration)
 				} else {
 					log.Infof("writing assignments data for head+1 epoch (%v) to redis with a TTL of %v", nextEpoch, expirationDuration)
-					err = db.PersistentRedisDbClient.Set(context.Background(), key, serializedAssignmentsData.Bytes(), expirationDuration).Err()
+					err = cache.SetEpochAssignments(chainID, nextEpoch, serializedAssignmentsData.Bytes(), expirationDuration)
 					if err != nil {
 						return fmt.Errorf("error writing assignments data for head+1 epoch to redis for epoch %v: %w", nextEpoch, err)
 					}
@@ -649,9 +667,8 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, exporterdb edb
 
 				// load into redis
 				start = time.Now()
-				key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
 				log.Infof("writing validator mappping to redis with no TTL")
-				err = db.PersistentRedisDbClient.Set(context.Background(), key, compressedValidatorMapping.Bytes(), 0).Err()
+				err = cache.SetValidatorMapping(chainID, compressedValidatorMapping.Bytes(), 0)
 				if err != nil {
 					return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
 				}

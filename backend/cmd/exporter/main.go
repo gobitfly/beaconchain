@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
@@ -180,9 +181,12 @@ func Run() {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context,
+			modules.NewSlotExporter(
+				context,
+				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterDB(db.WriterDb),
-				edb.NewSlotExporterBT(db.BigtableClient)),
+				edb.NewSlotExporterBT(db.BigtableClient),
+			),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),
