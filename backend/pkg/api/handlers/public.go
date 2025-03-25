@@ -1576,6 +1576,47 @@ func (h *HandlerService) PublicGetValidatorDashboardTotalWithdrawals(w http.Resp
 	returnOk(w, r, response)
 }
 
+// PublicGetValidatorDashboardConsolidations godoc
+//
+//	@Description	Get consolidations information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Public Key, Address."
+//	@Success		200				{object}	types.GetValidatorDashboardConsolidationsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consolidations [get]
+func (h *HandlerService) PublicGetValidatorDashboardConsolidations(w http.ResponseWriter, r *http.Request) {
+	var v validationError
+	q := r.URL.Query()
+	dashboardId, err := h.handleDashboardId(r.Context(), mux.Vars(r)["dashboard_id"])
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	pagingParams := v.checkPagingParams(q)
+	sort := checkSort[enums.VDBConsolidationsColumn](&v, q.Get("sort"))
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
+		return
+	}
+
+	ctx := r.Context()
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardConsolidations(ctx, *dashboardId, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	response := types.GetValidatorDashboardConsolidationsResponse{
+		Data:   data,
+		Paging: *paging,
+	}
+	returnOk(w, r, response)
+}
+
 // PublicGetValidatorDashboardRocketPool godoc
 //
 //	@Description	Get an aggregated list of the Rocket Pool nodes details associated with a specified dashboard.
