@@ -294,9 +294,10 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			source_epoch, 
 			source_root, 
 			target_epoch, 
-			target_root
+			target_root,
+			committeebits
 		)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT 
 			(block_slot, block_index) 
 		DO NOTHING`)
@@ -534,27 +535,86 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				}
 			}
 			for i, ps := range b.ProposerSlashings {
-				_, err := stmtProposerSlashing.Exec(b.Slot, i, b.BlockRoot, ps.ProposerIndex, ps.Header1.Slot, ps.Header1.ParentRoot, ps.Header1.StateRoot, ps.Header1.BodyRoot, ps.Header1.Signature, ps.Header2.Slot, ps.Header2.ParentRoot, ps.Header2.StateRoot, ps.Header2.BodyRoot, ps.Header2.Signature)
+				_, err := stmtProposerSlashing.Exec(
+					b.Slot,
+					i,
+					b.BlockRoot,
+					ps.ProposerIndex,
+					ps.Header1.Slot,
+					ps.Header1.ParentRoot,
+					ps.Header1.StateRoot,
+					ps.Header1.BodyRoot,
+					ps.Header1.Signature,
+					ps.Header2.Slot,
+					ps.Header2.ParentRoot,
+					ps.Header2.StateRoot,
+					ps.Header2.BodyRoot,
+					ps.Header2.Signature,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtProposerSlashing for block at slot %v index %v: %w", b.Slot, i, err)
 				}
 			}
 			for i, bls := range b.SignedBLSToExecutionChange {
-				_, err := stmtBLSChange.Exec(b.Slot, b.BlockRoot, bls.Message.Validatorindex, bls.Signature, bls.Message.BlsPubkey, bls.Message.Address)
+				_, err := stmtBLSChange.Exec(
+					b.Slot,
+					b.BlockRoot,
+					bls.Message.Validatorindex,
+					bls.Signature,
+					bls.Message.BlsPubkey,
+					bls.Message.Address,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtBLSChange for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
 
 			for i, as := range b.AttesterSlashings {
-				_, err := stmtAttesterSlashing.Exec(b.Slot, i, b.BlockRoot, pq.Array(as.Attestation1.AttestingIndices), as.Attestation1.Signature, as.Attestation1.Data.Slot, as.Attestation1.Data.CommitteeIndex, as.Attestation1.Data.BeaconBlockRoot, as.Attestation1.Data.Source.Epoch, as.Attestation1.Data.Source.Root, as.Attestation1.Data.Target.Epoch, as.Attestation1.Data.Target.Root, pq.Array(as.Attestation2.AttestingIndices), as.Attestation2.Signature, as.Attestation2.Data.Slot, as.Attestation2.Data.CommitteeIndex, as.Attestation2.Data.BeaconBlockRoot, as.Attestation2.Data.Source.Epoch, as.Attestation2.Data.Source.Root, as.Attestation2.Data.Target.Epoch, as.Attestation2.Data.Target.Root)
+				_, err := stmtAttesterSlashing.Exec(
+					b.Slot,
+					i,
+					b.BlockRoot,
+					pq.Array(as.Attestation1.AttestingIndices),
+					as.Attestation1.Signature,
+					as.Attestation1.Data.Slot,
+					as.Attestation1.Data.CommitteeIndex,
+					as.Attestation1.Data.BeaconBlockRoot,
+					as.Attestation1.Data.Source.Epoch,
+					as.Attestation1.Data.Source.Root,
+					as.Attestation1.Data.Target.Epoch,
+					as.Attestation1.Data.Target.Root,
+					pq.Array(as.Attestation2.AttestingIndices),
+					as.Attestation2.Signature,
+					as.Attestation2.Data.Slot,
+					as.Attestation2.Data.CommitteeIndex,
+					as.Attestation2.Data.BeaconBlockRoot,
+					as.Attestation2.Data.Source.Epoch,
+					as.Attestation2.Data.Source.Root,
+					as.Attestation2.Data.Target.Epoch,
+					as.Attestation2.Data.Target.Root,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtAttesterSlashing for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
 
 			for i, a := range b.Attestations {
-				_, err = stmtAttestations.Exec(b.Slot, i, b.BlockRoot, a.AggregationBits, pq.Array(a.Attesters), a.Signature, a.Data.Slot, a.Data.CommitteeIndex, a.Data.BeaconBlockRoot, a.Data.Source.Epoch, a.Data.Source.Root, a.Data.Target.Epoch, a.Data.Target.Root, a.CommitteeBits)
+				_, err = stmtAttestations.Exec(
+					b.Slot,
+					i,
+					b.BlockRoot,
+					a.AggregationBits,
+					pq.Array(a.Attesters),
+					a.Signature,
+					a.Data.Slot,
+					a.Data.CommitteeIndex,
+					a.Data.BeaconBlockRoot,
+					a.Data.Source.Epoch,
+					a.Data.Source.Root,
+					a.Data.Target.Epoch,
+					a.Data.Target.Root,
+					a.CommitteeBits,
+				)
 				if err != nil {
 					return fmt.Errorf("error executing stmtAttestations for block %v index %v: %w", b.Slot, i, err)
 				}
