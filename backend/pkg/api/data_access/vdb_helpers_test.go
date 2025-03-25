@@ -277,7 +277,7 @@ func TestGetEpochStart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			table, _, err := getTablesForPeriod(tt.period)
+			table, err := getTablesForPeriod(tt.period)
 			assert.NoError(t, err)
 
 			ds := buildEpochStartQuery(table)
@@ -345,7 +345,7 @@ func TestGetLastScheduledBlockAndSyncDate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clickhouseTotalTable, _, err := getTablesForPeriod(tt.period)
+			clickhouseTotalTable, err := getTablesForPeriod(tt.period)
 			assert.NoError(t, err)
 
 			ds := buildLastScheduledBlockAndSyncDateQuery(clickhouseTotalTable, dashboardId, groupId)
@@ -413,7 +413,7 @@ func TestGetMinMaxEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clickhouseTable, _, err := getTablesForPeriod(tt.period)
+			clickhouseTable, err := getTablesForPeriod(tt.period)
 			assert.NoError(t, err)
 
 			ds := buildMinMaxEpochsQuery(dashboardId, groupId, clickhouseTable)
@@ -529,16 +529,33 @@ func runGetTableTest[T any, R1 any, R2 any](t *testing.T, cases []getTableTestCa
 }
 
 func TestGetTable(t *testing.T) {
+	type getTableTestCaseSingle struct {
+		name      string
+		input     enums.TimePeriod
+		expected  string
+		expectErr error
+	}
 	t.Run("GetTablesForPeriod", func(t *testing.T) {
-		cases := []getTableTestCase[enums.TimePeriod, string, int]{
-			{"Last 1 hour", enums.TimePeriods.Last1h, "validator_dashboard_data_rolling_1h", 1, nil},
-			{"Last 24 hours", enums.TimePeriods.Last24h, "validator_dashboard_data_rolling_24h", 24, nil},
-			{"Last 7 days", enums.TimePeriods.Last7d, "validator_dashboard_data_rolling_7d", 7 * 24, nil},
-			{"Last 30 days", enums.TimePeriods.Last30d, "validator_dashboard_data_rolling_30d", 30 * 24, nil},
-			{"All time", enums.TimePeriods.AllTime, "validator_dashboard_data_rolling_total", -1, nil},
-			{"Invalid time period", enums.TimePeriod(999), "", 0, fmt.Errorf("not-implemented time period: %v", enums.TimePeriod(999))},
+		cases := []getTableTestCaseSingle{
+			{"Last 1 hour", enums.TimePeriods.Last1h, "validator_dashboard_data_rolling_1h", nil},
+			{"Last 24 hours", enums.TimePeriods.Last24h, "validator_dashboard_data_rolling_24h", nil},
+			{"Last 7 days", enums.TimePeriods.Last7d, "validator_dashboard_data_rolling_7d", nil},
+			{"Last 30 days", enums.TimePeriods.Last30d, "validator_dashboard_data_rolling_30d", nil},
+			{"All time", enums.TimePeriods.AllTime, "validator_dashboard_data_rolling_total", nil},
+			{"Invalid time period", enums.TimePeriod(999), "", fmt.Errorf("not-implemented time period: %v", enums.TimePeriod(999))},
 		}
-		runGetTableTest(t, cases, getTablesForPeriod)
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				result, err := getTablesForPeriod(tc.input)
+
+				assert.Equal(t, tc.expected, result)
+				if tc.expectErr != nil {
+					assert.EqualError(t, err, tc.expectErr.Error())
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
 	})
 
 	t.Run("GetTableAndDateColumn", func(t *testing.T) {

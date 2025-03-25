@@ -261,9 +261,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		return nil
 	})
 
-	retrieveApr := func(hours int, apr *float64) {
+	retrieveApr := func(timeFrame enums.TimePeriod, apr *float64) {
 		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
@@ -272,9 +272,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		})
 	}
 
-	retrieveRewards := func(hours int, rewards *t.ClElValue[decimal.Decimal]) {
+	retrieveRewards := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
@@ -337,9 +337,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		})
 	}
 
-	retrieveRewards(24, &data.Last24hIncome)
-	retrieveRewards(7*24, &data.Last7dIncome)
-	retrieveApr(30*24, &data.Last30dApr)
+	retrieveRewards(enums.Last24h, &data.Last24hIncome)
+	retrieveRewards(enums.Last7d, &data.Last7dIncome)
+	retrieveApr(enums.Last30d, &data.Last30dApr)
 	retrieveEfficiency("validator_dashboard_data_rolling_30d", &data.Last30dEfficiency)
 
 	err = eg.Wait()
@@ -425,7 +425,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 	var efficienciesMap map[uint64]float64
 	wg.Go(func() error {
 		var err error
-		clickhouseTable, _, err := getTablesForPeriod(period)
+		clickhouseTable, err := getTablesForPeriod(period)
 		if err != nil {
 			return err
 		}
