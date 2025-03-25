@@ -273,7 +273,7 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(rpcClient, slot, false, tx)
+				err = modules.ExportSlot(rpcClient, slot, false, edb.NewSlotExporterDB(db.WriterDb), edb.NewSlotExporterBT(db.BigtableClient), tx)
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -322,7 +322,7 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(rpcClient, slot, false, tx)
+				err = modules.ExportSlot(rpcClient, slot, false, edb.NewSlotExporterDB(db.WriterDb), edb.NewSlotExporterBT(db.BigtableClient), tx)
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -418,7 +418,7 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 
-			err = edb.SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
+			err = edb.NewSlotExporterDB(db.WriterDb).SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}
@@ -1388,7 +1388,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 				}
 
 				if importWholeBlock {
-					err := edb.SaveBlock(block, true, tx)
+					err := edb.NewSlotExporterDB(db.WriterDb).SaveBlock(block, true, tx)
 					if err != nil {
 						log.Error(err, fmt.Errorf("error saving Slot [%v]", block.Slot), 0)
 						return

@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
 	"github.com/gobitfly/beaconchain/pkg/exporter/services"
 	"github.com/gobitfly/beaconchain/pkg/monitoring"
@@ -179,7 +180,9 @@ func Run() {
 		usedModules = append(usedModules, modules.NewDashboardDataModule(context))
 	} else {
 		usedModules = append(usedModules,
-			modules.NewSlotExporter(context),
+			modules.NewSlotExporter(context,
+				edb.NewSlotExporterDB(db.WriterDb),
+				edb.NewSlotExporterBT(db.BigtableClient)),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),
 			modules.NewExecutionRewardFinalizer(context),
