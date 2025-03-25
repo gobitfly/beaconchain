@@ -683,7 +683,7 @@ func (bigtable *Bigtable) SetLastAttestationSlot(validator uint64, lastAttestati
 	return nil
 }
 
-func (bigtable *Bigtable) SaveSyncComitteeDuties(duties map[types.Slot]map[types.ValidatorIndex]bool) error {
+func (bigtable *Bigtable) SaveSyncCommitteeDuties(duties map[types.Slot]map[types.ValidatorIndex]bool) error {
 	start := time.Now()
 
 	if len(duties) == 0 {
