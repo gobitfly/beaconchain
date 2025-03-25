@@ -377,10 +377,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		return nil
 	})
 
-	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+	retrieveRewardsAndEfficiency := func(table string, timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
@@ -413,10 +413,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_24h", 24, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_7d", 7*24, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_24h", enums.Last24h, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_7d", enums.Last7d, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", enums.Last30d, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", enums.AllTime, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = eg.Wait()
 

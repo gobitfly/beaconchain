@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -489,7 +489,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	clickhouseTable, hours, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -710,7 +710,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsBlocksCl))
 	ret.MissedRewards.ProposerRewards.El = decimal.NewFromFloat(totalMissedRewardsEl)
 
-	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, hours)
+	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, period)
 	if err != nil {
 		return nil, err
 	}
@@ -724,8 +724,8 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return nil, fmt.Errorf("error retrieving past sync committee count: %w", err)
 	}
 
-	luckHours := float64(hours)
-	if hours == -1 {
+	luckHours := period.Duration().Hours()
+	if period == enums.AllTime {
 		luckHours = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours()
 		if luckHours == 0 {
 			luckHours = 24
@@ -1219,7 +1219,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	result := &t.VDBSlashingsSummaryValidators{}
 
 	// Get the table names based on the period
-	clickhouseTable, _, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}
@@ -1454,7 +1454,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return nil, err
 	}

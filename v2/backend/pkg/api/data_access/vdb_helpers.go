@@ -116,23 +116,11 @@ type IncomeInfo struct {
 	Apr t.ClElValue[float64]
 }
 
-func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (rewardsApr IncomeInfo, err error) {
+func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, timeFrame enums.TimePeriod) (rewardsApr IncomeInfo, err error) {
 	result := IncomeInfo{}
-	table := ""
-
-	switch hours {
-	case 1:
-		table = "validator_dashboard_data_rolling_1h"
-	case 24:
-		table = "validator_dashboard_data_rolling_24h"
-	case 7 * 24:
-		table = "validator_dashboard_data_rolling_7d"
-	case 30 * 24:
-		table = "validator_dashboard_data_rolling_30d"
-	case -1:
-		table = "validator_dashboard_data_rolling_90d"
-	default:
-		return IncomeInfo{}, fmt.Errorf("invalid hours value: %v", hours)
+	table, err := getTablesForPeriod(timeFrame)
+	if err != nil {
+		return result, err
 	}
 
 	type RewardsResult struct {
@@ -142,8 +130,6 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		RoiDividend    *big.Int `db:"roi_dividend"`
 		RoiDivisor     *big.Int `db:"roi_divisor"`
 	}
-
-	var rewardsResultTotal RewardsResult
 
 	rewardsDs := goqu.Dialect("postgres").
 		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table))).
@@ -178,25 +164,14 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return IncomeInfo{}, nil
 	}
 
-	aprDivisor := d.config.Chain.ClConfig.SecondsPerSlot * d.config.Chain.ClConfig.SlotsPerEpoch
-	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDividend, 0)), d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)), aprDivisor)
+	epochDuration := time.Duration(d.config.Chain.ClConfig.SecondsPerSlot * d.config.Chain.ClConfig.SlotsPerEpoch * uint64(time.Second))
 	rewards := big.Int{}
 	rewards.Sub(rewardsResultTable.RoiDividend, rewardsResultTable.RoiDivisor)
+	cumulativeClBaseMain := d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0))
+	result.Apr.Cl = calcAPR(d.convertClToMain(decimal.NewFromBigInt(&rewards, 0)), cumulativeClBaseMain, epochDuration)
 	result.Rewards.Cl = decimal.NewFromBigInt(&rewards, 0).Mul(decimal.NewFromInt(1e9))
 
-	if hours == -1 {
-		rewardsDs = rewardsDs.
-			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
-
-		rewardsResultTotal, err = runQuery[RewardsResult](ctx, d.clickhouseReader, rewardsDs)
-		if err != nil {
-			return IncomeInfo{}, err
-		}
-
-		rewards.Sub(rewardsResultTotal.RoiDividend, rewardsResultTotal.RoiDivisor)
-		result.Rewards.Cl = decimal.NewFromBigInt(&rewards, 0).Mul(decimal.NewFromInt(1e9))
-	}
-
+	// EL
 	elDs := goqu.Dialect("postgres").
 		Select(goqu.COALESCE(goqu.SUM(goqu.L("value")), 0)).
 		From(goqu.I("execution_rewards_finalized").As("b"))
@@ -209,7 +184,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
 			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
 
-		if groupId != -1 {
+		if groupId != t.AllGroups {
 			elDs = elDs.
 				Where(goqu.L("v.group_id = ?", groupId))
 		}
@@ -223,28 +198,19 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return IncomeInfo{}, err
 	}
 
-	roiDividendEl := d.convertElToMain(result.Rewards.El).Add(d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)))
-	result.Apr.El = calcAPR(roiDividendEl, d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0)), aprDivisor)
-
-	if hours == -1 {
-		elTotalDs := elDs.
-			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
-
-		result.Rewards.El, err = runQuery[decimal.Decimal](ctx, d.alloyReader, elTotalDs)
-		if err != nil {
-			return IncomeInfo{}, err
-		}
-	}
+	result.Apr.El = calcAPR(d.convertElToMain(result.Rewards.El), cumulativeClBaseMain, epochDuration)
 
 	return result, nil
 }
 
 // precondition: invested amount and rewards are in the same currency
-func calcAPR(rewards, investedAmount decimal.Decimal, aprDivisor uint64) float64 {
-	if rewards.IsZero() || investedAmount.IsZero() {
+func calcAPR(rewards, cumulativeDivisor decimal.Decimal, epochDuration time.Duration) float64 {
+	if rewards.IsZero() || cumulativeDivisor.IsZero() {
 		return 0
 	}
-	return (rewards.Div(investedAmount).Sub(decimal.NewFromInt(1)).Mul(decimal.NewFromInt(100 * 365 * 24 * 60 * 60).Div(decimal.NewFromInt(int64(aprDivisor))))).InexactFloat64()
+	epochDurationScaleFactor := decimal.NewFromInt(int64(utils.Year.Seconds())).Div(decimal.NewFromInt(int64(epochDuration.Seconds())))
+	percentScaleFactor := decimal.NewFromInt(100) // TODO remove BEDS-1147
+	return rewards.Div(cumulativeDivisor).Mul(epochDurationScaleFactor).Mul(percentScaleFactor).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
@@ -455,7 +421,7 @@ func processSyncCommitteeResults(queryResult []SyncCommitteeResult, currentSyncP
 
 // Retrieves the start epoch for a given time period (last 1h, 24h, 7d, 30d)
 func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.TimePeriod) (uint64, error) {
-	clickhouseTable, _, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return 0, err
 	}
@@ -533,7 +499,7 @@ func buildMinMaxEpochsQuery(dashboardId t.VDBId, groupId int64, clickhouseTable 
 
 // GetMinMaxEpochs is the main function that ties all steps together
 func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (uint64, uint64, error) {
-	clickhouseTable, _, err := getTablesForPeriod(period)
+	clickhouseTable, err := getTablesForPeriod(period)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -576,7 +542,7 @@ func buildLastScheduledBlockAndSyncDateQuery(clickhouseTable string, dashboardId
 // Gets last scheduled block/sync committee epoch
 func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context, dashboardId t.VDBId, groupId int64) (time.Time, time.Time, error) {
 	// we need to use clickhouse table for all_time period
-	clickhouseTotalTable, _, err := getTablesForPeriod(enums.AllTime)
+	clickhouseTotalTable, err := getTablesForPeriod(enums.AllTime)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
@@ -679,33 +645,27 @@ func processPastSyncCommitteesResults(validatorIndices []uint64) (map[uint64]uin
 	return validatorCountMap, nil
 }
 
-// Determines the validator dashboard data table and associated time duration in hours
+// Determines the validator dashboard data table
 // based on the given time period (1h, 24h, 7d, 30d, all_time)
-func getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
+func getTablesForPeriod(period enums.TimePeriod) (string, error) {
 	table := ""
-	hours := 0
 
 	switch period {
 	case enums.TimePeriods.Last1h:
 		table = "validator_dashboard_data_rolling_1h"
-		hours = 1
 	case enums.TimePeriods.Last24h:
 		table = "validator_dashboard_data_rolling_24h"
-		hours = 24
 	case enums.TimePeriods.Last7d:
 		table = "validator_dashboard_data_rolling_7d"
-		hours = 7 * 24
 	case enums.TimePeriods.Last30d:
 		table = "validator_dashboard_data_rolling_30d"
-		hours = 30 * 24
 	case enums.TimePeriods.AllTime:
 		table = "validator_dashboard_data_rolling_total"
-		hours = -1
 	default:
-		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
+		return "", fmt.Errorf("not-implemented time period: %v", period)
 	}
 
-	return table, hours, nil
+	return table, nil
 }
 
 // Retrieves the validator dashboard data table and corresponding date column
