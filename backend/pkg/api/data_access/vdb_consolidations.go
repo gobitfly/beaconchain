@@ -2,17 +2,18 @@ package dataaccess
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
-func (d *DataAccessService) GetValidatorDashboardConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsColumn], search string, limit uint64) ([]t.VDBConsolidationsTableRow, *t.Paging, error) {
-	var currentCursor t.ConsolidationsCursor
+func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsElColumn], search string, limit uint64) ([]t.VDBConsolidationsElTableRow, *t.Paging, error) {
+	return nil, nil, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsClColumn], search string, limit uint64) ([]t.VDBConsolidationsClTableRow, *t.Paging, error) {
+	// WIP
+	/*var currentCursor t.ConsolidationsCursor
 	var err error
 	if cursor != "" {
 		if currentCursor, err = utils.StringToCursor[t.ConsolidationsCursor](cursor); err != nil {
@@ -62,5 +63,6 @@ func (d *DataAccessService) GetValidatorDashboardConsolidations(ctx context.Cont
 		consolidationsDs = consolidationsDs.Where(directions)
 	}
 	res, err := runQueryRows[[]t.VDBConsolidationsTableRow](ctx, db.ReaderDb, consolidationsDs)
-	return res, &t.Paging{}, err
+	return res, &t.Paging{}, err*/
+	return nil, nil, nil
 }
