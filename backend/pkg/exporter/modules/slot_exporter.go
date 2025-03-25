@@ -573,7 +573,7 @@ func ExportSlot(client SlotExporterClient, slot uint64, isHeadEpoch bool, cache 
 
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
-			err := exportValidatorData(block, epoch, chainID, cache, client, exporterdb, bt, tx)
+			err := ExportValidatorData(block.Validators, epoch, chainID, cache, client, exporterdb, bt, tx)
 			if err != nil {
 				return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
 			}
@@ -756,12 +756,12 @@ func ExportSlot(client SlotExporterClient, slot uint64, isHeadEpoch bool, cache 
 	return nil
 }
 
-func exportValidatorData(block *types.Block, epoch, chainID uint64, cache edb.SlotExporterCacheRepository, client SlotExporterClient, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
+func ExportValidatorData(validators []*types.Validator, epoch, chainID uint64, cache edb.SlotExporterCacheRepository, client SlotExporterClient, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
 	// and also updates the status field in the validators array
-	err := SaveValidators(block.Validators, exporterdb, bt, tx)
+	err := SaveValidators(validators, exporterdb, bt, tx)
 	if err != nil {
 		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
 	}
@@ -769,9 +769,9 @@ func exportValidatorData(block *types.Block, epoch, chainID uint64, cache edb.Sl
 	var genesisBalances map[uint64][]*types.ValidatorBalance
 	if epoch == 0 {
 		var err error
-		indices := make([]uint64, 0, len(block.Validators))
+		indices := make([]uint64, 0, len(validators))
 
-		for _, validator := range block.Validators {
+		for _, validator := range validators {
 			indices = append(indices, validator.Index)
 		}
 		genesisBalances, err = bt.GetValidatorBalanceHistory(indices, 0, 0)
@@ -780,7 +780,7 @@ func exportValidatorData(block *types.Block, epoch, chainID uint64, cache edb.Sl
 		}
 	}
 
-	validators, err := exporterdb.GetValidatorsWithMissingBalances(10000, tx)
+	vl, err := exporterdb.GetValidatorsWithMissingBalances(10000, tx)
 	if err != nil {
 		return fmt.Errorf("error retrieving validators with missing balances: %w", err)
 	}
@@ -789,7 +789,7 @@ func exportValidatorData(block *types.Block, epoch, chainID uint64, cache edb.Sl
 	currentActivationEpoch := uint64(0)
 
 	timeStart := time.Now()
-	for _, validator := range validators {
+	for _, validator := range vl {
 		if validator.ActivationEpoch > epoch {
 			continue
 		}
@@ -854,13 +854,13 @@ func exportValidatorData(block *types.Block, epoch, chainID uint64, cache edb.Sl
 		// generate mapping
 		RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
 			Epoch:   types.Epoch(epoch),
-			Mapping: make([]*types.CachedValidator, len(block.Validators)),
+			Mapping: make([]*types.CachedValidator, len(validators)),
 		}
 
 		activationMapping := make(map[int][]uint64)
 		start := time.Now()
 
-		for _, v := range block.Validators {
+		for _, v := range validators {
 			r := types.CachedValidator{
 				PublicKey:             v.PublicKey,
 				Status:                v.Status,

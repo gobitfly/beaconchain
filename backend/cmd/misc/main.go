@@ -433,8 +433,17 @@ func Run() {
 			data.Validators = append(data.Validators, validatorsArr[start:end]...)
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
-
-			err = edb.NewSlotExporterDB(db.WriterDb).SaveValidators(0, data.Validators, rpcClient, len(data.Validators), tx)
+			chainID := utils.Config.Chain.ClConfig.DepositChainID
+			err = modules.ExportValidatorData(
+				data.Validators,
+				0,
+				chainID,
+				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
+				rpcClient,
+				edb.NewSlotExporterDB(db.WriterDb),
+				edb.NewSlotExporterBT(db.BigtableClient),
+				tx,
+			)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}
