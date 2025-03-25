@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
-	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -15,17 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 )
 
-func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
-	result := make([]t.VDBWithdrawalsTableRow, 0)
+func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsElColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsElTableRow, *t.Paging, error) {
+	// TODO implement changes
+	/*result := make([]t.VDBWithdrawalsElTableRow, 0)
 	var paging t.Paging
 
 	// Initialize the cursor
@@ -227,7 +222,7 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 	cursorData := make([]t.WithdrawalsCursor, 0)
 	for i, withdrawal := range queryResult {
 		address := hexutil.Encode(withdrawal.Address)
-		result = append(result, t.VDBWithdrawalsTableRow{
+		result = append(result, t.VDBWithdrawalsElTableRow{
 			Epoch:     withdrawal.BlockSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 			Slot:      withdrawal.BlockSlot,
 			Index:     withdrawal.ValidatorIndex,
@@ -274,11 +269,11 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 		} else {
 			// If there is no next data, add a missing estimate row
-			nextData = &t.VDBWithdrawalsTableRow{
+			nextData = &t.VDBWithdrawalsElTableRow{
 				IsMissingEstimate: true,
 			}
 		}
-		result = append([]t.VDBWithdrawalsTableRow{*nextData}, result...)
+		result = append([]t.VDBWithdrawalsElTableRow{*nextData}, result...)
 
 		// Flag if above limit
 		moreDataFlag = moreDataFlag || len(result) > int(limit)
@@ -299,14 +294,21 @@ func (d *DataAccessService) GetValidatorDashboardWithdrawals(ctx context.Context
 		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
 	}
 
-	return result, p, nil
+	return result, p, nil*/
+	return nil, nil, nil
 }
 
+func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsClColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsClTableRow, *t.Paging, error) {
+	// TODO
+	return nil, nil, nil
+}
+
+// TODO implement changes
 // returns information about the next *automatic* withdrawal, if applicable (=skimming)
 // 0x00 creds (genesis): never
 // 0x01 creds (capella): if balance > 32 EB
 // 0x02 creds (electra): if balance > 2048 EB
-func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidator) (*t.VDBWithdrawalsTableRow, error) {
+/*func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidator) (*t.VDBWithdrawalsElTableRow, error) {
 	if len(queryValidators) == 0 {
 		return nil, nil
 	}
@@ -422,7 +424,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 		return nil, err
 	}
 
-	nextData := &t.VDBWithdrawalsTableRow{
+	nextData := &t.VDBWithdrawalsElTableRow{
 		Epoch: nextWithdrawalSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch,
 		Slot:  nextWithdrawalSlot,
 		Index: *nextValidator,
@@ -435,10 +437,12 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	}
 
 	return nextData, nil
-}
+	return nil, nil
+}*/
 
-func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
-	result := &t.VDBTotalWithdrawalsData{
+func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalExecutionWithdrawalsData, error) {
+	// TODO
+	result := &t.VDBTotalExecutionWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
 
@@ -534,6 +538,11 @@ func (d *DataAccessService) GetValidatorDashboardTotalWithdrawals(ctx context.Co
 	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
 
 	return result, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalConsensusWithdrawalsData, error) {
+	// TODO
+	return nil, nil
 }
 
 func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator, error) {

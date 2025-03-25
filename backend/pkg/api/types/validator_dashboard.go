@@ -270,22 +270,51 @@ type GetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTota
 
 // ------------------------------------------------------------
 // Withdrawals Tab
-type VDBWithdrawalsTableRow struct {
-	Epoch             uint64          `json:"epoch"`
-	Slot              uint64          `json:"slot"`
-	Index             uint64          `json:"index"`
-	GroupId           uint64          `json:"group_id"`
-	Recipient         Address         `json:"recipient"`
-	Amount            decimal.Decimal `json:"amount"`
-	IsMissingEstimate bool            `json:"is_missing_estimate"`
+type VDBWithdrawalsElTableRow struct {
+	BlockQueued        uint64          `json:"block_queued"`
+	TimestampQueued    int64           `json:"timestamp_queued"`
+	BlockProcessed     uint64          `json:"block_processed"`
+	TimestampProcessed int64           `json:"timestamp_processed"`
+	Index              uint64          `json:"index"`
+	TxHash             Hash            `json:"tx_hash"`
+	GroupId            uint64          `json:"group_id"`
+	Sender             Address         `json:"sender"`
+	Executer           Address         `json:"executer"`
+	Amount             decimal.Decimal `json:"amount"`
+	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
+	Fee                decimal.Decimal `json:"fee"`
+	IsMissingEstimate  bool            `json:"is_missing_estimate"`
 }
-type GetValidatorDashboardWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsTableRow]
+type GetValidatorDashboardExecutionLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsElTableRow]
 
-type VDBTotalWithdrawalsData struct {
+type VDBWithdrawalsClTableRow struct {
+	SlotQueued            *uint64         `json:"slot_queued"` // does not exist pre-pectra
+	SlotProcessed         uint64          `json:"slot_processed"`
+	Index                 uint64          `json:"index"`
+	PublicKey             PubKey          `json:"public_key"`
+	WithdrawalCredentials Hash            `json:"withdrawal_credentials"`
+	Signature             Hash            `json:"signature"`
+	GroupId               uint64          `json:"group_id"`
+	Recipient             Address         `json:"recipient"`
+	Amount                decimal.Decimal `json:"amount"`
+	Type                  string          `json:"type" tstype:"'auto' | 'manual'" faker:"oneof: auto, manual"`
+	Status                string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
+	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'wrong_withdrawal_credentials' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding'" faker:"oneof: full_queue, unknown_pubkey, wrong_withdrawal_credentials, inactive, exiting, too_young, pending_withdrawals, not_compounding'"`
+	IsMissingEstimate     bool            `json:"is_missing_estimate"`
+}
+type GetValidatorDashboardConsensusLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsClTableRow]
+
+type VDBTotalExecutionWithdrawalsData struct {
 	TotalAmount decimal.Decimal `json:"total_amount"`
 }
 
-type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithdrawalsData]
+type GetValidatorDashboardTotalExecutionWithdrawalsResponse ApiDataResponse[VDBTotalExecutionWithdrawalsData]
+
+type VDBTotalConsensusWithdrawalsData struct {
+	TotalAmount decimal.Decimal `json:"total_amount"`
+}
+
+type GetValidatorDashboardTotalConsensusWithdrawalsResponse ApiDataResponse[VDBTotalConsensusWithdrawalsData]
 
 // ------------------------------------------------------------
 // Rocket Pool Tab
