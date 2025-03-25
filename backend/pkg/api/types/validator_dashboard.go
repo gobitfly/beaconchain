@@ -318,16 +318,17 @@ type GetValidatorDashboardTotalConsensusWithdrawalsResponse ApiDataResponse[VDBT
 // ------------------------------------------------------------
 // Consolidations Tab
 type VDBConsolidationsElTableRow struct {
-	Sender             Address         `json:"sender"`
+	From               Address         `json:"-"`
+	Consolidator       Address         `json:"consolidator"`
 	Source             uint64          `json:"source"`
 	Target             uint64          `json:"target"`
 	BlockQueued        uint64          `json:"block_queued"`
-	TimestampQueued    int64           `json:"timestamp_queued"`
+	TimestampQueued    int64           `json:"timestamp_queued" faker:"past_timestamp"`
 	BlockProcessed     uint64          `json:"block_processed"`
-	TimestampProcessed int64           `json:"timestamp_processed"`
+	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
 	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
-	TxHash             Hash            `json:"tx_hash"`
-	Fee                decimal.Decimal `json:"fee"`
+	TxHash             Hash            `json:"tx_hash" faker:"tx_hash"`
+	Fee                decimal.Decimal `json:"fee" faker:"eth"`
 }
 type GetValidatorDashboardExecutionLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsElTableRow]
 
@@ -338,7 +339,7 @@ type VDBConsolidationsClTableRow struct {
 	SlotProcessed uint64          `json:"slot_processed"`
 	Status        string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason  *string         `json:"reject_reason,omitempty" tstype:"'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_wrong_withdrawal_credentials' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals'" faker:"oneof: source_equals_target, full_queue, insufficient_consolidation_churn, source_unknown_pubkey, target_unknown_pubkey, source_wrong_withdrawal_credentials, target_not_compounding, source_inactive, target_inactive, source_exiting, target_exiting, source_too_young, source_pending_withdrawals"`
-	Amount        decimal.Decimal `json:"amount"`
+	Amount        decimal.Decimal `json:"amount" faker:"eth"`
 }
 type GetValidatorDashboardConsensusLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsClTableRow]
 

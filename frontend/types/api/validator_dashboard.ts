@@ -276,7 +276,7 @@ export type GetValidatorDashboardTotalConsensusWithdrawalsResponse = ApiDataResp
  * Consolidations Tab
  */
 export interface VDBConsolidationsElTableRow {
-  sender: Address;
+  consolidator: Address;
   source: number /* uint64 */;
   target: number /* uint64 */;
   block_queued: number /* uint64 */;
