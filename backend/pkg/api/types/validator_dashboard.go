@@ -273,17 +273,17 @@ type GetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTota
 // Withdrawals Tab
 type VDBWithdrawalsElTableRow struct {
 	BlockQueued        uint64          `json:"block_queued"`
-	TimestampQueued    int64           `json:"timestamp_queued"`
+	TimestampQueued    int64           `json:"timestamp_queued" faker:"past_timestamp"`
 	BlockProcessed     uint64          `json:"block_processed"`
-	TimestampProcessed int64           `json:"timestamp_processed"`
+	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
 	Index              uint64          `json:"index"`
-	TxHash             Hash            `json:"tx_hash"`
+	TxHash             Hash            `json:"tx_hash" faker:"tx_hash"`
 	GroupId            uint64          `json:"group_id"`
-	Sender             Address         `json:"sender"`
-	Executor           Address         `json:"executor"`
-	Amount             decimal.Decimal `json:"amount"`
+	From               Address         `json:"-"`
+	Withdrawer         Address         `json:"withdrawer"`
+	Amount             decimal.Decimal `json:"amount" faker:"eth"`
 	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
-	Fee                decimal.Decimal `json:"fee"`
+	Fee                decimal.Decimal `json:"fee" faker:"eth"`
 }
 type GetValidatorDashboardExecutionLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsElTableRow]
 
@@ -291,12 +291,12 @@ type VDBWithdrawalsClTableRow struct {
 	SlotQueued            *uint64         `json:"slot_queued"` // does not exist pre-pectra
 	SlotProcessed         uint64          `json:"slot_processed"`
 	Index                 uint64          `json:"index"`
-	PublicKey             PubKey          `json:"public_key"`
+	PublicKey             PubKey          `json:"public_key" faker:"pubkey"`
 	WithdrawalCredentials Hash            `json:"withdrawal_credentials"`
 	Signature             Hash            `json:"signature"`
 	GroupId               uint64          `json:"group_id"`
 	Recipient             Address         `json:"recipient"`
-	Amount                decimal.Decimal `json:"amount"`
+	Amount                decimal.Decimal `json:"amount" faker:"eth"`
 	Type                  string          `json:"type" tstype:"'auto' | 'manual'" faker:"oneof: auto, manual"`
 	Status                string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'wrong_withdrawal_credentials' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding'" faker:"oneof: full_queue, unknown_pubkey, wrong_withdrawal_credentials, inactive, exiting, too_young, pending_withdrawals, not_compounding'"`
