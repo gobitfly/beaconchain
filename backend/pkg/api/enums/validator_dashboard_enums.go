@@ -284,7 +284,7 @@ func (c VDBConsolidationsElColumn) Int() int {
 
 func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColumn {
 	switch s {
-	case "", "block_processed", "age":
+	case "", "block_processed", "timestamp":
 		return VDBConsolidationElBlockProcessed
 	default:
 		return VDBConsolidationsElColumn(-1)
@@ -324,7 +324,7 @@ func (c VDBConsolidationsClColumn) Int() int {
 
 func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColumn {
 	switch s {
-	case "", "slot_processed", "age":
+	case "", "slot_processed", "timestamp":
 		return VDBConsolidationClSlotProcessed
 	default:
 		return VDBConsolidationsClColumn(-1)
