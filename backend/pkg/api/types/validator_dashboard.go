@@ -318,15 +318,30 @@ type GetValidatorDashboardTotalConsensusWithdrawalsResponse ApiDataResponse[VDBT
 
 // ------------------------------------------------------------
 // Consolidations Tab
-type VDBConsolidationsTableRow struct {
-	Sender Address         `json:"sender"`
-	Source uint64          `json:"source"`
-	Target uint64          `json:"target"`
-	Epoch  uint64          `json:"epoch"`
-	Slot   uint64          `json:"slot"`
-	Amount decimal.Decimal `json:"amount"`
+type VDBConsolidationsElTableRow struct {
+	Sender             Address         `json:"sender"`
+	Source             uint64          `json:"source"`
+	Target             uint64          `json:"target"`
+	BlockQueued        uint64          `json:"block_queued"`
+	TimestampQueued    int64           `json:"timestamp_queued"`
+	BlockProcessed     uint64          `json:"block_processed"`
+	TimestampProcessed int64           `json:"timestamp_processed"`
+	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
+	TxHash             Hash            `json:"tx_hash"`
+	Fee                decimal.Decimal `json:"fee"`
 }
-type GetValidatorDashboardConsolidationsResponse ApiPagingResponse[VDBConsolidationsTableRow]
+type GetValidatorDashboardExecutionLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsElTableRow]
+
+type VDBConsolidationsClTableRow struct {
+	Source        uint64          `json:"source"`
+	Target        uint64          `json:"target"`
+	SlotQueued    uint64          `json:"slot_queued"`
+	SlotProcessed uint64          `json:"slot_processed"`
+	Status        string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
+	RejectReason  *string         `json:"reject_reason,omitempty"`
+	Amount        decimal.Decimal `json:"amount"`
+}
+type GetValidatorDashboardConsensusLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsClTableRow]
 
 // ------------------------------------------------------------
 // Rocket Pool Tab

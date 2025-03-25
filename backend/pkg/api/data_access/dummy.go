@@ -456,8 +456,12 @@ func (*DummyService) GetValidatorDashboardTotalClWithdrawals(ctx context.Context
 	return getDummyStruct[t.VDBTotalConsensusWithdrawalsData](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsColumn], search string, limit uint64) ([]t.VDBConsolidationsTableRow, *t.Paging, error) {
-	return []t.VDBConsolidationsTableRow{}, &t.Paging{}, nil
+func (*DummyService) GetValidatorDashboardExecutionLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsElColumn], search string, limit uint64) ([]t.VDBConsolidationsElTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBConsolidationsElTableRow](ctx)
+}
+
+func (*DummyService) GetValidatorDashboardConsensusLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsClColumn], search string, limit uint64) ([]t.VDBConsolidationsClTableRow, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBConsolidationsClTableRow](ctx)
 }
 
 func (*DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
