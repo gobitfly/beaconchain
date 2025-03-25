@@ -152,6 +152,8 @@ func (t TimePeriod) Duration() time.Duration {
 		return 7 * day
 	case Last30d:
 		return 30 * day
+	case AllTime:
+		return -1
 	default:
 		return 0
 	}
