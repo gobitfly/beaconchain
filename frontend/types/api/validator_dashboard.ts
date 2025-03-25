@@ -276,11 +276,11 @@ export type GetValidatorDashboardTotalConsensusWithdrawalsResponse = ApiDataResp
  * Consolidations Tab
  */
 export interface VDBConsolidationsElTableRow {
-  sender: Address;
+  consolidator: Address;
   source: number /* uint64 */;
   target: number /* uint64 */;
-  block_queued: number /* uint64 */;
-  timestamp_queued: number /* int64 */;
+  block_queued?: number /* uint64 */;
+  timestamp_queued?: number /* int64 */;
   block_processed: number /* uint64 */;
   timestamp_processed: number /* int64 */;
   status: 'queued' | 'processed';
@@ -294,7 +294,7 @@ export interface VDBConsolidationsClTableRow {
   slot_queued: number /* uint64 */;
   slot_processed: number /* uint64 */;
   status: 'queued' | 'completed' | 'rejected';
-  reject_reason?: 'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_wrong_withdrawal_credentials' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals';
+  reject_reason?: 'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_no_execution_withdrawal_credentials' | 'source_address_mismatch' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals' | 'source_slashed';
   amount: string /* decimal.Decimal */;
 }
 export type GetValidatorDashboardConsensusLayerConsolidationsResponse = ApiPagingResponse<VDBConsolidationsClTableRow>;
