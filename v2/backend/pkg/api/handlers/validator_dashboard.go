@@ -73,7 +73,7 @@ func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input
 //	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
 //	@Param			group_id		path		integer	true	"The ID of the group."
 //	@Param			period			query		string	true	"Time period to get data for."	Enums(all_time, last_30d, last_7d, last_24h, last_1h)
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
 //	@Success		200				{object}	types.GetValidatorDashboardGroupSummaryResponse
 //	@Failure		400				{object}	types.ApiErrorResponse
 //	@Router			/validator-dashboards/{dashboard_id}/groups/{group_id}/summary [get]
@@ -248,4 +248,172 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 	return &types.GetValidatorDashboardSummaryChartResponse{
 		Data: *data,
 	}, nil
+}
+
+// GetValidatorDashboardExecutionLayerWithdrawals godoc
+//
+//	@Description	Get withdrawals information (EL) for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor` value of the previous response to navigate to forward, or pass the `paging.prev_cursor` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Block, Address, Group, Public Key, Transaction Hash."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-withdrawals [get]
+func (i *inputGetValidatorDashboardExecutionLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.protocolModes = v.checkProtocolModes(params["modes"])
+	i.sort = *checkSort[enums.VDBWithdrawalsElColumn](&v, params["sort"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardExecutionLayerWithdrawals struct {
+	Paging
+	protocolModes types.VDBProtocolModes
+	sort          types.Sort[enums.VDBWithdrawalsElColumn]
+	dashboardId   interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardExecutionLayerWithdrawals(ctx context.Context, input inputGetValidatorDashboardExecutionLayerWithdrawals) (types.GetValidatorDashboardExecutionLayerWithdrawalsResponse, error) {
+	var r types.GetValidatorDashboardExecutionLayerWithdrawalsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardElWithdrawals(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit, input.protocolModes)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
+// GetValidatorDashboardConsensusLayerWithdrawals godoc
+//
+//	@Description	Get withdrawals information (CL) for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor` value of the previous response to navigate to forward, or pass the `paging.prev_cursor` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
+//	@Param			search			query		string	false	"Search for Index, Slot, Group, Public Key, Recipient."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
+//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-withdrawals [get]
+func (i *inputGetValidatorDashboardConsensusLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.protocolModes = v.checkProtocolModes(params["modes"])
+	i.sort = *checkSort[enums.VDBWithdrawalsClColumn](&v, params["sort"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardConsensusLayerWithdrawals struct {
+	Paging
+	protocolModes types.VDBProtocolModes
+	sort          types.Sort[enums.VDBWithdrawalsClColumn]
+	dashboardId   interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardConsensusLayerWithdrawals(ctx context.Context, input inputGetValidatorDashboardConsensusLayerWithdrawals) (types.GetValidatorDashboardConsensusLayerWithdrawalsResponse, error) {
+	var r types.GetValidatorDashboardConsensusLayerWithdrawalsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardClWithdrawals(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit, input.protocolModes)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
+
+// GetValidatorDashboardTotalExecutionLayerWithdrawals godoc
+//
+//	@Description	Get total withdrawals information (EL) for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			search			query		string	false	"Search for Index, Block, Address, Group, Public Key, Transaction Hash."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-execution-layer-withdrawals [get]
+func (i *inputGetValidatorDashboardTotalExecutionLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.protocolModes = v.checkProtocolModes(params["modes"])
+	i.search = params["search"]
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardTotalExecutionLayerWithdrawals struct {
+	protocolModes types.VDBProtocolModes
+	search        string
+	dashboardId   interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardTotalExecutionLayerWithdrawals(ctx context.Context, input inputGetValidatorDashboardTotalExecutionLayerWithdrawals) (types.GetValidatorDashboardTotalExecutionWithdrawalsResponse, error) {
+	var r types.GetValidatorDashboardTotalExecutionWithdrawalsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+
+	data, err := h.getDataAccessor(ctx).GetValidatorDashboardTotalElWithdrawals(ctx, *dashboardId, input.search, input.protocolModes)
+	if err != nil {
+		return r, err
+	}
+	r.Data = *data
+	return r, nil
+}
+
+// GetValidatorDashboardTotalConsensusLayerWithdrawals godoc
+//
+//	@Description	Get total withdrawals information (CL) for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			search			query		string	false	"Search for Index, Slot, Group, Public Key, Recipient."
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
+//	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusWithdrawalsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/total-consensus-layer-withdrawals [get]
+func (i *inputGetValidatorDashboardTotalConsensusLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.protocolModes = v.checkProtocolModes(params["modes"])
+	i.search = params["search"]
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardTotalConsensusLayerWithdrawals struct {
+	protocolModes types.VDBProtocolModes
+	search        string
+	dashboardId   interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardTotalConsensusLayerWithdrawals(ctx context.Context, input inputGetValidatorDashboardTotalConsensusLayerWithdrawals) (types.GetValidatorDashboardTotalConsensusWithdrawalsResponse, error) {
+	var r types.GetValidatorDashboardTotalConsensusWithdrawalsResponse
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return r, err
+	}
+
+	data, err := h.getDataAccessor(ctx).GetValidatorDashboardTotalClWithdrawals(ctx, *dashboardId, input.search, input.protocolModes)
+	if err != nil {
+		return r, err
+	}
+	r.Data = *data
+	return r, nil
 }
