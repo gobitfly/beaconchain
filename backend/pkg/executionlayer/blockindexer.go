@@ -33,7 +33,8 @@ var defaultBlockIndexerConfig = BlockIndexerConfig{
 	TraceMode:   "geth",
 }
 
-func (config *BlockIndexerConfig) validate() {
+// init set default value for unset fields
+func (config *BlockIndexerConfig) init() {
 	if config.Concurrency == 0 {
 		config.Concurrency = defaultBlockIndexerConfig.Concurrency
 	}
@@ -51,7 +52,7 @@ type BlockIndexer struct {
 }
 
 func NewBlockIndexer(store Store, lastBlockStore db2.LastBlocksStore, config BlockIndexerConfig, client Client, transformers ...TransformFunc) *BlockIndexer {
-	config.validate()
+	config.init()
 	return &BlockIndexer{
 		store:          store,
 		lastBlockStore: lastBlockStore,

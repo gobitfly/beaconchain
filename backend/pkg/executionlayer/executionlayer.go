@@ -28,7 +28,8 @@ var defaultConfig = Config{
 	BlockFrequency:      14 * time.Second,
 }
 
-func (config *Config) validate() {
+// init set default value for unset fields
+func (config *Config) init() {
 	if config.TokenPriceFrequency == 0 {
 		config.TokenPriceFrequency = defaultConfig.TokenPriceFrequency
 	}
@@ -47,7 +48,7 @@ type IndexerService struct {
 }
 
 func NewIndexerService(stateReader StateReader, indexer *Indexer, reorgWatcher *ReorgWatcher, tokenPricer *TokenPricer, config Config) *IndexerService {
-	config.validate()
+	config.init()
 	return &IndexerService{
 		tokenPricer:  tokenPricer,
 		indexer:      indexer,
@@ -174,7 +175,8 @@ var defaultIndexerConfig = IndexerConfig{
 	Bulk:                    8000,
 }
 
-func (c *IndexerConfig) validate() {
+// init set default value for unset fields
+func (c *IndexerConfig) init() {
 	if c.BalanceUpdaterBatchSize == 0 {
 		c.BalanceUpdaterBatchSize = defaultIndexerConfig.BalanceUpdaterBatchSize
 	}
@@ -200,7 +202,7 @@ type Indexer struct {
 }
 
 func NewIndexer(cache db2.CachedBalanceUpdates, blockIndexer *BlockIndexer, balanceUpdater *BalanceUpdater, store db2.StoreV1, ensImporter *ENSImporter, config IndexerConfig) *Indexer {
-	config.validate()
+	config.init()
 	return &Indexer{
 		balanceCache:   cache,
 		indexer:        blockIndexer,
