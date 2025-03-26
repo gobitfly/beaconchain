@@ -8,6 +8,7 @@
         "BcLink",
         "BcPageWrapper",
         "BcPremiumModal",
+        "BcTableAgeHeader",
         "BcTablePager",
         "BcToggle",
         "DashboardChartSummary",
