@@ -388,7 +388,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 	var efficienciesMap map[uint64]float64
 	wg.Go(func() error {
 		var err error
-		clickhouseTable, err := getTablesForPeriod(period)
+		clickhouseTable, err := period.Table()
 		if err != nil {
 			return err
 		}

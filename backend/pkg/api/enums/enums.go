@@ -1,6 +1,9 @@
 package enums
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Enum interface {
 	Int() int
@@ -157,6 +160,27 @@ func (t TimePeriod) Duration() time.Duration {
 	default:
 		return 0
 	}
+}
+
+func (t TimePeriod) Table() (string, error) {
+	table := ""
+
+	switch t {
+	case TimePeriods.Last1h:
+		table = "validator_dashboard_data_rolling_1h"
+	case TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_24h"
+	case TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_7d"
+	case TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_30d"
+	case TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+	default:
+		return "", fmt.Errorf("not-implemented time period: %v", t)
+	}
+
+	return table, nil
 }
 
 // ----------------

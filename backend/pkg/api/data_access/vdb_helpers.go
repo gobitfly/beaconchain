@@ -118,7 +118,7 @@ type IncomeInfo struct {
 
 func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, timeFrame enums.TimePeriod) (rewardsApr IncomeInfo, err error) {
 	result := IncomeInfo{}
-	table, err := getTablesForPeriod(timeFrame)
+	table, err := timeFrame.Table()
 	if err != nil {
 		return result, err
 	}
@@ -164,7 +164,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		return IncomeInfo{}, nil
 	}
 
-	epochDuration := time.Duration(d.config.Chain.ClConfig.SecondsPerSlot * d.config.Chain.ClConfig.SlotsPerEpoch * uint64(time.Second))
+	epochDuration := time.Second * time.Duration(d.config.Chain.ClConfig.SecondsPerSlot*d.config.Chain.ClConfig.SlotsPerEpoch)
 	rewards := big.Int{}
 	rewards.Sub(rewardsResultTable.RoiDividend, rewardsResultTable.RoiDivisor)
 	cumulativeClBaseMain := d.convertClToMain(decimal.NewFromBigInt(rewardsResultTable.RoiDivisor, 0))
@@ -204,13 +204,13 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 }
 
 // precondition: invested amount and rewards are in the same currency
-func calcAPR(rewards, cumulativeDivisor decimal.Decimal, epochDuration time.Duration) float64 {
+func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration) float64 {
 	if rewards.IsZero() || cumulativeDivisor.IsZero() {
 		return 0
 	}
-	epochDurationScaleFactor := decimal.NewFromInt(int64(utils.Year.Seconds())).Div(decimal.NewFromInt(int64(epochDuration.Seconds())))
+	annualizationFactor := decimal.NewFromInt(utils.Year.Nanoseconds()).Div(decimal.NewFromInt(duration.Nanoseconds()))
 	percentScaleFactor := decimal.NewFromInt(100) // TODO remove BEDS-1147
-	return rewards.Div(cumulativeDivisor).Mul(epochDurationScaleFactor).Mul(percentScaleFactor).InexactFloat64()
+	return rewards.Div(cumulativeDivisor).Mul(annualizationFactor).Mul(percentScaleFactor).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
@@ -421,7 +421,7 @@ func processSyncCommitteeResults(queryResult []SyncCommitteeResult, currentSyncP
 
 // Retrieves the start epoch for a given time period (last 1h, 24h, 7d, 30d)
 func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.TimePeriod) (uint64, error) {
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return 0, err
 	}
@@ -499,7 +499,7 @@ func buildMinMaxEpochsQuery(dashboardId t.VDBId, groupId int64, clickhouseTable 
 
 // GetMinMaxEpochs is the main function that ties all steps together
 func (d *DataAccessService) getMinMaxEpochs(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (uint64, uint64, error) {
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return 0, 0, err
 	}
@@ -542,7 +542,7 @@ func buildLastScheduledBlockAndSyncDateQuery(clickhouseTable string, dashboardId
 // Gets last scheduled block/sync committee epoch
 func (d *DataAccessService) getLastScheduledBlockAndSyncDate(ctx context.Context, dashboardId t.VDBId, groupId int64) (time.Time, time.Time, error) {
 	// we need to use clickhouse table for all_time period
-	clickhouseTotalTable, err := getTablesForPeriod(enums.AllTime)
+	clickhouseTotalTable, err := enums.AllTime.Table()
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
@@ -643,29 +643,6 @@ func processPastSyncCommitteesResults(validatorIndices []uint64) (map[uint64]uin
 		validatorCountMap[validatorIndex]++
 	}
 	return validatorCountMap, nil
-}
-
-// Determines the validator dashboard data table
-// based on the given time period (1h, 24h, 7d, 30d, all_time)
-func getTablesForPeriod(period enums.TimePeriod) (string, error) {
-	table := ""
-
-	switch period {
-	case enums.TimePeriods.Last1h:
-		table = "validator_dashboard_data_rolling_1h"
-	case enums.TimePeriods.Last24h:
-		table = "validator_dashboard_data_rolling_24h"
-	case enums.TimePeriods.Last7d:
-		table = "validator_dashboard_data_rolling_7d"
-	case enums.TimePeriods.Last30d:
-		table = "validator_dashboard_data_rolling_30d"
-	case enums.TimePeriods.AllTime:
-		table = "validator_dashboard_data_rolling_total"
-	default:
-		return "", fmt.Errorf("not-implemented time period: %v", period)
-	}
-
-	return table, nil
 }
 
 // Retrieves the validator dashboard data table and corresponding date column
