@@ -102,6 +102,11 @@ var (
 		Name: "notifications_queue_sent_duration_seconds",
 		Help: "Amount of time notification took to be successfully sent",
 	}, []string{"channel", "event_type"})
+	ClientCallDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "client_call_duration_milliseconds",
+		Help:    "Duration of client calls",
+		Buckets: []float64{0.003, 0.005, 0.01, 0.03, .05, .1, .3, .5, 1, 3, 5, 10},
+	}, []string{"client", "method"})
 )
 
 func init() {

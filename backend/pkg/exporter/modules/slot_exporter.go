@@ -13,6 +13,7 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -419,6 +420,8 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 		}
 	}
 
+	metrics.TaskDuration.WithLabelValues("slot_exporter_export_slot").Observe(time.Since(start).Seconds())
+
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		if err := s.exportEpochAssignments(block, headEpoch); err != nil {
 			return err
@@ -436,6 +439,11 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 }
 
 func (s *exporter) exportDuties(block *types.Block) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_duties").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	syncDuties[types.Slot(block.Slot)] = make(map[types.ValidatorIndex]bool)
 
@@ -483,6 +491,11 @@ func (s *exporter) exportDuties(block *types.Block) error {
 }
 
 func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	epoch := utils.EpochOfSlot(block.Slot)
 	chainID := utils.Config.Chain.ClConfig.DepositChainID
 
@@ -555,7 +568,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	// if we are exporting the head epoch, update the validator db table
 	if isHeadEpoch {
-		if err := s.ExportValidatorData(block.Validators, epoch, chainID); err != nil {
+		if err := s.exportValidatorData(block.Validators, epoch, chainID); err != nil {
 			return err
 		}
 	}
@@ -596,6 +609,11 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 }
 
 func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint64) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_bigtable").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	// prepare the duties for export to bigtable
 	syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
 	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot <= (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch-1; slot++ {
@@ -638,6 +656,11 @@ func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint6
 }
 
 func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainID uint64, isHeadEpoch bool) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_redis").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
 		Epoch:       types.Epoch(epoch),
 		Assignments: block.EpochAssignments,
@@ -702,7 +725,12 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainI
 	return nil
 }
 
-func (s *exporter) ExportValidatorData(validators []*types.Validator, epoch, chainID uint64) error {
+func (s *exporter) exportValidatorData(validators []*types.Validator, epoch, chainID uint64) error {
+	timeStart := time.Now()
+	defer func(timeStart time.Time) {
+		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_validators_data").Observe(time.Since(timeStart).Seconds())
+	}(timeStart)
+
 	g := errgroup.Group{}
 
 	// this function sets exports the validator status into the db
@@ -734,7 +762,7 @@ func (s *exporter) ExportValidatorData(validators []*types.Validator, epoch, cha
 	balanceCache := make(map[uint64]map[uint64]uint64) // cache balances by epoch
 	currentActivationEpoch := uint64(0)
 
-	timeStart := time.Now()
+	balanceStart := time.Now()
 	for _, validator := range vl {
 		if validator.ActivationEpoch > epoch {
 			continue
@@ -779,7 +807,7 @@ func (s *exporter) ExportValidatorData(validators []*types.Validator, epoch, cha
 			return fmt.Errorf("error saving activation epoch balance for validator %v: %w", validator.ValidatorIndex, err)
 		}
 	}
-	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(balanceStart))
 
 	err = s.db.AnalyzeValidatorsTable(s.dbTx)
 	if err != nil {
