@@ -720,6 +720,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		log.Infof("updating validator status to %s for %d validators", status, len(validators))
 		_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(validators))
 		if err != nil {
+			log.Error(err, "error updating validator status", 0)
 			return fmt.Errorf("error updating validator status: %w", err)
 		}
 	}
