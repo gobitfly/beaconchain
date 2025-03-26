@@ -171,7 +171,7 @@ const { t: $t } = useTranslation()
     display: flex;
     flex-direction: column;
     gap: var(--padding-large);
-    width: $breakpoint-sm;
+    max-width: $breakpoint-sm;
 
     @media (min-width: $breakpoint-md) {
       flex-direction: row;
