@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"github.com/sirupsen/logrus"
 
 	"regexp"
 	"sort"
@@ -716,12 +717,24 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	}
 
 	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
+	const batchSize = 1000
+
 	for status, validators := range validatorStatusUpdateMap {
 		log.Infof("updating validator status to %s for %d validators", status, len(validators))
-		_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(validators))
-		if err != nil {
-			log.Error(err, "error updating validator status", 0)
-			return fmt.Errorf("error updating validator status: %w", err)
+
+		for i := 0; i < len(validators); i += batchSize {
+			end := i + batchSize
+			if end > len(validators) {
+				end = len(validators)
+			}
+
+			logrus.Infof("applying update batch from index %v to %v", i, end)
+			batch := validators[i:end]
+			_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(batch))
+			if err != nil {
+				log.Error(err, "error updating validator status", 0)
+				return fmt.Errorf("error updating validator status: %w", err)
+			}
 		}
 	}
 
