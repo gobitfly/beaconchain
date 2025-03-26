@@ -13,10 +13,10 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/metrics"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/klauspost/pgzip"
 
@@ -364,11 +364,12 @@ func (s *slotExporter) handleFinalizedSlots(head *types.ChainHead, exporter *exp
 }
 
 type exporter struct {
-	Client SlotExporterClient
-	cache  edb.SlotExporterCacheRepository
-	db     edb.SlotExporterDBRepository
-	bt     edb.SlotExporterBTRepository
-	dbTx   *sqlx.Tx
+	Client  SlotExporterClient
+	cache   edb.SlotExporterCacheRepository
+	db      edb.SlotExporterDBRepository
+	bt      edb.SlotExporterBTRepository
+	metrics metrics.MetricsRepository
+	dbTx    *sqlx.Tx
 
 	slotExporter *slotExporter
 }
@@ -379,6 +380,7 @@ func NewExporter(client SlotExporterClient, cache edb.SlotExporterCacheRepositor
 		cache:        cache,
 		db:           db,
 		bt:           bt,
+		metrics:      metrics.NewMetrics(),
 		dbTx:         dbTx,
 		slotExporter: slotExporter,
 	}
@@ -419,8 +421,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 			}
 		}
 	}
-
-	metrics.TaskDuration.WithLabelValues("slot_exporter_export_slot").Observe(time.Since(start).Seconds())
+	s.metrics.ObserveDuration("slot_exporter_export_slot", time.Since(start))
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		if err := s.exportEpochAssignments(block, headEpoch); err != nil {
@@ -441,7 +442,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 func (s *exporter) exportDuties(block *types.Block) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		metrics.TaskDuration.WithLabelValues("slot_exporter_export_duties").Observe(time.Since(timeStart).Seconds())
+		s.metrics.ObserveDuration("slot_exporter_export_duties", time.Since(timeStart))
 	}(timeStart)
 
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
@@ -493,7 +494,7 @@ func (s *exporter) exportDuties(block *types.Block) error {
 func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch").Observe(time.Since(timeStart).Seconds())
+		s.metrics.ObserveDuration("slot_exporter_export_epoch", time.Since(timeStart))
 	}(timeStart)
 
 	epoch := utils.EpochOfSlot(block.Slot)
@@ -611,7 +612,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint64) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_bigtable").Observe(time.Since(timeStart).Seconds())
+		s.metrics.ObserveDuration("slot_exporter_export_epoch_assignments_to_bigtable", time.Since(timeStart))
 	}(timeStart)
 
 	// prepare the duties for export to bigtable
@@ -658,7 +659,7 @@ func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint6
 func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainID uint64, isHeadEpoch bool) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_assignments_to_redis").Observe(time.Since(timeStart).Seconds())
+		s.metrics.ObserveDuration("slot_exporter_export_epoch_assignments_to_redis", time.Since(timeStart))
 	}(timeStart)
 
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
@@ -728,7 +729,7 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainI
 func (s *exporter) exportValidatorData(validators []*types.Validator, epoch, chainID uint64) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		metrics.TaskDuration.WithLabelValues("slot_exporter_export_epoch_validators_data").Observe(time.Since(timeStart).Seconds())
+		s.metrics.ObserveDuration("slot_exporter_export_epoch_validators_data", time.Since(timeStart))
 	}(timeStart)
 
 	g := errgroup.Group{}
