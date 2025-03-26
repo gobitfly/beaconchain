@@ -24,6 +24,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	exportermetrics "github.com/gobitfly/beaconchain/pkg/exporter/metrics"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -68,11 +69,13 @@ type SlotExporterDBRepository interface {
 
 type SlotExporterDB struct {
 	WriterDb *sqlx.DB
+	metrics  exportermetrics.MetricsRepository
 }
 
 func NewSlotExporterDB(writerDb *sqlx.DB) *SlotExporterDB {
 	return &SlotExporterDB{
 		WriterDb: writerDb,
+		metrics:  exportermetrics.NewMetrics(),
 	}
 }
 
@@ -92,14 +95,20 @@ func (s *SlotExporterDB) CommitTx(tx *sqlx.Tx) error {
 }
 
 func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_save_block", time.Since(start))
+	}()
+
 	blocksMap := make(map[uint64]map[string]*types.Block)
 	if blocksMap[block.Slot] == nil {
 		blocksMap[block.Slot] = make(map[string]*types.Block)
 	}
 	blocksMap[block.Slot][fmt.Sprintf("%x", block.BlockRoot)] = block
 
-	err := saveBlocks(blocksMap, tx, forceSlotUpdate)
+	err := s.saveBlocks(blocksMap, tx, forceSlotUpdate)
 	if err != nil {
+		s.metrics.Error("db_save_block")
 		log.Fatal(err, "error saving blocks to db", 0)
 		return fmt.Errorf("error saving blocks to db: %w", err)
 	}
@@ -107,12 +116,7 @@ func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx 
 	return nil
 }
 
-func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlotUpdate bool) error {
-	start := time.Now()
-	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_blocks").Observe(time.Since(start).Seconds())
-	}()
-
+func (s *SlotExporterDB) saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlotUpdate bool) error {
 	domain, err := utils.GetSigningDomain()
 	if err != nil {
 		return err
@@ -667,7 +671,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			}
 
 			// save the graffitiwall data of the block the db
-			err = saveGraffitiwall(b, tx)
+			err = s.saveGraffitiwall(b, tx)
 			if err != nil {
 				return fmt.Errorf("error saving graffitiwall data to the db: %v", err)
 			}
@@ -677,10 +681,10 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 	return nil
 }
 
-func saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
+func (s *SlotExporterDB) saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_graffitiwall").Observe(time.Since(start).Seconds())
+		s.metrics.ObserveDuration("db_save_graffitiwall", time.Since(start))
 	}()
 
 	stmtGraffitiwall, err := tx.Prepare(`
@@ -751,6 +755,11 @@ func (s *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Valida
 }
 
 func (s *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_save_new_validator", time.Since(start))
+	}()
+
 	_, err := tx.Exec(`INSERT INTO validators (
 		validatorindex,
 		pubkey,
@@ -779,7 +788,11 @@ func (s *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.T
 		fmt.Sprintf("%x", validator.PublicKey),
 		validator.Status)
 
-	return err
+	if err != nil {
+		s.metrics.Error("db_save_new_validator")
+		return err
+	}
+	return nil
 }
 
 func (s *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error) {
@@ -851,11 +864,17 @@ func (s *SlotExporterDB) UpdateValidatorsStatus(statusUpdateMap map[string][]uin
 }
 
 func (s *SlotExporterDB) UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_update_validators", time.Since(start))
+	}()
+
 	log.Infof("applying %v validator table update queries", totalUpdates)
 	updateStart := time.Now()
 
 	_, err := tx.Exec(queries)
 	if err != nil {
+		s.metrics.Error("db_update_validators")
 		log.Error(err, "error executing validator update query", 0)
 		return err
 	}
@@ -916,9 +935,15 @@ func (s *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, bal
 }
 
 func (s *SlotExporterDB) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_analyze_validators_table", time.Since(start))
+	}()
+
 	timeStart := time.Now()
 	_, err := tx.Exec("ANALYZE (SKIP_LOCKED) validators;")
 	if err != nil {
+		s.metrics.Error("db_analyze_validators_table")
 		return err
 	}
 	log.Infof("analyze of validators table completed, took %v", time.Since(timeStart))
@@ -946,7 +971,7 @@ func (s *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx
 func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		metrics.TaskDuration.WithLabelValues("db_save_epoch").Observe(time.Since(start).Seconds())
+		s.metrics.ObserveDuration("db_save_epoch", time.Since(start))
 		log.InfoWithFields(log.Fields{"epoch": epoch, "duration": time.Since(start)}, "completed saving epoch")
 	}()
 
@@ -1026,6 +1051,7 @@ func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, 
 		false)
 
 	if err != nil {
+		s.metrics.Error("db_save_epoch")
 		return fmt.Errorf("error executing save epoch statement: %w", err)
 	}
 
@@ -1049,6 +1075,11 @@ func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, 
 
 // UpdateEpochStatus will update the epoch status in the database
 func (s *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_update_epochs_status", time.Since(start))
+	}()
+
 	_, err := tx.Exec(`
 		UPDATE epochs SET
 			eligibleether = $1,
@@ -1065,7 +1096,11 @@ func (s *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, 
 		WHERE epoch = $5`,
 		stats.EligibleEther, stats.GlobalParticipationRate, stats.VotedEther, stats.Finalized, stats.Epoch)
 
-	return err
+	if err != nil {
+		s.metrics.Error("db_update_epoch_status")
+		return err
+	}
+	return nil
 }
 
 type EpochMetadata struct {
@@ -1272,7 +1307,7 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
-		metrics.TaskDuration.WithLabelValues("update_queue_deposits").Observe(time.Since(start).Seconds())
+		s.metrics.ObserveDuration("db_update_queue_deposits", time.Since(start))
 	}()
 
 	// first we remove any validator that isn't queued anymore
@@ -1353,6 +1388,7 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 		) AS data
 		WHERE validator_queue_deposits.validatorindex=data.validatorindex`)
 	if err != nil {
+		s.metrics.Error("db_update_queue_deposits")
 		log.Error(err, "error updating validator_queue_deposits: %v", 0)
 		return err
 	}
@@ -1360,6 +1396,11 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 }
 
 func (s *SlotExporterDB) CacheBlockDepositLookup() error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_cache_block_deposit_lookup", time.Since(start))
+	}()
+
 	err := CacheQuery(`
 		SELECT
 			uvdv.dashboard_id,
@@ -1379,6 +1420,7 @@ func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 		[]string{"dashboard_id", "block_slot", "block_index"},
 		[]string{"dashboard_id", "amount"})
 	if err != nil {
+		s.metrics.Error("slot_exporter_cache_block_deposit_lookup")
 		return err
 	}
 
@@ -1386,6 +1428,11 @@ func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 }
 
 func (s *SlotExporterDB) CacheBlockDepositRequestsLookup() error {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_cache_block_deposit_requests_lookup", time.Since(start))
+	}()
+
 	err := CacheQuery(`
 		SELECT
 			uvdv.dashboard_id,
@@ -1406,6 +1453,7 @@ func (s *SlotExporterDB) CacheBlockDepositRequestsLookup() error {
 		[]string{"dashboard_id", "block_slot", "request_index"},
 		[]string{"dashboard_id", "amount"})
 	if err != nil {
+		s.metrics.Error("db_cache_block_deposit_requests_lookup")
 		return err
 	}
 
@@ -1424,8 +1472,8 @@ const (
 	RollingTotal Rollings = `validator_dashboard_rolling_total`
 )
 
-func (r *Rollings) GetDuration() time.Duration {
-	switch *r {
+func (s *Rollings) GetDuration() time.Duration {
+	switch *s {
 	case Rolling1h:
 		return time.Hour
 	case Rolling24h:
@@ -2002,6 +2050,11 @@ func (s *SlotExporterDB) HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, er
 }
 
 func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_transform_switch_to_compounding_requests", time.Since(start))
+	}()
+
 	res, err := tx.Exec(`
 	INSERT INTO blocks_switch_to_compounding_requests (
 		block_slot, 
@@ -2023,11 +2076,13 @@ func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlo
 	ON CONFLICT DO NOTHING;
 	`, firstSlot, lastSlot)
 	if err != nil {
+		s.metrics.Error("db_transform_switch_to_compounding_requests")
 		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
 	}
 
 	consolidationRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
+		s.metrics.Error("db_transform_switch_to_compounding_requests")
 		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
 	}
 
@@ -2035,6 +2090,11 @@ func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlo
 }
 
 func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_transform_consolidation_requests", time.Since(start))
+	}()
+
 	res, err := tx.Exec(`
 	INSERT INTO blocks_consolidation_requests (
 		block_slot, 
@@ -2058,11 +2118,13 @@ func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint
 	ON CONFLICT DO NOTHING;
 	`, firstSlot, lastSlot)
 	if err != nil {
+		s.metrics.Error("db_transform_consolidation_requests")
 		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
 	}
 
 	consolidationRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
+		s.metrics.Error("db_transform_consolidation_requests")
 		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
 	}
 
@@ -2070,6 +2132,11 @@ func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint
 }
 
 func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_transform_deposit_requests", time.Since(start))
+	}()
+
 	res, err := tx.Exec(`
 	INSERT INTO blocks_deposit_requests (
 		block_slot, 
@@ -2095,11 +2162,13 @@ func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx
 	ON CONFLICT DO NOTHING;
 `, firstSlot, lastSlot)
 	if err != nil {
+		s.metrics.Error("db_transform_deposit_requests")
 		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
 	}
 
 	depositRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
+		s.metrics.Error("db_transform_deposit_requests")
 		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
 	}
 
@@ -2107,6 +2176,11 @@ func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx
 }
 
 func (s *SlotExporterDB) TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	start := time.Now()
+	defer func() {
+		s.metrics.ObserveDuration("db_transform_removed_excess_balance_events", time.Since(start))
+	}()
+
 	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
 	res, err := tx.Exec(`
 	INSERT INTO blocks_withdrawals (
@@ -2131,11 +2205,13 @@ func (s *SlotExporterDB) TransformRemovedExcessBalanceEvents(firstSlot, lastSlot
 	ON CONFLICT DO NOTHING;
 `, firstSlot, lastSlot)
 	if err != nil {
+		s.metrics.Error("db_transform_removed_excess_balance_events")
 		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
 	}
 
 	excessBalanceRequestsProcessed, err := res.RowsAffected()
 	if err != nil {
+		s.metrics.Error("db_transform_removed_excess_balance_events")
 		return 0, fmt.Errorf("error getting the amount of processed excess balance requests: %w", err)
 	}
 
