@@ -235,7 +235,7 @@ type VDBExecutionDepositsTableRow struct {
 	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
 	Timestamp            int64           `json:"timestamp" faker:"past_timestamp"`
-	From                 Address         `json:"from"`
+	From                 Address         `json:"-"` // TODO enable again
 	Depositor            Address         `json:"depositor"`
 	TxHash               Hash            `json:"tx_hash" faker:"tx_hash"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`

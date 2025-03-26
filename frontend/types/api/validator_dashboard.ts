@@ -202,7 +202,6 @@ export interface VDBExecutionDepositsTableRow {
   group_id: number /* uint64 */;
   block: number /* uint64 */;
   timestamp: number /* int64 */;
-  from: Address;
   depositor: Address;
   tx_hash: Hash;
   withdrawal_credential: Hash;
