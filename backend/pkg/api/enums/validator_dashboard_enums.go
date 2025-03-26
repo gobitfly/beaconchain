@@ -266,7 +266,7 @@ func (c VDBDepositsElColumn) Int() int {
 
 func (VDBDepositsElColumn) NewFromString(s string) VDBDepositsElColumn {
 	switch s {
-	case "", "block":
+	case "", "block", "timestamp":
 		return VDBDepositElBlock
 	case "amount":
 		return VDBDepositElAmount
@@ -301,7 +301,7 @@ func (c VDBDepositsClColumn) Int() int {
 
 func (VDBDepositsClColumn) NewFromString(s string) VDBDepositsClColumn {
 	switch s {
-	case "", "slot":
+	case "", "slot", "timestamp":
 		return VDBDepositClSlot
 	case "amount":
 		return VDBDepositClAmount
