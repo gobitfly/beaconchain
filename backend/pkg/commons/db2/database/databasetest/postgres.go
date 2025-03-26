@@ -19,6 +19,11 @@ import (
 
 var oncePostgres sync.Once
 
+func callerPackage() string {
+	_, filename, _, _ := runtime.Caller(4)
+	return filepath.Base(filepath.Dir(filename))
+}
+
 func NewPostgres(t *testing.T) *sqlx.DB {
 	t.Helper()
 	ctx := context.Background()
@@ -26,11 +31,15 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 	var err error
 	var container testcontainers.Container
 	// increase the container life, this way it can be reused
-	_ = os.Setenv("RYUK_RECONNECTION_TIMEOUT", "1m0s")
+	_ = os.Setenv("RYUK_RECONNECTION_TIMEOUT", "30s")
+
 	skipIfNoDocker(t, func() {
 		container, err = testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 			ContainerRequest: testcontainers.ContainerRequest{
-				Name:         "postgres",
+				// we run one postgres per package
+				// packages are tested independently in go
+				// we cannot easily retrieve a container used by another package
+				Name:         "postgres_" + callerPackage(),
 				Image:        "postgres:12",
 				ExposedPorts: []string{"5432/tcp"},
 				Env: map[string]string{
@@ -53,7 +62,9 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 		t.Fatal(err)
 	}
 
-	db, err := sqlx.Open("postgres", fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", url))
+	postgresURL := fmt.Sprintf("postgres://postgres:postgres@%s/postgres?sslmode=disable", url)
+
+	db, err := sqlx.Open("postgres", postgresURL)
 	if err != nil {
 		t.Fatal(err)
 	}
