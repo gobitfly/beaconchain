@@ -175,7 +175,7 @@ func Run() {
 			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
 		}
 		chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig, metrics.NewMetricsCollector())
+		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig)
 		if err != nil {
 			log.Fatal(err, "lighthouse client error", 0)
 		}

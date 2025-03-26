@@ -44,14 +44,14 @@ type LighthouseClient struct {
 }
 
 // NewLighthouseClient is used to create a new Lighthouse client
-func NewLighthouseClient(cl *consapi.NodeClient, chainID *big.Int, metrics metrics.MetricsRepository) (*LighthouseClient, error) {
+func NewLighthouseClient(cl *consapi.NodeClient, chainID *big.Int) (*LighthouseClient, error) {
 	signer := gethtypes.NewCancunSigner(chainID)
 	client := &LighthouseClient{
 		cl:                  cl,
 		assignmentsCacheMux: &sync.Mutex{},
 		slotsCacheMux:       &sync.Mutex{},
 		signer:              signer,
-		metrics:             metrics,
+		metrics:             metrics.NewMetricsCollector(),
 	}
 	client.assignmentsCache, _ = lru.New(10)
 	client.slotsCache, _ = lru.New(128) // cache at most 128 slots

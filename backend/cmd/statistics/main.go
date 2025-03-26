@@ -119,7 +119,7 @@ func Run() {
 			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
 		}
 
-		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainID, metrics.NewMetricsCollector())
+		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainID)
 		if err != nil {
 			log.Fatal(err, "new explorer lighthouse client error", 0)
 		}

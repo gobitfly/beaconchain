@@ -11,7 +11,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
@@ -201,7 +200,7 @@ func GetModuleContext() (ModuleContext, error) {
 
 	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
 
-	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID, metrics.NewMetricsCollector())
+	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
