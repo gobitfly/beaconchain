@@ -52,7 +52,7 @@ const handleDelete = () => {
     @keydown.esc.stop="close"
   >
     <BcText
-      tag="h2"
+      is="h2"
       variant="lg"
     >
       {{ $t('notifications.dashboards.dialog.delete_all_notifications.heading') }}

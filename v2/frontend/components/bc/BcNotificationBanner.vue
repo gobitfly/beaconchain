@@ -8,7 +8,7 @@ defineProps<{
 <template>
   <section class="bc-notification-banner">
     <BcText
-      tag="h2"
+      is="h2"
       variant="lg"
     >
       {{ title }}
