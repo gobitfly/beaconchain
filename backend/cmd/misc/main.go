@@ -38,6 +38,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -174,7 +175,7 @@ func Run() {
 			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
 		}
 		chainIDBig := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig)
+		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainIDBig, metrics.NewMetricsCollector())
 		if err != nil {
 			log.Fatal(err, "lighthouse client error", 0)
 		}
@@ -273,10 +274,12 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
+				metricsCollector := metrics.NewMetricsCollector()
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(bt),
+					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+					edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
+					edb.NewSlotExporterBT(bt, metricsCollector),
+					metricsCollector,
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -328,10 +331,12 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
+				metricsCollector := metrics.NewMetricsCollector()
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(bt),
+					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+					edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
+					edb.NewSlotExporterBT(bt, metricsCollector),
+					metricsCollector,
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -430,10 +435,12 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 			chainID := utils.Config.Chain.ClConfig.DepositChainID
+			metricsCollector := metrics.NewMetricsCollector()
 			slotExporter := modules.NewExporter(rpcClient,
-				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-				edb.NewSlotExporterDB(db.WriterDb),
-				edb.NewSlotExporterBT(bt),
+				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+				edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
+				edb.NewSlotExporterBT(bt, metricsCollector),
+				metricsCollector,
 				tx,
 				nil)
 			err = slotExporter.ExportValidatorData(data.Validators, 0, chainID)
@@ -1406,7 +1413,7 @@ func updateAggreationBits(rpcClient *rpc.LighthouseClient, startEpoch uint64, en
 				}
 
 				if importWholeBlock {
-					err := edb.NewSlotExporterDB(db.WriterDb).SaveBlock(block, true, tx)
+					err := edb.NewSlotExporterDB(db.WriterDb, metrics.NewMetricsCollector()).SaveBlock(block, true, tx)
 					if err != nil {
 						log.Error(err, fmt.Errorf("error saving Slot [%v]", block.Slot), 0)
 						return
