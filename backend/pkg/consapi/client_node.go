@@ -50,7 +50,12 @@ func (r *NodeClient) GetValidatorBalances(stateID any) (*types.StandardValidator
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%v/validator_balances", r.Endpoint, stateID)
-	return network.Get[types.StandardValidatorBalancesResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardValidatorBalancesResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_validator_balances")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetFinalityCheckpoints(stateID any) (*types.StandardFinalityCheckpointsResponse, error) {
@@ -60,7 +65,12 @@ func (r *NodeClient) GetFinalityCheckpoints(stateID any) (*types.StandardFinalit
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%s/finality_checkpoints", r.Endpoint, stateID)
-	return network.Get[types.StandardFinalityCheckpointsResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardFinalityCheckpointsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_finality_checkpoints")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetBlockHeader(blockID any) (*types.StandardBeaconHeaderResponse, error) {
@@ -70,7 +80,12 @@ func (r *NodeClient) GetBlockHeader(blockID any) (*types.StandardBeaconHeaderRes
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/headers/%v", r.Endpoint, blockID)
-	return network.Get[types.StandardBeaconHeaderResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardBeaconHeaderResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_block_header")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetBlockHeaders(slot *uint64, parentRoot *any) (*types.StandardBeaconHeadersResponse, error) {
@@ -85,7 +100,13 @@ func (r *NodeClient) GetBlockHeaders(slot *uint64, parentRoot *any) (*types.Stan
 	} else if parentRoot != nil {
 		requestURL += fmt.Sprintf("?parent_root=%v", *parentRoot)
 	}
-	return network.Get[types.StandardBeaconHeadersResponse](r.httpClient, requestURL)
+
+	resp, err := network.Get[types.StandardBeaconHeadersResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_block_headers")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetSyncCommitteesAssignments(epoch *uint64, stateID any) (*types.StandardSyncCommitteesResponse, error) {
@@ -100,7 +121,13 @@ func (r *NodeClient) GetSyncCommitteesAssignments(epoch *uint64, stateID any) (*
 	} else {
 		requestURL = fmt.Sprintf("%s/eth/v1/beacon/states/%v/sync_committees?epoch=%d", r.Endpoint, stateID, *epoch)
 	}
-	return network.Get[types.StandardSyncCommitteesResponse](r.httpClient, requestURL)
+
+	resp, err := network.Get[types.StandardSyncCommitteesResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_sync_committees_assignments")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetSpec() (*types.StandardSpecResponse, error) {
@@ -110,7 +137,12 @@ func (r *NodeClient) GetSpec() (*types.StandardSpecResponse, error) {
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/config/spec", r.Endpoint)
-	return network.Get[types.StandardSpecResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardSpecResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_spec")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetSlot(blockID any) (*types.StandardBeaconSlotResponse, error) {
@@ -120,7 +152,12 @@ func (r *NodeClient) GetSlot(blockID any) (*types.StandardBeaconSlotResponse, er
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v2/beacon/blocks/%v", r.Endpoint, blockID)
-	return network.Get[types.StandardBeaconSlotResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardBeaconSlotResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_slot")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetValidators(state any, ids []string, status []types.ValidatorStatus) (*types.StandardValidatorsResponse, error) {
@@ -144,7 +181,13 @@ func (r *NodeClient) GetValidators(state any, ids []string, status []types.Valid
 		statusStr := strings.Join(utils.ConvertToStringSlice(status), ",")
 		requestURL += fmt.Sprintf("status=%s", statusStr)
 	}
-	return network.Get[types.StandardValidatorsResponse](r.httpClient, requestURL)
+
+	resp, err := network.Get[types.StandardValidatorsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_validators")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingleValidatorsResponse, error) {
@@ -154,7 +197,12 @@ func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingle
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/states/%s/validators/%v", r.Endpoint, state, validatorID)
-	return network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_validator")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetProposalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
@@ -164,7 +212,12 @@ func (r *NodeClient) GetProposalAssignments(epoch uint64) (*types.StandardPropos
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
-	return network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_proposal_assignments")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetProposalRewards(blockID any) (*types.StandardBlockRewardsResponse, error) {
@@ -174,7 +227,12 @@ func (r *NodeClient) GetProposalRewards(blockID any) (*types.StandardBlockReward
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/blocks/%v", r.Endpoint, blockID)
-	return network.Get[types.StandardBlockRewardsResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardBlockRewardsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_proposal_rewards")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetSyncRewards(blockID any) (*types.StandardSyncCommitteeRewardsResponse, error) {
@@ -184,7 +242,12 @@ func (r *NodeClient) GetSyncRewards(blockID any) (*types.StandardSyncCommitteeRe
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/sync_committee/%v", r.Endpoint, blockID)
-	return network.Post[types.StandardSyncCommitteeRewardsResponse](r.httpClient, requestURL)
+	resp, err := network.Post[types.StandardSyncCommitteeRewardsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_sync_rewards")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetAttestationRewards(epoch uint64) (*types.StandardAttestationRewardsResponse, error) {
@@ -194,7 +257,12 @@ func (r *NodeClient) GetAttestationRewards(epoch uint64) (*types.StandardAttesta
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/%v", r.Endpoint, epoch)
-	return network.Post[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
+	resp, err := network.Post[types.StandardAttestationRewardsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_attestation_rewards")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetBlobSidecars(blockID any) (*types.StandardBlobSidecarsResponse, error) {
@@ -204,7 +272,12 @@ func (r *NodeClient) GetBlobSidecars(blockID any) (*types.StandardBlobSidecarsRe
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/blob_sidecars/%v", r.Endpoint, blockID)
-	return network.Get[types.StandardBlobSidecarsResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardBlobSidecarsResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_blob_sidecars")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetCommittees(stateID any, epoch, index, slot *uint64) (*types.StandardCommitteesResponse, error) {
@@ -221,7 +294,12 @@ func (r *NodeClient) GetCommittees(stateID any, epoch, index, slot *uint64) (*ty
 	} else if slot != nil {
 		requestURL += fmt.Sprintf("?slot=%d", *slot)
 	}
-	return network.Get[types.StandardCommitteesResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardCommitteesResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_blob_sidecars")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetGenesis() (*types.StandardGenesisResponse, error) {
@@ -231,7 +309,12 @@ func (r *NodeClient) GetGenesis() (*types.StandardGenesisResponse, error) {
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/genesis", r.Endpoint)
-	return network.Get[types.StandardGenesisResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardGenesisResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_genesis")
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventResponse {
@@ -258,6 +341,7 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 		}
 		url, err := url.Parse(requestURL)
 		if err != nil {
+			r.metrics.Error("node_get_events")
 			panic(err)
 		}
 		request := &http.Request{
@@ -271,6 +355,7 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 		//stream.Logger = log.New(os.Stdout, "eventsource: ", log.LstdFlags)
 
 		if err != nil {
+			r.metrics.Error("node_get_events")
 			responseCh <- &types.EventResponse{Error: err}
 			return
 		}
@@ -300,5 +385,10 @@ func (r *NodeClient) GetState(stateID any) (*types.StandardBeaconStateResponse, 
 	}(timeStart)
 
 	requestURL := fmt.Sprintf("%s/eth/v1/debug/beacon/states/%v", r.Endpoint, stateID)
-	return network.Get[types.StandardBeaconStateResponse](r.httpClient, requestURL)
+	resp, err := network.Get[types.StandardBeaconStateResponse](r.httpClient, requestURL)
+	if err != nil {
+		r.metrics.Error("node_get_state")
+		return nil, err
+	}
+	return resp, nil
 }
