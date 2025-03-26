@@ -53,6 +53,7 @@
         "healthz",
         "i18n",
         "logger",
+        "main.scss",
         "mainHeader",
         "middleware",
         "notifications",
