@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -489,7 +489,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}
@@ -1219,7 +1219,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	result := &t.VDBSlashingsSummaryValidators{}
 
 	// Get the table names based on the period
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}
@@ -1454,7 +1454,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	clickhouseTable, err := getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}

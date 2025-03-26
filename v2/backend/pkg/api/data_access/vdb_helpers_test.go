@@ -277,7 +277,7 @@ func TestGetEpochStart(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			table, err := getTablesForPeriod(tt.period)
+			table, err := tt.period.Table()
 			assert.NoError(t, err)
 
 			ds := buildEpochStartQuery(table)
@@ -345,7 +345,7 @@ func TestGetLastScheduledBlockAndSyncDate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clickhouseTotalTable, err := getTablesForPeriod(tt.period)
+			clickhouseTotalTable, err := tt.period.Table()
 			assert.NoError(t, err)
 
 			ds := buildLastScheduledBlockAndSyncDateQuery(clickhouseTotalTable, dashboardId, groupId)
@@ -413,7 +413,7 @@ func TestGetMinMaxEpochs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			clickhouseTable, err := getTablesForPeriod(tt.period)
+			clickhouseTable, err := tt.period.Table()
 			assert.NoError(t, err)
 
 			ds := buildMinMaxEpochsQuery(dashboardId, groupId, clickhouseTable)
@@ -546,7 +546,7 @@ func TestGetTable(t *testing.T) {
 		}
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
-				result, err := getTablesForPeriod(tc.input)
+				result, err := tc.input.Table()
 
 				assert.Equal(t, tc.expected, result)
 				if tc.expectErr != nil {

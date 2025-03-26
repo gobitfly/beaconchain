@@ -377,7 +377,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		return nil
 	})
 
-	retrieveRewardsAndEfficiency := func(table string, timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+	retrieveRewardsAndEfficiency := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
 			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
@@ -391,6 +391,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 
 		// Efficiency
 		eg.Go(func() error {
+			table, err := timeFrame.Table()
+			if err != nil {
+				return err
+			}
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
@@ -413,10 +417,10 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		})
 	}
 
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_24h", enums.Last24h, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_7d", enums.Last7d, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", enums.Last30d, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", enums.AllTime, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
+	retrieveRewardsAndEfficiency(enums.Last24h, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency(enums.Last7d, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency(enums.Last30d, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency(enums.AllTime, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = eg.Wait()
 
