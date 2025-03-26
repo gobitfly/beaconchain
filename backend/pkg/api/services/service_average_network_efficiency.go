@@ -49,7 +49,12 @@ func (s *Services) updateEfficiencyData() error {
 	efficiencyInfo := s.initEfficiencyInfo()
 	efficiencyMutex := &sync.RWMutex{}
 
-	setEfficiencyData := func(tableName string, period enums.TimePeriod) error {
+	setEfficiencyData := func(period enums.TimePeriod) error {
+		tableName, err := period.Table()
+		if err != nil {
+			return err
+		}
+
 		var queryResult struct {
 			AttestationReward      decimal.Decimal `db:"attestations_reward"`
 			AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
@@ -106,24 +111,19 @@ func (s *Services) updateEfficiencyData() error {
 	wg := &errgroup.Group{}
 
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_1h", enums.TimePeriods.Last1h)
-		return err
+		return setEfficiencyData(enums.TimePeriods.Last1h)
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_24h", enums.TimePeriods.Last24h)
-		return err
+		return setEfficiencyData(enums.TimePeriods.Last24h)
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_7d", enums.TimePeriods.Last7d)
-		return err
+		return setEfficiencyData(enums.TimePeriods.Last7d)
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_30d", enums.TimePeriods.Last30d)
-		return err
+		return setEfficiencyData(enums.TimePeriods.Last30d)
 	})
 	wg.Go(func() error {
-		err := setEfficiencyData("validator_dashboard_data_rolling_total", enums.TimePeriods.AllTime)
-		return err
+		return setEfficiencyData(enums.TimePeriods.AllTime)
 	})
 
 	err := wg.Wait()
