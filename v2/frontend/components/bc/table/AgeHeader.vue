@@ -5,12 +5,14 @@ const {
 </script>
 
 <template>
-  <span
+  <BcButtonText
     class="age-header"
-    @click="toggleAgeFormat"
-  >{{
-    $t("table.age")
-  }}</span>
+    @click.stop="toggleAgeFormat"
+  >
+    {{
+      $t("table.age")
+    }}
+  </BcButtonText>
 </template>
 
 <style lang="scss" scoped>
