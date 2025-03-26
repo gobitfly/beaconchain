@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/pkg/errors"
@@ -771,7 +770,10 @@ func calculateTxFee(t *types.Eth1Transaction, baseFee []byte) *big.Int {
 	txFee := new(big.Int).Mul(new(big.Int).SetBytes(t.GasPrice), big.NewInt(int64(t.GasUsed)))
 
 	if len(baseFee) > 0 {
-		effectiveGasPrice := math.BigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(baseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
+		effectiveGasPrice := new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(baseFee))
+		if effectiveGasPrice.Cmp(new(big.Int).SetBytes(t.MaxFeePerGas)) > 0 {
+			effectiveGasPrice = new(big.Int).SetBytes(t.MaxFeePerGas)
+		}
 		proposerGasPricePart := new(big.Int).Sub(effectiveGasPrice, new(big.Int).SetBytes(baseFee))
 
 		if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
