@@ -13,10 +13,10 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
-	"github.com/gobitfly/beaconchain/pkg/exporter/metrics"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/klauspost/pgzip"
 
@@ -139,7 +139,7 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 	}
 	defer s.db.RollbackTx(tx)
 
-	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, tx, s)
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, metrics.NewMetricsCollector(), tx, s)
 
 	if s.firstRun {
 		log.Infof("performing first run consistency checks")
@@ -374,13 +374,13 @@ type exporter struct {
 	slotExporter *slotExporter
 }
 
-func NewExporter(client SlotExporterClient, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
+func NewExporter(client SlotExporterClient, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, metrics metrics.MetricsRepository, dbTx *sqlx.Tx, slotExporter *slotExporter) *exporter {
 	return &exporter{
 		Client:       client,
 		cache:        cache,
 		db:           db,
 		bt:           bt,
-		metrics:      metrics.NewMetrics(),
+		metrics:      metrics,
 		dbTx:         dbTx,
 		slotExporter: slotExporter,
 	}
@@ -421,7 +421,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 			}
 		}
 	}
-	s.metrics.ObserveDuration("slot_exporter_export_slot", time.Since(start))
+	s.metrics.ObserveTaskDuration("slot_exporter_export_slot", time.Since(start))
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		if err := s.exportEpochAssignments(block, headEpoch); err != nil {
@@ -442,7 +442,7 @@ func (s *exporter) ExportSlot(slot uint64, headEpoch bool) error {
 func (s *exporter) exportDuties(block *types.Block) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		s.metrics.ObserveDuration("slot_exporter_export_duties", time.Since(timeStart))
+		s.metrics.ObserveTaskDuration("slot_exporter_export_duties", time.Since(timeStart))
 	}(timeStart)
 
 	syncDuties := make(map[types.Slot]map[types.ValidatorIndex]bool)
@@ -494,7 +494,7 @@ func (s *exporter) exportDuties(block *types.Block) error {
 func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		s.metrics.ObserveDuration("slot_exporter_export_epoch", time.Since(timeStart))
+		s.metrics.ObserveTaskDuration("slot_exporter_export_epoch", time.Since(timeStart))
 	}(timeStart)
 
 	epoch := utils.EpochOfSlot(block.Slot)
@@ -569,7 +569,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 
 	// if we are exporting the head epoch, update the validator db table
 	if isHeadEpoch {
-		if err := s.exportValidatorData(block.Validators, epoch, chainID); err != nil {
+		if err := s.ExportValidatorData(block.Validators, epoch, chainID); err != nil {
 			return err
 		}
 	}
@@ -612,7 +612,7 @@ func (s *exporter) exportEpochAssignments(block *types.Block, isHeadEpoch bool) 
 func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint64) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		s.metrics.ObserveDuration("slot_exporter_export_epoch_assignments_to_bigtable", time.Since(timeStart))
+		s.metrics.ObserveTaskDuration("slot_exporter_export_epoch_assignments_to_bigtable", time.Since(timeStart))
 	}(timeStart)
 
 	// prepare the duties for export to bigtable
@@ -659,7 +659,7 @@ func (s *exporter) saveEpochAssigmentsToBigtable(block *types.Block, epoch uint6
 func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainID uint64, isHeadEpoch bool) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		s.metrics.ObserveDuration("slot_exporter_export_epoch_assignments_to_redis", time.Since(timeStart))
+		s.metrics.ObserveTaskDuration("slot_exporter_export_epoch_assignments_to_redis", time.Since(timeStart))
 	}(timeStart)
 
 	redisCachedEpochAssignments := &types.RedisCachedEpochAssignments{
@@ -726,10 +726,10 @@ func (s *exporter) saveEpochAssignmentsToRedis(block *types.Block, epoch, chainI
 	return nil
 }
 
-func (s *exporter) exportValidatorData(validators []*types.Validator, epoch, chainID uint64) error {
+func (s *exporter) ExportValidatorData(validators []*types.Validator, epoch, chainID uint64) error {
 	timeStart := time.Now()
 	defer func(timeStart time.Time) {
-		s.metrics.ObserveDuration("slot_exporter_export_epoch_validators_data", time.Since(timeStart))
+		s.metrics.ObserveTaskDuration("slot_exporter_export_epoch_validators_data", time.Since(timeStart))
 	}(timeStart)
 
 	g := errgroup.Group{}

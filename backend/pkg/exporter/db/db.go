@@ -24,7 +24,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
-	exportermetrics "github.com/gobitfly/beaconchain/pkg/exporter/metrics"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
@@ -69,13 +68,13 @@ type SlotExporterDBRepository interface {
 
 type SlotExporterDB struct {
 	WriterDb *sqlx.DB
-	metrics  exportermetrics.MetricsRepository
+	metrics  metrics.MetricsRepository
 }
 
-func NewSlotExporterDB(writerDb *sqlx.DB) *SlotExporterDB {
+func NewSlotExporterDB(writerDb *sqlx.DB, metrics metrics.MetricsRepository) *SlotExporterDB {
 	return &SlotExporterDB{
 		WriterDb: writerDb,
-		metrics:  exportermetrics.NewMetrics(),
+		metrics:  metrics,
 	}
 }
 
@@ -97,7 +96,7 @@ func (s *SlotExporterDB) CommitTx(tx *sqlx.Tx) error {
 func (s *SlotExporterDB) SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_save_block", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_save_block", time.Since(start))
 	}()
 
 	blocksMap := make(map[uint64]map[string]*types.Block)
@@ -684,7 +683,7 @@ func (s *SlotExporterDB) saveBlocks(blocks map[uint64]map[string]*types.Block, t
 func (s *SlotExporterDB) saveGraffitiwall(block *types.Block, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_save_graffitiwall", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_save_graffitiwall", time.Since(start))
 	}()
 
 	stmtGraffitiwall, err := tx.Prepare(`
@@ -757,7 +756,7 @@ func (s *SlotExporterDB) GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Valida
 func (s *SlotExporterDB) SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_save_new_validator", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_save_new_validator", time.Since(start))
 	}()
 
 	_, err := tx.Exec(`INSERT INTO validators (
@@ -866,7 +865,7 @@ func (s *SlotExporterDB) UpdateValidatorsStatus(statusUpdateMap map[string][]uin
 func (s *SlotExporterDB) UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_update_validators", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_update_validators", time.Since(start))
 	}()
 
 	log.Infof("applying %v validator table update queries", totalUpdates)
@@ -937,7 +936,7 @@ func (s *SlotExporterDB) UpdateActivationEpochBalance(validatorIndex uint64, bal
 func (s *SlotExporterDB) AnalyzeValidatorsTable(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_analyze_validators_table", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_analyze_validators_table", time.Since(start))
 	}()
 
 	timeStart := time.Now()
@@ -971,7 +970,7 @@ func (s *SlotExporterDB) SaveValidatorQueue(validators *types.ValidatorQueue, tx
 func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_save_epoch", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_save_epoch", time.Since(start))
 		log.InfoWithFields(log.Fields{"epoch": epoch, "duration": time.Since(start)}, "completed saving epoch")
 	}()
 
@@ -1077,7 +1076,7 @@ func (s *SlotExporterDB) SaveEpoch(epoch uint64, validators []*types.Validator, 
 func (s *SlotExporterDB) UpdateEpochStatus(stats *types.ValidatorParticipation, tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_update_epochs_status", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_update_epochs_status", time.Since(start))
 	}()
 
 	_, err := tx.Exec(`
@@ -1307,7 +1306,7 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 	start := time.Now()
 	defer func() {
 		log.Infof("took %v seconds to update queue deposits", time.Since(start).Seconds())
-		s.metrics.ObserveDuration("db_update_queue_deposits", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_update_queue_deposits", time.Since(start))
 	}()
 
 	// first we remove any validator that isn't queued anymore
@@ -1398,7 +1397,7 @@ func (s *SlotExporterDB) UpdateQueueDeposits(tx *sqlx.Tx) error {
 func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_cache_block_deposit_lookup", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_cache_block_deposit_lookup", time.Since(start))
 	}()
 
 	err := CacheQuery(`
@@ -1430,7 +1429,7 @@ func (s *SlotExporterDB) CacheBlockDepositLookup() error {
 func (s *SlotExporterDB) CacheBlockDepositRequestsLookup() error {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_cache_block_deposit_requests_lookup", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_cache_block_deposit_requests_lookup", time.Since(start))
 	}()
 
 	err := CacheQuery(`
@@ -2052,7 +2051,7 @@ func (s *SlotExporterDB) HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, er
 func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_transform_switch_to_compounding_requests", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_transform_switch_to_compounding_requests", time.Since(start))
 	}()
 
 	res, err := tx.Exec(`
@@ -2092,7 +2091,7 @@ func (s *SlotExporterDB) TransformSwitchToCompoundingRequests(firstSlot, lastSlo
 func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_transform_consolidation_requests", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_transform_consolidation_requests", time.Since(start))
 	}()
 
 	res, err := tx.Exec(`
@@ -2134,7 +2133,7 @@ func (s *SlotExporterDB) TransformConsolidationRequests(firstSlot, lastSlot uint
 func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_transform_deposit_requests", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_transform_deposit_requests", time.Since(start))
 	}()
 
 	res, err := tx.Exec(`
@@ -2178,7 +2177,7 @@ func (s *SlotExporterDB) TransformDepositRequests(firstSlot, lastSlot uint64, tx
 func (s *SlotExporterDB) TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
 	start := time.Now()
 	defer func() {
-		s.metrics.ObserveDuration("db_transform_removed_excess_balance_events", time.Since(start))
+		s.metrics.ObserveTaskDuration("db_transform_removed_excess_balance_events", time.Since(start))
 	}()
 
 	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks

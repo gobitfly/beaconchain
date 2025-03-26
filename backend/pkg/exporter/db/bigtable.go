@@ -4,8 +4,8 @@ import (
 	"sync"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/exporter/metrics"
 )
 
 type SlotExporterBTRepository interface {
@@ -22,10 +22,10 @@ type SlotExporterBT struct {
 	metrics metrics.MetricsRepository
 }
 
-func NewSlotExporterBT(btClient *db.Bigtable) *SlotExporterBT {
+func NewSlotExporterBT(btClient *db.Bigtable, metrics metrics.MetricsRepository) *SlotExporterBT {
 	return &SlotExporterBT{
 		client:  btClient,
-		metrics: metrics.NewMetrics(),
+		metrics: metrics,
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/exporter/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 )
 
 type SlotExporterCacheRepository interface {
@@ -28,10 +28,10 @@ type SlotExporterCache struct {
 	metrics metrics.MetricsRepository
 }
 
-func NewSlotExporterCache(cache database.RemoteCache) *SlotExporterCache {
+func NewSlotExporterCache(cache database.RemoteCache, metrics metrics.MetricsRepository) *SlotExporterCache {
 	return &SlotExporterCache{
 		cache:   cache,
-		metrics: metrics.NewMetrics(),
+		metrics: metrics,
 	}
 }
 
