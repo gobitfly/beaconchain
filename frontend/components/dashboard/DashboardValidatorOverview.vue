@@ -102,14 +102,11 @@ const aprInfos = [
         {{ validatorsOffline }}
       </span>
       <BcButtonIcon
+        name="arrow-upright-from-square"
         screenreader-text="dashboard.validator.overview.open_validator_overview_modal"
+        class="link"
         @click="openValidatorModal"
-      >
-        <BcIcon
-          class="link optical-correction"
-          name="arrow-upright-from-square"
-        />
-      </BcButtonIcon>
+      />
       <template #additionalInfo>
         {{ $t('dashboard.validator.overview.validators_balance.balance_total') }}
         <BcFormatAmount
@@ -283,9 +280,6 @@ const aprInfos = [
   padding-right: var(--padding-xl);
 }
 
-.optical-correction {
-  transform: translateY(1px);
-}
 .tooltip {
   min-width: 6.25rem;
 }

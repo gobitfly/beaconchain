@@ -46,9 +46,9 @@ const handleToggleNotifications = ({
         />
       </div>
       <BcText
+        is="p"
         v-if="!notificationsManagementStore.settings.paired_devices.length"
         class="info-empty"
-        tag="p"
         variant="lg"
       >
         {{ $t('notifications.general.paired_devices.info_empty.template') }}

@@ -1,15 +1,15 @@
 <script setup lang="ts">
 withDefaults(
   defineProps<{
-    isDimmed?: boolean,
-    tag?:
+    is?:
       | 'h2'
       | 'h4'
       | 'p'
       | 'span',
+    isDimmed?: boolean,
     variant?: 'base' | 'lg' | 'md' | 'sm',
   }>(), {
-    tag: 'span',
+    is: 'span',
     variant: 'base',
   },
 )
@@ -17,7 +17,7 @@ withDefaults(
 
 <template>
   <component
-    :is="tag"
+    :is
     :class="{
       'variant-lg': variant === 'lg',
       'variant-md': variant === 'md',

@@ -9,8 +9,8 @@ const { t: $t } = useTranslation()
     <nav class="main-footer__links">
       <section>
         <BcText
+          is="h4"
           variant="md"
-          tag="h4"
           class="main-footer__headline"
         >
           {{ $t('footer.legal_notices') }}
@@ -46,8 +46,8 @@ const { t: $t } = useTranslation()
         class="main-footer__section"
       >
         <BcText
+          is="h4"
           variant="md"
-          tag="h4"
         >
           {{ $t('footer.resources') }}
         </BcText>
@@ -82,8 +82,8 @@ const { t: $t } = useTranslation()
         class="main-footer__section"
       >
         <BcText
+          is="h4"
           variant="md"
-          tag="h4"
         >
           {{ $t('footer.links') }}
         </BcText>
