@@ -12,10 +12,12 @@ type NodeClientWithMetrics struct {
 	metrics metrics.MetricsRepository
 }
 
-func NewNodeClientWithMetrics(client ClientInt, metrics metrics.MetricsRepository) NodeClientWithMetrics {
-	return NodeClientWithMetrics{
-		client:  client,
-		metrics: metrics,
+func NewNodeClientWithMetrics(client ClientInt, metrics metrics.MetricsRepository) Client {
+	return Client{
+		ClientInt: &NodeClientWithMetrics{
+			client:  client,
+			metrics: metrics,
+		},
 	}
 }
 
@@ -281,4 +283,8 @@ func (c *NodeClientWithMetrics) GetState(stateID any) (*types.StandardBeaconStat
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *NodeClientWithMetrics) GetEndpoint() string {
+	return c.client.GetEndpoint()
 }

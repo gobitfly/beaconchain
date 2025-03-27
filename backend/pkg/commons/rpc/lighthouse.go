@@ -33,7 +33,7 @@ var LighthouseLatestHeadEpoch uint64 = 0
 
 // LighthouseClient holds the Lighthouse client info
 type LighthouseClient struct {
-	cl                  *consapi.NodeClient
+	cl                  *consapi.Client
 	assignmentsCache    *lru.Cache
 	assignmentsCacheMux *sync.Mutex
 	slotsCache          *lru.Cache
@@ -42,7 +42,7 @@ type LighthouseClient struct {
 }
 
 // NewLighthouseClient is used to create a new Lighthouse client
-func NewLighthouseClient(cl *consapi.NodeClient, chainID *big.Int) (*LighthouseClient, error) {
+func NewLighthouseClient(cl *consapi.Client, chainID *big.Int) (*LighthouseClient, error) {
 	signer := gethtypes.NewCancunSigner(chainID)
 	client := &LighthouseClient{
 		cl:                  cl,
@@ -1088,7 +1088,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 
 	log.Infof("requesting validator inclusion data for epoch %v", request_epoch)
 
-	parsedResponse, err := network.Get[LighthouseValidatorParticipationResponse](nil, fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.Endpoint, request_epoch))
+	parsedResponse, err := network.Get[LighthouseValidatorParticipationResponse](nil, fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.GetEndpoint(), request_epoch))
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator participation data for epoch %v: %w", request_epoch, err)
 	}
@@ -1100,7 +1100,7 @@ func (lc *LighthouseClient) GetValidatorParticipation(epoch uint64) (*types.Vali
 		prevEpochActiveGwei := parsedResponse.Data.PreviousEpochActiveGwei
 		if prevEpochActiveGwei == 0 {
 			// lh@5.2.0+ has no previous_epoch_active_gwei field anymore, see https://github.com/sigp/lighthouse/pull/5279
-			parsedPrevResponse, err := network.Get[LighthouseValidatorParticipationResponse](nil, fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.Endpoint, request_epoch-1))
+			parsedPrevResponse, err := network.Get[LighthouseValidatorParticipationResponse](nil, fmt.Sprintf("%s/lighthouse/validator_inclusion/%d/global", lc.cl.GetEndpoint(), request_epoch-1))
 			if err != nil {
 				return nil, fmt.Errorf("error retrieving validator participation data for prevEpoch %v: %w", request_epoch-1, err)
 			}

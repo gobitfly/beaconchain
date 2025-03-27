@@ -210,3 +210,7 @@ func (r *NodeClient) GetState(stateID any) (*types.StandardBeaconStateResponse, 
 	requestURL := fmt.Sprintf("%s/eth/v1/debug/beacon/states/%v", r.Endpoint, stateID)
 	return network.Get[types.StandardBeaconStateResponse](r.httpClient, requestURL)
 }
+
+func (r *NodeClient) GetEndpoint() string {
+	return r.Endpoint
+}

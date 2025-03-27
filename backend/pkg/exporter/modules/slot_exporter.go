@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/gob"
 	"fmt"
+	"math/big"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
@@ -52,9 +54,15 @@ type slotExporter struct {
 }
 
 func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
+	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
+	client, err := rpc.NewLighthouseWithMetrics(&moduleContext.CL, metrics.NewMetricsCollector(), chainID)
+	if err != nil {
+		log.Fatal(err, "error creating lighthouse client with metrics: %v", 0)
+	}
+
 	return &slotExporter{
 		ModuleContext:  moduleContext,
-		Client:         moduleContext.ConsClient,
+		Client:         client,
 		cache:          cache,
 		db:             db,
 		bt:             bt,

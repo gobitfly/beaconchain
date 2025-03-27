@@ -1,23 +1,31 @@
 package rpc
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
 type LighthouseWithMetrics struct {
-	client  LighthouseClient
+	client  *LighthouseClient
 	metrics metrics.MetricsRepository
 }
 
-func NewLighthouseWithMetrics(client LighthouseClient, metrics metrics.MetricsRepository) LighthouseWithMetrics {
-	return LighthouseWithMetrics{
-		client:  client,
-		metrics: metrics,
+func NewLighthouseWithMetrics(client *consapi.Client, metrics metrics.MetricsRepository, chainID *big.Int) (*LighthouseWithMetrics, error) {
+	nodeClientWithMetrics := consapi.NewNodeClientWithMetrics(client, metrics)
+	lhc, err := NewLighthouseClient(&nodeClientWithMetrics, chainID)
+	if err != nil {
+		return nil, err
 	}
+
+	return &LighthouseWithMetrics{
+		client:  lhc,
+		metrics: metrics,
+	}, nil
 }
 
 func (l *LighthouseWithMetrics) GetNewBlockChan() chan *types.Block {
