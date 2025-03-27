@@ -3,7 +3,6 @@ package consapi
 import (
 	"net/http"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
@@ -70,5 +69,4 @@ type ClientInt interface {
 type NodeClient struct {
 	Endpoint   string
 	httpClient *http.Client
-	metrics    metrics.MetricsRepository
 }
