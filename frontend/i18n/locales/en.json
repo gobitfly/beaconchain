@@ -4,7 +4,7 @@
         "col": {
             "graffiti": "Graffiti",
             "proposer": "Proposer",
-            "tx_hash": "Tx Hash"
+            "transaction_hash": "Transaction Hash"
         },
         "status": {
             "missed": "Missed",
@@ -245,7 +245,9 @@
                 "rewards": "Rewards",
                 "signature": "Signature",
                 "status": "Status",
+                "validator_index": "Validator Index",
                 "validators": "Validators",
+                "validity": "Validity",
                 "withdrawal_credential": "Withdrawal Credential"
             },
             "duties": {
@@ -259,6 +261,9 @@
                 "title": "Epoch"
             },
             "el_deposits": {
+                "info_valid_with_invalid_signature": "Signature invalid, but will still be accepted due to a prior deposit with a valid signature.",
+                "search_placeholder_guest_dashboard": "Index, Block, Address",
+                "search_placeholder_private_dashboard": "Index, Block, Address, Group",
                 "title": "Execution Layer"
             },
             "group_management": {
@@ -429,6 +434,12 @@
                 },
                 "total_group_name": "Total Efficiency",
                 "validator_status_popout": "Open validator status details"
+            },
+            "table": {
+                "status_text": {
+                    "invalid": "Invalid",
+                    "valid": "Valid"
+                }
             },
             "tabs": {
                 "blocks": "Blocks",
@@ -1127,7 +1138,7 @@
         "last": "Last",
         "of": "of",
         "showing": "Showing {from} to {to} of {total}",
-        "valid": "Valid"
+        "validity": "Validity"
     },
     "time_duration": {
         "days": "{amount} day | {amount} days",

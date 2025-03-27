@@ -183,6 +183,8 @@ const data = computed(() => {
 }
 
 .format-hash {
+  align-items: center;
+
   &:has(.truncate-text) {
     display: flex;
   }
