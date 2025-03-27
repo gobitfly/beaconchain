@@ -184,7 +184,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
           :expandable="size.expandable"
           class="duties-table"
           :cursor
-          :loading="isLoading"
+          :is-loading
           :page-size
           :selected-sort="tempQuery?.sort as string"
           @set-cursor="setCursor"
