@@ -239,7 +239,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	}
 
 	// Custom type for block_index
-	var data []struct {
+	type dbResult struct {
 		GroupId              sql.NullInt64 `db:"group_id"`
 		PublicKey            []byte        `db:"publickey"`
 		Slot                 int64         `db:"block_slot"`
@@ -333,28 +333,22 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	}
 
 	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("block_slot"), Desc: true, Offset: currentCursor.Slot},
-		{Column: goqu.I("block_index"), Desc: true, Offset: currentCursor.SlotIndex},
+		{Column: goqu.I("bd.block_slot"), Desc: true, Offset: currentCursor.Slot},
+		{Column: goqu.I("bd.block_index"), Desc: true, Offset: currentCursor.SlotIndex},
 	}
 	order, directions, err := applySortAndPagination(defaultColumns, defaultColumns[0], currentCursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	depositsDs = depositsDs.
+	depositsDs = goqu.Dialect("postgres").From(depositsDs.As("bd")).
 		Order(order...).
 		Limit(uint(limit + 1))
 	if directions != nil {
 		depositsDs = depositsDs.Where(directions)
 	}
 
-	query, params, err := depositsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare SQL query: %w", err)
-	}
-
-	err = db.AlloyReader.SelectContext(ctx, &data, query, params...)
-
+	data, err := runQueryRows[[]dbResult](ctx, db.AlloyReader, depositsDs)
 	if err != nil {
 		return nil, nil, err
 	}
