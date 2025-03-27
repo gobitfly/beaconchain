@@ -50,6 +50,7 @@
         "dialog",
         "eslint",
         "feature-flags",
+        "format.ts",
         "git",
         "git-blame-ignore",
         "healthz",
