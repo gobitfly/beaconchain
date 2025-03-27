@@ -3,6 +3,7 @@ import type { HashTabs } from '~/types/hashTabs'
 export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = false) {
   const activeTab = ref<string>('-1')
   const { hash: initialHash } = useRoute()
+  const router = useRouter()
 
   const findFirstValidIndex = () => {
     const defaultKey = tabs.find(t => t.key === defaultTab)
@@ -32,7 +33,7 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = f
     if (isServerSide || !useRouteHash) {
       return
     }
-    window.location.hash = key
+    router.push({ hash: `#${key}` })
   }
 
   watch(
