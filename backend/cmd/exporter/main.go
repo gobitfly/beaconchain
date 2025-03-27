@@ -55,6 +55,7 @@ func Run() {
 		}()
 	}
 
+	var bt *db.Bigtable
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -70,7 +71,7 @@ func Run() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
+			bt, err = db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 			if err != nil {
 				log.Fatal(err, "error connecting to bigtable", 0)
 			}
@@ -185,7 +186,7 @@ func Run() {
 				context,
 				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterDB(db.WriterDb),
-				edb.NewSlotExporterBT(db.BigtableClient),
+				edb.NewSlotExporterBT(bt),
 			),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),

@@ -276,7 +276,7 @@ func Run() {
 				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterBT(bt),
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -331,7 +331,7 @@ func Run() {
 				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterBT(bt),
 					tx,
 					nil)
 				err = slotExporter.ExportSlot(slot, false)
@@ -433,7 +433,7 @@ func Run() {
 			slotExporter := modules.NewExporter(rpcClient,
 				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 				edb.NewSlotExporterDB(db.WriterDb),
-				edb.NewSlotExporterBT(db.BigtableClient),
+				edb.NewSlotExporterBT(bt),
 				tx,
 				nil)
 			err = slotExporter.ExportValidatorData(data.Validators, 0, chainID)
