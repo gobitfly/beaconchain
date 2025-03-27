@@ -141,7 +141,7 @@ const {
             :page-size
             :row-class="getRowClass"
             :is-row-expandable
-            :loading="isLoadingDeposits"
+            :is-loading="isLoadingDeposits"
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
