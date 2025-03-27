@@ -9,8 +9,8 @@ interface Props {
   dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
   hidePager?: boolean,
+  isLoading?: boolean,
   isRowExpandable?: (item: any) => boolean,
-  loading?: boolean,
   pageSize?: number,
   selectedSort?: string,
   selectionMode?: 'multiple' | 'single',
@@ -117,7 +117,7 @@ const sort = computed(() => {
     :sort-order="sort?.order"
     :value="data?.data"
     :data-key
-    :loading
+    :loading="isLoading"
   >
     <Column
       v-if="selectionMode"
@@ -166,7 +166,7 @@ const sort = computed(() => {
     </Column>
     <template #empty>
       <slot
-        v-if="!loading"
+        v-if="!isLoading"
         name="empty"
       >
         <DashboardTableEmpty />
