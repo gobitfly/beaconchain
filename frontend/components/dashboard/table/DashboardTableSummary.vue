@@ -188,7 +188,7 @@ watch(
             :page-size
             :row-class="getRowClass"
             :selected-sort="tempQuery?.sort"
-            :loading="isLoading"
+            :is-loading
             :hide-pager="true"
             @set-cursor="setCursor"
             @sort="onSort"

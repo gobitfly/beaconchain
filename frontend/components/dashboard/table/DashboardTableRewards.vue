@@ -167,7 +167,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             :add-spacer="colsVisible.age"
             :is-row-expandable
             :selected-sort="tempQuery?.sort"
-            :loading="isLoading"
+            :is-loading
             @set-cursor="setCursor"
             @sort="onSort"
             @set-page-size="setPageSize"
