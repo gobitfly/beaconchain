@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 )
 
 type SlotExporterCacheRepository interface {
@@ -24,27 +23,19 @@ type SlotExporterCacheRepository interface {
 }
 
 type SlotExporterCache struct {
-	cache   database.RemoteCache
-	metrics metrics.MetricsRepository
+	cache database.RemoteCacheWithMetrics
 }
 
-func NewSlotExporterCache(cache database.RemoteCache, metrics metrics.MetricsRepository) *SlotExporterCache {
+func NewSlotExporterCache(cache database.RemoteCacheWithMetrics) *SlotExporterCache {
 	return &SlotExporterCache{
-		cache:   cache,
-		metrics: metrics,
+		cache: cache,
 	}
 }
 
 func (c *SlotExporterCache) setValue(key string, value []byte, expiration time.Duration) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
-
-	err := c.cache.Set(ctx, key, value, expiration)
-	if err != nil {
-		c.metrics.Error("slot_exporter_cache_set_value")
-		return err
-	}
-	return nil
+	return c.cache.Set(ctx, key, value, expiration)
 }
 
 func (c *SlotExporterCache) getValue(key string) (uint64, error) {
@@ -52,7 +43,6 @@ func (c *SlotExporterCache) getValue(key string) (uint64, error) {
 	defer cancel()
 	res, err := c.cache.Get(ctx, key)
 	if err != nil {
-		c.metrics.Error("slot_exporter_cache_get_value")
 		return 0, err
 	}
 	return new(big.Int).SetBytes(res).Uint64(), nil

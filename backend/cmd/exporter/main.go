@@ -184,7 +184,12 @@ func Run() {
 		usedModules = append(usedModules,
 			modules.NewSlotExporter(
 				context,
-				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metrics.NewMetricsCollector()),
+				edb.NewSlotExporterCache(
+					database.NewRemoteCacheWithMetrics(
+						database.Redis{Client: db.PersistentRedisDbClient},
+						metrics.NewMetricsCollector(),
+					),
+				),
 				edb.NewSlotExporterDB(db.WriterDb, metrics.NewMetricsCollector()),
 				edb.NewSlotExporterBT(bt, metrics.NewMetricsCollector()),
 			),

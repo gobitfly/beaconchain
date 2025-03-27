@@ -273,7 +273,12 @@ func Run() {
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				metricsCollector := metrics.NewMetricsCollector()
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+					edb.NewSlotExporterCache(
+						database.NewRemoteCacheWithMetrics(
+							database.Redis{Client: db.PersistentRedisDbClient},
+							metricsCollector,
+						),
+					),
 					edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
 					edb.NewSlotExporterBT(bt, metricsCollector),
 					metricsCollector,
@@ -330,7 +335,12 @@ func Run() {
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
 				metricsCollector := metrics.NewMetricsCollector()
 				slotExporter := modules.NewExporter(rpcClient,
-					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+					edb.NewSlotExporterCache(
+						database.NewRemoteCacheWithMetrics(
+							database.Redis{Client: db.PersistentRedisDbClient},
+							metricsCollector,
+						),
+					),
 					edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
 					edb.NewSlotExporterBT(bt, metricsCollector),
 					metricsCollector,
@@ -434,7 +444,12 @@ func Run() {
 			chainID := utils.Config.Chain.ClConfig.DepositChainID
 			metricsCollector := metrics.NewMetricsCollector()
 			slotExporter := modules.NewExporter(rpcClient,
-				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}, metricsCollector),
+				edb.NewSlotExporterCache(
+					database.NewRemoteCacheWithMetrics(
+						database.Redis{Client: db.PersistentRedisDbClient},
+						metricsCollector,
+					),
+				),
 				edb.NewSlotExporterDB(db.WriterDb, metricsCollector),
 				edb.NewSlotExporterBT(bt, metricsCollector),
 				metricsCollector,
