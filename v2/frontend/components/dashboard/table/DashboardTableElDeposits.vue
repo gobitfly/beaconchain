@@ -1,95 +1,65 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
+import type {
+  GetValidatorDashboardExecutionLayerDepositsResponse,
+  GetValidatorDashboardTotalExecutionDepositsResponse,
+  VDBExecutionDepositsTableRow,
+} from '~/types/api/validator_dashboard'
+import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
+import { getGroupLabel } from '~/utils/dashboard/group'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardElDepositsStore } from '~/stores/dashboard/useValidatorDashboardElDepositsStore'
 
-const { dashboardKey } = useDashboardKey()
+const {
+  elDeposits,
+  elDepositsTotalAmount,
+} = defineProps<{
+  elDeposits?: GetValidatorDashboardExecutionLayerDepositsResponse,
+  elDepositsTotalAmount?: GetValidatorDashboardTotalExecutionDepositsResponse,
+  isLoading: boolean,
+}>()
 
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(5)
+const {
+  isGuestDashboard,
+} = useDashboardKey()
+
 const { t: $t } = useTranslation()
-
-const {
-  deposits,
-  getDeposits,
-  getTotalAmount,
-  isLoadingDeposits,
-  isLoadingTotal,
-  query: lastQuery,
-  totalAmount,
-} = useValidatorDashboardElDepositsStore()
-const {
-  bounce: setQuery,
-  value: query,
-} = useDebounceValue<
-  TableQueryParams | undefined
->(undefined, 500)
-
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators,
-  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
+
+const query = defineModel<TableQueryParams>('query')
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    block: width.value >= 1100,
-    depositer: width.value >= 860,
-    from: width.value >= 960,
-    group: width.value > 1200,
-    publicKey: width.value >= 560,
-    txHash: width.value >= 760,
-    valid: width.value >= 660,
-    withdrawalCredentials: width.value >= 1060,
+    block: width.value >= 768,
+    depositor: width.value >= 1042,
+    group: width.value > 768,
+    validatorIndex: width.value >= 768,
+    validity: width.value >= 768,
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  async (q) => {
-    if (q) {
-      await getDeposits(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const tableData = computed(() => {
-  if (!deposits.value?.data?.length) {
+  if (!elDeposits?.data?.length) {
     return
   }
+
   return {
     data: [
-      { amount: totalAmount.value },
-      ...deposits.value.data,
+      {
+        amount: elDepositsTotalAmount?.data.total_amount,
+        block: -1, // used for identifier
+        block_index: -1, // used for identifier
+        isTotalAmountRow: true,
+      },
+      ...elDeposits.data,
     ],
-    paging: deposits.value.paging,
+    paging: elDeposits.paging,
   }
 })
 
@@ -98,17 +68,20 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  query.value = setQuerySort(sort, query.value)
 }
 
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+const setCursor = (cursor: Cursor) => {
+  query.value = setQueryCursor(cursor, query.value)
+}
+const setPageSize = (limit: number) => {
+  query.value = setQueryPageSize(limit, query.value)
 }
 
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+const setSearch = (value?: string) => {
+  query.value = {
+    ...query.value, search: value,
+  }
 }
 
 const getRowClass = (row: VDBExecutionDepositsTableRow) => {
@@ -127,301 +100,300 @@ const {
 </script>
 
 <template>
-  <div>
-    <BcTableControl :title="$t('dashboard.validator.el_deposits.title')">
-      <template #table>
-        <ClientOnly fallback-tag="span">
-          <BcTable
-            :data="tableData"
-            data-key="index"
-            :expandable="!colsVisible.group"
-            class="el_deposits_table"
-            :cursor
-            :page-size
-            :row-class="getRowClass"
-            :is-row-expandable
-            :is-loading="isLoadingDeposits"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+  <BcTableControl
+    :title="$t('dashboard.validator.el_deposits.title')"
+    :search-placeholder="$t(
+      isGuestDashboard
+        ? 'dashboard.validator.el_deposits.search_placeholder_guest_dashboard'
+        : 'dashboard.validator.el_deposits.search_placeholder_private_dashboard',
+    )
+    "
+    @set-search="setSearch"
+  >
+    <template #table>
+      <ClientOnly fallback-tag="span">
+        <BcTable
+          :data="addIdentifier(tableData, 'block', 'block_index')"
+          data-key="identifier"
+          expandable
+          table-class="dashboard-table-el-deposits"
+          :cursor="query?.cursor"
+          :page-size="query?.limit"
+          :row-class="getRowClass"
+          :is-row-expandable
+          :is-loading
+          :selected-sort="query?.sort"
+          @set-cursor="setCursor"
+          @sort="onSort"
+          @set-page-size="setPageSize"
+        >
+          <Column
+            field="timestamp"
+            body-class="age-field"
+            sortable
           >
-            <Column
-              v-if="colsVisible.publicKey"
-              field="public_key"
-              :header="$t('dashboard.validator.col.public_key')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.public_key"
-                  :no-wrap="true"
-                  type="public_key"
+            <template #header>
+              <BcTableAgeHeader />
+            </template>
+            <template #body="slotProps">
+              <span v-if="slotProps.data.isTotalAmountRow">Σ</span>
+              <BcTableDateTime
+                v-else
+                :unix-timestamp="slotProps.data.timestamp"
+              />
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.validatorIndex"
+            field="index"
+            :header="$t('dashboard.validator.col.validator_index')"
+          >
+            <template #body="slotProps">
+              <BcIcon
+                v-if="!slotProps.data.isTotalAmountRow"
+                name="desktop"
+                size="sm"
+                class="dashboard-table-el-deposits__desktop-icon"
+              />
+              <BcLink
+                v-if="!slotProps.data.isTotalAmountRow"
+                :to="`/validator/${slotProps.data.index}`"
+                target="_blank"
+                class="link"
+              >
+                {{ slotProps.data.index }}
+              </BcLink>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.group"
+            field="group_id"
+            body-class="group-id"
+            header-class="group-id"
+            :header="$t('dashboard.validator.col.group')"
+          >
+            <template #body="slotProps">
+              <span v-if="!slotProps.data.isTotalAmountRow">
+                {{ groupNameLabel(slotProps.data.group_id) }}
+              </span>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.block"
+            field="block"
+            sortable
+            :header="$t('common.block')"
+          >
+            <template #body="slotProps">
+              <BcLink
+                v-if="!slotProps.data.isTotalAmountRow"
+                :to="`/block/${slotProps.data.block}`"
+                target="_blank"
+                class="link"
+              >
+                <BcFormatNumber :value="slotProps.data.block" />
+              </BcLink>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.depositor"
+            field="depositor"
+            :header="$t('dashboard.validator.col.depositor')"
+          >
+            <template #body="slotProps">
+              <BcFormatHash
+                v-if="!slotProps.data.isTotalAmountRow"
+                :hash="slotProps.data.depositor.hash"
+                :ens="slotProps.data.depositor.ens"
+                :no-wrap="true"
+                type="address"
+              />
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.validity"
+            field="validity"
+            :header="$t('table.validity')"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="!slotProps.data.isTotalAmountRow"
+                class="status-cell-content"
+              >
+                <DashboardTableElDepositsValidity
+                  :validity="slotProps.data.validity"
                 />
-                <span v-else>Σ</span>
-              </template>
-            </Column>
-            <Column
-              field="index"
-              :header="$t('common.index')"
-            >
-              <template #body="slotProps">
-                <BcLink
-                  v-if="slotProps.data.index !== undefined"
-                  :to="`/validator/${slotProps.data.index}`"
-                  target="_blank"
-                  class="link"
+              </div>
+            </template>
+          </Column>
+          <Column
+            field="amount"
+            :header="$t('table.amount')"
+            sortable
+          >
+            <template #body="slotProps">
+              <BcTooltip
+                fit-content
+              >
+                <BcFormatAmount
+                  :value="slotProps.data.amount"
+                  target-currency="clDisplayCurrency"
+                  has-tooltip
+                />
+                <template
+                  v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
+                  #tooltip
                 >
-                  {{ slotProps.data.index }}
-                </BcLink>
-                <span v-else-if="!colsVisible.publicKey">Σ</span>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.group"
-              field="group_id"
-              body-class="group-id"
-              header-class="group-id"
-              :header="$t('dashboard.validator.col.group')"
-            >
-              <template #body="slotProps">
-                <span v-if="slotProps.data.index !== undefined">
+                  <BcFormatAmount
+                    :value="slotProps.data.amount"
+                    has-higher-precision
+                  />
+                </template>
+              </BcTooltip>
+            </template>
+          </Column>
+          <Column
+            v-if="!colsVisible.validity"
+            field="validity"
+          >
+            <template #body="slotProps">
+              <div v-if="!slotProps.data.isTotalAmountRow">
+                <DashboardTableElDepositsValidity
+                  is-mobile
+                  :validity="slotProps.data.validity"
+                />
+              </div>
+            </template>
+          </Column>
+          <template #expansion="slotProps">
+            <div class="expansion">
+              <div
+                v-if="!colsVisible.validatorIndex"
+                class="row"
+              >
+                <div class="label">
+                  {{ $t("dashboard.validator.col.validator_index") }}
+                </div>
+                <div class="value">
+                  <BcIcon
+                    v-if="!slotProps.data.isTotalAmountRow"
+                    name="desktop"
+                    size="sm"
+                    class="dashboard-table-el-deposits__desktop-icon"
+                  />
+                  <BcLink
+                    :to="`/validator/${slotProps.data.index}`"
+                    target="_blank"
+                    class="link"
+                  >
+                    {{ slotProps.data.index }}
+                  </BcLink>
+                </div>
+              </div>
+              <div
+                v-if="!colsVisible.group"
+                class="row"
+              >
+                <div class="label">
+                  {{ $t("dashboard.validator.col.group") }}
+                </div>
+                <div class="value">
                   {{ groupNameLabel(slotProps.data.group_id) }}
-                </span>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.block"
-              field="block"
-              :header="$t('common.block')"
-            >
-              <template #body="slotProps">
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="label">
+                  {{ $t("block.col.transaction_hash") }}
+                </div>
+                <BcFormatHash
+                  v-if="!slotProps.data.isTotalAmountRow"
+                  :hash="slotProps.data.tx_hash"
+                  :no-wrap="true"
+                  type="tx"
+                />
+              </div>
+
+              <div
+                v-if="!colsVisible.block"
+                class="row"
+              >
+                <div class="label">
+                  {{ $t("common.block") }}
+                </div>
                 <BcLink
-                  v-if="slotProps.data.index !== undefined"
                   :to="`/block/${slotProps.data.block}`"
                   target="_blank"
                   class="link"
                 >
                   <BcFormatNumber :value="slotProps.data.block" />
                 </BcLink>
-              </template>
-            </Column>
-            <Column
-              field="age"
-              body-class="age-field"
-            >
-              <template #header>
-                <BcTableAgeHeader />
-              </template>
-              <template #body="slotProps">
-                <BcTableDateTime
-                  v-if="slotProps.data.index !== undefined"
-                  :unix-timestamp="slotProps.data.timestamp"
-                />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.from"
-              :header="$t('table.from')"
-            >
-              <template #body="slotProps">
+              </div>
+
+              <div class="row">
+                <div class="label">
+                  {{ $t("dashboard.validator.col.public_key") }}
+                </div>
                 <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.from.hash"
-                  :ens="slotProps.data.from.ens"
+                  :hash="slotProps.data.public_key"
+                  type="public_key"
                   :no-wrap="true"
-                  type="address"
                 />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.depositer"
-              field="depositor"
-              :header="$t('dashboard.validator.col.depositor')"
-            >
-              <template #body="slotProps">
+              </div>
+
+              <div class="row">
+                <div class="label">
+                  {{ $t("dashboard.validator.col.withdrawal_credential") }}
+                </div>
                 <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
+                  :hash="slotProps.data.withdrawal_credential"
+                  type="withdrawal_credentials"
+                  :no-wrap="true"
+                />
+              </div>
+
+              <div
+                v-if="!colsVisible.depositor"
+                class="row"
+              >
+                <div class="label">
+                  {{ $t("dashboard.validator.col.depositor") }}
+                </div>
+                <BcFormatHash
+                  v-if="!slotProps.data.isTotalAmountRow"
                   :hash="slotProps.data.depositor.hash"
                   :ens="slotProps.data.depositor.ens"
                   :no-wrap="true"
                   type="address"
                 />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.txHash"
-              :header="$t('block.col.tx_hash')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.tx_hash"
-                  :no-wrap="true"
-                  type="tx"
-                />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.withdrawalCredentials"
-              header-class="withdrawal-credentials"
-              :header="$t('dashboard.validator.col.withdrawal_credential')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.withdrawal_credential"
-                  :no-wrap="true"
-                  type="withdrawal_credentials"
-                />
-              </template>
-            </Column>
-            <Column
-              field="amount"
-              :header="$t('table.amount')"
-            >
-              <template #body="slotProps">
-                <div
-                  v-if="slotProps.data.index === undefined && isLoadingTotal"
-                >
-                  <BcLoadingSpinner
-                    :loading="true"
-                    size="small"
-                  />
-                </div>
-                <BcTooltip
-                  v-else
-                  fit-content
-                >
-                  <BcFormatAmount
-                    :value="slotProps.data.amount"
-                    target-currency="clDisplayCurrency"
-                    :maximum-fraction-digits="0"
-                  />
-                  <template
-                    v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
-                    #tooltip
-                  >
-                    <BcFormatAmount
-                      :value="slotProps.data.amount"
-                      has-higher-precision
-                    />
-                  </template>
-                </BcTooltip>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.valid"
-              field="valid"
-              :header="$t('table.valid')"
-            >
-              <template #body="slotProps">
-                <BcTableValidTag
-                  v-if="slotProps.data.index !== undefined"
-                  :valid="slotProps.data.valid"
-                />
-              </template>
-            </Column>
-            <template #expansion="slotProps">
-              <div class="expansion">
-                <div class="row">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.public_key") }}
-                  </div>
-                  <BcFormatHash
-                    :hash="slotProps.data.public_key"
-                    type="public_key"
-                    :no-wrap="true"
-                  />
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.group") }}
-                  </div>
-                  <div class="value">
-                    {{ groupNameLabel(slotProps.data.group_id) }}
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("common.block") }}
-                  </div>
-                  <BcLink
-                    :to="`/block/${slotProps.data.block}`"
-                    target="_blank"
-                    class="link"
-                  >
-                    <BcFormatNumber :value="slotProps.data.block" />
-                  </BcLink>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("table.from") }}
-                  </div>
-                  <BcFormatHash
-                    v-if="slotProps.data.index !== undefined"
-                    :hash="slotProps.data.from.hash"
-                    :ens="slotProps.data.from.ens"
-                    :no-wrap="true"
-                    type="address"
-                  />
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.depositor") }}
-                  </div>
-                  <BcFormatHash
-                    v-if="slotProps.data.index !== undefined"
-                    :hash="slotProps.data.depositor.hash"
-                    :ens="slotProps.data.depositor.ens"
-                    :no-wrap="true"
-                    type="address"
-                  />
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("block.col.tx_hash") }}
-                  </div>
-                  <BcFormatHash
-                    v-if="slotProps.data.index !== undefined"
-                    :hash="slotProps.data.tx_hash"
-                    :no-wrap="true"
-                    type="tx"
-                  />
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.withdrawal_credential") }}
-                  </div>
-                  <BcFormatHash
-                    :hash="slotProps.data.withdrawal_credential"
-                    type="withdrawal_credentials"
-                    :no-wrap="true"
-                  />
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("table.valid") }}
-                  </div>
-                  <div>
-                    <BcTableValidTag :valid="slotProps.data.valid" />
-                  </div>
-                </div>
               </div>
-            </template>
-            <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
-            </template>
-          </BcTable>
-        </ClientOnly>
-      </template>
-    </BcTableControl>
-  </div>
+              <div
+                v-if="!colsVisible.validity"
+                class="row"
+              >
+                <div class="label">
+                  {{ $t("dashboard.validator.col.validity") }}
+                </div>
+                <DashboardTableElDepositsValidity
+                  :validity="slotProps.data.validity"
+                />
+              </div>
+            </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
+          </template>
+        </BcTable>
+      </ClientOnly>
+    </template>
+  </BcTableControl>
 </template>
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+@use '~/assets/css/breakpoints' as *;
 
-:deep(.el_deposits_table) {
+:deep(.dashboard-table-el-deposits) {
   > .p-datatable-wrapper {
     min-height: 335px;
   }
@@ -447,33 +419,51 @@ const {
   .age-field {
     white-space: nowrap;
   }
-  tr > td.age-field {
+
+  .status-cell-content {
+    display: flex;
+    align-items: center;
+  }
+
+  tr>td.age-field {
     padding: 0 7px;
     @include utils.set-all-width(110px);
   }
 }
 
+.dashboard-table-el-deposits__desktop-icon {
+  margin-right: var(--padding);
+  color: var(--text-color-discreet);
+}
+
 .expansion {
-  color: var(--container-color);
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: var(--padding-medium) calc(var(--padding-large) * 2);
+  padding: var(--padding-medium);
   background-color: var(--container-background);
-  display: flex;
-  flex-direction: column;
-  gap: var(--padding);
-  padding: var(--padding);
+  color: var(--container-color);
   font-size: var(--small_text_font_size);
 
+  @media (min-width: $breakpoint-md) {
+    grid-template-columns: repeat(4, max-content);
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+  }
+
   .row {
-    display: flex;
-    gap: var(--padding);
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: var(--padding-large);
+    align-items: center;
 
     .label {
-      width: 164px;
       font-weight: var(--standard_text_bold_font_weight);
     }
 
     .value {
-      @include utils.truncate-text;
-      max-width: 140px;
+      display: flex
     }
   }
 }
