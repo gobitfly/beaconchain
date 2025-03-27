@@ -64,7 +64,6 @@ type rpcBlock struct {
 	Transactions []rpcTransaction    `json:"transactions"`
 	UncleHashes  []common.Hash       `json:"uncles"`
 	Withdrawals  []*types.Withdrawal `json:"withdrawals,omitempty"`
-	Requests     []*types.Request    `json:"requests,omitempty"`
 }
 
 type rpcTransaction struct {
@@ -139,6 +138,5 @@ func parseEthBlock(chainID *big.Int, raw json.RawMessage, rawUncles []jsonrpc.Me
 			Transactions: txs,
 			Uncles:       uncles,
 			Withdrawals:  body.Withdrawals,
-			Requests:     body.Requests,
 		}), nil
 }
