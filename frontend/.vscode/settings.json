@@ -68,6 +68,7 @@
         "useFeatureFlag",
         "useNotificationsOverviewStore",
         "useWindowSize",
+        "variables.scss",
         "vscode"
     ],
     "editor.codeActionsOnSave": {
