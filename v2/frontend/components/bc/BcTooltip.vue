@@ -326,7 +326,7 @@ onUnmounted(() => {
 }
 
 .slot_container {
-  display: inline;
+  display: inline-flex;
 
   &.active {
     cursor: pointer;
