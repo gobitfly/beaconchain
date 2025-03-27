@@ -260,14 +260,6 @@ export function formatTsToTime(ts: number, locales: Locale): string {
   return date.toLocaleTimeString(locales, options)
 }
 
-export function nZeros(count: number): string {
-  return count > 0
-    ? Array.from(Array(count))
-        .map(() => '0')
-        .join('')
-    : ''
-}
-
 export function withCurrency(value: string, currency: string): string {
   return `${value} ${currency}`
 }
