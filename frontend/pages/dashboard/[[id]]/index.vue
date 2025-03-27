@@ -8,6 +8,7 @@ import {
   isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
+import type { TableQueryParams } from '~/types/datatable'
 
 const {
   isLoggedIn,
@@ -199,6 +200,54 @@ watch(
   },
   { immediate: true },
 )
+
+const dashboardData = useDashboardData()
+
+// Execution Layer deposits data
+const elDepositsQueryParams = ref<TableQueryParams>({
+  limit: 5, sort: 'timestamp:desc',
+})
+
+const {
+  data: elDepositsData,
+  refresh: refreshElDepositsData,
+  status: elDepositsDataStatus,
+} = useAsyncData('el_deposits', () => {
+  return Promise.all([
+    dashboardData.fetchELDeposits(
+      dashboardKey.value,
+      elDepositsQueryParams.value,
+    ),
+    dashboardData.fetchELDpositsTotalAmount(dashboardKey.value),
+  ])
+},
+{
+  immediate: false,
+  watch: [ elDepositsQueryParams ],
+})
+const elDeposits = computed(() => {
+  return elDepositsData.value?.[0]
+})
+const elDepositsTotalAmount = computed(() => elDepositsData.value?.[1])
+
+// tabs
+const route = useRoute()
+
+const activeTab = computed(() => route.hash)
+
+watch(
+  activeTab,
+  () => {
+    refreshActiveTab()
+  },
+)
+const refreshActiveTab = () => {
+  switch (activeTab.value) {
+    case '#deposits':
+      refreshElDepositsData()
+      break
+  }
+}
 </script>
 
 <template>
@@ -248,7 +297,12 @@ watch(
       >
         <template #tab-panel-deposits>
           <div class="deposits">
-            <DashboardTableElDeposits />
+            <DashboardTableElDeposits
+              v-model:query="elDepositsQueryParams"
+              :el-deposits
+              :el-deposits-total-amount
+              :is-loading="elDepositsDataStatus === 'pending'"
+            />
             <BcIcon
               name="arrow-down"
               class="down_icon"
