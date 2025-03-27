@@ -71,6 +71,7 @@
         "useNotificationsOverviewStore",
         "useSettingsStore",
         "useWindowSize",
+        "variables.scss",
         "vscode"
     ],
     "editor.codeActionsOnSave": {
