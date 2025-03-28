@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"github.com/sirupsen/logrus"
 
 	"regexp"
 	"sort"
@@ -728,7 +727,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				end = len(validators)
 			}
 
-			logrus.Infof("applying update batch from index %v to %v", i, end)
+			log.Infof("applying update batch from index %v to %v", i, end)
 			batch := validators[i:end]
 			_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(batch))
 			if err != nil {
