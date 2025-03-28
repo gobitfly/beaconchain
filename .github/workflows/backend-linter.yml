@@ -11,7 +11,8 @@ on:
     paths:
       - 'backend/**'
     branches:
-      - '*'
+      - '**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
