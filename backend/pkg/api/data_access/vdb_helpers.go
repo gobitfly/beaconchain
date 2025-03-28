@@ -2,7 +2,6 @@ package dataaccess
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"math/big"
 	"time"
