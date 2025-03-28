@@ -35,10 +35,10 @@ func NewStoreV1(data, metadata, updates, blocks database.Database, cache CachedB
 
 func NewStoreV1FromBigtable(bigtable *database.BigTable, cache CachedBalanceUpdates) StoreV1 {
 	return StoreV1{
-		data:     database.Wrap(bigtable, DataTable),
-		metadata: database.Wrap(bigtable, MetadataTable),
-		updates:  database.Wrap(bigtable, UpdatesTable),
-		blocks:   database.Wrap(bigtable, BlocksTable),
+		data:     database.WrapWithMetrics(bigtable, DataTable),
+		metadata: database.WrapWithMetrics(bigtable, MetadataTable),
+		updates:  database.WrapWithMetrics(bigtable, UpdatesTable),
+		blocks:   database.WrapWithMetrics(bigtable, BlocksTable),
 		cache:    cache,
 	}
 }

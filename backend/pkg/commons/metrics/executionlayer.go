@@ -35,4 +35,9 @@ var (
 		Name: "indexing_reorg_total",
 		Help: "Total number of block impacted by chain reorganizations",
 	}, []string{"chainID"})
+
+	ClientGetBlock = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "client_get_block_time_seconds",
+		Help: "Time taken to retrieve a block from the blockchain and parse it",
+	}, []string{"chainID"})
 )

@@ -3,6 +3,7 @@ package executionlayer
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync/atomic"
 	"time"
 
@@ -10,11 +11,29 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type Client interface {
 	GetBlock(number uint64, traceMode string) (*types.Eth1Block, *types.GetBlockTimings, error)
+	GetChainID() *big.Int
+}
+
+type clientWithMetrics struct {
+	client Client
+}
+
+func (c clientWithMetrics) GetBlock(number uint64, traceMode string) (*types.Eth1Block, *types.GetBlockTimings, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.ClientGetBlock.WithLabelValues(c.client.GetChainID().String()).Observe(time.Since(start).Seconds())
+	}(start)
+	return c.client.GetBlock(number, traceMode)
+}
+
+func (c clientWithMetrics) GetChainID() *big.Int {
+	return c.client.GetChainID()
 }
 
 type Store interface {
@@ -41,7 +60,7 @@ func NewBlockIndexer(store Store, lastBlockStore db2.LastBlocksStore, config Blo
 		store:          store,
 		lastBlockStore: lastBlockStore,
 		transformers:   transformers,
-		client:         client,
+		client:         clientWithMetrics{client},
 		config:         config,
 	}
 }
