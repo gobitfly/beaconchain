@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -21,7 +24,6 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsElColumn], search string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
-	// TODO: add default sorting
 	var err error
 	var currentCursor t.ELDepositsCursor
 
@@ -32,16 +34,20 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		}
 	}
 
-	// Resolve validator indices to pubkeys
-	byteaArray, err := d.getValidatorPubkeys(dashboardId)
-	if err != nil {
-		return nil, nil, err
+	// filters
+	searchPubkey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
+	searchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+	searchIndexOrBlock := t.ReInteger.MatchString(search)
+
+	if search != "" && !searchPubkey && !searchGroup && !searchIndexOrBlock {
+		return make([]t.VDBExecutionDepositsTableRow, 0), &t.Paging{}, nil
 	}
 
 	// Custom type for log_index
-	var data []struct {
+	type dbResult struct {
 		GroupId               sql.NullInt64 `db:"group_id"`
 		PublicKey             []byte        `db:"publickey"`
+		Index                 uint64        `db:"validatorindex"`
 		BlockNumber           int64         `db:"block_number"`
 		LogIndex              int64         `db:"log_index"`
 		Timestamp             time.Time     `db:"block_ts"`
@@ -50,13 +56,14 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		TxHash                []byte        `db:"tx_hash"`
 		WithdrawalCredentials []byte        `db:"withdrawal_credentials"`
 		Amount                int64         `db:"amount"`
-		Valid                 bool          `db:"valid_signature"`
+		Valid                 string        `db:"valid_signature"`
 	}
 
 	depositsDs := goqu.Dialect("postgres").
 		From(goqu.T("eth1_deposits").As("ed")).
 		Select(
 			goqu.I("ed.publickey"),
+			goqu.I("v.validatorindex"),
 			goqu.I("ed.block_number"),
 			goqu.L("COALESCE(ed.log_index, 0) AS log_index"),
 			goqu.I("ed.from_address"),
@@ -64,13 +71,54 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			goqu.I("ed.tx_hash"),
 			goqu.I("ed.withdrawal_credentials"),
 			goqu.I("ed.amount"),
-			goqu.I("ed.valid_signature"),
 			goqu.I("ed.block_ts"),
+			goqu.Case().
+				When(goqu.I("ed.valid_signature").Eq(true), "valid").
+				When(goqu.Func("EXISTS", goqu.
+					From(goqu.T("eth1_deposits").As("ed2")).
+					Select("valid_signature").
+					Where(
+						goqu.I("valid_signature").Eq(true),
+						goqu.I("ed2.publickey").Eq(goqu.I("ed.publickey")),
+						goqu.Or(
+							goqu.I("ed2.block_number").Lt(goqu.I("ed.block_number")),
+							goqu.And(
+								goqu.I("ed2.block_number").Eq(goqu.I("ed.block_number")),
+								goqu.I("ed2.log_index").Lt(goqu.I("ed.log_index")),
+							),
+						),
+					)), "invalid_skipped").
+				Else("invalid").
+				As("valid_signature"),
+		).
+		InnerJoin(
+			goqu.T("validators").As("v"),
+			goqu.On(goqu.I("ed.publickey").Eq(goqu.I("v.pubkey"))),
 		)
 
+	searches := []exp.Expression{}
 	if dashboardId.Validators != nil {
+		// Resolve validator indices to pubkeys
+		byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
+		if err != nil {
+			return nil, nil, err
+		}
 		depositsDs = depositsDs.
 			Where(goqu.L("ed.publickey = ANY(?)", byteaArray))
+		if searchIndexOrBlock {
+			filter, err := d.getPubIndexSearchQryFilter(search)
+			if err != nil {
+				return nil, nil, err
+			}
+			searches = append(searches, filter)
+		}
+		if searchPubkey {
+			pubkey, err := hexutil.Decode(search)
+			if err != nil {
+				return nil, nil, err
+			}
+			searches = append(searches, goqu.I("ed.publickey").Eq(pubkey))
+		}
 	} else {
 		depositsDs = depositsDs.
 			SelectAppend(
@@ -84,13 +132,65 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 				),
 			).
 			Where(goqu.I("cedl.dashboard_id").Eq(dashboardId.Id))
+		if searchIndexOrBlock || searchPubkey {
+			var index uint64
+			if searchIndexOrBlock {
+				idx, err := strconv.Atoi(search)
+				if err != nil {
+					return nil, nil, err
+				}
+				index = uint64(idx)
+			} else {
+				validatorMapping, err := d.services.GetCurrentValidatorMapping()
+				if err != nil {
+					return nil, nil, err
+				}
+				var ok bool
+				index, ok = validatorMapping.ValidatorIndices[search]
+				if !ok && !searchGroup {
+					return make([]t.VDBExecutionDepositsTableRow, 0), &t.Paging{}, nil
+				}
+			}
+			// only validators with index in dashboards
+			depositsDs = depositsDs.
+				InnerJoin(
+					goqu.T("users_val_dashboards_validators").As("uvdv"),
+					goqu.On(
+						goqu.I("cedl.dashboard_id").Eq(goqu.I("uvdv.dashboard_id")),
+						goqu.I("cedl.group_id").Eq(goqu.I("uvdv.group_id")),
+						goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+					),
+				)
+			searches = append(searches, goqu.I("uvdv.validator_index").Eq(index))
+		}
+		if searchGroup {
+			depositsDs = depositsDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("cedl.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("cedl.group_id").Eq(goqu.I("uvdg.id")),
+				))
+			searches = append(searches,
+				goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1)+"%"),
+			)
+		}
+	}
+	if searchIndexOrBlock {
+		searches = append(searches, goqu.I("ed.block_number").Eq(search))
+	}
+	if len(searches) > 0 {
+		depositsDs = depositsDs.Where(goqu.Or(searches...))
 	}
 
 	defaultColumns := []t.SortColumn{
 		{Column: goqu.I("ed.block_number"), Desc: true, Offset: currentCursor.BlockNumber},
 		{Column: goqu.I("ed.log_index"), Desc: true, Offset: currentCursor.LogIndex},
 	}
-	order, directions, err := applySortAndPagination(defaultColumns, defaultColumns[0], currentCursor.GenericCursor)
+	var offset any
+	switch colSort.Column {
+	case enums.VDBDepositsElColumns.Amount:
+		offset = currentCursor.Amount
+	}
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,13 +202,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		depositsDs = depositsDs.Where(directions)
 	}
 
-	query, params, err := depositsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to prepare SQL query: %w", err)
-	}
-
-	err = db.AlloyReader.SelectContext(ctx, &data, query, params...)
-
+	data, err := runQueryRows[[]dbResult](ctx, db.AlloyReader, depositsDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,8 +230,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
-			// Valid:                row.Valid,
-			From: t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
+			Validity:             row.Valid,
+			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
 		}
 		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
@@ -234,7 +328,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	}
 
 	// Resolve validator indices to pubkeys
-	byteaArray, err := d.getValidatorPubkeys(dashboardId)
+	byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -418,43 +512,117 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalExecutionDepositsData, error) {
-	// TODO add filter
 	responseData := t.VDBTotalExecutionDepositsData{
 		TotalAmount: decimal.Zero,
 	}
 
-	totalDs := goqu.Dialect("postgres").
-		Select(goqu.L("COALESCE(SUM(amount), 0)"))
+	// filters
+	searchPubkey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
+	searchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+	searchIndexOrBlock := t.ReInteger.MatchString(search)
 
+	if search != "" && !searchPubkey && !searchGroup && !searchIndexOrBlock {
+		return &responseData, nil
+	}
+
+	totalDs := goqu.Dialect("postgres").
+		Select(goqu.L("COALESCE(SUM(ed.amount), 0)"))
+
+	searches := []exp.Expression{}
 	if dashboardId.Validators != nil {
 		// Resolve validator indices to pubkeys
-		byteaArray, err := d.getValidatorPubkeys(dashboardId)
+		byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
 		if err != nil {
 			return nil, err
 		}
 		totalDs = totalDs.
 			From(goqu.T("eth1_deposits").As("ed")).
 			Where(goqu.L("publickey = ANY(?)", byteaArray))
+		if searchPubkey {
+			pubkey, err := hexutil.Decode(search)
+			if err != nil {
+				return nil, err
+			}
+			searches = append(searches, goqu.I("ed.publickey").Eq(pubkey))
+		}
+		if searchIndexOrBlock {
+			filter, err := d.getPubIndexSearchQryFilter(search)
+			if err != nil {
+				return nil, err
+			}
+			searches = append(searches, filter)
+		}
 	} else {
 		totalDs = totalDs.
-			From(goqu.T("cached_eth1_deposits_lookup")).
-			Where(goqu.I("dashboard_id").Eq(dashboardId.Id)).
-			GroupBy(goqu.I("dashboard_id"))
+			From(goqu.T("cached_eth1_deposits_lookup").As("ed")).
+			Where(goqu.I("ed.dashboard_id").Eq(dashboardId.Id)).
+			GroupBy(goqu.I("ed.dashboard_id"))
+
+		if searchGroup {
+			totalDs = totalDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("ed.group_id").Eq(goqu.I("uvdg.id")),
+					goqu.I("ed.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+				))
+			searches = append(searches,
+				goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1)+"%"),
+			)
+		}
+		if searchIndexOrBlock || searchPubkey {
+			var index uint64
+			if searchIndexOrBlock {
+				idx, err := strconv.Atoi(search)
+				if err != nil {
+					return nil, err
+				}
+				index = uint64(idx)
+			} else {
+				validatorMapping, err := d.services.GetCurrentValidatorMapping()
+				if err != nil {
+					return nil, err
+				}
+				var ok bool
+				index, ok = validatorMapping.ValidatorIndices[search]
+				if !ok && !searchGroup {
+					return &responseData, nil
+				}
+			}
+			totalDs = totalDs.
+				InnerJoin(
+					goqu.T("eth1_deposits"),
+					goqu.On(
+						goqu.I("ed.block_number").Eq(goqu.I("eth1_deposits.block_number")),
+						goqu.I("ed.log_index").Eq(goqu.I("eth1_deposits.log_index")),
+					),
+				).
+				InnerJoin(
+					goqu.T("validators").As("v"),
+					goqu.On(goqu.I("eth1_deposits.publickey").Eq(goqu.I("v.pubkey"))),
+				).
+				InnerJoin(
+					goqu.T("users_val_dashboards_validators").As("uvdv"),
+					goqu.On(
+						goqu.I("ed.dashboard_id").Eq(goqu.I("uvdv.dashboard_id")),
+						goqu.I("ed.group_id").Eq(goqu.I("uvdv.group_id")),
+						goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+					),
+				)
+			searches = append(searches, goqu.I("uvdv.validator_index").Eq(index))
+		}
+	}
+	if searchIndexOrBlock {
+		searches = append(searches, goqu.I("ed.block_number").Eq(search))
+	}
+	if len(searches) > 0 {
+		totalDs = totalDs.Where(goqu.Or(searches...))
 	}
 
-	query, params, err := totalDs.Prepared(true).ToSQL()
+	sum, err := runQuery[int64](ctx, db.AlloyReader, totalDs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to prepare SQL query: %w", err)
-	}
-
-	var sum int64
-	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
 	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
-
 	return &responseData, nil
 }
 
@@ -470,7 +638,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 
 	if dashboardId.Validators != nil {
 		// Resolve validator indices to pubkeys
-		byteaArray, err := d.getValidatorPubkeys(dashboardId)
+		byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
 		if err != nil {
 			return nil, err
 		}
@@ -528,20 +696,34 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 	return &responseData, nil
 }
 
-func (d *DataAccessService) getValidatorPubkeys(dashboardId t.VDBId) (pq.ByteaArray, error) {
+func (d *DataAccessService) getValidatorPubkeys(validators []t.VDBValidator) (pq.ByteaArray, error) {
 	var byteaArray pq.ByteaArray
 
-	if dashboardId.Validators != nil {
-		validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(dashboardId.Validators)
-		if err != nil {
-			return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
-		}
+	validatorPubkeys, err := d.services.GetPubkeySliceFromIndexSlice(validators)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve validator indices to pubkeys: %w", err)
+	}
 
-		// Convert pubkeys to bytes for PostgreSQL
-		byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
-		for i, p := range validatorPubkeys {
-			byteaArray[i], _ = hexutil.Decode(p)
-		}
+	// Convert pubkeys to bytes for PostgreSQL
+	byteaArray = make(pq.ByteaArray, len(validatorPubkeys))
+	for i, p := range validatorPubkeys {
+		byteaArray[i], _ = hexutil.Decode(p)
 	}
 	return byteaArray, nil
+}
+
+func (d *DataAccessService) getPubIndexSearchQryFilter(search string) (exp.Expression, error) {
+	index, err := strconv.Atoi(search)
+	if err != nil {
+		return nil, err
+	}
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, err
+	}
+	var pubkey string
+	if index < len(validatorMapping.ValidatorPubkeys) {
+		pubkey = validatorMapping.ValidatorPubkeys[index]
+	}
+	return goqu.I("ed.publickey").Eq(pubkey), nil
 }
