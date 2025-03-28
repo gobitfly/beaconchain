@@ -53,7 +53,7 @@ func TestBalanceUpdater(t *testing.T) {
 	if got, want := balances[0].Pair, expected.Pair; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	if got, want := balances[0].Value.String(), expectedBalance.String(); got != want {
+	if got, want := balances[0].Value.String(), expected.Value.String(); got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if len(updates.updates) != 0 {

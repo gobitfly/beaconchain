@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 
@@ -114,7 +115,7 @@ func (service *IndexerService) SyncTokenPrice(path string) {
 
 type StateReader struct {
 	chainID        string
-	client         *ethclient.Client
+	client         ethereum.BlockNumberReader
 	lastBlockStore db2.LastBlocksStore
 }
 
@@ -260,7 +261,7 @@ func (service *Indexer) Balances(state syncState) {
 
 		total, err := service.store.CountBalanceUpdates(state.chainID)
 		if err != nil {
-			logger.WithField("error", err).Error("error while updating balances")
+			logger.WithField("error", err).Error("error while counting balance updates")
 			continue
 		}
 		logger = logger.WithField("pending", total)
@@ -294,7 +295,7 @@ func (service *Indexer) ENS(state syncState) {
 
 		total, err := service.store.CountEnsUpdates(state.chainID)
 		if err != nil {
-			logger.WithField("error", err).Error("error while importing ens")
+			logger.WithField("error", err).Error("error while counting total ens updates")
 			continue
 		}
 		logger = logger.WithField("pending", total)
@@ -304,7 +305,7 @@ func (service *Indexer) ENS(state syncState) {
 		}
 		res, err := service.ensImporter.Import(state.chainID, service.config.ENSImportBatchSize)
 		if err != nil {
-			logger.WithField("error", err).Error("error while importing balances")
+			logger.WithField("error", err).Error("error while importing ens")
 			continue
 		}
 		logger.WithFields(logrus.Fields{
