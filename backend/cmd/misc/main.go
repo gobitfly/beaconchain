@@ -83,7 +83,7 @@ var opts = struct {
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
 	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
-	"update-highest-active-validatorindex": misctypes.Requires{
+	"update-highest-active-validatorindex": {
 		Bigtable: true,
 		ClNode:   true,
 	},
@@ -507,7 +507,6 @@ func updateHighestActiveValidatorIndex(rpcClient *rpc.LighthouseClient) error {
 	db.BigtableClient = bt
 
 	for epoch := opts.StartEpoch; epoch <= opts.EndEpoch; epoch++ {
-		log.Infof("updating highest active validator index for epoch %v", epoch)
 		valiMap, err := rpcClient.GetBalancesForEpoch(int64(epoch))
 		if err != nil {
 			return err
@@ -518,6 +517,7 @@ func updateHighestActiveValidatorIndex(rpcClient *rpc.LighthouseClient) error {
 				highestActiveValidatorIndex = vali
 			}
 		}
+		log.Infof("updating highest active validator: index: %v, epoch: %v", highestActiveValidatorIndex, epoch)
 		err = db.BigtableClient.SaveHighestActiveValidatorIndex(context.Background(), epoch, highestActiveValidatorIndex)
 		if err != nil {
 			return fmt.Errorf("error updating highest active validator index: %w", err)
