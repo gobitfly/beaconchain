@@ -54,6 +54,7 @@ import (
 
 var opts = struct {
 	Command             string
+	Config              string
 	User                uint64
 	Addresses           string
 	TargetVersion       int64
@@ -82,6 +83,10 @@ var opts = struct {
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
 	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"update-highest-active-validatorindex": misctypes.Requires{
+		Bigtable: true,
+		ClNode:   true,
+	},
 }
 
 func Run() {
@@ -96,7 +101,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -477,6 +482,8 @@ func Run() {
 		err = collectUserDbNotifications(opts.StartEpoch)
 	case "verify-fcm-tokens":
 		err = verifyFCMTokens()
+	case "update-highest-active-validatorindex":
+		err = updateHighestActiveValidatorIndex(rpcClient)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -486,6 +493,38 @@ func Run() {
 	} else {
 		log.Infof("command executed successfully")
 	}
+}
+
+func updateHighestActiveValidatorIndex(rpcClient *rpc.LighthouseClient) error {
+	var err error
+
+	chainIdStr := fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)
+
+	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdStr, utils.Config.RedisCacheEndpoint)
+	if err != nil {
+		return fmt.Errorf("error connecting to bigtable: %w", err)
+	}
+	db.BigtableClient = bt
+
+	for epoch := opts.StartEpoch; epoch <= opts.EndEpoch; epoch++ {
+		log.Infof("updating highest active validator index for epoch %v", epoch)
+		valiMap, err := rpcClient.GetBalancesForEpoch(int64(epoch))
+		if err != nil {
+			return err
+		}
+		highestActiveValidatorIndex := uint64(0)
+		for vali := range valiMap {
+			if vali > highestActiveValidatorIndex {
+				highestActiveValidatorIndex = vali
+			}
+		}
+		err = db.BigtableClient.SaveHighestActiveValidatorIndex(context.Background(), epoch, highestActiveValidatorIndex)
+		if err != nil {
+			return fmt.Errorf("error updating highest active validator index: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func collectNotifications(startEpoch uint64) error {
