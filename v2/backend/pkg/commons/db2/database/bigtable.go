@@ -106,8 +106,7 @@ func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminCl
 // It returns a BigTable and an error if any part of the setup fails
 // if tablesAndFamilies is not nil it will try to create the associated tables and families if not already presents
 func NewBigTable(project, instance string, tablesAndFamilies map[string][]string, options ...option.ClientOption) (*BigTable, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	ctx := context.Background()
 
 	// Create an admin client to manage Bigtable tables
 	adminClient, err := bigtable.NewAdminClient(ctx, project, instance, options...)
