@@ -83,6 +83,7 @@ type ELDepositsCursor struct {
 	GenericCursor
 	BlockNumber int64
 	LogIndex    int64
+	Amount      int64
 }
 
 type ValidatorsCursor struct {
