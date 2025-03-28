@@ -5,13 +5,13 @@ on:
       - 'backend/pkg/api/types/**'
       - 'frontend/types/api/**'
     branches:
-      - '*'
+      - '**'
   pull_request:
     paths:
       - 'backend/pkg/api/types/**'
       - 'frontend/types/api/**'
     branches:
-      - '*'
+      - '**'
   workflow_dispatch:
 
 concurrency:
