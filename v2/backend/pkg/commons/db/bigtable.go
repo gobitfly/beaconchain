@@ -542,7 +542,7 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 	epochKey := bigtable.reversedPaddedEpoch(epoch)
 
 	for _, validator := range validators {
-		if (utils.Config.Chain.ClConfig.ElectraForkEpoch >= epoch || validator.Balance > 0) && validator.Index > highestActiveIndex {
+		if (utils.Config.Chain.ClConfig.ElectraForkEpoch <= epoch || validator.Balance > 0) && validator.Index > highestActiveIndex {
 			highestActiveIndex = validator.Index
 		}
 
@@ -564,6 +564,8 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 	if err != nil {
 		return err
 	}
+
+	log.Infof("saving highestActiveValidatorIndex for epoch %v: %v (electraForkEpoch: %v)", epoch, highestActiveIndex, utils.Config.Chain.ClConfig.ElectraForkEpoch)
 
 	// store the highes active validator index for that epoch
 	return bigtable.SaveHighestActiveValidatorIndex(ctx, epoch, highestActiveIndex)
