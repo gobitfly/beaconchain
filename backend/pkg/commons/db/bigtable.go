@@ -542,7 +542,7 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 	epochKey := bigtable.reversedPaddedEpoch(epoch)
 
 	for _, validator := range validators {
-		if validator.Balance > 0 && validator.Index > highestActiveIndex {
+		if (utils.Config.Chain.ClConfig.ElectraForkEpoch >= epoch || validator.Balance > 0) && validator.Index > highestActiveIndex {
 			highestActiveIndex = validator.Index
 		}
 
@@ -566,13 +566,19 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 	}
 
 	// store the highes active validator index for that epoch
+	return bigtable.SaveHighestActiveValidatorIndex(ctx, epoch, highestActiveIndex)
+}
+
+func (bigtable *Bigtable) SaveHighestActiveValidatorIndex(ctx context.Context, epoch, highestActiveIndex uint64) error {
+	epochKey := bigtable.reversedPaddedEpoch(epoch)
+	ts := gcp_bigtable.Time(utils.EpochToTime(epoch))
 	highestActiveIndexEncoded := make([]byte, 8)
 	binary.LittleEndian.PutUint64(highestActiveIndexEncoded, highestActiveIndex)
 
 	mut := &gcp_bigtable.Mutation{}
 	mut.Set(VALIDATOR_HIGHEST_ACTIVE_INDEX_FAMILY, VALIDATOR_HIGHEST_ACTIVE_INDEX_FAMILY, ts, highestActiveIndexEncoded)
 	key := fmt.Sprintf("%s:%s:%s", bigtable.chainId, VALIDATOR_HIGHEST_ACTIVE_INDEX_FAMILY, epochKey)
-	err = bigtable.tableValidatorsHistory.Apply(ctx, key, mut)
+	err := bigtable.tableValidatorsHistory.Apply(ctx, key, mut)
 	if err != nil {
 		return err
 	}
