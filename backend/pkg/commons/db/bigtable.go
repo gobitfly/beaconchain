@@ -565,6 +565,8 @@ func (bigtable *Bigtable) SaveValidatorBalances(epoch uint64, validators []*type
 		return err
 	}
 
+	log.Infof("saving highestActiveValidatorIndex for epoch %v: %v (electraForkEpoch: %v)", epoch, highestActiveIndex, utils.Config.Chain.ClConfig.ElectraForkEpoch)
+
 	// store the highes active validator index for that epoch
 	return bigtable.SaveHighestActiveValidatorIndex(ctx, epoch, highestActiveIndex)
 }
