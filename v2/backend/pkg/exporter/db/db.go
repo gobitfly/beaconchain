@@ -1311,7 +1311,7 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 		sum(efficiency_dividend) AS efficiency_dividend,
 		sum(efficiency_divisor) AS efficiency_divisor
 	`
-	join := fmt.Sprintf("left join (select * from _final_validator_dashboard_roi_%[1]s final where %[2]s >= $1 and %[2]s <= $2) roi on roi.validator_index = a.validator_index", source, column)
+	join := fmt.Sprintf("left join (select validator_index, sum(roi_dividend) as roi_dividend, sum(roi_divisor) as roi_divisor from _final_validator_dashboard_roi_%[1]s where %[2]s >= $1 and %[2]s <= $2) roi on roi.validator_index = a.validator_index group by validator_index", source, column)
 	extraSelect := ", roi.roi_dividend::Int128 AS roi_dividend, roi.roi_divisor::Int128 AS roi_divisor"
 
 	if source == RollingSourceEpochly {
