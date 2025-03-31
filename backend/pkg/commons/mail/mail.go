@@ -175,11 +175,12 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 func SendMailSendgrid(to, subject, msgHtml, msgText string, attachment []types.EmailAttachment) error {
 	client := sendgrid.NewSendClient(utils.Config.Frontend.Mail.Sendgrid.ApiKey)
 
+	log.Infof("sending email via sendgrid to %s", utils.Config.Frontend.Mail.Sendgrid.ApiKey)
 	// if the text part still contains html tags / entities, remove / convert them
 	msgText = html2text.HTML2Text(msgText)
 
 	msg := mail.NewSingleEmail(
-		mail.NewEmail("no-reply", utils.Config.Frontend.Mail.Mailgun.Sender),
+		mail.NewEmail("beaconcha.in", utils.Config.Frontend.Mail.Sendgrid.Sender),
 		subject,
 		mail.NewEmail("", to),
 		msgText,
@@ -255,7 +256,7 @@ func SendTextMailSendgrid(to, subject, msgContent string, attachment []types.Ema
 	client := sendgrid.NewSendClient(utils.Config.Frontend.Mail.Sendgrid.ApiKey)
 
 	msg := mail.NewSingleEmail(
-		mail.NewEmail("no-reply", utils.Config.Frontend.Mail.Mailgun.Sender),
+		mail.NewEmail("beaconcha.in", utils.Config.Frontend.Mail.Sendgrid.Sender),
 		subject,
 		mail.NewEmail("", to),
 		msgContent,
