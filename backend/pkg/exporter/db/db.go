@@ -1985,7 +1985,6 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 	return excessBalanceEvents, nil
 }
 
-
 func (s *SlotExporterDB) HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error) {
 	var count uint64
 	err := s.WriterDb.Get(&count, `
