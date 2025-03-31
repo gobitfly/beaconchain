@@ -3,9 +3,10 @@ package mail
 import (
 	"bytes"
 	"context"
-	"html/template"
-
 	"fmt"
+	"github.com/sendgrid/sendgrid-go"
+	"github.com/sendgrid/sendgrid-go/helpers/mail"
+	"html/template"
 	"net/smtp"
 	"time"
 
@@ -48,6 +49,13 @@ func SendHTMLMail(to, subject string, msg types.Email, attachment []types.EmailA
 		}
 		content := body.String()
 		err = SendMailMailgun(to, subject, content, createTextMessage(msg), attachment)
+	} else if utils.Config.Frontend.Mail.Sendgrid.ApiKey != "" {
+		err = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		if err != nil {
+			log.Error(err, "error rendering mail template", 0)
+		}
+		content := body.String()
+		err = SendMailSendgrid(to, subject, content, createTextMessage(msg), attachment)
 	} else {
 		log.Error(nil, "error sending reset-email: invalid config for mail-service", 0)
 		err = nil
@@ -64,6 +72,8 @@ func SendTextMail(to, subject, msg string, attachment []types.EmailAttachment) e
 		err = SendTextMailSMTP(to, subject, msg)
 	} else if utils.Config.Frontend.Mail.Mailgun.PrivateKey != "" {
 		err = SendTextMailMailgun(to, subject, msg, attachment)
+	} else if utils.Config.Frontend.Mail.Sendgrid.ApiKey != "" {
+		err = SendTextMailSendgrid(to, subject, msg, attachment)
 	} else {
 		err = fmt.Errorf("invalid config for mail-service")
 	}
@@ -161,6 +171,42 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 	return nil
 }
 
+// SendMailSendgrid sends an email to the given address with the given message, using mailgun.
+func SendMailSendgrid(to, subject, msgHtml, msgText string, attachment []types.EmailAttachment) error {
+	client := sendgrid.NewSendClient(utils.Config.Frontend.Mail.Sendgrid.ApiKey)
+
+	// if the text part still contains html tags / entities, remove / convert them
+	msgText = html2text.HTML2Text(msgText)
+
+	msg := mail.NewSingleEmail(
+		mail.NewEmail("no-reply", utils.Config.Frontend.Mail.Mailgun.Sender),
+		subject,
+		mail.NewEmail("", to),
+		msgText,
+		msgHtml,
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	if len(attachment) > 0 {
+		for _, att := range attachment {
+			a := mail.NewAttachment()
+			a.SetContent(fmt.Sprintf("%s", att.Attachment))
+			a.SetFilename(att.Name)
+			msg.AddAttachment(a)
+		}
+	}
+
+	// Send the message with a 10sec timeout
+	resp, err := client.SendWithContext(ctx, msg)
+	if err != nil {
+		log.InfoWithFields(log.Fields{"resp": resp}, "error sending mail via mailgun")
+		return fmt.Errorf("error sending mail via mailgun: %w", err)
+	}
+
+	return nil
+}
+
 // SendMailSMTP sends an email to the given address with the given message, using smtp.
 func SendTextMailSMTP(to, subject, body string) error {
 	server := utils.Config.Frontend.Mail.SMTP.Server // eg. smtp.gmail.com:587
@@ -178,7 +224,7 @@ func SendTextMailSMTP(to, subject, body string) error {
 	return nil
 }
 
-// SendMailMailgun sends an email to the given address with the given message, using mailgun.
+// SendTextMailMailgun sends an email to the given address with the given message, using mailgun.
 func SendTextMailMailgun(to, subject, msg string, attachment []types.EmailAttachment) error {
 	mg := mailgun.NewMailgun(
 		utils.Config.Frontend.Mail.Mailgun.Domain,
@@ -198,6 +244,39 @@ func SendTextMailMailgun(to, subject, msg string, attachment []types.EmailAttach
 	resp, id, err := mg.Send(ctx, message)
 	if err != nil {
 		log.InfoWithFields(log.Fields{"resp": resp, "id": id}, "error sending mail via mailgun")
+		return fmt.Errorf("error sending mail via mailgun: %w", err)
+	}
+
+	return nil
+}
+
+// SendTextMailSendgrid sends an email to the given address with the given message, using mailgun.
+func SendTextMailSendgrid(to, subject, msgContent string, attachment []types.EmailAttachment) error {
+	client := sendgrid.NewSendClient(utils.Config.Frontend.Mail.Sendgrid.ApiKey)
+
+	msg := mail.NewSingleEmail(
+		mail.NewEmail("no-reply", utils.Config.Frontend.Mail.Mailgun.Sender),
+		subject,
+		mail.NewEmail("", to),
+		msgContent,
+		"",
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	if len(attachment) > 0 {
+		for _, att := range attachment {
+			a := mail.NewAttachment()
+			a.SetContent(fmt.Sprintf("%s", att.Attachment))
+			a.SetFilename(att.Name)
+			msg.AddAttachment(a)
+		}
+	}
+
+	// Send the message with a 10sec timeout
+	resp, err := client.SendWithContext(ctx, msg)
+	if err != nil {
+		log.InfoWithFields(log.Fields{"resp": resp}, "error sending mail via mailgun")
 		return fmt.Errorf("error sending mail via mailgun: %w", err)
 	}
 

@@ -137,6 +137,11 @@ type Config struct {
 				PrivateKey string `yaml:"privateKey" env:"PRIVATE_KEY"`
 				Sender     string `yaml:"sender" env:"SENDER"`
 			} `yaml:"mailgun" env:", prefix=MAILGUN_"`
+			Sendgrid struct {
+				Domain string `yaml:"domain" env:"DOMAIN"`
+				ApiKey string `yaml:"apiKey" env:"API_KEY"`
+				Sender string `yaml:"sender" env:"SENDER"`
+			} `yaml:"sendgrid" env:", prefix=SENDGRID_"`
 			Contact struct {
 				SupportEmail string `yaml:"supportEmail" env:"SUPPORT_EMAIL"`
 				InquiryEmail string `yaml:"inquiryEmail" env:"INQUIRY_EMAIL"`
