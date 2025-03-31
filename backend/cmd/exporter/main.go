@@ -192,6 +192,7 @@ func Run() {
 				),
 				edb.NewSlotExporterDB(db.WriterDb, metrics.NewMetricsCollector()),
 				edb.NewSlotExporterBT(bt, metrics.NewMetricsCollector()),
+				metrics.NewMetricsCollector(),
 			),
 			modules.NewExecutionDepositsExporter(context),
 			modules.NewExecutionPayloadsExporter(context),

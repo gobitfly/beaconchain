@@ -41,10 +41,11 @@ type SlotExporterClient interface {
 
 type slotExporter struct {
 	ModuleContext
-	Client SlotExporterClient
-	cache  edb.SlotExporterCacheRepository
-	db     edb.SlotExporterDBRepository
-	bt     edb.SlotExporterBTRepository
+	Client  SlotExporterClient
+	cache   edb.SlotExporterCacheRepository
+	db      edb.SlotExporterDBRepository
+	bt      edb.SlotExporterBTRepository
+	metrics metrics.MetricsRepository
 
 	firstRun       bool
 	latestEpoch    uint64
@@ -53,9 +54,9 @@ type slotExporter struct {
 	latestProposed uint64
 }
 
-func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository) ModuleInterface {
+func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRepository, db edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, metrics metrics.MetricsRepository) ModuleInterface {
 	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-	client, err := rpc.NewLighthouseWithMetrics(&moduleContext.CL, metrics.NewMetricsCollector(), chainID)
+	client, err := rpc.NewLighthouseWithMetrics(&moduleContext.CL, metrics, chainID)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client with metrics: %v", 0)
 	}
@@ -66,6 +67,7 @@ func NewSlotExporter(moduleContext ModuleContext, cache edb.SlotExporterCacheRep
 		cache:          cache,
 		db:             db,
 		bt:             bt,
+		metrics:        metrics,
 		firstRun:       true,
 		latestEpoch:    0,
 		latestSlot:     0,
@@ -141,13 +143,16 @@ func (s *slotExporter) OnHead(_ *constypes.StandardEventHeadResponse) (err error
 		return fmt.Errorf("error retrieving chain head: %w", err)
 	}
 
+	s.metrics.SetStateMetric("node_latest_slot", head.HeadSlot)
+	s.metrics.SetStateMetric("node_latest_epoch", head.HeadEpoch)
+
 	tx, err := s.db.BeginTx()
 	if err != nil {
 		return fmt.Errorf("error starting tx: %w", err)
 	}
 	defer s.db.RollbackTx(tx)
 
-	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, metrics.NewMetricsCollector(), tx, s)
+	exporter := NewExporter(s.Client, s.cache, s.db, s.bt, s.metrics, tx, s)
 
 	if s.firstRun {
 		log.Infof("performing first run consistency checks")
