@@ -106,7 +106,7 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 	}
 
 	var req types.AdConfigurationData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -122,8 +122,8 @@ func (h *HandlerService) InternalPostAdConfigurations(w http.ResponseWriter, r *
 		returnBadRequest(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -152,8 +152,8 @@ func (h *HandlerService) InternalGetAdConfigurations(w http.ResponseWriter, r *h
 	}
 
 	keys := v.checkAdConfigurationKeys(r.URL.Query().Get("keys"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -183,7 +183,7 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
 	var req types.AdConfigurationUpdateData
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -198,8 +198,8 @@ func (h *HandlerService) InternalPutAdConfiguration(w http.ResponseWriter, r *ht
 		returnConflict(w, r, errors.New("provide either banner_id or html_content"))
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -228,8 +228,8 @@ func (h *HandlerService) InternalDeleteAdConfiguration(w http.ResponseWriter, r 
 	}
 
 	key := v.checkKeyNotEmpty(mux.Vars(r)["key"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -348,10 +348,6 @@ func (h *HandlerService) InternalPutValidatorDashboardName(w http.ResponseWriter
 	h.PublicPutValidatorDashboardName(w, r)
 }
 
-func (h *HandlerService) InternalPostValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
-	h.PublicPostValidatorDashboardGroups(w, r)
-}
-
 func (h *HandlerService) InternalPutValidatorDashboardGroups(w http.ResponseWriter, r *http.Request) {
 	h.PublicPutValidatorDashboardGroups(w, r)
 }
@@ -366,6 +362,10 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroupValidators(w http.
 
 func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicPostValidatorDashboardValidators(w, r)
+}
+
+func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
+	h.PublicDeleteValidatorDashboardValidators(w, r)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
@@ -384,8 +384,8 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 	groupId := v.checkGroupId(q.Get("group_id"), allowEmpty)
 	period := checkEnum[enums.TimePeriod](&v, q.Get("period"), "period")
 	sort := checkSort[enums.VDBManageValidatorsColumn](&v, q.Get("sort"))
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	data, paging, err := h.daService.GetValidatorDashboardMobileValidators(r.Context(), *dashboardId, groupId, period, pagingParams.cursor, *sort, pagingParams.search, pagingParams.limit)
@@ -400,8 +400,8 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileValidators(w http.Re
 	returnOk(w, r, response)
 }
 
-func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	h.PublicDeleteValidatorDashboardValidators(w, r)
+func (h *HandlerService) InternalPostValidatorDashboardValidatorBulkDeletions(w http.ResponseWriter, r *http.Request) {
+	h.PublicPostValidatorDashboardValidatorBulkDeletions(w, r)
 }
 
 func (h *HandlerService) InternalPostValidatorDashboardPublicIds(w http.ResponseWriter, r *http.Request) {
@@ -427,15 +427,6 @@ func (h *HandlerService) InternalGetValidatorDashboardSlotViz(w http.ResponseWri
 func (h *HandlerService) InternalGetValidatorDashboardSummary(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummary(w, r)
 }
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupSummary(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardGroupSummary(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardSummaryChart(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardSummaryChart(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardSummaryValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardSummaryValidators(w, r)
 }
@@ -458,14 +449,6 @@ func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWrit
 
 func (h *HandlerService) InternalGetValidatorDashboardBlocks(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardBlocks(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardHeatmap(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardHeatmap(w, r)
-}
-
-func (h *HandlerService) InternalGetValidatorDashboardGroupHeatmap(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardGroupHeatmap(w, r)
 }
 
 func (h *HandlerService) InternalGetValidatorDashboardExecutionLayerDeposits(w http.ResponseWriter, r *http.Request) {
@@ -507,12 +490,13 @@ func (h *HandlerService) InternalGetValidatorDashboardRocketPoolMinipools(w http
 // even though this endpoint is internal only, it should still not be broken since it is used by the mobile app
 func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.ResponseWriter, r *http.Request) {
 	var v validationError
+	ctx := r.Context()
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
-	userId, err := GetUserIdByContext(r)
+	userId, err := GetUserIdByContext(ctx)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -526,7 +510,7 @@ func (h *HandlerService) InternalGetValidatorDashboardMobileWidget(w http.Respon
 		returnForbidden(w, r, errors.New("user does not have access to mobile app widget"))
 		return
 	}
-	data, err := h.daService.GetValidatorDashboardMobileWidget(r.Context(), dashboardId)
+	data, err := h.daService.GetValidatorDashboardMobileWidget(ctx, dashboardId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -546,8 +530,8 @@ func (h *HandlerService) InternalGetMobileLatestBundle(w http.ResponseWriter, r 
 	force := v.checkBool(q.Get("force"), "force")
 	bundleVersion := v.checkUint(q.Get("bundle_version"), "bundle_version")
 	nativeVersion := v.checkUint(q.Get("native_version"), "native_version")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	stats, err := h.daService.GetLatestBundleForNativeVersion(r.Context(), nativeVersion)
@@ -571,8 +555,8 @@ func (h *HandlerService) InternalPostMobileBundleDeliveries(w http.ResponseWrite
 	var v validationError
 	vars := mux.Vars(r)
 	bundleVersion := v.checkUint(vars["bundle_version"], "bundle_version")
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err := h.daService.IncrementBundleDeliveryCount(r.Context(), bundleVersion)
@@ -664,6 +648,33 @@ func (h *HandlerService) InternalPostUserNotificationsTestWebhook(w http.Respons
 
 // --------------------------------------
 // Blocks
+
+// helper function to unify handling of block detail request validation
+func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
+	var v validationError
+	var err error
+	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
+	var value uint64
+	switch paramValue := mux.Vars(r)[paramName]; paramValue {
+	// possibly add other values like "genesis", "finalized", hardforks etc. later
+	case "latest":
+		ctx := r.Context()
+		if paramName == "block" {
+			value, err = h.daService.GetLatestBlock(ctx)
+		} else if paramName == "slot" {
+			value, err = h.daService.GetLatestSlot(ctx)
+		}
+		if err != nil {
+			return 0, 0, err
+		}
+	default:
+		value = v.checkUint(paramValue, paramName)
+	}
+	if err := v.AsError(); err != nil {
+		return 0, 0, err
+	}
+	return chainId, value, nil
+}
 
 func (h *HandlerService) InternalGetBlock(w http.ResponseWriter, r *http.Request) {
 	chainId, block, err := h.validateBlockRequest(r, "block")

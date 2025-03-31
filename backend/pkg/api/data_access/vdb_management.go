@@ -3,7 +3,6 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"math/big"
 	"sort"
@@ -364,118 +363,44 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			}
 		}
 
-		// Find rocketpool validators
-		type RpOperatorInfo struct {
-			ValidatorIndex     uint64          `db:"validatorindex"`
-			NodeFee            float64         `db:"node_fee"`
-			NodeDepositBalance decimal.Decimal `db:"node_deposit_balance"`
-			UserDepositBalance decimal.Decimal `db:"user_deposit_balance"`
-		}
-		var queryResult []RpOperatorInfo
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("v.validatorindex"),
-				goqu.L("rplm.node_fee"),
-				goqu.L("rplm.node_deposit_balance"),
-				goqu.L("rplm.user_deposit_balance")).
-			From(goqu.L("rocketpool_minipools AS rplm")).
-			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("rplm.pubkey = v.pubkey"))).
-			Where(goqu.L("node_deposit_balance IS NOT NULL")).
-			Where(goqu.L("user_deposit_balance IS NOT NULL"))
-
-		if len(dashboardId.Validators) == 0 {
-			ds = ds.
-				LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
-				Where(goqu.L("uvdv.dashboard_id = ?", dashboardId.Id))
-		} else {
-			ds = ds.
-				Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
+		rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
 		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
+			return err
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		balances, err := d.calculateValidatorDashboardBalance(ctx, rpOperatorInfo, validators, validatorMapping, protocolModes)
 		if err != nil {
-			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
+			return err
 		}
-
-		rpValidators := make(map[uint64]RpOperatorInfo)
-		for _, res := range queryResult {
-			rpValidators[res.ValidatorIndex] = res
-		}
-
-		// Create a new sub-dashboard to get the total cl deposits for non-rocketpool validators
-		var nonRpDashboardId t.VDBId
-
-		for _, validator := range validators {
-			metadata := validatorMapping.ValidatorMetadata[validator]
-			validatorBalance := utils.GWeiToWei(big.NewInt(int64(metadata.Balance)))
-			effectiveBalance := utils.GWeiToWei(big.NewInt(int64(metadata.EffectiveBalance)))
-
-			if rpValidator, ok := rpValidators[validator]; ok {
-				if protocolModes.RocketPool {
-					// Calculate the balance of the operator
-					fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
-					operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
-					invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
-
-					base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(rpValidator.UserDepositBalance)), rpValidator.NodeDepositBalance)
-					commission := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(invOperatorShare).Mul(decimal.NewFromFloat(rpValidator.NodeFee)))
-					reward := decimal.Max(decimal.Zero, validatorBalance.Sub(fullDeposit).Mul(operatorShare).Add(commission))
-
-					operatorBalance := base.Add(reward)
-
-					data.Balances.Total = data.Balances.Total.Add(operatorBalance)
-				} else {
-					data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-				}
-				data.Balances.StakedEth = data.Balances.StakedEth.Add(rpValidator.NodeDepositBalance)
-			} else {
-				data.Balances.Total = data.Balances.Total.Add(validatorBalance)
-
-				nonRpDashboardId.Validators = append(nonRpDashboardId.Validators, validator)
-			}
-			data.Balances.Effective = data.Balances.Effective.Add(effectiveBalance)
-		}
-
-		// Get the total cl deposits for non-rocketpool validators
-		if len(nonRpDashboardId.Validators) > 0 {
-			totalNonRpDeposits, err := d.GetValidatorDashboardTotalClDeposits(ctx, nonRpDashboardId)
-			if err != nil {
-				return fmt.Errorf("error retrieving total cl deposits for non-rocketpool validators: %w", err)
-			}
-			data.Balances.StakedEth = data.Balances.StakedEth.Add(totalNonRpDeposits.TotalAmount)
-		}
+		data.Balances = balances
 
 		return nil
 	})
 
-	retrieveRewardsAndEfficiency := func(table string, hours int, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+	retrieveRewardsAndEfficiency := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
 		// Rewards + APR
 		eg.Go(func() error {
-			(*rewards).El, (*apr).El, (*rewards).Cl, (*apr).Cl, err = d.internal_getElClAPR(ctx, dashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
+			*rewards = incomeInfo.Rewards
+			*apr = incomeInfo.Apr
 			return nil
 		})
 
 		// Efficiency
 		eg.Go(func() error {
+			table, err := timeFrame.Table()
+			if err != nil {
+				return err
+			}
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 				Select(
-					goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-					goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-					goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-					goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"))
+					goqu.L("COALESCE(SUM(efficiency_dividend::decimal) / NULLIF(SUM(efficiency_divisor::decimal), 0), 0)").As("efficiency"),
+				)
 
 			if len(dashboardId.Validators) == 0 {
 				ds = ds.
@@ -486,49 +411,16 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
-			var queryResult struct {
-				AttestationReward      decimal.Decimal `db:"attestations_reward"`
-				AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-				BlocksProposed         uint64          `db:"blocks_proposed"`
-				BlocksScheduled        uint64          `db:"blocks_scheduled"`
-				SyncExecuted           uint64          `db:"sync_executed"`
-				SyncScheduled          uint64          `db:"sync_scheduled"`
-			}
-
-			query, args, err := ds.Prepared(true).ToSQL()
-			if err != nil {
-				return fmt.Errorf("error preparing query: %w", err)
-			}
-
-			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
-			if err != nil {
-				return err
-			}
-
-			// Calculate efficiency
-			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-			if !queryResult.AttestationIdealReward.IsZero() {
-				attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
-				attestationEfficiency.Valid = true
-			}
-			if queryResult.BlocksScheduled > 0 {
-				proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
-				proposerEfficiency.Valid = true
-			}
-			if queryResult.SyncScheduled > 0 {
-				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
-				syncEfficiency.Valid = true
-			}
-			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
-
-			return nil
+			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
+			*efficiency *= 100
+			return err
 		})
 	}
 
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_24h", 24, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_7d", 7*24, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_30d", 30*24, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
-	retrieveRewardsAndEfficiency("validator_dashboard_data_rolling_total", -1, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
+	retrieveRewardsAndEfficiency(enums.Last24h, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
+	retrieveRewardsAndEfficiency(enums.Last7d, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
+	retrieveRewardsAndEfficiency(enums.Last30d, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
+	retrieveRewardsAndEfficiency(enums.AllTime, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
 
 	err = eg.Wait()
 
@@ -903,160 +795,22 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	return result, nil
 }
 
-// Updates the group for validators already in the dashboard linked to the deposit address.
-// Adds up to limit new validators associated with the deposit address, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
+func (d *DataAccessService) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error) {
+	ds := goqu.Dialect("postgres").
+		Select(goqu.L("DISTINCT uvdv.validator_index")).
+		From(goqu.I("users_val_dashboards_validators").As("uvdv")).
+		Where(goqu.L("uvdv.dashboard_id = ?", dashboardId))
 
-	addressParsed, err := hex.DecodeString(strings.TrimPrefix(address, "0x"))
-	if err != nil {
-		return nil, err
+	if len(validators) > 0 {
+		ds = ds.Where(goqu.L("uvdv.validator_index = ANY(?)", pq.Array(validators)))
 	}
 
-	uniqueValidatorIndexesQuery := `
-		(SELECT 
-   		    DISTINCT uvdv.validator_index
-   		FROM validators v
-   		JOIN eth1_deposits d ON v.pubkey = d.publickey
-   		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-   		WHERE uvdv.dashboard_id = $1 AND d.from_address = $2)
-
-   		UNION
-
-   		(SELECT 
-   		    DISTINCT v.validatorindex AS validator_index
-   		FROM validators v
-   		JOIN eth1_deposits d ON v.pubkey = d.publickey
-   		LEFT JOIN users_val_dashboards_validators uvdv
-   		    ON v.validatorindex = uvdv.validator_index AND uvdv.dashboard_id = $1
-   		WHERE d.from_address = $2 AND uvdv.validator_index IS NULL
-   		ORDER BY validator_index
-   		LIMIT $3)`
-
-	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
-
-	var validators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, addressParsed, limit, groupId)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-// Updates the group for validators already in the dashboard linked to the withdrawal address.
-// Adds up to limit new validators associated with the withdrawal address, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, credential string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
-
-	addressParsed, err := hex.DecodeString(strings.TrimPrefix(credential, "0x"))
-	if err != nil {
-		return nil, err
-	}
-
-	uniqueValidatorIndexesQuery := `
-		(SELECT 
-			DISTINCT uvdv.validator_index
-		FROM validators v
-		JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-		WHERE uvdv.dashboard_id = $1 AND v.withdrawalcredentials = $2)
-
-		UNION
-
-		(SELECT 
-			DISTINCT v.validatorindex AS validator_index
-		FROM validators v
-		LEFT JOIN users_val_dashboards_validators uvdv 
-			ON v.validatorindex = uvdv.validator_index AND uvdv.dashboard_id = $1
-		WHERE v.withdrawalcredentials = $2 AND uvdv.validator_index IS NULL
-		ORDER BY v.validatorindex
-		LIMIT $3)`
-
-	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
-
-	var validators []uint64
-	err = d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, addressParsed, limit, groupId)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-// Update the group for validators already in the dashboard linked to the graffiti (via produced block).
-// Add up to limit new validators associated with the graffiti, if not already in the dashboard.
-func (d *DataAccessService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	result := []t.VDBPostValidatorsData{}
-
-	uniqueValidatorIndexesQuery := `
-		(SELECT 
-			DISTINCT uvdv.validator_index
-		FROM blocks b
-		JOIN users_val_dashboards_validators uvdv ON b.proposer = uvdv.validator_index
-		WHERE uvdv.dashboard_id = $1 AND b.graffiti_text = $2)
-
-		UNION
-		
-		(SELECT DISTINCT b.proposer AS validator_index
-		FROM blocks b
-		LEFT JOIN users_val_dashboards_validators uvdv 
-			ON b.proposer = uvdv.validator_index AND uvdv.dashboard_id = $1
-		WHERE b.graffiti_text = $2 AND uvdv.validator_index IS NULL
-		ORDER BY b.proposer
-		LIMIT $3)`
-
-	addValidatorsQuery := d.getAddValidatorsQuery(uniqueValidatorIndexesQuery)
-
-	var validators []uint64
-	err := d.alloyWriter.SelectContext(ctx, &validators, addValidatorsQuery, dashboardId, graffiti, limit, groupId)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, validator := range validators {
-		result = append(result, t.VDBPostValidatorsData{
-			Index:   validator,
-			GroupId: groupId,
-		})
-	}
-
-	return result, nil
-}
-
-func (d *DataAccessService) getAddValidatorsQuery(uniqueValidatorIndexesQuery string) string {
-	return fmt.Sprintf(`
-		WITH unique_validator_indexes AS (
-			%s
-		)
-		INSERT INTO users_val_dashboards_validators (dashboard_id, group_id, validator_index)
-		SELECT $1 AS dashboard_id, $4 AS group_id, validator_index
-		FROM unique_validator_indexes
-		ON CONFLICT (dashboard_id, validator_index) DO UPDATE 
-		SET
-		    dashboard_id = EXCLUDED.dashboard_id,
-		    group_id = EXCLUDED.group_id,
-		    validator_index = EXCLUDED.validator_index
-		RETURNING validator_index`, uniqueValidatorIndexesQuery)
+	return runQueryRows[[]t.VDBValidator](ctx, d.alloyReader, ds)
 }
 
 func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	if len(validators) == 0 {
 		// Remove all validators for the dashboard
-		// This is usually forbidden by API validation
 		_, err := d.alloyWriter.ExecContext(ctx, `
 			DELETE FROM users_val_dashboards_validators
 			WHERE dashboard_id = $1
@@ -1076,14 +830,21 @@ func (d *DataAccessService) RemoveValidatorDashboardValidators(ctx context.Conte
 	return err
 }
 
-func (d *DataAccessService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
-	var count uint64
-	err := d.alloyReader.GetContext(ctx, &count, `
-		SELECT COUNT(*)
-		FROM users_val_dashboards_validators
-		WHERE dashboard_id = $1
-	`, dashboardId)
-	return count, err
+func (d *DataAccessService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
+	validators, err := d.getDashboardValidators(ctx, dashboardId, nil)
+	if err != nil {
+		return 0, err
+	}
+	validatorEbs, err := d.GetValidatorsEffectiveBalances(ctx, validators, onlyActive)
+	if err != nil {
+		return 0, err
+	}
+
+	var totalEb uint64
+	for _, eb := range validatorEbs {
+		totalEb += eb
+	}
+	return totalEb, nil
 }
 
 func (d *DataAccessService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {

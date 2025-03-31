@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { VDBWithdrawalsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
@@ -11,9 +9,9 @@ import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
-type ExtendedVDBWithdrawalsTableRow = {
+type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
   identifier: string,
-} & VDBWithdrawalsTableRow
+}
 
 const { dashboardKey } = useDashboardKey()
 
@@ -21,8 +19,9 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
-const { latestState } = useLatestStateStore()
-const { slotToEpoch } = useNetworkStore()
+const store = useLatestStateStore()
+const { latestState } = storeToRefs(store)
+const { getEpochFromSlot } = useNetworkStore()
 const {
   getTotalAmount,
   getWithdrawals,
@@ -39,9 +38,11 @@ const {
 } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
 const totalIdentifier = 'total'
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  hasValidators,
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -151,7 +152,7 @@ const isRowExpandable = (row: ExtendedVDBWithdrawalsTableRow) => {
 
 const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
   if (latestState?.value) {
-    return row.epoch > slotToEpoch(latestState.value.current_slot)
+    return row.epoch > getEpochFromSlot(latestState.value.current_slot)
   }
 
   return false
@@ -199,7 +200,7 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 >
                   {{ $t("dashboard.validator.withdrawals.pending") }}
                   <BcTooltip>
-                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <BcIcon name="circle-info" />
                     <template #tooltip>
                       {{
                         $t("dashboard.validator.withdrawals.pending_tooltip")
@@ -353,15 +354,16 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                   v-else-if="!slotProps.data.is_missing_estimate"
                   class="value-with-tooltip-container"
                 >
-                  <BcFormatValue
+                  <BcFormatAmount
                     :value="slotProps.data.amount"
                     :class="{
                       'all-time-total':
                         slotProps.data.identifier === totalIdentifier,
                     }"
+                    has-tooltip
                   />
                   <BcTooltip v-if="isRowInFuture(slotProps.data)">
-                    <FontAwesomeIcon :icon="faInfoCircle" />
+                    <BcIcon name="circle-info" />
                     <template #tooltip>
                       {{ $t("dashboard.validator.withdrawals.future_tooltip") }}
                     </template>

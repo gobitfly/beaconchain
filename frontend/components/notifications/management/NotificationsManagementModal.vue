@@ -1,11 +1,4 @@
 <script lang="ts" setup>
-import {
-  faBolt,
-  faCog,
-  faGaugeSimpleMax,
-  faMonitorWaveform,
-  faNetworkWired,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { HashTabs } from '~/types/hashTabs'
 
 const { t: $t } = useTranslation()
@@ -14,27 +7,22 @@ const visible = defineModel<boolean>()
 
 const tabs: HashTabs = [
   {
-    icon: faCog,
+    icon: 'gear',
     key: 'general',
     title: $t('notifications.tabs.general'),
   },
   {
-    icon: faGaugeSimpleMax,
+    icon: 'gauge-simple-max',
     key: 'dashboards',
     title: $t('notifications.tabs.dashboards'),
   },
   {
-    icon: faMonitorWaveform,
-    key: 'machines',
-    title: $t('notifications.tabs.machines'),
-  },
-  {
-    icon: faBolt,
+    icon: 'bolt',
     key: 'clients',
     title: $t('notifications.tabs.clients'),
   },
   {
-    icon: faNetworkWired,
+    icon: 'network-wired',
     key: 'networks',
     title: $t('notifications.tabs.networks'),
   },
@@ -59,9 +47,6 @@ const tabs: HashTabs = [
       </template>
       <template #tab-panel-dashboards>
         <NotificationsManagementDashboards />
-      </template>
-      <template #tab-panel-machines>
-        <NotificationsManagementMachines />
       </template>
       <template #tab-panel-clients>
         <NotificationsManagementClients />

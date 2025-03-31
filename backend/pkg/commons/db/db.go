@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -63,20 +64,28 @@ const DefaultInfScrollRows = 25
 
 var ErrNoStats = errors.New("no stats available")
 
-func dbTestConnection(dbConn *sqlx.DB, dataBaseName string) {
+func dbTestConnection(dbConn *sqlx.DB, databaseBrand string, databaseName string, connectionType string) {
 	// The golang sql driver does not properly implement PingContext
 	// therefore we use a timer to catch db connection timeouts
 	dbConnectionTimeout := time.NewTimer(15 * time.Second)
 
 	go func() {
 		<-dbConnectionTimeout.C
-		log.Fatal(fmt.Errorf("timeout while connecting to %s", dataBaseName), "", 0)
+		log.Fatal(fmt.Errorf("timeout while connecting to %s %s database %s", connectionType, databaseBrand, databaseName), "", 0)
 	}()
 
 	err := dbConn.Ping()
 	if err != nil {
-		log.Fatal(fmt.Errorf("unable to ping %s. error: %w", dataBaseName, err), "", 0)
+		log.Fatal(fmt.Errorf("unable to ping %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
 	}
+
+	// get the migration version of the database using the goose
+	// ideally this runs regularly but idk would have to throw into the monitoring process prob? makes the most sense there, tho that isnt exactly connected to prometheus
+	ver, err := getGooseVersion(dbConn, databaseBrand)
+	if err != nil {
+		log.Warn(fmt.Errorf("unable to get migration version of %s %s database %s. error: %w", connectionType, databaseBrand, databaseName, err), "", 0)
+	}
+	metrics.DatabaseVersion.WithLabelValues(databaseBrand, databaseName, fmt.Sprint(ver)).Set(1)
 
 	dbConnectionTimeout.Stop()
 }
@@ -102,28 +111,35 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		reader.MaxIdleConns = reader.MaxOpenConns
 	}
 
-	var sslParam string
+	var extraParams string
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
+	var hosts string
+	hosts = net.JoinHostPort(writer.Host, writer.Port)
+	if len(writer.Failovers) > 0 {
+		for _, failover := range writer.Failovers {
+			hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
+		}
+		extraParams += "&connection_open_strategy=in_order"
+	}
 
-	log.Debugf("connecting to %s database %s:%s/%s as writer with %d/%d max open/idle connections", databaseBrand, writer.Host, writer.Port, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
-	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, net.JoinHostPort(writer.Host, writer.Port), writer.Name, sslParam))
+	log.Debugf("connecting to %s database %s/%s as writer with %d/%d max open/idle connections", databaseBrand, hosts, writer.Name, writer.MaxOpenConns, writer.MaxIdleConns)
+	dbConnWriter, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, writer.Username, writer.Password, hosts, writer.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Writer database", 0)
 	}
-
-	dbTestConnection(dbConnWriter, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
+	dbTestConnection(dbConnWriter, databaseBrand, writer.Name, "writer")
 	dbConnWriter.SetConnMaxIdleTime(time.Second * 30)
 	dbConnWriter.SetConnMaxLifetime(time.Minute)
 	dbConnWriter.SetMaxOpenConns(writer.MaxOpenConns)
@@ -134,31 +150,61 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 	}
 
 	if driverName == "clickhouse" {
-		sslParam = "secure=false"
+		extraParams = "secure=false"
 		if writer.SSL {
-			sslParam = "secure=true"
+			extraParams = "secure=true"
 		}
 		// debug
 		// sslParam += "&debug=true"
 	} else {
-		sslParam = "sslmode=disable"
+		extraParams = "sslmode=disable"
 		if writer.SSL {
-			sslParam = "sslmode=require"
+			extraParams = "sslmode=require"
 		}
 	}
 
-	log.Debugf("connecting to %s database %s:%s/%s as reader with %d/%d max open/idle connections", databaseBrand, reader.Host, reader.Port, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
-	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, net.JoinHostPort(reader.Host, reader.Port), reader.Name, sslParam))
+	hosts = net.JoinHostPort(reader.Host, reader.Port)
+	if len(reader.Failovers) > 0 {
+		for _, failover := range reader.Failovers {
+			hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
+		}
+		extraParams += "&connection_open_strategy=in_order"
+	}
+
+	log.Debugf("connecting to %s database %s/%s as reader with %d/%d max open/idle connections", databaseBrand, hosts, reader.Name, reader.MaxOpenConns, reader.MaxIdleConns)
+	dbConnReader, err := sqlx.Open(driverName, fmt.Sprintf("%s://%s:%s@%s/%s?%s", databaseBrand, reader.Username, reader.Password, hosts, reader.Name, extraParams))
 	if err != nil {
 		log.Fatal(err, "error getting Connection Reader database", 0)
 	}
 
-	dbTestConnection(dbConnReader, fmt.Sprintf("database %v:%v/%v", writer.Host, writer.Port, writer.Name))
+	dbTestConnection(dbConnReader, databaseBrand, reader.Name, "reader")
 	dbConnReader.SetConnMaxIdleTime(time.Second * 30)
 	dbConnReader.SetConnMaxLifetime(time.Minute)
 	dbConnReader.SetMaxOpenConns(reader.MaxOpenConns)
 	dbConnReader.SetMaxIdleConns(reader.MaxIdleConns)
 	return dbConnWriter, dbConnReader
+}
+
+// concurrent safe get goose version of a db using a sqlx.DB and a database brand
+var GooseVersionMutex = sync.Mutex{}
+
+func getGooseVersion(db *sqlx.DB, databaseBrand string) (int64, error) {
+	GooseVersionMutex.Lock()
+	defer GooseVersionMutex.Unlock()
+	if databaseBrand == "clickhouse" {
+		if err := goose.SetDialect("clickhouse"); err != nil {
+			return 0, err
+		}
+	} else {
+		if err := goose.SetDialect("postgres"); err != nil {
+			return 0, err
+		}
+	}
+	ver, err := goose.GetDBVersion(db.DB)
+	if err != nil {
+		return 0, fmt.Errorf("unable to get migration version of %s database. error: %w", databaseBrand, err)
+	}
+	return ver, nil
 }
 
 func ApplyEmbeddedDbSchema(version int64, database string) error {
@@ -436,13 +482,9 @@ func GetEth2Deposits(query string, length, start uint64, orderBy, orderDir strin
 	var err error
 
 	// Define the base queries
-	deposistsCountQuery := `
-		SELECT COUNT(*)
-		FROM blocks_deposits
-		INNER JOIN blocks ON blocks_deposits.block_root = blocks.blockroot AND blocks.status = '1'
-		%s`
+	depositsCountQuery := `SELECT SUM(depositscount) FROM blocks WHERE status = '1' AND depositscount > 0`
 
-	deposistsQuery := `
+	depositsQuery := `
 			SELECT
 				blocks_deposits.block_slot,
 				blocks_deposits.block_index,
@@ -468,12 +510,12 @@ func GetEth2Deposits(query string, length, start uint64, orderBy, orderDir strin
 		}
 	}
 	if trimmedQuery == "" {
-		err = ReaderDb.Get(&totalCount, fmt.Sprintf(deposistsCountQuery, ""))
+		err = ReaderDb.Get(&totalCount, depositsCountQuery)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		err = ReaderDb.Select(&deposits, fmt.Sprintf(deposistsQuery, "", orderBy, orderDir), length, start)
+		err = ReaderDb.Select(&deposits, fmt.Sprintf(depositsQuery, "", orderBy, orderDir), length, start)
 		if err != nil && err != sql.ErrNoRows {
 			return nil, 0, err
 		}
@@ -484,31 +526,47 @@ func GetEth2Deposits(query string, length, start uint64, orderBy, orderDir strin
 	if utils.IsHash(trimmedQuery) {
 		param = hash
 		searchQuery = `WHERE blocks_deposits.publickey = $3`
+		depositsCountQuery = `
+			SELECT SUM(depositscount)
+			FROM blocks
+			INNER JOIN blocks_deposits ON blocks.blockroot = blocks_deposits.block_root AND blocks_deposits.publickey = $1
+			WHERE status = '1' AND depositscount > 0`
 	} else if utils.IsValidWithdrawalCredentials(trimmedQuery) {
 		param = hash
 		searchQuery = `WHERE blocks_deposits.withdrawalcredentials = $3`
+		depositsCountQuery = `
+			SELECT SUM(depositscount)
+			FROM blocks
+			INNER JOIN blocks_deposits ON blocks.blockroot = blocks_deposits.block_root AND blocks_deposits.withdrawalcredentials = $1
+			WHERE status = '1' AND depositscount > 0`
 	} else if utils.IsEth1Address(trimmedQuery) {
 		param = hash
 		searchQuery = `
-				LEFT JOIN eth1_deposits ON blocks_deposits.publickey = eth1_deposits.publickey
-				WHERE eth1_deposits.from_address = $3`
+			LEFT JOIN eth1_deposits ON blocks_deposits.publickey = eth1_deposits.publickey
+			WHERE eth1_deposits.from_address = $3`
+		depositsCountQuery = `
+			SELECT SUM(depositscount)
+			FROM blocks
+			INNER JOIN blocks_deposits ON blocks.blockroot = blocks_deposits.block_root AND blocks_deposits.from_address = $1
+			WHERE status = '1' AND depositscount > 0`
 	} else if uiQuery, parseErr := strconv.ParseUint(query, 10, 31); parseErr == nil { // Limit to 31 bits to stay within math.MaxInt32
 		param = uiQuery
 		searchQuery = `WHERE blocks_deposits.block_slot = $3`
+		depositsCountQuery = `
+			SELECT SUM(depositscount)
+			FROM blocks
+			WHERE status = '1' AND depositscount > 0 AND slot = $1`
 	} else {
 		// The query does not fulfill any of the requirements for a search
 		return deposits, totalCount, nil
 	}
 
-	// The deposits count query only has one parameter for the search
-	countSearchQuery := strings.ReplaceAll(searchQuery, "$3", "$1")
-
-	err = ReaderDb.Get(&totalCount, fmt.Sprintf(deposistsCountQuery, countSearchQuery), param)
+	err = ReaderDb.Get(&totalCount, depositsCountQuery, param)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	err = ReaderDb.Select(&deposits, fmt.Sprintf(deposistsQuery, searchQuery, orderBy, orderDir), length, start, param)
+	err = ReaderDb.Select(&deposits, fmt.Sprintf(depositsQuery, searchQuery, orderBy, orderDir), length, start, param)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, 0, err
 	}
@@ -2475,4 +2533,123 @@ func CopyToTable[T []any](tableName string, columns []string, data []T) error {
 		return fmt.Errorf("error copying data to %s: %w", tableName, err)
 	}
 	return nil
+}
+
+func HasEventsForEpoch(epoch uint64) (bool, error) {
+	if epoch == 0 {
+		return true, nil
+	}
+
+	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+	var count uint64
+	err := ReaderDb.Get(&count, `
+		SELECT 
+			COUNT(*) 
+		FROM 
+			consensus_layer_events 
+		WHERE 
+			slot >= $1 AND slot <= $2`, firstSlot, lastSlot)
+	if err != nil {
+		return false, fmt.Errorf("error checking for events for epoch: %w", err)
+	}
+
+	return count > 0, nil
+}
+
+func TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_switch_to_compounding_requests (block_slot, block_root, request_index, address, validator_index)
+		SELECT
+				slot AS slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				decode((data->>'address'), 'base64') AS address,
+				(data->>'index')::int AS validator_index
+			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
+		SELECT
+				slot AS slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				(data->>'source_index')::int AS source_index,
+				(data->>'target_index')::int AS target_index,
+				(data->>'amount')::bigint AS amount_consolidated
+			FROM consensus_layer_events WHERE event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
+	}
+
+	consolidationRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed consolidation requests: %w", err)
+	}
+
+	return consolidationRequestsProcessed, nil
+}
+
+func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	res, err := tx.Exec(`
+	INSERT INTO blocks_deposit_requests (block_slot, block_root, request_index, pubkey, withdrawal_credentials, amount, signature)
+		SELECT
+				slot AS block_slot,
+				block_root AS block_root,
+				event_index AS request_index,
+				decode((data->>'pubkey'), 'base64') AS pubkey,
+				decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
+				(data->>'amount')::bigint AS amount,
+				decode((data->>'signature'), 'base64')::bytea AS signature
+		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
+	}
+
+	depositRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed deposit requests: %w", err)
+	}
+
+	return depositRequestsProcessed, nil
+}
+
+func TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error) {
+	// we offset by -20000 to avoid conflicts with normal withdrawals in the blocks
+	res, err := tx.Exec(`
+	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validatorindex, address, amount)
+		SELECT
+				slot AS block_slot,
+				block_root AS block_root,
+				-20000 + event_index AS withdrawalindex,
+				(data->>'validator_index')::int AS validatorindex,
+				''::bytea as address,
+				(data->>'amount')::bigint AS amount
+		FROM consensus_layer_events WHERE event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot)
+	if err != nil {
+		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
+	}
+
+	excessBalanceRequestsProcessed, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("error getting the amount of processed excess balance requests: %w", err)
+	}
+
+	return excessBalanceRequestsProcessed, nil
 }

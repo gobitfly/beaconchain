@@ -4,14 +4,13 @@ import {
 import {
   provide, warn,
 } from 'vue'
-import { COOKIE_KEY } from '~/types/cookie'
 import type {
   DashboardKey,
   DashboardKeyData,
   DashboardType,
 } from '~/types/dashboard'
 import {
-  isPublicDashboardKey, isSharedKey,
+  isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 
 export function useDashboardKeyProvider(
@@ -22,10 +21,10 @@ export function useDashboardKeyProvider(
   const router = useRouter()
   const dashboardType = ref(type)
   const dashboardKey = ref(mockKey)
-  const dashboardKeyCookie = useCookie(
+  const dashboardKeyCookie = useBcCookie(
     dashboardType.value === 'account'
-      ? COOKIE_KEY.ACCOUNT_DASHOBARD_KEY
-      : COOKIE_KEY.VALIDATOR_DASHOBARD_KEY,
+      ? 'bc-account-dashboard-key'
+      : 'bc-validator-dashboard-key',
   )
   const { isLoggedIn } = useUserStore()
 
@@ -57,8 +56,8 @@ export function useDashboardKeyProvider(
       // only use the dashboard cookie key as default if you are not logged in and it's not private
       if (
         !isLoggedIn.value
-        && isPublicDashboardKey(dashboardKeyCookie.value)
-        && !isSharedKey(dashboardKeyCookie.value)
+        && isGuestDashboardKey(dashboardKeyCookie.value)
+        && !isSharedDashboardKey(dashboardKeyCookie.value)
       ) {
         setDashboardKey(`${dashboardKeyCookie.value}`)
       }
@@ -73,17 +72,17 @@ export function useDashboardKeyProvider(
   }
   initialCheck()
 
-  const isPublic = computed(() => {
-    return isPublicDashboardKey(dashboardKey.value)
+  const isGuestDashboard = computed(() => {
+    return isGuestDashboardKey(dashboardKey.value)
   })
 
-  const isShared = computed(() => {
-    return isSharedKey(dashboardKey.value)
+  const isSharedDashboard = computed(() => {
+    return isSharedDashboardKey(dashboardKey.value)
   })
 
   // validator id / publicKey for validator dashboard or account id or ens name for account dashboard
   const publicEntities = computed(() => {
-    if (!isPublic.value || !dashboardKey.value) {
+    if (!isGuestDashboard.value || !dashboardKey.value) {
       return []
     }
     return fromBase64Url(dashboardKey.value)?.split(',') ?? []
@@ -107,8 +106,8 @@ export function useDashboardKeyProvider(
     addEntities,
     dashboardKey,
     dashboardType,
-    isPublic,
-    isShared,
+    isGuestDashboard,
+    isSharedDashboard,
     publicEntities,
     removeEntities,
     setDashboardKey,

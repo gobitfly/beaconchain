@@ -1,15 +1,9 @@
 import {
-  commify,
-  formatUnits,
-} from '@ethersproject/units'
-import {
   DateTime, type StringUnitLength,
 } from 'luxon'
 import type { ComposerTranslation } from 'vue-i18n'
+import type { Locale } from '~/i18n/i18n.config'
 import type { AgeFormat } from '~/types/settings'
-import {
-  type ChainIDs, epochToTs, slotToTs,
-} from '~/types/network'
 import type { NumberOrString } from '~/types/value'
 
 export const ONE_MINUTE = 60
@@ -24,28 +18,11 @@ export interface NumberFormatConfig {
   precision?: number,
 }
 
-export function formatPercent(
-  percent?: number,
-  config?: NumberFormatConfig,
-): string {
-  if (percent === undefined) {
-    return ''
+export function addPlusSign(value: string, add = true): string {
+  if (!add || !value || value === '0' || value.startsWith('-')) {
+    return value
   }
-  const {
-    addPositiveSign, fixed, precision,
-  } = {
-    ...{
-      addPositiveSign: false,
-      fixed: 2,
-      precision: 2,
-    },
-    ...config,
-  }
-  let result = trim(percent, precision, fixed)
-  if (addPositiveSign) {
-    result = addPlusSign(result)
-  }
-  return `${result}%`
+  return `+${value}`
 }
 
 export function calculatePercent(value?: number, base?: number): number {
@@ -55,160 +32,49 @@ export function calculatePercent(value?: number, base?: number): number {
   return ((value ?? 0) * 100) / base
 }
 
-export function formatAndCalculatePercent(
-  value?: number,
-  base?: number,
-  config?: NumberFormatConfig,
-): string {
-  if (!base) {
-    return ''
-  }
-  return formatPercent(calculatePercent(value, base), config)
-}
-
-export function formatNumber(value?: number): string {
-  return value?.toLocaleString('en-US') ?? ''
-}
-
-export function addPlusSign(value: string, add = true): string {
-  if (!add || !value || value === '0' || value.startsWith('-')) {
-    return value
-  }
-  return `+${value}`
-}
-
-export function withCurrency(value: string, currency: string): string {
-  return `${value} ${currency}`
-}
-
-export function nZeros(count: number): string {
-  return count > 0
-    ? Array.from(Array(count))
-      .map(() => '0')
-      .join('')
-    : ''
-}
-
-export function commmifyLeft(value: string): string {
-  const formatted = commify(value)
-  const i = formatted.lastIndexOf('.0')
-  if (i >= 0 && i === formatted.length - 2) {
-    return formatted.substring(0, formatted.length - 2)
-  }
-  return formatted
-}
-
-export function trim(
+export function formatFiatCurrency(
   value: number | string,
-  maxDecimalCount: number,
-  minDecimalCount?: number,
-): string {
-  if (typeof value !== 'string') {
-    value = `${value}`
-  }
-  minDecimalCount
-    = minDecimalCount === undefined
-      ? maxDecimalCount
-      : Math.min(minDecimalCount, maxDecimalCount)
-  const split = value.split('.')
-  let dec = split[1] ?? ''
-  const hasTinyValue = !!dec && REGEXP_HAS_NUMBERS.test(dec)
-  dec = dec.substring(0, maxDecimalCount)
-  while (dec.length < minDecimalCount) {
-    dec += '0'
-  }
-  if (split[0] === '0' && (!dec || parseInt(dec) === 0) && hasTinyValue) {
-    if (maxDecimalCount === 0) {
-      return '<1'
-    }
-    return `<0.${nZeros(maxDecimalCount - 1)}1`
-  }
-  const left = commmifyLeft(split[0])
-  if (!dec?.length) {
-    return left
-  }
-  return `${left}.${dec}`
-}
-
-function formatTs(
-  ts?: number,
-  timestamp?: number,
-  format: AgeFormat = 'relative',
-  style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
-  withTime = true,
+  options: {
+    currency?: CurrencyCodeFiat,
+    locale?: Locale,
+    maximumFractionDigits?: number,
+    minimumFractionDigits?: number,
+  } = {},
 ) {
-  if (ts === undefined) {
-    return undefined
-  }
+  const {
+    currency = 'EUR',
+    locale = 'en-US',
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = options
 
-  if (format === 'relative') {
-    return formatTsToRelative(ts * 1000, timestamp, style, locales)
-  }
-  else {
-    return formatTsToAbsolute(ts, locales, withTime)
-  }
+  return new Intl.NumberFormat(locale, {
+    currency,
+    maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'currency',
+  }).format(value as `${number}`)
 }
 
-export function formatTsToAbsolute(
-  ts: number,
-  locales: string,
-  includeTime?: boolean,
-): string {
-  const timeOptions: Intl.DateTimeFormatOptions = includeTime
-    ? {
-        hour: 'numeric',
-        minute: 'numeric',
-      }
-    : {}
-  const options: Intl.DateTimeFormatOptions = {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    ...timeOptions,
-  }
-  const date = new Date(ts * 1000)
-  return includeTime
-    ? date.toLocaleString(locales, options)
-    : date.toLocaleDateString(locales, options)
+/**
+ * This should convert 0.2069 to 20
+ */
+export function formatFraction(value: NumberOrString, option?: { locale?: Locale }) {
+  const {
+    locale = 'en-US',
+  } = option ?? {}
+  const number = Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  }).format(number * 100)
 }
-
-export function formatTsToTime(ts: number, locales: string): string {
-  const options: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: 'numeric',
-  }
-  const date = new Date(ts * 1000)
-  return date.toLocaleTimeString(locales, options)
-}
-
-function formatTsToRelative(
-  targetTimestamp?: number,
-  baseTimestamp?: number,
-  style: StringUnitLength = 'narrow',
-  locales: string = 'en-US',
-): null | string | undefined {
-  if (!targetTimestamp) {
-    return undefined
-  }
-
-  const date = baseTimestamp
-    ? DateTime.fromMillis(baseTimestamp)
-    : DateTime.now()
-  return DateTime.fromMillis(targetTimestamp)
-    .setLocale(locales)
-    .toRelative({
-      base: date,
-      style,
-    })
-}
-
 export function formatGoTimestamp(
   timestamp: number | string,
   compareTimestamp?: number,
   format?: AgeFormat,
   style?: StringUnitLength,
-  locales?: string,
+  locales?: Locale,
   withTime?: boolean,
 ) {
   if (typeof timestamp === 'number') {
@@ -225,73 +91,70 @@ export function formatGoTimestamp(
   )
 }
 
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDateTime(currentNetwork.value, ...)`
- * you should rather use `formatEpochToDateTime(...)` from `useFormat.ts`.
- */
-export function formatEpochToDateTime(
-  chainId: ChainIDs,
-  epoch: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    epochToTs(chainId, epoch),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
+export function formatNumber(value: number | string, {
+  hasRoundingIndication,
+  locale = 'en-US',
+  maximumFractionDigits,
+  minimumFractionDigits,
+  scaleBy = 0,
+  signDisplay,
+  useGrouping,
+}: {
+  hasRoundingIndication?: boolean,
+  locale?: Locale,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+  scaleBy?: number,
+  signDisplay?: Intl.NumberFormatOptions['signDisplay'],
+  useGrouping?: Intl.NumberFormatOptions['useGrouping'],
+} = {}) {
+  const [
+    number,
+    exponent = 0,
+  ] = `${value}`.toLowerCase().split('e')
+  const numberInScientificNotation = `${number}e${Number(exponent) + scaleBy}`
+  const numberInScientificNotationAbsolute = Number(numberInScientificNotation)
+  const isPositive = numberInScientificNotationAbsolute > 0
+  const isRoundedToZero = numberInScientificNotationAbsolute < Number(`1e-${maximumFractionDigits || 1}`)
+  const shouldShowRoundingIndication = hasRoundingIndication && isPositive && isRoundedToZero
+  const formattedValue = new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    roundingMode: shouldShowRoundingIndication
+      ? 'expand'
+      : 'halfExpand',
+    signDisplay,
+    useGrouping,
+  }).format(numberInScientificNotation as `${number}`)
+  return `${shouldShowRoundingIndication ? '<' : ''}${formattedValue}`
 }
 
 /**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatSlotToDateTime(currentNetwork.value, ...)`
- * you should rather use `formatSlotToDateTime(...)` from `useFormat.ts`.
+ * Format number | string (fraction or number) to percent.
+ *
+ * @example 0.12346 to 12.346%
+ * @example (isFraction: false) 98 to 98%
+ *
  */
-export function formatSlotToDateTime(
-  chainId: ChainIDs,
-  slot: number,
-  timestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: string,
-  withTime?: boolean,
-): null | string | undefined {
-  return formatTs(
-    slotToTs(chainId, slot),
-    timestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `formatEpochToDate(currentNetwork.value, ...)` you
- * should rather use `formatEpochToDate(...)` from `useFormat.ts`.
- */
-export function formatEpochToDate(
-  chainId: ChainIDs,
-  epoch: number,
-  locales: string,
-): null | string | undefined {
-  return formatEpochToDateTime(
-    chainId,
-    epoch,
-    undefined,
-    'absolute',
-    undefined,
-    locales,
-    false,
-  )
+export function formatPercent(value: NumberOrString, option?: {
+  isFraction?: boolean,
+  locale?: Locale,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+}) {
+  const {
+    isFraction = true,
+    locale = 'en-US',
+    maximumFractionDigits,
+    minimumFractionDigits,
+  } = option ?? {}
+  const number = isFraction ? Number(value) * 100 : Number(value)
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    style: 'unit',
+    unit: 'percent',
+  }).format(number)
 }
 
 export function formattedNumberToHtml(value?: string): string | undefined {
@@ -331,81 +194,10 @@ export function formatTimeDuration(
   return t(translationId, { amount }, amount === 1 ? 1 : 2)
 }
 
-export function formatFiat(
-  value: number,
-  currency: string,
-  locales: string,
-  minimumFractionDigits?: number,
-  maximumFractionDigits?: number,
-) {
-  const formatter = new Intl.NumberFormat(locales, {
-    currency,
-    maximumFractionDigits,
-    minimumFractionDigits,
-    style: 'currency',
-  })
-
-  return formatter.format(value)
-}
-
-export const formatPremiumProductPrice = (
-  t: ComposerTranslation,
-  price: number,
-  digits?: number,
-) => {
-  return formatFiat(
-    price,
-    'EUR',
-    t('locales.currency'),
-    digits ?? 2,
-    digits ?? 2,
-  )
-}
-
-export function formatToPercent(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: 'unit',
-    unit: 'percent',
-  }).format(Number(value))
-}
-
-/**
- * This should convert 0.2069 to 20%
- */
-export function formatFractionToPercent(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-    style: 'unit',
-    unit: 'percent',
-  }).format(number * 100)
-}
-/**
- * This should convert 0.2069 to 20
- */
-export function formatFraction(value: NumberOrString, option?: { locale?: string }) {
-  const {
-    locale = 'en-US',
-  } = option ?? {}
-  const number = Number(value)
-  return new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  }).format(number * 100)
-}
 /**
  * This should convert 20 to 0.2
  */
-export function formatToFraction(value: NumberOrString, option?: { locale?: string }) {
+export function formatToFraction(value: NumberOrString, option?: { locale?: Locale }) {
   const {
     locale = 'en-US',
   } = option ?? {}
@@ -416,31 +208,109 @@ export function formatToFraction(value: NumberOrString, option?: { locale?: stri
   }).format(number / 100)
 }
 
-export function formatWeiTo(wei: string, {
-  maximumFractionDigits = 0,
-  minimumFractionDigits = 0,
-  unit,
-}: {
-  maximumFractionDigits?: number,
-  minimumFractionDigits?: number,
-  unit: 'gwei',
-}) {
-  return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits,
-    minimumFractionDigits,
-  }).format(Number(formatUnits(wei, unit)))
+export function formatTs(
+  ts?: number,
+  timestamp?: number,
+  format: AgeFormat = 'relative',
+  style: StringUnitLength = 'narrow',
+  locales: Locale = 'en-US',
+  withTime = true,
+) {
+  if (ts === undefined) {
+    return undefined
+  }
+
+  if (format === 'relative') {
+    return formatTsToRelative(ts * 1000, timestamp, style, locales)
+  }
+  else {
+    return formatTsToAbsolute(ts, locales, withTime)
+  }
 }
 
-export function formatToWei(value: string, {
-  from,
-}: {
-  from: 'gwei',
-},
-) {
-  const bigValue = BigInt(Math.round(Number(value)))
-  let result = ''
-  if (from === 'gwei') {
-    result = `${bigValue * 1_000_000_000n}`
+export function formatTsToAbsolute(
+  ts: number,
+  locales: Locale,
+  includeTime?: boolean,
+): string {
+  const timeOptions: Intl.DateTimeFormatOptions = includeTime
+    ? {
+        hour: 'numeric',
+        minute: 'numeric',
+      }
+    : {}
+  const options: Intl.DateTimeFormatOptions = {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    ...timeOptions,
   }
-  return result
+  const date = new Date(ts * 1000)
+  return includeTime
+    ? date.toLocaleString(locales, options)
+    : date.toLocaleDateString(locales, options)
+}
+
+export function formatTsToTime(ts: number, locales: Locale): string {
+  const options: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: 'numeric',
+  }
+  const date = new Date(ts * 1000)
+  return date.toLocaleTimeString(locales, options)
+}
+
+export function nZeros(count: number): string {
+  return count > 0
+    ? Array.from(Array(count))
+        .map(() => '0')
+        .join('')
+    : ''
+}
+
+export function withCurrency(value: string, currency: string): string {
+  return `${value} ${currency}`
+}
+
+function formatTsToRelative(
+  targetTimestamp?: number,
+  baseTimestamp?: number,
+  style: StringUnitLength = 'narrow',
+  locales: Locale = 'en-US',
+): null | string | undefined {
+  if (!targetTimestamp) {
+    return undefined
+  }
+
+  const date = baseTimestamp
+    ? DateTime.fromMillis(baseTimestamp)
+    : DateTime.now()
+  return DateTime.fromMillis(targetTimestamp)
+    .setLocale(locales)
+    .toRelative({
+      base: date,
+      style,
+    })
+}
+
+export const formatValue = (value: string, {
+  from = 'wei',
+  maximumFractionDigits = 0,
+  minimumFractionDigits = 0,
+  to,
+  useGrouping = false,
+}: {
+  from?: CryptoUnit,
+  maximumFractionDigits?: number,
+  minimumFractionDigits?: number,
+  to: CryptoUnit,
+  useGrouping?: boolean,
+}) => {
+  const scaleBy = unitFactorCrypto[from] - unitFactorCrypto[to]
+  return formatNumber(value, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+    scaleBy,
+    useGrouping,
+  })
 }

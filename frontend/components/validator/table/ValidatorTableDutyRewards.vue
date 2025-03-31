@@ -1,89 +1,130 @@
 <script setup lang="ts">
 import type { ValidatorHistoryDuties } from '~/types/api/common'
-import { formatRewardValueOption } from '~/utils/dashboard/table'
-import { totalDutyRewards } from '~/utils/dashboard/validator'
 
-interface Props {
-  data?: ValidatorHistoryDuties,
-}
-const props = defineProps<Props>()
+const {
+  data,
+} = defineProps<{
+  data: ValidatorHistoryDuties,
+}>()
 
 const { t: $t } = useTranslation()
 
-const mapped = computed(() => {
-  const total = totalDutyRewards(props.data)
-  const details: { label: string,
-    value?: string, }[] = []
-  if (!total || total.isZero()) {
-    return {
-      details,
-      total,
-    }
-  }
-
-  const addDetail = (key: string, value?: string) => {
-    if (!value || value === '0') {
-      return
-    }
-    details.push({
-      label: $t(`validator.rewards.${key}`),
-      value,
-    })
-  }
-
-  addDetail('attestation_head', props?.data?.attestation_head?.income)
-  addDetail('attestation_source', props?.data?.attestation_source?.income)
-  addDetail('attestation_target', props?.data?.attestation_target?.income)
-  addDetail('proposer_el', props?.data?.proposal?.el_income)
-  addDetail(
-    'proposer_attestation',
-    props?.data?.proposal?.cl_attestation_inclusion_income,
-  )
-  addDetail('proposer_sync', props?.data?.proposal?.cl_sync_inclusion_income)
-  addDetail(
-    'proposer_slashing',
-    props?.data?.proposal?.cl_slashing_inclusion_income,
-  )
-  addDetail('total', total.toString())
-  return {
-    details,
-    total,
-  }
+const currencyItems = computed(() => {
+  const result = [
+    {
+      consensusLayerValue: data.attestation_head?.income ?? '0',
+    },
+    {
+      consensusLayerValue: data.attestation_source?.income ?? '0',
+    },
+    {
+      consensusLayerValue: data.attestation_target?.income ?? '0',
+    },
+    {
+      executionLayerValue: data.proposal?.el_income ?? '0',
+    },
+    {
+      consensusLayerValue: data.proposal?.cl_attestation_inclusion_income ?? '0',
+    },
+    {
+      consensusLayerValue: data.proposal?.cl_sync_inclusion_income ?? '0',
+    },
+    {
+      consensusLayerValue: data.proposal?.cl_slashing_inclusion_income ?? '0',
+    },
+  ]
+  return result
 })
 </script>
 
 <template>
-  <BcFormatValue
-    :value="mapped.total"
-    :use-colors="true"
-    :options="formatRewardValueOption"
+  <BcTooltip
+    fit-content
+    tooltip-text-align="left"
   >
-    <template
-      v-if="mapped.details?.length"
-      #tooltip
-    >
-      <div class="tooltip">
-        <div
-          v-for="detail in mapped.details"
-          :key="detail.label"
-        >
-          <b>{{ detail.label }}: </b>
-          <BcFormatValue
-            :value="detail.value"
-            :use-colors="true"
-            :options="formatRewardValueOption"
+    <BcFormatAmount
+      :currency-items
+      has-color
+      has-sign-display
+      target-unit-crypto="auto"
+    />
+    <template #tooltip>
+      <div>
+        <div v-if="data.attestation_head?.income">
+          <b>{{ $t('validator.rewards.attestation_head') }}: </b>
+          <BcFormatAmount
+            :value="data.attestation_head?.income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.attestation_source?.income">
+          <b>{{ $t('validator.rewards.attestation_source') }}: </b>
+          <BcFormatAmount
+            :value="data.attestation_source?.income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.attestation_target?.income">
+          <b>{{ $t('validator.rewards.attestation_target') }}: </b>
+          <BcFormatAmount
+            :value="data.attestation_target?.income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.proposal?.el_income">
+          <b>{{ $t('validator.rewards.proposer_el') }}: </b>
+          <BcFormatAmount
+            :value="data.proposal?.el_income"
+            source-currency="elCurrency"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.proposal?.cl_attestation_inclusion_income">
+          <b>{{ $t('validator.rewards.proposer_attestation') }}: </b>
+          <BcFormatAmount
+            :value="data.proposal?.cl_attestation_inclusion_income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.proposal?.cl_sync_inclusion_income">
+          <b>{{ $t('validator.rewards.proposer_sync') }}: </b>
+          <BcFormatAmount
+            :value="data.proposal?.cl_sync_inclusion_income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
+          />
+        </div>
+        <div v-if="data.proposal?.cl_slashing_inclusion_income">
+          <b>{{ $t('validator.rewards.proposer_slashing') }}: </b>
+          <BcFormatAmount
+            :value="data.proposal?.cl_slashing_inclusion_income"
+            target-unit-crypto="auto"
+            has-sign-display
+            has-higher-precision
+            has-color
           />
         </div>
       </div>
     </template>
-  </BcFormatValue>
+  </BcTooltip>
 </template>
 
 <style lang="scss" scoped>
-.tooltip {
-  text-align: left;
-  .head {
-    margin-top: var(--padding);
-  }
-}
 </style>

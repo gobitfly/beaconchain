@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import type { InternalGetUserNotificationMachinesResponse } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
+import type { GetUserNotificationMachinesResponse } from '~/types/api/notifications'
+
 import type { TableQueryParams } from '~/types/datatable'
 
 const notificationsMachineStore = defineStore('notifications-network-store', () => {
-  const data = ref<InternalGetUserNotificationMachinesResponse | undefined>()
+  const data = ref<GetUserNotificationMachinesResponse | undefined>()
   return { data }
 })
 
@@ -14,7 +14,16 @@ export function useNotificationsMachineStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsMachineStore())
   const {
-    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
+    cursor,
+    isStoredQuery,
+    onSort,
+    pageSize,
+    pendingQuery,
+    query,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
   } = useTableQuery({
     limit: 10, sort: 'timestamp:desc',
   }, 10)
@@ -24,8 +33,8 @@ export function useNotificationsMachineStore() {
     isLoading.value = true
     setStoredQuery(q)
     try {
-      const result = await fetch<InternalGetUserNotificationMachinesResponse>(
-        API_PATH.NOTIFICATIONS_MACHINE,
+      const result = await fetch<GetUserNotificationMachinesResponse>(
+        'NOTIFICATIONS_MACHINE',
         undefined,
         undefined,
         q,
@@ -38,7 +47,7 @@ export function useNotificationsMachineStore() {
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -51,7 +60,9 @@ export function useNotificationsMachineStore() {
 
   watch(query, (q) => {
     if (q) {
-      isLoggedIn.value && loadMachineNotifications(q)
+      if (isLoggedIn.value) {
+        loadMachineNotifications(q)
+      }
     }
   }, { immediate: true })
 

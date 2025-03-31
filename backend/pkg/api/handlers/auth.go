@@ -197,8 +197,8 @@ func (h *HandlerService) GetUserIdByApiKey(r *http.Request) (uint64, error) {
 }
 
 // if this is used, user ID should've been stored in context (by GetUserIdStoreMiddleware)
-func GetUserIdByContext(r *http.Request) (uint64, error) {
-	userId, ok := r.Context().Value(types.CtxUserIdKey).(uint64)
+func GetUserIdByContext(ctx context.Context) (uint64, error) {
+	userId, ok := ctx.Value(types.CtxUserIdKey).(uint64)
 	if !ok {
 		return 0, newUnauthorizedErr("user not authenticated")
 	}
@@ -226,15 +226,15 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
 	// validate email
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -250,8 +250,8 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 
 	// validate password
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), 10)
@@ -281,8 +281,8 @@ func (h *HandlerService) InternalPostUsers(w http.ResponseWriter, r *http.Reques
 func (h *HandlerService) InternalPostUserConfirm(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	confirmationHash := v.checkUserEmailToken(mux.Vars(r)["token"])
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -321,15 +321,15 @@ func (h *HandlerService) InternalPostUserPasswordReset(w http.ResponseWriter, r 
 	req := struct {
 		Email string `json:"email"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
 	// validate email
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -360,13 +360,13 @@ func (h *HandlerService) InternalPostUserPasswordResetHash(w http.ResponseWriter
 	req := struct {
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -428,14 +428,14 @@ func (h *HandlerService) InternalPostLogin(w http.ResponseWriter, r *http.Reques
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
 	email := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -563,12 +563,12 @@ func (h *HandlerService) InternalPostMobileEquivalentExchange(w http.ResponseWri
 		RefreshToken string `json:"refresh_token"`
 		DeviceID     string `json:"client_id"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -629,12 +629,12 @@ func (h *HandlerService) InternalPostUsersMeNotificationSettingsPairedDevicesTok
 	req := struct {
 		Token string `json:"token"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -658,12 +658,12 @@ const USER_SUBSCRIPTION_LIMIT = 8
 func (h *HandlerService) InternalHandleMobilePurchase(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := types.MobileSubscription{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -739,20 +739,30 @@ func (h *HandlerService) InternalPostLogout(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *HandlerService) InternalDeleteUser(w http.ResponseWriter, r *http.Request) {
-	user, err := h.getUserBySession(r)
+	userId, err := h.GetUserIdBySession(r)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	// TODO allow if user has any subsciptions etc?
-	err = h.daService.RemoveUser(r.Context(), user.Id)
+	ctx := r.Context()
+	hasUserActiveSubscription, err := h.daService.GetHasUserActiveSubscription(ctx, userId)
+	if err != nil {
+		handleErr(w, r, err)
+		return
+	}
+	if hasUserActiveSubscription {
+		handleErr(w, r, newConflictErr("user has an active premium subscription or premium API plan, please cancel them first before deleting the account"))
+		return
+	}
+
+	err = h.daService.RemoveUser(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
-	err = h.purgeAllSessionsForUser(r.Context(), user.Id)
+	err = h.purgeAllSessionsForUser(ctx, userId)
 	if err != nil {
 		handleErr(w, r, err)
 		return
@@ -784,15 +794,15 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 		Email    string `json:"new_email"`
 		Password string `json:"password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 
 	// validate new email
 	newEmail := v.checkEmail(req.Email)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	if newEmail == userInfo.Email {
@@ -812,8 +822,8 @@ func (h *HandlerService) InternalPostUserEmail(w http.ResponseWriter, r *http.Re
 
 	// validate password
 	password := v.checkPassword(req.Password)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
@@ -859,7 +869,7 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 		OldPassword string `json:"old_password"`
 		NewPassword string `json:"new_password"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
@@ -867,8 +877,8 @@ func (h *HandlerService) InternalPutUserPassword(w http.ResponseWriter, r *http.
 	// validate passwords
 	oldPassword := v.checkPassword(req.OldPassword)
 	newPassword := v.checkPassword(req.NewPassword)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(userData.Password), []byte(oldPassword))

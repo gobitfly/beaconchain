@@ -2,20 +2,20 @@ package erc20
 
 import (
 	"encoding/json"
-
 	"fmt"
 	"math/big"
 	"os"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/shopspring/decimal"
+
+	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 )
 
-var ERC20Abi, _ = abi.JSON(strings.NewReader(Erc20ABI))
+var ABI, _ = contracts.ERC20MetaData.GetAbi()
 
-var TransferTopic []byte = []byte{0xdd, 0xf2, 0x52, 0xad, 0x1b, 0xe2, 0xc8, 0x9b, 0x69, 0xc2, 0xb0, 0x68, 0xfc, 0x37, 0x8d, 0xaa, 0x95, 0x2b, 0xa7, 0xf1, 0x63, 0xc4, 0xa1, 0x16, 0x28, 0xf5, 0x5a, 0x4d, 0xf5, 0x23, 0xb3, 0xef}
+var TransferTopic = ABI.Events["Transfer"].ID
 
 var tokenMap = make(map[string]*ERC20TokenDetail)
 
@@ -59,12 +59,11 @@ type ERC20TokenList struct {
 type ERC20TokenDetail struct {
 	Address  string `json:"address"`
 	Owner    string `json:"-"`
-	ChainID  int64  `json:"chainId"`
 	Decimals int64  `json:"decimals"`
 	Name     string `json:"name"`
 	Symbol   string `json:"symbol"`
 	Divider  *big.Int
-	Contract *Erc20
+	Contract *contracts.IERC20
 }
 
 func (td *ERC20TokenDetail) FormatAmount(in *big.Int) string {

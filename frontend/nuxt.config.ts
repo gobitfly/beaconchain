@@ -1,7 +1,7 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve'
-import commonjs from '@rollup/plugin-commonjs'
 import { gitDescribeSync } from 'git-describe'
 import { warn } from 'vue'
+import { getSeconds } from './utils/time'
 
 let gitVersion = ''
 
@@ -17,41 +17,15 @@ try {
     gitVersion = info.hash
   }
 }
-catch (err) {
+catch {
   warn(
     'The GitHub tag and hash of the explorer cannot be read with git-describe.',
   )
 }
-
+// https://developer.chrome.com/blog/cookie-max-age-expires
+const maxDaysForCookies = 400
 export default defineNuxtConfig({
-  build: {
-    transpile: [
-      'echarts',
-      'zrender',
-      'tslib',
-      'resize-detector',
-    ],
-  },
-  colorMode: {
-    fallback: 'dark',
-    preference: 'dark',
-  },
-  compatibilityDate: '2024-07-15',
-  css: [
-    '~/assets/css/main.scss',
-    '~/assets/css/prime.scss',
-    '@fortawesome/fontawesome-svg-core/styles.css',
-  ],
-  devServer: {
-    host: 'local.beaconcha.in',
-    https: {
-      cert: 'server.crt',
-      key: 'server.key',
-    },
-  },
-  devtools: { enabled: true },
-  eslint: { config: { stylistic: true } },
-  i18n: { vueI18n: './i18n.config.ts' },
+  /* eslint-disable perfectionist/sort-objects  -- as there is a conflict with `nuxt specific eslint rules` */
   modules: [
     '@nuxtjs/i18n',
     '@nuxtjs/color-mode',
@@ -59,20 +33,21 @@ export default defineNuxtConfig({
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
     ],
+    'pinia-plugin-persistedstate/nuxt',
     '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
   ],
-  nitro: {
-    compressPublicAssets: true,
-    esbuild: {
-      options: {
-        target: 'esnext',
-      },
-    },
+  ssr: process.env.ENABLE_SSR !== 'FALSE',
+  devtools: { enabled: true },
+  css: [
+    '~/assets/css/main.scss',
+    '~/assets/css/prime.scss',
+  ],
+  colorMode: {
+    fallback: 'dark',
+    preference: 'dark',
   },
-  postcss: { plugins: { autoprefixer: {} } },
-  routeRules: { '/': { redirect: '/dashboard' } },
   runtimeConfig: {
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
@@ -95,7 +70,31 @@ export default defineNuxtConfig({
       v1Domain: process.env.PUBLIC_V1_DOMAIN,
     },
   },
-  ssr: process.env.ENABLE_SSR !== 'FALSE',
+  build: {
+    transpile: [
+      'echarts',
+      'zrender',
+      'tslib',
+      'resize-detector',
+    ],
+  },
+  routeRules: { '/': { redirect: '/dashboard' } },
+  devServer: {
+    host: 'local.beaconcha.in',
+    https: {
+      cert: 'server.crt',
+      key: 'server.key',
+    },
+  },
+  compatibilityDate: '2024-07-15',
+  nitro: {
+    compressPublicAssets: true,
+    esbuild: {
+      options: {
+        target: 'esnext',
+      },
+    },
+  },
   vite: {
     build: {
       minify: true,
@@ -108,11 +107,26 @@ export default defineNuxtConfig({
             }
           },
         },
-        plugins: [
-          nodeResolve(),
-          commonjs(),
-        ],
+        plugins: [ nodeResolve() ],
+      },
+    },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          api: 'modern-compiler',
+        },
       },
     },
   },
+  postcss: { plugins: { autoprefixer: {} } },
+  eslint: { config: { stylistic: true } },
+  piniaPluginPersistedstate: {
+    storage: 'cookies',
+    cookieOptions: {
+      maxAge: getSeconds({ days: maxDaysForCookies }),
+    },
+    key: 'bc-store-%id',
+    debug: true,
+  },
+  /* eslint-enable perfectionist/sort-objects */
 })

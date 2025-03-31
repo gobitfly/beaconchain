@@ -23,6 +23,7 @@ type endpoint struct {
 
 func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, cfg *types.Config) *mux.Router {
 	router := mux.NewRouter()
+	router.Use(contentTypeMiddleware)
 	apiRouter := router.PathPrefix("/api").Subrouter()
 	publicRouter := apiRouter.PathPrefix("/v2").Subrouter()
 	legacyRouter := apiRouter.PathPrefix("/v1").Subrouter()
@@ -33,7 +34,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
 		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 	}
-	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, !cfg.Frontend.DisableStatsInserts)
+	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, cfg)
 
 	// store user id in context, if available
 	publicRouter.Use(handlerService.StoreUserIdByApiKeyMiddleware)
@@ -284,31 +285,31 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		internalDashboardRouter.Use(hs.VDBArchivedCheckMiddleware)
 	}
 
+	const allowMocking = true
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", hs.PublicPutValidatorDashboardName, hs.InternalPutValidatorDashboardName},
-		{http.MethodPost, "/{dashboard_id}/groups", hs.PublicPostValidatorDashboardGroups, hs.InternalPostValidatorDashboardGroups},
+		{http.MethodPost, "/{dashboard_id}/groups", handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardGroups, allowMocking), handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardGroups, allowMocking)},
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroup, hs.InternalDeleteValidatorDashboardGroup},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}/validators", hs.PublicDeleteValidatorDashboardGroupValidators, hs.InternalDeleteValidatorDashboardGroupValidators},
 		{http.MethodPost, "/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
 		{http.MethodGet, "/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
-		{http.MethodPost, "/{dashboard_id}/validators/bulk-deletions", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
+		{http.MethodDelete, "/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
+		{http.MethodPost, "/{dashboard_id}/validators/bulk-deletions", hs.PublicPostValidatorDashboardValidatorBulkDeletions, hs.InternalPostValidatorDashboardValidatorBulkDeletions},
 		{http.MethodPost, "/{dashboard_id}/public-ids", hs.PublicPostValidatorDashboardPublicIds, hs.InternalPostValidatorDashboardPublicIds},
 		{http.MethodPut, "/{dashboard_id}/public-ids/{public_id}", hs.PublicPutValidatorDashboardPublicId, hs.InternalPutValidatorDashboardPublicId},
 		{http.MethodDelete, "/{dashboard_id}/public-ids/{public_id}", hs.PublicDeleteValidatorDashboardPublicId, hs.InternalDeleteValidatorDashboardPublicId},
 		{http.MethodGet, "/{dashboard_id}/slot-viz", hs.PublicGetValidatorDashboardSlotViz, hs.InternalGetValidatorDashboardSlotViz},
 		{http.MethodGet, "/{dashboard_id}/summary", hs.PublicGetValidatorDashboardSummary, hs.InternalGetValidatorDashboardSummary},
 		{http.MethodGet, "/{dashboard_id}/summary/validators", hs.PublicGetValidatorDashboardSummaryValidators, hs.InternalGetValidatorDashboardSummaryValidators},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", hs.PublicGetValidatorDashboardGroupSummary, hs.InternalGetValidatorDashboardGroupSummary},
-		{http.MethodGet, "/{dashboard_id}/summary-chart", hs.PublicGetValidatorDashboardSummaryChart, hs.InternalGetValidatorDashboardSummaryChart},
+		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/summary", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardGroupSummary, allowMocking)},
+		{http.MethodGet, "/{dashboard_id}/summary-chart", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/rewards/{epoch}", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{http.MethodGet, "/{dashboard_id}/heatmap", hs.PublicGetValidatorDashboardHeatmap, hs.InternalGetValidatorDashboardHeatmap},
-		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/heatmap/{timestamp}", hs.PublicGetValidatorDashboardGroupHeatmap, hs.InternalGetValidatorDashboardGroupHeatmap},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-execution-layer-deposits", hs.PublicGetValidatorDashboardTotalExecutionLayerDeposits, hs.InternalGetValidatorDashboardTotalExecutionLayerDeposits},
@@ -361,10 +362,21 @@ func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRo
 	dashboardSettingsEndpoints := []endpoint{
 		{http.MethodGet, "/validator-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsValidatorDashboard, hs.InternalGetUserNotificationsValidatorDashboard},
 		{http.MethodGet, "/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}", hs.PublicGetUserNotificationsAccountDashboard, hs.InternalGetUserNotificationsAccountDashboard},
+	}
+	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
+
+	publicActiveDashboardNotificationSettingsRouter := publicDashboardNotificationSettingsRouter.NewRoute().Subrouter()
+	internalActiveDashboardNotificationSettingsRouter := internalDashboardNotificationSettingsRouter.NewRoute().Subrouter()
+	// TODO add archivedCheck middleware to account dashboard endpoints once they are implemented
+	if !debug {
+		publicActiveDashboardNotificationSettingsRouter.Use(hs.VDBArchivedCheckMiddleware)
+		internalActiveDashboardNotificationSettingsRouter.Use(hs.VDBArchivedCheckMiddleware)
+	}
+	activeDashboardSettingsEndpoints := []endpoint{
 		{http.MethodPut, "/settings/validator-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsValidatorDashboard, hs.InternalPutUserNotificationSettingsValidatorDashboard},
 		{http.MethodPut, "/settings/account-dashboards/{dashboard_id}/groups/{group_id}", hs.PublicPutUserNotificationSettingsAccountDashboard, hs.InternalPutUserNotificationSettingsAccountDashboard},
 	}
-	addEndpointsToRouters(dashboardSettingsEndpoints, publicDashboardNotificationSettingsRouter, internalDashboardNotificationSettingsRouter)
+	addEndpointsToRouters(activeDashboardSettingsEndpoints, publicActiveDashboardNotificationSettingsRouter, internalActiveDashboardNotificationSettingsRouter)
 }
 
 func addEndpointsToRouters(endpoints []endpoint, publicRouter *mux.Router, internalRouter *mux.Router) {

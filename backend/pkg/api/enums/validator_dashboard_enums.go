@@ -27,7 +27,7 @@ func (c VDBSummaryColumn) Int() int {
 
 func (VDBSummaryColumn) NewFromString(s string) VDBSummaryColumn {
 	switch s {
-	case "group_id":
+	case "", "group_id":
 		return VDBSummaryGroup
 	case "validators":
 		return VDBSummaryValidators
@@ -77,7 +77,7 @@ func (c VDBRewardsColumn) Int() int {
 
 func (VDBRewardsColumn) NewFromString(s string) VDBRewardsColumn {
 	switch s {
-	case "epoch":
+	case "", "epoch":
 		return VDBRewardEpoch
 	default:
 		return VDBRewardsColumn(-1)
@@ -108,7 +108,7 @@ func (c VDBDutiesColumn) Int() int {
 
 func (VDBDutiesColumn) NewFromString(s string) VDBDutiesColumn {
 	switch s {
-	case "validator":
+	case "", "validator":
 		return VDBDutyValidator
 	case "reward":
 		return VDBDutyReward
@@ -148,7 +148,7 @@ func (VDBBlocksColumn) NewFromString(s string) VDBBlocksColumn {
 	switch s {
 	case "proposer":
 		return VDBBlockProposer
-	case "slot":
+	case "", "slot":
 		return VDBBlockSlot
 	case "block":
 		return VDBBlockBlock
@@ -221,7 +221,7 @@ func (VDBWithdrawalsColumn) NewFromString(s string) VDBWithdrawalsColumn {
 	switch s {
 	case "epoch":
 		return VDBWithdrawalEpoch
-	case "slot":
+	case "", "slot":
 		return VDBWithdrawalSlot
 	case "index":
 		return VDBWithdrawalIndex
@@ -269,7 +269,7 @@ func (c VDBManageValidatorsColumn) Int() int {
 
 func (VDBManageValidatorsColumn) NewFromString(s string) VDBManageValidatorsColumn {
 	switch s {
-	case "index":
+	case "", "index":
 		return VDBManageValidatorsIndex
 	case "public_key":
 		return VDBManageValidatorsPublicKey
@@ -396,12 +396,10 @@ type VDBRocketPoolColumn int
 var _ EnumFactory[VDBRocketPoolColumn] = VDBRocketPoolColumn(0)
 
 const (
-	VDBRocketPoolNode VDBRocketPoolColumn = iota
-	VDBRocketPoolMinipools
+	VDBRocketPoolNode      VDBRocketPoolColumn = iota
+	VDBRocketPoolMinipools                     // might be supported later
 	VDBRocketPoolCollateral
-	VDBRocketPoolRpl
 	VDBRocketPoolEffectiveRpl
-	VDBRocketPoolRplApr
 	VDBRocketPoolSmoothingPool
 )
 
@@ -411,18 +409,14 @@ func (c VDBRocketPoolColumn) Int() int {
 
 func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	switch s {
-	case "node":
+	case "", "node":
 		return VDBRocketPoolNode
-	case "minipools":
-		return VDBRocketPoolMinipools
 	case "collateral":
 		return VDBRocketPoolCollateral
-	case "rpl":
-		return VDBRocketPoolRpl
+	case "minipools":
+		return VDBRocketPoolMinipools
 	case "effective_rpl":
 		return VDBRocketPoolEffectiveRpl
-	case "rpl_apr":
-		return VDBRocketPoolRplApr
 	case "smoothing_pool":
 		return VDBRocketPoolSmoothingPool
 	default:
@@ -430,21 +424,35 @@ func (VDBRocketPoolColumn) NewFromString(s string) VDBRocketPoolColumn {
 	}
 }
 
+func (c VDBRocketPoolColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBRocketPoolNode:
+		return goqu.T("n").Col("address")
+	case VDBRocketPoolCollateral:
+		return goqu.C("rpl_stake")
+	case VDBRocketPoolEffectiveRpl:
+		return goqu.C("effective_rpl_stake")
+	case VDBRocketPoolSmoothingPool:
+		return goqu.C("smoothing_pool_opted_in")
+	case VDBRocketPoolMinipools:
+		return goqu.L("COUNT(mp.address)")
+
+	default:
+		return nil
+	}
+}
+
 var VDBRocketPoolColumns = struct {
 	Node          VDBRocketPoolColumn
 	Minipools     VDBRocketPoolColumn
 	Collateral    VDBRocketPoolColumn
-	Rpl           VDBRocketPoolColumn
 	EffectiveRpl  VDBRocketPoolColumn
-	RplApr        VDBRocketPoolColumn
 	SmoothingPool VDBRocketPoolColumn
 }{
 	VDBRocketPoolNode,
 	VDBRocketPoolMinipools,
 	VDBRocketPoolCollateral,
-	VDBRocketPoolRpl,
 	VDBRocketPoolEffectiveRpl,
-	VDBRocketPoolRplApr,
 	VDBRocketPoolSmoothingPool,
 }
 
@@ -465,7 +473,7 @@ func (c VDBRocketPoolMinipoolsColumn) Int() int {
 
 func (VDBRocketPoolMinipoolsColumn) NewFromString(s string) VDBRocketPoolMinipoolsColumn {
 	switch s {
-	case "group_id":
+	case "", "group_id":
 		return VDBRocketPoolMinipoolsGroup
 	default:
 		return VDBRocketPoolMinipoolsColumn(-1)

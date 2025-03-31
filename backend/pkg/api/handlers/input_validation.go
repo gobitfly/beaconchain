@@ -1,21 +1,21 @@
 package handlers
 
 import (
-	"bytes"
 	"cmp"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
+	"maps"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
 	"github.com/shopspring/decimal"
 	"github.com/xeipuuv/gojsonschema"
@@ -32,9 +32,10 @@ var (
 	reValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
 	reValidatorList                = regexp.MustCompile(`^(0x[0-9a-fA-F]{96}|[0-9]+)(,\s*(0x[0-9a-fA-F]{96}|[0-9]+)\s*)+$`)
 	reEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
-	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[01])?[0-9a-fA-F]{62}$`)
+	reWithdrawalCredential         = regexp.MustCompile(`^(0x0[012])?[0-9a-fA-F]{62}$`)
 	reEnsName                      = regexp.MustCompile(`^.+\.eth$`)
-	reGraffiti                     = regexp.MustCompile(`^.{2,}$`)          // at least 2 characters, so that queries won't time out
+	reGraffiti                     = regexp.MustCompile(`^.{2,32}$`) // at least 2 characters, so that queries won't time out
+	reGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){32}$`)
 	reCursor                       = regexp.MustCompile(`^[A-Za-z0-9-_]+$`) // has to be base64
 	reEmail                        = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	rePassword                     = regexp.MustCompile(`^.{5,}$`)
@@ -44,7 +45,6 @@ var (
 
 const (
 	maxNameLength                     = 50
-	maxValidatorsInList               = 20
 	maxQueryLimit              uint64 = 100
 	defaultReturnLimit         uint64 = 10
 	sortOrderAscending                = "asc"
@@ -67,13 +67,13 @@ const (
 // It is used to collect multiple validation errors before returning them to the user.
 type validationError map[string]string
 
-func (v validationError) Error() string {
+func (v validationError) ErrorString() string {
 	//iterate over map and create a string
 	var sb strings.Builder
-	for k, v := range v {
-		sb.WriteString(k)
+	for _, key := range slices.Sorted(maps.Keys(v)) {
+		sb.WriteString(key)
 		sb.WriteString(": ")
-		sb.WriteString(v)
+		sb.WriteString(v[key])
 		sb.WriteString("\n")
 	}
 	return sb.String()[:sb.Len()-1]
@@ -92,6 +92,13 @@ func (v *validationError) add(paramName, problem string) {
 
 func (v *validationError) hasErrors() bool {
 	return v != nil && len(*v) > 0
+}
+
+func (v *validationError) AsError() error {
+	if v.hasErrors() {
+		return newBadRequestErr("%s", v.ErrorString())
+	}
+	return nil
 }
 
 // --------------------------------------
@@ -141,14 +148,8 @@ func (v *validationError) checkUserEmailToken(token string) string {
 
 // check request structure (body contains valid json and all required parameters are present)
 // return error only if internal error occurs, otherwise add error to validationError and/or return nil
-func (v *validationError) checkBody(data interface{}, r *http.Request) error {
-	// check if content type is application/json
-	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
-		v.add("request body", "'Content-Type' header must be 'application/json'")
-	}
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	r.Body = io.NopCloser(bytes.NewReader(bodyBytes)) // unconsume body for error logging
+func (v *validationError) checkBody(data interface{}, requestBody io.ReadCloser) error {
+	bodyBytes, err := io.ReadAll(requestBody)
 	if err != nil {
 		return newInternalServerErr("error reading request body")
 	}
@@ -252,6 +253,7 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 	}
 	var keys []string
 	for _, key := range splitParameters(keysString, ',') {
+		key = strings.TrimSpace(key)
 		keys = append(keys, v.checkRegex(reName, key, "keys"))
 	}
 	return keys
@@ -259,33 +261,6 @@ func (v *validationError) checkAdConfigurationKeys(keysString string) []string {
 
 func (v *validationError) checkPrimaryDashboardId(param string) types.VDBIdPrimary {
 	return types.VDBIdPrimary(v.checkUint(param, "dashboard_id"))
-}
-
-// helper function to unify handling of block detail request validation
-func (h *HandlerService) validateBlockRequest(r *http.Request, paramName string) (uint64, uint64, error) {
-	var v validationError
-	var err error
-	chainId := v.checkNetworkParameter(mux.Vars(r)["network"])
-	var value uint64
-	switch paramValue := mux.Vars(r)[paramName]; paramValue {
-	// possibly add other values like "genesis", "finalized", hardforks etc. later
-	case "latest":
-		ctx := r.Context()
-		if paramName == "block" {
-			value, err = h.daService.GetLatestBlock(ctx)
-		} else if paramName == "slot" {
-			value, err = h.daService.GetLatestSlot(ctx)
-		}
-		if err != nil {
-			return 0, 0, err
-		}
-	default:
-		value = v.checkUint(paramValue, paramName)
-	}
-	if v.hasErrors() {
-		return 0, 0, v
-	}
-	return chainId, value, nil
 }
 
 // checkGroupId validates the given group id and returns it as an int64.
@@ -313,6 +288,7 @@ func splitParameters(params string, delim rune) []string {
 func parseGroupIdList[T any](groupIds string, convert func(string, string) T) []T {
 	var ids []T
 	for _, id := range splitParameters(groupIds, ',') {
+		id = strings.TrimSpace(id)
 		ids = append(ids, convert(id, "group_ids"))
 	}
 	return ids
@@ -400,7 +376,11 @@ func (v *validationError) parseSortOrder(order string) bool {
 func checkSort[T enums.EnumFactory[T]](v *validationError, sortString string) *types.Sort[T] {
 	var c T
 	if sortString == "" {
-		return &types.Sort[T]{Column: c, Desc: defaultDesc}
+		sortCol := c.NewFromString(sortString)
+		if enums.IsInvalidEnum(sortCol) {
+			sortCol = c
+		}
+		return &types.Sort[T]{Column: sortCol, Desc: defaultDesc}
 	}
 	sortSplit := splitParameters(sortString, ':')
 	if len(sortSplit) > 2 {
@@ -424,6 +404,7 @@ func (v *validationError) checkProtocolModes(protocolModes string) types.VDBProt
 	}
 	protocolsSlice := splitParameters(protocolModes, ',')
 	for _, protocolMode := range protocolsSlice {
+		protocolMode = strings.TrimSpace(protocolMode)
 		switch protocolMode {
 		case "rocket_pool":
 			modes.RocketPool = true
@@ -523,39 +504,27 @@ func isValidNetwork(network intOrString) (uint64, bool) {
 	return 0, false
 }
 
-func (v *validationError) checkTimestamps(r *http.Request, chartLimits ChartTimeDashboardLimits) (after uint64, before uint64) {
-	afterParam := r.URL.Query().Get("after_ts")
-	beforeParam := r.URL.Query().Get("before_ts")
-	switch {
-	// If both parameters are empty, return the latest data
-	case afterParam == "" && beforeParam == "":
-		return max(chartLimits.LatestExportedTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs), chartLimits.LatestExportedTs
-
-	// If only the afterParam is provided
-	case afterParam != "" && beforeParam == "":
-		afterTs := v.checkUint(afterParam, "after_ts")
-		beforeTs := afterTs + chartLimits.MaxAllowedInterval
-		return afterTs, beforeTs
-
-	// If only the beforeParam is provided
-	case beforeParam != "" && afterParam == "":
-		beforeTs := v.checkUint(beforeParam, "before_ts")
-		afterTs := max(beforeTs-chartLimits.MaxAllowedInterval, chartLimits.MinAllowedTs)
-		return afterTs, beforeTs
-
-	// If both parameters are provided, validate them
-	default:
-		afterTs := v.checkUint(afterParam, "after_ts")
-		beforeTs := v.checkUint(beforeParam, "before_ts")
-
-		if afterTs > beforeTs {
-			v.add("after_ts", "parameter `after_ts` must not be greater than `before_ts`")
-		}
-
-		if beforeTs-afterTs > chartLimits.MaxAllowedInterval {
-			v.add("before_ts", fmt.Sprintf("parameters `after_ts` and `before_ts` must not lie apart more than %d seconds for this aggregation", chartLimits.MaxAllowedInterval))
-		}
-
-		return afterTs, beforeTs
+func (v *validationError) checkDashboardId(id string) interface{} {
+	if reInteger.MatchString(id) {
+		// given id is a normal id
+		id := v.checkUint(id, "dashboard_id")
+		return types.VDBIdPrimary(id)
 	}
+	if reValidatorDashboardPublicId.MatchString(id) {
+		// given id is a public id
+		return types.VDBIdPublic(id)
+	}
+	// given id must be an encoded set of validators
+	decodedId, err := base64.RawURLEncoding.DecodeString(id)
+	if err != nil {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	var validatorListError validationError
+	indexes, publicKeys := validatorListError.checkValidatorList(string(decodedId), forbidEmpty)
+	if validatorListError.hasErrors() {
+		v.add("dashboard_id", fmt.Sprintf("given value '%s' is not a valid dashboard id", id))
+		return nil
+	}
+	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}
 }

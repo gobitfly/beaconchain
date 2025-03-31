@@ -2,7 +2,8 @@
 const { t: $t } = useTranslation()
 const { currentPremiumSubscription } = useProductsStore()
 const {
-  isStripeDisabled, stripeCustomerPortal,
+  isStripeDisabled,
+  stripeCustomerPortal,
 } = useStripe()
 
 const buttonsDisabled = defineModel<boolean | undefined>({ required: true })

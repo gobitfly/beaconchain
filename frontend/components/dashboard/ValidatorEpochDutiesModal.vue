@@ -5,7 +5,6 @@ import type { Cursor } from '~/types/datatable'
 import type { GetValidatorDashboardDutiesResponse } from '~/types/api/validator_dashboard'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
 import type { PathValues } from '~/types/customFetch'
-import { API_PATH } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -24,7 +23,8 @@ interface Props {
 }
 
 const {
-  props, setHeader,
+  props,
+  setHeader,
 } = useBcDialog<Props>({
   contentClass: 'epoch-duties-modal',
   showHeader: size.value.expandable,
@@ -71,7 +71,7 @@ const loadData = async () => {
     isLoading.value = !data.value
     const testQ = JSON.stringify(query.value)
     const result = await fetch<GetValidatorDashboardDutiesResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_EPOCH_DUTY,
+      'DASHBOARD_VALIDATOR_EPOCH_DUTY',
       {
         query: {
           ...query.value,

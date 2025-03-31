@@ -1,5 +1,3 @@
-import type { CryptoCurrency } from '~/types/currencies'
-
 export enum ChainFamily {
   Any = 'Any',
   Arbitrum = 'Arbitrum',
@@ -9,34 +7,30 @@ export enum ChainFamily {
   Optimism = 'Optimism',
 }
 
-export enum ChainIDs {
-  Any = 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
+const ChainIDs = {
+  Any: 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
 
-  ArbitrumNovaEthereum = 42170,
-  ArbitrumOneEthereum = 42161,
-  ArbitrumOneSepolia = 421614,
+  Ethereum: 1,
+  Gnosis: 100,
 
-  BaseEthereum = 8453,
-  BaseSepolia = 84532,
-  Chiado = 10200,
+  Holesky: 17000,
+  Hoodi: 560048,
+  Pectra_Devnet_5: 7088110746,
+  Pectra_Devnet_6: 7072151312,
+  Sepolia: 11155111,
+} as const
 
-  Ethereum = 1,
-  Gnosis = 100,
-
-  Holesky = 17000,
-  OptimismEthereum = 10,
-
-  OptimismSepolia = 11155420,
-  Sepolia = 11155111,
-}
+export type ChainId = (typeof ChainIDs)[keyof typeof ChainIDs]
 
 export interface ChainInfoFields {
-  clCurrency: CryptoCurrency,
+  clCurrency: CurrencyCodeCrypto,
   description: string,
-  elCurrency: CryptoCurrency,
+  displayCurrencyDefault: DisplayCurrency,
+  elCurrency: CurrencyCodeCrypto,
   family: ChainFamily,
-  L1: ChainIDs, // if the network is a L2, this field points to the L1
-  mainNet: ChainIDs, // if the network is a testnet, this field points to the non-test network
+  hasRocketPool: boolean,
+  mainCurrency: CurrencyCodeCrypto,
+  mainNet: ChainId,
   name: string,
   nameParts: string[],
   priority: number, // default order of the networks on the screen (ex: in the drop-down of the search bar)
@@ -46,13 +40,32 @@ export interface ChainInfoFields {
   timeStampSlot0: number, // if this property is 0, it means that the network has no slots
 }
 
-export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
+export type DisplayCurrency = {
+  consensusLayer: 'ETH',
+  executionLayer: 'ETH',
+  fiat: 'USD',
+  main: 'ETH',
+} | {
+  consensusLayer: 'GNO',
+  executionLayer: 'xDAI',
+  fiat: 'USD',
+  main: 'GNO',
+}
+
+export const ChainInfo: Record<ChainId, ChainInfoFields> = {
   [ChainIDs.Any]: {
     clCurrency: 'ETH',
     description: 'Any network',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Any,
-    L1: ChainIDs.Any,
+    hasRocketPool: false,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Any,
     name: 'Any network',
     nameParts: [
@@ -65,123 +78,19 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     slotsPerEpoch: 32,
     timeStampSlot0: 0,
   },
-
-  [ChainIDs.ArbitrumNovaEthereum]: {
-    clCurrency: 'ETH',
-    description: 'L2',
-    elCurrency: 'ETH',
-    family: ChainFamily.Arbitrum,
-    L1: ChainIDs.Ethereum,
-    mainNet: ChainIDs.ArbitrumNovaEthereum,
-    name: 'Arbitrum Nova',
-    nameParts: [
-      'Arbitrum Nova',
-      '',
-    ],
-    priority: 11,
-    secondsPerSlot: 0,
-    shortName: 'Arbitrum',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-  [ChainIDs.ArbitrumOneEthereum]: {
-    clCurrency: 'ETH',
-    description: 'L2',
-    elCurrency: 'ETH',
-    family: ChainFamily.Arbitrum,
-    L1: ChainIDs.Ethereum,
-    mainNet: ChainIDs.ArbitrumOneEthereum,
-    name: 'Arbitrum One',
-    nameParts: [
-      'Arbitrum One',
-      '',
-    ],
-    priority: 10,
-    secondsPerSlot: 0,
-    shortName: 'Arbitrum',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-  [ChainIDs.ArbitrumOneSepolia]: {
-    clCurrency: 'ETH',
-    description: 'Testnet',
-    elCurrency: 'ETH',
-    family: ChainFamily.Arbitrum,
-    L1: ChainIDs.Sepolia,
-    mainNet: ChainIDs.ArbitrumOneEthereum,
-    name: 'Arbitrum Sepolia',
-    nameParts: [
-      'Arbitrum',
-      'Sepolia',
-    ],
-    priority: 12,
-    secondsPerSlot: 0,
-    shortName: 'Arbitrum',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-
-  [ChainIDs.BaseEthereum]: {
-    clCurrency: 'ETH',
-    description: 'L2',
-    elCurrency: 'ETH',
-    family: ChainFamily.Base,
-    L1: ChainIDs.Ethereum,
-    mainNet: ChainIDs.BaseEthereum,
-    name: 'Base',
-    nameParts: [
-      'Base',
-      '',
-    ],
-    priority: 30,
-    secondsPerSlot: 0,
-    shortName: 'Base',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-  [ChainIDs.BaseSepolia]: {
-    clCurrency: 'ETH',
-    description: 'Testnet',
-    elCurrency: 'ETH',
-    family: ChainFamily.Base,
-    L1: ChainIDs.Sepolia,
-    mainNet: ChainIDs.BaseEthereum,
-    name: 'Base Sepolia',
-    nameParts: [
-      'Base',
-      'Sepolia',
-    ],
-    priority: 31,
-    secondsPerSlot: 0,
-    shortName: 'Base',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-  [ChainIDs.Chiado]: {
-    clCurrency: 'GNO',
-    description: 'Testnet',
-    elCurrency: 'xDAI',
-    family: ChainFamily.Gnosis,
-    L1: ChainIDs.Chiado,
-    mainNet: ChainIDs.Gnosis,
-    name: 'Gnosis Chiado',
-    nameParts: [
-      'Gnosis',
-      'Chiado',
-    ],
-    priority: 41,
-    secondsPerSlot: 5,
-    shortName: 'Chiado',
-    slotsPerEpoch: 16,
-    timeStampSlot0: 1665396300,
-  },
-
   [ChainIDs.Ethereum]: {
     clCurrency: 'ETH',
     description: 'Mainnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
-    L1: ChainIDs.Ethereum,
+    hasRocketPool: true,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum',
     nameParts: [
@@ -195,11 +104,18 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     timeStampSlot0: 1606824023,
   },
   [ChainIDs.Gnosis]: {
-    clCurrency: 'GNO',
-    description: 'Mainnet',
+    clCurrency: 'mGNO',
+    description: '',
+    displayCurrencyDefault: {
+      consensusLayer: 'GNO',
+      executionLayer: 'xDAI',
+      fiat: 'USD',
+      main: 'GNO',
+    },
     elCurrency: 'xDAI',
     family: ChainFamily.Gnosis,
-    L1: ChainIDs.Gnosis,
+    hasRocketPool: false,
+    mainCurrency: 'GNO',
     mainNet: ChainIDs.Gnosis,
     name: 'Gnosis',
     nameParts: [
@@ -212,13 +128,19 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     slotsPerEpoch: 16,
     timeStampSlot0: 1638993340,
   },
-
   [ChainIDs.Holesky]: {
     clCurrency: 'ETH',
     description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
-    L1: ChainIDs.Holesky,
+    hasRocketPool: true,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Holesky',
     nameParts: [
@@ -231,49 +153,98 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     slotsPerEpoch: 32,
     timeStampSlot0: 1695902400,
   },
-  [ChainIDs.OptimismEthereum]: {
-    clCurrency: 'ETH',
-    description: 'L2',
-    elCurrency: 'ETH',
-    family: ChainFamily.Optimism,
-    L1: ChainIDs.Ethereum,
-    mainNet: ChainIDs.OptimismEthereum,
-    name: 'Optimism',
-    nameParts: [
-      'Optimism',
-      '',
-    ],
-    priority: 20,
-    secondsPerSlot: 0,
-    shortName: 'Optimism',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
-  },
-
-  [ChainIDs.OptimismSepolia]: {
+  [ChainIDs.Hoodi]: {
     clCurrency: 'ETH',
     description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
-    family: ChainFamily.Optimism,
-    L1: ChainIDs.Sepolia,
-    mainNet: ChainIDs.OptimismEthereum,
-    name: 'Optimism Sepolia',
+    family: ChainFamily.Ethereum,
+    hasRocketPool: true,
+    mainCurrency: 'ETH',
+    mainNet: ChainIDs.Ethereum,
+    name: 'Ethereum Hoodi',
     nameParts: [
-      'Optimism',
-      'Sepolia',
+      'Ethereum',
+      'Hoodi',
     ],
-    priority: 21,
-    secondsPerSlot: 0,
-    shortName: 'Optimism',
-    slotsPerEpoch: 0,
-    timeStampSlot0: 0,
+    priority: 2,
+    secondsPerSlot: 12,
+    shortName: 'Hoodi',
+    slotsPerEpoch: 32,
+    timeStampSlot0: 1742213400,
+  },
+  [ChainIDs.Pectra_Devnet_5]: {
+    clCurrency: 'ETH',
+    description: 'Devnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
+    elCurrency: 'ETH',
+    family: ChainFamily.Ethereum,
+    hasRocketPool: false,
+    mainCurrency: 'ETH',
+    mainNet: ChainIDs.Ethereum,
+    name: 'Ethereum Pectra Devnet 5',
+    nameParts: [
+      'Ethereum',
+      'Pectra',
+      'Devnet',
+      '5',
+    ],
+    priority: 41,
+    secondsPerSlot: 12,
+    shortName: 'Pectra',
+    slotsPerEpoch: 32,
+    timeStampSlot0: 1737034260,
+  },
+  [ChainIDs.Pectra_Devnet_6]: {
+    clCurrency: 'ETH',
+    description: 'Devnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
+    elCurrency: 'ETH',
+    family: ChainFamily.Ethereum,
+    hasRocketPool: false,
+    mainCurrency: 'ETH',
+    mainNet: ChainIDs.Ethereum,
+    name: 'Ethereum Pectra Devnet 6',
+    nameParts: [
+      'Ethereum',
+      'Pectra',
+      'Devnet',
+      '6',
+    ],
+    priority: 42,
+    secondsPerSlot: 12,
+    shortName: 'Pectra',
+    slotsPerEpoch: 32,
+    timeStampSlot0: 1738603860,
   },
   [ChainIDs.Sepolia]: {
     clCurrency: 'ETH',
     description: 'Testnet',
+    displayCurrencyDefault: {
+      consensusLayer: 'ETH',
+      executionLayer: 'ETH',
+      fiat: 'USD',
+      main: 'ETH',
+    },
     elCurrency: 'ETH',
     family: ChainFamily.Ethereum,
-    L1: ChainIDs.Sepolia,
+    hasRocketPool: false,
+    mainCurrency: 'ETH',
     mainNet: ChainIDs.Ethereum,
     name: 'Ethereum Sepolia',
     nameParts: [
@@ -286,126 +257,4 @@ export const ChainInfo: Record<ChainIDs, ChainInfoFields> = {
     slotsPerEpoch: 32,
     timeStampSlot0: 1655733600,
   },
-}
-
-export function getAllExistingChainIDs(sortByPriority: boolean): ChainIDs[] {
-  const list: ChainIDs[] = []
-
-  for (const id in ChainIDs) {
-    if (isNaN(Number(id))) {
-      list.push(ChainIDs[id as keyof typeof ChainIDs])
-    }
-  }
-  if (sortByPriority) {
-    sortChainIDsByPriority(list)
-  }
-  return list
-}
-
-/**
- * Should be used only when you test a network different from the current one.
- * Whereever you would write `isMainNet(currentNetwork.value)` you should
- * rather use `isMainNet()` from `useNetworkStore.ts`.
- */
-export function isMainNet(network: ChainIDs): boolean {
-  return ChainInfo[network].mainNet === network
-}
-
-/**
- * Should be used only when you test a network different from the current one.
- * Wherever you would write `isL1(currentNetwork.value)` you should rather use `isL1()` from `useNetworkStore.ts`.
- */
-export function isL1(network: ChainIDs): boolean {
-  return ChainInfo[network].L1 === network
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `epochsPerDay(currentNetwork.value)` you should
- * rather use `epochsPerDay()` from `useNetworkStore.ts`.
- */
-export function epochsPerDay(chainId: ChainIDs): number {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined) {
-    return 0
-  }
-  return (24 * 60 * 60) / (info.slotsPerEpoch * info.secondsPerSlot)
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `epochToTs(currentNetwork.value, epoch)` you should
- *  rather use `epochToTs(epoch)` from `useNetworkStore.ts`.
- */
-export function epochToTs(
-  chainId: ChainIDs,
-  epoch: number,
-): number | undefined {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined || epoch < 0) {
-    return undefined
-  }
-
-  return info.timeStampSlot0 + epoch * info.slotsPerEpoch * info.secondsPerSlot
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `slotToTs(currentNetwork.value, slot)` you should
- *  rather use `slotToTs(slot)` from `useNetworkStore.ts`.
- */
-export function slotToTs(chainId: ChainIDs, slot: number): number | undefined {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined || slot < 0) {
-    return undefined
-  }
-
-  return info.timeStampSlot0 + slot * info.secondsPerSlot
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `tsToSlot(currentNetwork.value, ts)` you should
- * rather use `tsToSlot(ts)` from `useNetworkStore.ts`.
- */
-export function tsToSlot(chainId: ChainIDs, ts: number): number {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined) {
-    return -1
-  }
-  return Math.floor((ts - info.timeStampSlot0) / info.secondsPerSlot)
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `slotToEpoch(currentNetwork.value, slot)` you should
- *  rather use `slotToEpoch(slot)` from `useNetworkStore.ts`.
- */
-export function slotToEpoch(chainId: ChainIDs, slot: number): number {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined) {
-    return -1
-  }
-  return Math.floor(slot / info.slotsPerEpoch)
-}
-
-/**
- * Should be used only when you work with a network different from the current one.
- * Wherever you would write `secondsPerEpoch(currentNetwork.value)` you should
- * rather use `secondsPerEpoch()` from `useNetworkStore.ts`.
- */
-export function secondsPerEpoch(chainId: ChainIDs): number {
-  const info = ChainInfo[chainId]
-  if (info.timeStampSlot0 === undefined) {
-    return -1
-  }
-  return info.slotsPerEpoch * info.secondsPerSlot
-}
-
-/**
- * @param list List to sort. Its order will be modified because the function sorts in place.
- * @returns List sorted in place, so the same as parameter `list`.
- */
-export function sortChainIDsByPriority(list: ChainIDs[]): ChainIDs[] {
-  return list.sort((a, b) => ChainInfo[a].priority - ChainInfo[b].priority)
-}
+} as const

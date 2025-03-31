@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
-import IconValidator from '../icon/IconValidator.vue'
-import IconAccount from '../icon/IconAccount.vue'
 import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
-import type { ChainIDs } from '~/types/network'
+import type { ChainId } from '~/types/network'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 import { NotificationsDashboardDialogEntity } from '#components'
 
@@ -17,7 +13,7 @@ const { t: $t } = useTranslation()
 
 // TODO: replace currentNetwork with selection from NETWORK_SWITCHER_COMPONENT that has yet to be implemented
 const { currentNetwork } = useNetworkStore()
-const networkId = ref<ChainIDs>(currentNetwork.value ?? 1)
+const networkId = ref<ChainId>(currentNetwork.value ?? 1)
 
 const {
   isLoading,
@@ -89,7 +85,7 @@ const textDashboardNotifications = (event_types: NotificationDashboardsTableRow[
 
 const dialog = useDialog()
 
-const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow) => {
+const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }) => {
   dialog.open(NotificationsDashboardDialogEntity, {
     data: {
       dashboard_id: row.dashboard_id,
@@ -131,9 +127,8 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
             >
               <template #body="slotProps">
                 <div class="icon-wrapper">
-                  <IconNetwork
-                    colored
-                    :chain-id="slotProps.data.chain_id"
+                  <BcNetworkIcon
+                    :id="slotProps.data.chain_id"
                     class="icon-network"
                   />
                 </div>
@@ -193,7 +188,9 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
               <template #body="slotProps">
                 <div class="entity">
                   <template v-if="!slotProps.data.is_account_dashboard">
-                    <IconValidator class="icon-dashboard-type" />
+                    <BcIcon
+                      name="desktop"
+                    />
                     {{ slotProps.data.entity_count }}
                     <span>
                       {{
@@ -205,7 +202,9 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                     </span>
                   </template>
                   <template v-else>
-                    <IconAccount class="icon-dashboard-type" />
+                    <BcIcon
+                      name="user"
+                    />
                     {{ slotProps.data.entity_count }}
                     <span>
                       {{
@@ -217,14 +216,11 @@ const showDialog = (row: { identifier: string } & NotificationDashboardsTableRow
                     </span>
                   </template>
                   <BcButtonIcon
-                    screenreader-text="Open notification details"
+                    screenreader-text="notifications.dashboards.dialog.entity.open_notification_details"
+                    name="arrow-upright-from-square"
+                    class="link"
                     @click="showDialog(slotProps.data)"
-                  >
-                    <FontAwesomeIcon
-                      class="link"
-                      :icon="faArrowUpRightFromSquare"
-                    />
-                  </BcButtonIcon>
+                  />
                 </div>
               </template>
             </Column>

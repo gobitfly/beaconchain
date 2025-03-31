@@ -424,6 +424,7 @@ func RenderEmailsForUserEvents(epoch uint64, notificationsByUserID types.Notific
 
 func QueueEmailNotifications(epoch uint64, notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
 	// for emails multiple notifications will be rendered to one email per user for each run
+	// TODO filter out ratelimited users, don't need to queue or even render emails
 	emails, err := RenderEmailsForUserEvents(epoch, notificationsByUserID)
 	if err != nil {
 		return fmt.Errorf("error rendering emails: %w", err)
@@ -595,11 +596,11 @@ func QueuePushNotification(epoch uint64, notificationsByUserID types.Notificatio
 }
 
 func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbConn *sqlx.DB, networkDbConn *sqlx.DB) error {
-	count, err := db.CountSentMessage("n_test_push", userId)
+	incr, _, err := db.IncrSentMessagesCount("n_test_push", userId, 1, 10)
 	if err != nil {
 		return err
 	}
-	if count > 10 {
+	if incr == 0 {
 		return fmt.Errorf("rate limit has been exceeded")
 	}
 	tokens, err := GetUserPushTokenByIds([]types.UserId{userId}, userDbConn)
@@ -638,7 +639,15 @@ func QueueTestPushNotification(ctx context.Context, userId types.UserId, userDbC
 func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserId, tx *sqlx.Tx) error {
 	var webhooks []types.UserWebhook
 	userIds := slices.Collect(maps.Keys(notificationsByUserID))
-	err := db.FrontendWriterDB.Select(&webhooks, `
+
+	// first get an array of users that have webhooks disabled
+	var disabledUsers []types.UserId
+	err := db.FrontendWriterDB.Select(&disabledUsers, `SELECT user_id FROM users_notification_channels WHERE active = false AND channel = $1 AND user_id = ANY($2)`, types.WebhookNotificationChannel, pq.Array(userIds))
+	if err != nil {
+		return fmt.Errorf("error quering users_notification_channels, err: %w", err)
+	}
+
+	err = db.FrontendWriterDB.Select(&webhooks, `
 	SELECT
 		id,
 		user_id,
@@ -650,8 +659,8 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 	FROM
 		users_webhooks
 	WHERE
-		user_id = ANY($1) AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2)
-	`, pq.Array(userIds), types.WebhookNotificationChannel)
+		user_id = ANY($1) AND NOT (user_id = ANY($2));
+	`, pq.Array(userIds), pq.Array(disabledUsers))
 
 	if err != nil {
 		return fmt.Errorf("error quering users_webhooks, err: %w", err)
@@ -676,11 +685,10 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 		webhook_last_sent AS last_sent
 	FROM users_val_dashboards_groups
 	LEFT JOIN users_val_dashboards ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
-	WHERE users_val_dashboards.user_id = ANY($1)
+	WHERE users_val_dashboards.user_id = ANY($1) AND NOT (users_val_dashboards.user_id = ANY($2))
 	AND webhook_target IS NOT NULL
-	AND webhook_format IS NOT NULL
-	AND user_id NOT IN (SELECT user_id from users_notification_channels WHERE active = false and channel = $2);
-	`, pq.Array(userIds), types.WebhookNotificationChannel)
+	AND webhook_format IS NOT NULL;
+	`, pq.Array(userIds), pq.Array(disabledUsers))
 	if err != nil {
 		return fmt.Errorf("error quering users_val_dashboards_groups, err: %w", err)
 	}
@@ -728,19 +736,17 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 								}
 								if len(notifications) > 0 {
 									// reset Retries
-									if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-										_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
-										if err != nil {
-											log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-											continue
-										}
-									} else if w.Retries > 5 && !w.LastSent.Valid {
-										log.Warnf("webhook '%v' has more than 5 retries and does not have a valid last_sent timestamp", w.Url)
-										continue
-									}
-
 									if w.Retries >= 5 {
-										// early return
+										if !w.LastSent.Valid {
+											log.Warnf("webhook '%v' has 5 retries and does not have a valid last_sent timestamp", w.Url)
+										} else if w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+											_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = 0 WHERE id = $1;`, w.ID)
+											if err != nil {
+												log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+											} else {
+												log.Infof("webhook '%v' has 5 retries and has been reset", w.Url)
+											}
+										}
 										continue
 									}
 								}
@@ -828,19 +834,17 @@ func QueueWebhookNotifications(notificationsByUserID types.NotificationsPerUserI
 				w := dashboardWebhookMap[userID][dashboardId][dashboardGroupId]
 
 				// reset Retries
-				if w.Retries > 5 && w.LastSent.Valid && w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
-					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = 0 WHERE id = $1 AND dashboard_id = $2;`, dashboardGroupId, dashboardId)
-					if err != nil {
-						log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
-						continue
-					}
-				} else if w.Retries > 5 && !w.LastSent.Valid {
-					log.Warnf("webhook '%v' for dashboard %d and group %d has more than 5 retries and does not have a valid last_sent timestamp", w.Url, dashboardId, dashboardGroupId)
-					continue
-				}
-
 				if w.Retries >= 5 {
-					// early return
+					if !w.LastSent.Valid {
+						log.Warnf("webhook '%v' for dashboard %d and group %d has more than 5 retries and does not have a valid last_sent timestamp", w.Url, dashboardId, dashboardGroupId)
+					} else if w.LastSent.Time.Add(time.Hour).Before(time.Now()) {
+						_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = 0 WHERE id = $1 AND dashboard_id = $2;`, dashboardGroupId, dashboardId)
+						if err != nil {
+							log.Error(err, "error updating users_webhooks table; setting retries to zero", 0)
+						} else {
+							log.Infof("webhook '%v' for dashboard %d and group %d has 5 retries and has been reset", w.Url, dashboardId, dashboardGroupId)
+						}
+					}
 					continue
 				}
 

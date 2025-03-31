@@ -24,14 +24,17 @@ const {
   totalAmount,
 } = useValidatorDashboardElDepositsStore()
 const {
-  bounce: setQuery, value: query,
+  bounce: setQuery,
+  value: query,
 } = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  hasValidators,
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -117,6 +120,10 @@ const getRowClass = (row: VDBExecutionDepositsTableRow) => {
 const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
   return row.index !== undefined
 }
+const {
+  displayCurrencyDefault,
+  selectedCurrencyMain,
+} = useCurrency()
 </script>
 
 <template>
@@ -282,11 +289,25 @@ const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
                     size="small"
                   />
                 </div>
-                <BcFormatValue
+                <BcTooltip
                   v-else
-                  :value="slotProps.data.amount"
-                  :options="{ fixedDecimalCount: 0 }"
-                />
+                  fit-content
+                >
+                  <BcFormatAmount
+                    :value="slotProps.data.amount"
+                    target-currency="clDisplayCurrency"
+                    :maximum-fraction-digits="0"
+                  />
+                  <template
+                    v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
+                    #tooltip
+                  >
+                    <BcFormatAmount
+                      :value="slotProps.data.amount"
+                      has-higher-precision
+                    />
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <Column

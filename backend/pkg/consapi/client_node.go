@@ -3,6 +3,7 @@ package consapi
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/network"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi/utils"
+	"github.com/klauspost/compress/gzhttp"
 )
 
 func NewClient(endpoint string) Client {
@@ -18,8 +20,15 @@ func NewClient(endpoint string) Client {
 
 func NewClientWithConfig(endpoint string, httpClient *http.Client) Client {
 	if httpClient == nil {
+		tr := &http.Transport{}
+		tr.ResponseHeaderTimeout = 60 * time.Second
+		tr.TLSHandshakeTimeout = 30 * time.Second
+		tr.DisableCompression = false // we want compression if we can get it. json is very compressible
+		gztr := gzhttp.Transport(tr, gzhttp.TransportEnableZstd(false))
+
 		httpClient = &http.Client{
-			Timeout: 500 * time.Second,
+			Transport: gztr,
+			Timeout:   120 * time.Second,
 		}
 	}
 
@@ -93,7 +102,6 @@ func (r *NodeClient) GetValidators(state any, ids []string, status []types.Valid
 		statusStr := strings.Join(utils.ConvertToStringSlice(status), ",")
 		requestURL += fmt.Sprintf("status=%s", statusStr)
 	}
-
 	return network.Get[types.StandardValidatorsResponse](r.httpClient, requestURL)
 }
 
@@ -102,12 +110,12 @@ func (r *NodeClient) GetValidator(validatorID, state any) (*types.StandardSingle
 	return network.Get[types.StandardSingleValidatorsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
+func (r *NodeClient) GetProposalAssignments(epoch uint64) (*types.StandardProposerAssignmentsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/validator/duties/proposer/%d", r.Endpoint, epoch)
 	return network.Get[types.StandardProposerAssignmentsResponse](r.httpClient, requestURL)
 }
 
-func (r *NodeClient) GetPropoalRewards(blockID any) (*types.StandardBlockRewardsResponse, error) {
+func (r *NodeClient) GetProposalRewards(blockID any) (*types.StandardBlockRewardsResponse, error) {
 	requestURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/blocks/%v", r.Endpoint, blockID)
 	return network.Get[types.StandardBlockRewardsResponse](r.httpClient, requestURL)
 }
@@ -154,7 +162,26 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 	req.Header.Set("accept-encoding", "identity")
 
 	go func() {
-		stream, err := eventsource.SubscribeWithRequest("", req)
+		// create a client with compression disabled
+		// compression can cause delayed events due to chunked encoding
+		client := &http.Client{
+			Transport: &http.Transport{
+				DisableCompression: true,
+			},
+		}
+		url, err := url.Parse(requestURL)
+		if err != nil {
+			panic(err)
+		}
+		request := &http.Request{
+			Method: http.MethodGet,
+			URL:    url,
+			Header: http.Header{
+				"Accept": []string{"text/event-stream"},
+			},
+		}
+		stream, err := eventsource.SubscribeWith(requestURL, client, request)
+		//stream.Logger = log.New(os.Stdout, "eventsource: ", log.LstdFlags)
 
 		if err != nil {
 			responseCh <- &types.EventResponse{Error: err}
@@ -177,4 +204,9 @@ func (r *NodeClient) GetEvents(topics []types.EventTopic) chan *types.EventRespo
 		}
 	}()
 	return responseCh
+}
+
+func (r *NodeClient) GetState(stateID any) (*types.StandardBeaconStateResponse, error) {
+	requestURL := fmt.Sprintf("%s/eth/v1/debug/beacon/states/%v", r.Endpoint, stateID)
+	return network.Get[types.StandardBeaconStateResponse](r.httpClient, requestURL)
 }

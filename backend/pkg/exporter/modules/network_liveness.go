@@ -8,6 +8,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 func networkLivenessUpdater(client rpc.Client) {
@@ -21,20 +23,26 @@ func networkLivenessUpdater(client rpc.Client) {
 	slotDuration := time.Second * time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot)
 
 	for {
+		r := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+		r(constants.Running, nil)
+
 		head, err := client.GetChainHead()
 		if err != nil {
 			log.Error(err, "error getting chainhead when exporting networkliveness", 0)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 			time.Sleep(slotDuration)
 			continue
 		}
 
 		if prevHeadEpoch == head.HeadEpoch {
+			r(constants.Success, nil)
 			time.Sleep(slotDuration)
 			continue
 		}
 
 		// wait for node to be synced
 		if time.Now().Add(-epochDuration).After(utils.EpochToTime(head.HeadEpoch)) {
+			r(constants.Failure, map[string]string{"error": "node not synced"})
 			time.Sleep(slotDuration)
 			continue
 		}
@@ -45,6 +53,7 @@ func networkLivenessUpdater(client rpc.Client) {
 			head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
 		if err != nil {
 			log.Error(err, "error saving networkliveness", 0)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 		} else {
 			log.Infof("updated networkliveness for epoch %v", head.HeadEpoch)
 			prevHeadEpoch = head.HeadEpoch
@@ -53,12 +62,15 @@ func networkLivenessUpdater(client rpc.Client) {
 		err = cache.LatestNodeEpoch.Set(head.HeadEpoch)
 		if err != nil {
 			log.Error(err, "error setting latestNodeEpoch in cache", 0)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
 
 		err = cache.LatestNodeFinalizedEpoch.Set(head.FinalizedEpoch)
 		if err != nil {
 			log.Error(err, "error setting latestNodeFinalizedEpoch in cache", 0)
+			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
+		r(constants.Success, nil)
 
 		time.Sleep(slotDuration)
 	}

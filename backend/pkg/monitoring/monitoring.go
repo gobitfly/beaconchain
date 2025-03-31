@@ -7,7 +7,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
@@ -25,16 +24,7 @@ func Init(full bool) {
 	if db.ClickHouseNativeWriter == nil {
 		log.Infof("initializing clickhouse writer")
 		startedClickhouse.Store(true)
-		db.ClickHouseNativeWriter = db.MustInitClickhouseNative(&types.DatabaseConfig{
-			Username:     utils.Config.ClickHouse.WriterDatabase.Username,
-			Password:     utils.Config.ClickHouse.WriterDatabase.Password,
-			Name:         utils.Config.ClickHouse.WriterDatabase.Name,
-			Host:         utils.Config.ClickHouse.WriterDatabase.Host,
-			Port:         utils.Config.ClickHouse.WriterDatabase.Port,
-			MaxOpenConns: utils.Config.ClickHouse.WriterDatabase.MaxOpenConns,
-			SSL:          true,
-			MaxIdleConns: utils.Config.ClickHouse.WriterDatabase.MaxIdleConns,
-		})
+		db.ClickHouseNativeWriter = db.MustInitClickhouseNative(&utils.Config.ClickHouse.WriterDatabase)
 	}
 	monitoredServices = []services.Service{
 		&services.ServerDbConnections{},
@@ -66,7 +56,7 @@ func Stop() {
 		service.Stop()
 	}
 	// this prevents status reports that werent shut down cleanly from triggering alerts
-	services.NewStatusReport(constants.CleanShutdownEvent, constants.Default, constants.Default)(constants.Success, nil)
+	services.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
 	if startedClickhouse.Load() {
 		db.ClickHouseNativeWriter.Close()
 	}

@@ -26,9 +26,9 @@ var prices = map[string]float64{}
 var pricesMu = &sync.Mutex{}
 var didInit = uint64(0)
 var feeds = map[string]*chainlink_feed.Feed{}
-var calcPairs = map[string]bool{}
-var clCurrency = "ETH"
-var elCurrency = "ETH"
+var mainCurrency = "ETH" // currency in which all exchange rates are denominated, e.g. ETH or GNO
+var clCurrency = "ETH"   // currency in which all CL values are denominated, e.g. ETH or mGNO
+var elCurrency = "ETH"   // currency in which all EL values are denominated, e.g. ETH or xDai
 
 var currencies = map[string]struct {
 	Symbol string
@@ -37,8 +37,7 @@ var currencies = map[string]struct {
 	"AUD":  {"A$", "Australian Dollar"},
 	"CAD":  {"C$", "Canadian Dollar"},
 	"CNY":  {"¥", "Chinese Yuan"},
-	"DAI":  {"DAI", "DAI stablecoin"},
-	"xDAI": {"xDAI", "xDAI stablecoin"},
+	"xDAI": {"DAI", "xDAI stablecoin"},
 	"ETH":  {"ETH", "Ether"},
 	"EUR":  {"€", "Euro"},
 	"GBP":  {"£", "Pound Sterling"},
@@ -52,7 +51,7 @@ func init() {
 	runOnceWg.Add(1)
 }
 
-func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string) {
+func Init(chainId uint64, eth1Endpoint, mainCurrencyParam, clCurrencyParam, elCurrencyParam string) {
 	if atomic.AddUint64(&didInit, 1) > 1 {
 		log.Warnf("price.Init called multiple times")
 		return
@@ -61,21 +60,17 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 	switch chainId {
 	case 1, 100:
 	default:
-		setPrice(elCurrency, elCurrency, 1)
-		setPrice(clCurrency, clCurrency, 1)
+		setPrice(mainCurrency, elCurrency, 1)
+		setPrice(mainCurrency, clCurrency, 1)
 		availableCurrencies = []string{clCurrency, elCurrency}
 		log.Warnf("chainId not supported for fetching prices: %v", chainId)
 		runOnce.Do(func() { runOnceWg.Done() })
 		return
 	}
 
+	mainCurrency = mainCurrencyParam
 	clCurrency = clCurrencyParam
 	elCurrency = elCurrencyParam
-	if elCurrency == "xDAI" {
-		elCurrency = "DAI"
-	}
-	calcPairs[elCurrency] = true
-	calcPairs[clCurrency] = true
 
 	eClient, err := ethclient.Dial(eth1Endpoint)
 	if err != nil {
@@ -104,34 +99,16 @@ func Init(chainId uint64, eth1Endpoint, clCurrencyParam, elCurrencyParam string)
 		feedAddrs["JPY/USD"] = "0xbce206cae7f0ec07b545edde332a47c2f75bbeb3"
 		feedAddrs["GBP/USD"] = "0x5c0ab2d9b5a7ed9f470386e82bb36a3613cdd4b5"
 		feedAddrs["AUD/USD"] = "0x77f9710e7d0a19669a13c055f62cd80d313df022"
-
 		availableCurrencies = []string{"ETH", "USD", "EUR", "GBP", "CNY", "CAD", "AUD", "JPY"}
-	case 11155111:
-		// see: https://docs.chain.link/data-feeds/price-feeds/addresses/
-		feedAddrs["ETH/USD"] = "0x694AA1769357215DE4FAC081bf1f309aDC325306"
-		feedAddrs["EUR/USD"] = "0x1a81afB8146aeFfCFc5E50e8479e826E7D55b910"
-		feedAddrs["JPY/USD"] = "0x8A6af2B75F23831ADc973ce6288e5329F63D86c6"
-		feedAddrs["GBP/USD"] = "0x91FAB41F5f3bE955963a986366edAcff1aaeaa83"
-		feedAddrs["AUD/USD"] = "0xB0C712f98daE15264c8E26132BCC91C40aD4d5F9"
-
-		availableCurrencies = []string{"ETH", "USD", "EUR", "GBP", "AUD", "JPY"}
 	case 100:
 		// see: https://docs.chain.link/data-feeds/price-feeds/addresses/?network=gnosis-chain
 		feedAddrs["GNO/USD"] = "0x22441d81416430A54336aB28765abd31a792Ad37"
-		feedAddrs["DAI/USD"] = "0x678df3415fc31947dA4324eC63212874be5a82f8"
+		feedAddrs["xDAI/USD"] = "0x678df3415fc31947dA4324eC63212874be5a82f8"
 		feedAddrs["EUR/USD"] = "0xab70BCB260073d036d1660201e9d5405F5829b7a"
 		feedAddrs["JPY/USD"] = "0x2AfB993C670C01e9dA1550c58e8039C1D8b8A317"
-		// feedAddrs["CHFUSD"] = "0xFb00261Af80ADb1629D3869E377ae1EEC7bE659F"
 		feedAddrs["ETH/USD"] = "0xa767f745331D267c7751297D982b050c93985627"
-
-		setPrice("mGNO", "GNO", float64(1)/float64(32))
 		setPrice("GNO", "mGNO", 32)
-		setPrice("mGNO", "mGNO", 1)
-		setPrice("GNO", "GNO", 1)
-
-		calcPairs["GNO"] = true
-
-		availableCurrencies = []string{"GNO", "mGNO", "DAI", "ETH", "USD", "EUR", "JPY"}
+		availableCurrencies = []string{"GNO", "mGNO", "xDAI", "ETH", "USD", "EUR", "JPY"}
 	default:
 		log.Fatal(fmt.Errorf("unsupported chainId %v", chainId), "", 0)
 	}
@@ -166,9 +143,6 @@ func updatePrices() {
 			pricesMu.Lock()
 			defer pricesMu.Unlock()
 			prices[pair] = price
-			if pair == "GNO/USD" {
-				prices["mGNO/USD"] = price / 32
-			}
 			return nil
 		})
 	}
@@ -177,35 +151,24 @@ func updatePrices() {
 		log.Error(err, "error upating prices", 0)
 		return
 	}
-	for p := range calcPairs {
-		if err = calcPricePairs(p); err != nil {
-			log.Error(err, "error calculating price pairs", 0, map[string]interface{}{"pair": p})
-			return
-		}
-	}
-	setPrice(elCurrency, elCurrency, 1)
-	setPrice(clCurrency, clCurrency, 1)
 
-	runOnce.Do(func() { runOnceWg.Done() })
-}
-
-func calcPricePairs(currency string) error {
+	// add prices of main currency to all other currencies
 	pricesMu.Lock()
 	defer pricesMu.Unlock()
-	pricesCopy := prices
-	currencyUsdPrice, exists := prices[currency+"/USD"]
+	currencyUsdPrice, exists := prices[mainCurrency+"/USD"]
 	if !exists {
-		return fmt.Errorf("failed updating prices: cant find %v pair %+v", currency+"/USD", prices)
+		log.Error(fmt.Errorf("failed updating prices: cant find %v pair %+v", mainCurrency+"/USD", prices), "", 0)
+		return
 	}
-	for pair, price := range pricesCopy {
+	for pair, price := range prices {
 		s := strings.Split(pair, "/")
 		if len(s) < 2 || s[1] != "USD" {
 			continue
 		}
-		// availableCurrencies = append(availableCurrencies, s[0])
-		prices[currency+"/"+s[0]] = currencyUsdPrice / price
+		prices[mainCurrency+"/"+s[0]] = currencyUsdPrice / price
 	}
-	return nil
+
+	runOnce.Do(func() { runOnceWg.Done() })
 }
 
 func setPrice(a, b string, v float64) {
@@ -221,12 +184,6 @@ func GetPrice(a, b string) float64 {
 	runOnceWg.Wait()
 	pricesMu.Lock()
 	defer pricesMu.Unlock()
-	if a == "xDAI" {
-		a = "DAI"
-	}
-	if b == "xDAI" {
-		b = "DAI"
-	}
 	price, exists := prices[a+"/"+b]
 	if !exists {
 		log.WarnWithFields(log.Fields{"pair": a + "/" + b}, "price pair not found")

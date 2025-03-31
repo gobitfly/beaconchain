@@ -1,43 +1,37 @@
 <script setup lang="ts">
 import {
-  faArrowDown,
-  faChartLineUp,
-  faCube,
-  faCubes, faFire,
-  faMoneyBill,
-  faWallet,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
   DashboardCreationController, DashboardTableBlocks, DashboardTableEmpty, DashboardTableRewards, DashboardTableSummary,
   DashboardTableWithdrawals,
 } from '#components'
-import type { CookieDashboard } from '~/types/dashboard'
+import type { GuestDashboard } from '~/types/dashboard'
 import {
-  isPublicDashboardKey, isSharedKey,
+  isGuestDashboardKey, isSharedDashboardKey,
 } from '~/utils/dashboard/key'
 import type { HashTabs } from '~/types/hashTabs'
 
-const { isLoggedIn } = useUserStore()
+const {
+  isLoggedIn,
+  premium_perks,
+} = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
 
 const tabs: HashTabs = [
   {
     component: DashboardTableSummary,
-    icon: faChartLineUp,
+    icon: 'chart-line-up',
     key: 'summary',
     title: $t('dashboard.validator.tabs.summary'),
   },
   {
     component: DashboardTableRewards,
-    icon: faCubes,
+    icon: 'cubes',
     key: 'rewards',
     title: $t('dashboard.validator.tabs.rewards'),
   },
   {
     component: DashboardTableBlocks,
-    icon: faCube,
+    icon: 'cube',
     key: 'blocks',
     title: $t('dashboard.validator.tabs.blocks'),
 
@@ -45,35 +39,39 @@ const tabs: HashTabs = [
   {
     component: DashboardTableEmpty,
     disabled: !showInDevelopment,
-    icon: faFire,
+    icon: 'fire',
     key: 'heatmap',
     title: $t('dashboard.validator.tabs.heatmap'),
   },
   {
-    icon: faWallet,
+    icon: 'wallet',
     key: 'deposits',
     title: $t('dashboard.validator.tabs.deposits'),
   },
   {
     component: DashboardTableWithdrawals,
-    icon: faMoneyBill,
+    icon: 'money-bill',
     key: 'withdrawals',
     title: $t('dashboard.validator.tabs.withdrawals'),
   },
 ]
 
 const {
-  dashboardKey, setDashboardKey,
+  dashboardKey,
+  setDashboardKey,
 } = useDashboardKeyProvider('validator')
+
+const userDashboardStore = useUserDashboardStore()
+const {
+  getDashboardLabel,
+  refreshDashboards,
+  updateGuestDashboardKey,
+} = userDashboardStore
+
 const {
   cookieDashboards,
   dashboards,
-  getDashboardLabel,
-  refreshDashboards,
-  updateHash,
-} = useUserDashboardStore()
-// when we run into an error loading a dashboard keep it here to prevent an infinity loop
-const errorDashboardKeys: string[] = []
+} = storeToRefs(userDashboardStore)
 
 const seoTitle = computed(() => {
   return getDashboardLabel(dashboardKey.value, 'validator')
@@ -81,9 +79,34 @@ const seoTitle = computed(() => {
 
 useBcSeo(seoTitle, true)
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
+const {
+  refreshOverview,
+} = validatorDashboardOverviewStore
+
+const {
+  getProducts,
+  premiumProducts,
+} = useProductsStore()
+
+await useAsyncData('get_products', () => getProducts())
+
+const hasReachedLimit = computed(() => {
+  const latestEffectiveBalance = overview.value?.balances.effective_latest
+  const freeProduct = premiumProducts.value['Free']
+  const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
+  const effectiveBalancePerDashboard = premium_perks.value?.effective_balance_per_dashboard
+    || effectiveBalanceLimitFreeProduct
+
+  if (!latestEffectiveBalance || !effectiveBalancePerDashboard) {
+    return false
+  }
+  return isGreaterEquals(latestEffectiveBalance, effectiveBalancePerDashboard)
+})
+
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
 const { error: validatorOverviewError } = await useAsyncData(
@@ -91,6 +114,13 @@ const { error: validatorOverviewError } = await useAsyncData(
   () => refreshOverview(dashboardKey.value),
   { watch: [ dashboardKey ] },
 )
+// when we run into an error loading a dashboard keep it here to prevent an infinity loop
+const errorDashboardKeys: string[] = []
+const setDashboardKeyIfNoError = (key: string) => {
+  if (!errorDashboardKeys.includes(key)) {
+    setDashboardKey(key)
+  }
+}
 watch(
   validatorOverviewError,
   (error) => {
@@ -122,12 +152,6 @@ function showDashboardCreationDialog() {
   dashboardCreationControllerModal.value?.show()
 }
 
-const setDashboardKeyIfNoError = (key: string) => {
-  if (!errorDashboardKeys.includes(key)) {
-    setDashboardKey(key)
-  }
-}
-
 watch(
   [
     dashboardKey,
@@ -138,38 +162,38 @@ watch(
     newLoggedIn,
   ], [ oldKey ]) => {
     if (!newLoggedIn || !newKey) {
-      // Some checks if we need to update the dashboard key or the public dashboard
-      let cd = dashboards.value?.validator_dashboards?.[0] as CookieDashboard
-      const isPublic = isPublicDashboardKey(newKey)
-      const isShared = isSharedKey(newKey)
+      // Some checks if we need to update the dashboard key or the guest dashboard
+      let gd = dashboards.value?.validator_dashboards?.[0] as GuestDashboard
+      const isGuest = isGuestDashboardKey(newKey)
+      const isShared = isSharedDashboardKey(newKey)
       if (isShared) {
         return
       }
       if (newLoggedIn) {
         // if we are logged in and have no dashboard key we only want to switch
         //  to the first dashboard if it is a private one
-        if (cd && cd.hash === undefined) {
-          setDashboardKeyIfNoError(cd.id.toString())
+        if (gd && gd.key === undefined) {
+          setDashboardKeyIfNoError(gd.id.toString())
         }
       }
       else if (
         !newLoggedIn
-        && cd
-        && isPublic
-        && (!cd.hash || (cd.hash ?? '') === (oldKey ?? ''))
+        && gd
+        && isGuest
+        && (!gd.key || (gd.key ?? '') === (oldKey ?? ''))
       ) {
-        // we got a new public dashboard hash but the old hash matches the
+        // we got a new guest dashboard key but the old key matches the
         // stored dashboard - so we update the stored dashboard
         if (!errorDashboardKeys.includes(newKey)) {
-          updateHash('validator', newKey)
+          updateGuestDashboardKey('validator', newKey)
         }
         setDashboardKeyIfNoError(newKey ?? '')
       }
-      else if (!newKey || !isPublic) {
+      else if (!newKey || !isGuest) {
         // trying to view a private dashboad but not logged in
-        cd = cookieDashboards.value
-          ?.validator_dashboards?.[0] as CookieDashboard
-        setDashboardKeyIfNoError(cd?.hash ?? '')
+        gd = cookieDashboards.value
+          ?.validator_dashboards?.[0] as GuestDashboard
+        setDashboardKeyIfNoError(gd?.key ?? '')
       }
     }
   },
@@ -180,15 +204,32 @@ watch(
 <template>
   <div v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
     <BcPageWrapper>
-      <DashboardCreationController class="panel-controller" :display-mode="'panel'" :initially-visible="true" />
+      <DashboardCreationController
+        class="panel-controller"
+        :display-mode="'panel'"
+        :initially-visible="true"
+      />
     </BcPageWrapper>
   </div>
   <div v-else>
     <DashboardCreationController
-      ref="dashboardCreationControllerModal" class="modal-controller"
+      ref="dashboardCreationControllerModal"
+      class="modal-controller"
       :display-mode="'modal'"
     />
     <BcPageWrapper>
+      <template #banner>
+        <BcNotificationBanner
+          v-if="hasReachedLimit"
+          :title="$t('dashboard.subsciprion_limit_reached_title')"
+        >
+          <BcTranslation
+            keypath="dashboard.subsciprion_limit_reached.template"
+            linkpath="dashboard.subsciprion_limit_reached._link"
+            to="/pricing"
+          />
+        </BcNotificationBanner>
+      </template>
       <template #top>
         <DashboardHeader @show-creation="showDashboardCreationDialog()" />
         <DashboardControls :dashboard-title="overview?.name" />
@@ -196,10 +237,11 @@ watch(
       </template>
       <DashboardSharedDashboardModal />
       <div>
-        <DashboardValidatorSlotViz />
+        <DashboardSlotViz />
       </div>
       <BcTabList
-        :tabs default-tab="summary"
+        :tabs
+        default-tab="summary"
         :use-route-hash="true"
         class="dashboard-tab-view"
         panels-class="dashboard-tab-panels"
@@ -207,7 +249,10 @@ watch(
         <template #tab-panel-deposits>
           <div class="deposits">
             <DashboardTableElDeposits />
-            <FontAwesomeIcon :icon="faArrowDown" class="down_icon" />
+            <BcIcon
+              name="arrow-down"
+              class="down_icon"
+            />
             <DashboardTableClDeposits />
           </div>
         </template>

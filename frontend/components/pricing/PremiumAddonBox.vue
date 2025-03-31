@@ -1,523 +1,376 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faInfoCircle,
-  faMinus,
-  faPlus,
-} from '@fortawesome/pro-regular-svg-icons'
 import {
   type ExtraDashboardValidatorsPremiumAddon,
   ProductCategoryPremiumAddon,
 } from '~/types/api/user'
-import { formatPremiumProductPrice } from '~/utils/format'
-import { Target } from '~/types/links'
+
+const {
+  addon,
+  effectiveBalancePerDashboardLimit,
+  isPaymentYearly,
+} = defineProps<({
+  addon: ExtraDashboardValidatorsPremiumAddon,
+  effectiveBalancePerDashboardLimit: string,
+  isPaymentYearly: boolean,
+})>()
 
 const { t: $t } = useTranslation()
 const {
-  isLoggedIn, user,
-} = useUserStore()
+  displayCurrencyDefault,
+  formatAmount,
+} = useCurrency()
+
 const {
-  isStripeDisabled, stripeCustomerPortal, stripePurchase,
-} = useStripe()
-const { promoCode } = usePromoCode()
+  isLoggedIn,
+  premium_perks,
+  user,
+} = useUserStore()
 
-interface Props {
-  addon: ExtraDashboardValidatorsPremiumAddon,
-  isYearly: boolean,
-  maximumValidatorLimit?: number,
-}
-const props = defineProps<Props>()
+const quantity = ref(1)
 
-const quantityForPurchase = ref(1)
-
-const prices = computed(() => {
-  const mainPrice = props.isYearly
-    ? props.addon.price_per_year_eur / 12
-    : props.addon.price_per_month_eur
-  const quantity = quantityForPurchase.value || 1
-  const savingAmount
-    = (props.addon.price_per_month_eur * 12 - props.addon.price_per_year_eur)
-    * quantity
-  const savingDigits = savingAmount % 100 === 0 ? 0 : 2
-
-  return {
-    main: formatPremiumProductPrice($t, mainPrice * quantity),
-    monthly: formatPremiumProductPrice(
-      $t,
-      props.addon.price_per_month_eur * quantity,
-    ),
-    monthly_based_on_yearly: formatPremiumProductPrice(
-      $t,
-      (props.addon.price_per_year_eur / 12) * quantity,
-    ),
-    perValidator: formatPremiumProductPrice(
-      $t,
-      mainPrice / props.addon.extra_dashboard_validators,
-      5,
-    ),
-    saving: formatPremiumProductPrice($t, savingAmount, savingDigits),
-    yearly: formatPremiumProductPrice(
-      $t,
-      props.addon.price_per_year_eur * quantity,
-    ),
-  }
+const pricePerUnit = computed(() => {
+  return isPaymentYearly
+    ? addon.price_per_year_eur / 12
+    : addon.price_per_month_eur
 })
 
-const boxText = computed(() => {
-  return {
-    perValidator: $t('pricing.per_validator', { amount: prices.value.perValidator }),
-    validatorCount: $t('pricing.addons.validator_amount', { amount: formatNumber(props.addon.extra_dashboard_validators) }),
-  }
+const totalMonthlyPrice = computed(() => {
+  return addon.price_per_month_eur * quantity.value
 })
+
+const totalYearlyPricePerMonth = computed(() => {
+  return (addon.price_per_year_eur / 12) * quantity.value
+})
+
+const totalYearlyPrice = computed(() => {
+  return addon.price_per_year_eur * quantity.value
+})
+
+const getOldMaxEffectiveBalance = (
+  hasCurrencyDisplay: boolean = false,
+  targetUnit: CryptoUnit = 'wei',
+) => formatAmount('32', {
+  hasCurrencyDisplay,
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+  sourceUnit: 'base',
+  targetCurrency: displayCurrencyDefault.main,
+  targetUnit,
+  useGrouping: false,
+})
+
+const oldMaxEffectiveBalance = Number(getOldMaxEffectiveBalance())
+const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
+
+// This is used to show users that the price they used to pay per Validator
+// hasn't changed now that we charge by Effective Balance
+const pricePerValidator = computed(() => {
+  return divide(
+    (pricePerUnit.value * oldMaxEffectiveBalance),
+    addon.extra_dashboard_effective_balance,
+  )
+})
+
+const yearlySubscriptionSavings = computed(() => {
+  return (addon.price_per_month_eur * 12 - addon.price_per_year_eur)
+    * quantity.value
+})
+
+const extraEffectiveBalance = computed(() =>
+  formatAmount(`${addon.extra_dashboard_effective_balance}`, {
+    minimumFractionDigits: 0,
+    targetCurrency: displayCurrencyDefault.main,
+
+  }),
+)
 
 const addonSubscriptionCount = computed(() => {
   return (
     user.value?.subscriptions?.filter(
       sub =>
         sub.product_category === ProductCategoryPremiumAddon
-        && (sub.product_id === props.addon.product_id_monthly
-        || sub.product_id === props.addon.product_id_yearly),
+        && (sub.product_id === addon.product_id_monthly
+          || sub.product_id === addon.product_id_yearly),
     ).length || 0
   )
 })
 
-const addonButton = computed(() => {
-  let text = $t('pricing.get_started')
-  if (isLoggedIn.value) {
-    text
-      = addonSubscriptionCount.value > 0
-        ? $t('pricing.addons.button.manage_addon')
-        : $t('pricing.addons.button.select_addon')
-  }
-
-  async function callback() {
-    if (isStripeDisabled.value) {
-      return
-    }
-
-    if (isLoggedIn.value) {
-      if (addonSubscriptionCount.value > 0) {
-        await stripeCustomerPortal()
-      }
-      else {
-        await stripePurchase(
-          props.isYearly
-            ? props.addon.stripe_price_id_yearly
-            : props.addon.stripe_price_id_monthly,
-          quantityForPurchase.value,
-        )
-      }
-    }
-    else {
-      await navigateTo({
-        path: '/login', query: { promoCode },
-      })
-    }
-  }
-
-  return {
-    callback,
-    disabled: isStripeDisabled.value,
-    text,
-  }
+const isQuantityLimitReached = computed(() => {
+  return quantity.value >= maximumQuantity.value
 })
 
 const maximumQuantity = computed(() => {
+  const unusedDashboardEffectiveBalance = add(
+    effectiveBalancePerDashboardLimit ?? 0,
+    -(premium_perks.value?.effective_balance_per_dashboard ?? 0),
+  )
+  const extraAddonEffectiveBalanacePerDashboard = addon.extra_dashboard_effective_balance
+
   return Math.floor(
-    ((props.maximumValidatorLimit || 10000)
-    - (user.value?.premium_perks.validators_per_dashboard || 0))
-    / props.addon.extra_dashboard_validators,
+    Number(divide(unusedDashboardEffectiveBalance, extraAddonEffectiveBalanacePerDashboard)),
   )
 })
 
-const limitReached = computed(() => {
-  return quantityForPurchase.value >= maximumQuantity.value
-})
+const {
+  isStripeDisabled,
+  stripeCustomerPortal,
+  stripePurchase,
+} = useStripe()
+const { promoCode } = usePromoCode()
 
-const purchaseQuantityButtons = computed(() => {
-  return {
-    minus: {
-      callback: () => {
-        if (quantityForPurchase.value > 1) {
-          quantityForPurchase.value--
-        }
-      },
-      disabled: quantityForPurchase.value <= 1,
-    },
-    plus: {
-      callback: () => {
-        if (quantityForPurchase.value < maximumQuantity.value) {
-          quantityForPurchase.value++
-        }
-      },
-      disabled: limitReached.value,
-    },
+const isDisabledSubmitButton = computed(() =>
+  isStripeDisabled.value
+  || quantity.value > maximumQuantity.value
+  || quantity.value < 1,
+)
+
+const handleSubmitPurchase = async () => {
+  if (isStripeDisabled.value) {
+    return
   }
-})
+
+  if (isLoggedIn.value) {
+    if (addonSubscriptionCount.value > 0) {
+      await stripeCustomerPortal()
+    }
+    else {
+      await stripePurchase(
+        isPaymentYearly
+          ? addon.stripe_price_id_yearly
+          : addon.stripe_price_id_monthly,
+        quantity.value,
+      )
+    }
+  }
+  else {
+    await navigateTo({
+      path: '/login', query: { promoCode },
+    })
+  }
+}
 </script>
 
 <template>
-  <div class="box-container">
-    <div class="summary-container">
-      <div class="validator-count">
-        {{ boxText.validatorCount }}
-        <div class="subtext">
-          {{ $t("pricing.addons.per_dashboard") }}
-          <BcTooltip
-            position="top"
-            :fit-content="true"
-          >
-            <FontAwesomeIcon
-              :icon="faInfoCircle"
-              class="tooltip-icon"
-            />
-            <template #tooltip>
-              <div class="saving-tooltip-container">
-                {{
-                  $t("pricing.pectra_tooltip", {
-                    effectiveBalance: formatNumber(
-                      props.addon?.extra_dashboard_validators * 32,
-                    ),
-                  })
-                }}
-              </div>
-            </template>
-          </BcTooltip>
-        </div>
-        <div class="per-validator">
-          {{ boxText.perValidator }}
-        </div>
-      </div>
+  <div class="premium-addon-box">
+    <div class="premium-addon-box__header">
+      <span class="premium-addon-box__title">
+        {{
+          $t('pricing.addons.effective_balance', {
+            amount: extraEffectiveBalance,
+          })
+        }}
+      </span>
+      <span class="premium-addon-box__title-detail">
+        {{ $t('pricing.per_min_validator_deposit', {
+          amount: formatFiatCurrency(pricePerValidator, {
+            minimumFractionDigits: 5,
+          }),
+          old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
+        }) }}
+      </span>
     </div>
-    <div class="description-container">
-      <div class="price">
-        <template v-if="isYearly">
-          <div>
-            {{ prices.monthly_based_on_yearly }}
-          </div>
-          <div
-            class="month"
-            yearly
-          >
-            {{ $t("pricing.per_month") }}
-          </div>
-          <div class="year">
-            {{ $t("pricing.amount_per_year", { amount: prices.yearly }) }}*
-          </div>
-        </template>
-        <template v-else>
-          <div>
-            {{ prices.monthly }}
-          </div>
-          <div class="month">
-            {{ $t("pricing.per_month") }}*
-          </div>
-        </template>
+
+    <hr>
+
+    <div class="premium-addon-box__body">
+      <div class="premium-addon-box__price">
+        {{ formatFiatCurrency(isPaymentYearly ? totalYearlyPricePerMonth : totalMonthlyPrice) }}
+      </div>
+      <div class="premium-addon-box__price-description">
+        {{ $t("pricing.per_month") }}
+        {{ isPaymentYearly ? $t("pricing.amount_per_year", { amount: formatFiatCurrency(totalYearlyPrice) }) : '' }} *
       </div>
       <div
-        v-if="isYearly"
-        class="saving-info"
+        v-if="isPaymentYearly"
+        class="premium-addon-box__info-badge"
       >
-        <div>
-          {{ $t("pricing.savings", { amount: prices.saving }) }}
-        </div>
+        <span>
+          {{ $t("pricing.savings", {
+            amount: formatFiatCurrency(yearlySubscriptionSavings, { maximumFractionDigits: 0 }),
+          }) }}
+        </span>
         <BcTooltip
           position="top"
           :fit-content="true"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
           <template #tooltip>
-            <div class="saving-tooltip-container">
+            <div class="premium-addon-box__info-tooltip">
               {{
                 $t("pricing.savings_tooltip", {
-                  monthly: prices.monthly,
-                  monthly_yearly: prices.monthly_based_on_yearly,
+                  monthly: formatFiatCurrency(totalMonthlyPrice),
+                  monthly_yearly: formatFiatCurrency(totalYearlyPricePerMonth),
                 })
               }}
             </div>
           </template>
         </BcTooltip>
       </div>
-      <div class="quantity-row">
-        <div
-          v-if="addonSubscriptionCount"
-          class="quantity-label"
+      <div v-if="addonSubscriptionCount">
+        {{
+          $t("pricing.addons.currently_active", {
+            amount: addonSubscriptionCount,
+          })
+        }}
+      </div>
+      <div
+        v-else
+        class="premium-addon-box__subscription-form"
+      >
+        <fieldset
+          aria-labelledby="subscription-count-row-label"
+          class="premium-addon-box__subscription-form-count-row"
         >
-          {{
-            $t("pricing.addons.currently_active", {
-              amount: addonSubscriptionCount,
-            })
-          }}
-        </div>
-        <div
-          v-else
-          class="quantity-setter"
-        >
-          <Button
-            class="p-button-icon-only"
-            :disabled="purchaseQuantityButtons.minus.disabled"
-            @click="purchaseQuantityButtons.minus.callback"
+          <BcScreenreaderOnly
+            is="legend"
+            id="subscription-count-row-label"
+            screenreader-text="pricing.addons.select_quantity"
+          />
+          <BcButton
+            class="premium-addon-box__subscription-counter-button"
+            :is-disabled="quantity <= 1"
+            @click="quantity -= 1"
           >
-            <FontAwesomeIcon :icon="faMinus" />
-          </Button>
-          <InputNumber
-            v-model="quantityForPurchase"
-            class="quantity-input"
-            input-id="integeronly"
+            <BcIcon name="minus" />
+            <BcScreenreaderOnly
+              screenreader-text="pricing.addons.button.decrease_quantity"
+            />
+          </BcButton>
+          <BcInputNumber
+            v-model="quantity"
+            input-mode="numeric"
             :min="1"
             :max="maximumQuantity"
+            :aria-label="$t('pricing.addons.selected_quantity')"
+            input-width="2.75rem"
           />
-          <Button
-            class="p-button-icon-only"
-            :disabled="purchaseQuantityButtons.plus.disabled"
-            @click="purchaseQuantityButtons.plus.callback"
+          <BcButton
+            class="premium-addon-box__subscription-counter-button"
+            :is-disabled="isQuantityLimitReached"
+            @click="quantity += 1"
           >
-            <FontAwesomeIcon :icon="faPlus" />
-          </Button>
-        </div>
+            <BcIcon name="plus" />
+            <BcScreenreaderOnly
+              screenreader-text="pricing.addons.button.increase_quantity"
+            />
+          </BcButton>
+        </fieldset>
+
+        <span class="premium-addon-box__contact-support-text">
+          <BcTranslation
+            v-if="isQuantityLimitReached"
+            keypath="pricing.addons.contact_support.template"
+            linkpath="pricing.addons.contact_support._link"
+            to="https://dsc.gg/beaconchain"
+          />
+        </span>
+
+        <BcButton
+          type="submit"
+          :is-disabled="isDisabledSubmitButton"
+          class="premium-addon-box__submit-button"
+          @click="handleSubmitPurchase"
+        >
+          {{ isLoggedIn
+            ? addonSubscriptionCount > 0
+              ? $t('pricing.addons.button.manage_addon')
+              : $t('pricing.addons.button.select_addon')
+            : $t('pricing.get_started') }}
+        </BcButton>
       </div>
-      <div class="limit-reached-row">
-        <div v-if="limitReached">
-          {{ tOf($t, "pricing.addons.contact_support", 0) }}
-          <BcLink
-            to="https://dsc.gg/beaconchain  "
-            :target="Target.External"
-            class="link"
-          >
-            {{ tOf($t, "pricing.addons.contact_support", 1) }}
-          </BcLink>
-          {{ tOf($t, "pricing.addons.contact_support", 2) }}
-        </div>
-      </div>
-      <Button
-        :label="addonButton.text"
-        :disabled="addonButton.disabled"
-        class="select-button"
-        @click="addonButton.callback"
-      />
     </div>
   </div>
 </template>
 
 <style lang="scss" scoped>
-@use "~/assets/css/pricing.scss";
-
-.box-container {
-  width: 290px;
+.premium-addon-box {
+  width: calc(194px + 2.5rem);
   height: 100%;
   background-color: var(--container-background);
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
-  flex-shrink: 0;
   text-align: center;
+  padding: 1.25rem;
 
-  .summary-container {
+  &__title {
+    text-wrap: balance;
+    display: inline-block;
+    font-size: 1.25rem;
+    white-space: pre-line;
+    margin-bottom: 0.5rem;
+  }
+
+  &__title-detail {
+    font-size: 1rem;
+    color: var(--text-color-discreet);
+  }
+
+  hr {
+    border-color: var(--container-border-color)
+  }
+
+  &__body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    border-bottom: 2px solid var(--container-border-color);
-    padding: 28px 0 21px 0;
-
-    .validator-count {
-      font-size: 20px;
-      font-weight: 600;
-
-      .subtext {
-        font-weight: 400;
-        margin-bottom: 16px;
-
-        .tooltip-icon {
-          width: 15px;
-        }
-      }
-
-      .per-validator {
-        color: var(--text-color-discreet);
-        font-size: 17px;
-        font-weight: 400;
-      }
-    }
+    width: 165px;
+    margin: auto;
   }
 
-  .description-container {
+  &__price {
+    font-size: 1.75rem;
+  }
+
+  &__price-description {
+    color: var(--text-color-discreet);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  &__info-badge {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px 28px 29px 28px;
-
-    .price {
-      font-size: 26px;
-      font-weight: 600;
-      margin-bottom: 24px;
-
-      .month {
-        color: var(--text-color-discreet);
-        font-size: 17px;
-        font-weight: 600;
-
-        &[yearly] {
-          font-size: 14px;
-          font-weight: 500;
-        }
-      }
-
-      .year {
-        color: var(--text-color-discreet);
-        font-size: 17px;
-        font-weight: 500;
-      }
-    }
-
-    .saving-info {
-      width: 100%;
-      display: flex;
-      flex-direction: row;
-      justify-content: center;
-      align-items: center;
-      gap: 13px;
-      height: 30px;
-      border-radius: 15px;
-      background: var(--subcontainer-background);
-      font-size: 15px;
-      margin-bottom: 24px;
-    }
-
-    .quantity-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 30px;
-
-      .quantity-label {
-        font-size: 17px;
-      }
-
-      .quantity-setter {
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-bottom: 20px;
-
-        .quantity-input {
-          width: 45px;
-
-          > :first-child {
-            width: 100%;
-            text-align: center;
-          }
-        }
-
-        > * {
-          height: 100%;
-        }
-      }
-    }
-
-    .limit-reached-row {
-      height: 16px;
-      font-size: 13px;
-      margin-bottom: 20px;
-    }
-
-    .select-button {
-      width: 100%;
-      @include pricing.pricing_button;
-    }
+    width: 100%;
+    background-color: var(--subcontainer-background);
+    font-size: 0.7rem;
+    padding: 0.25rem 0.15rem;
+    border-radius: 4px;
+    gap: 0.25rem;
+    justify-content: center;
+    margin-bottom: 0.75rem;
   }
 
-  @media (max-width: 1360px) {
-    width: 200px;
-
-    .summary-container {
-      padding: 20px 0 18px 0;
-
-      .validator-count {
-        font-size: 14px;
-
-        .subtext {
-          margin-bottom: 10px;
-
-          .tooltip-icon {
-            width: 13px;
-          }
-        }
-
-        .per-validator {
-          font-size: 12px;
-        }
-      }
-    }
-
-    .description-container {
-      padding: 10px 25px 10px 25px;
-
-      .price {
-        font-size: 18px;
-        margin-bottom: 17px;
-
-        .month {
-          font-size: 12px;
-
-          &[yearly] {
-            font-size: 10px;
-          }
-        }
-
-        .year {
-          font-size: 10px;
-        }
-      }
-
-      .saving-info {
-        height: 21px;
-        gap: 4px;
-        font-size: 10px;
-        margin-bottom: 17px;
-      }
-
-      .quantity-row {
-        height: 20px;
-        margin-bottom: 10px;
-
-        .quantity-label {
-          font-size: 12px;
-        }
-
-        .quantity-setter {
-          gap: 8px;
-
-          .quantity-input {
-            width: 35px;
-
-            > :first-child {
-              font-size: 12px;
-            }
-          }
-
-          > .p-button {
-            width: 20px;
-          }
-        }
-      }
-
-      .limit-reached-row {
-        height: 10px;
-        font-size: 8px;
-        margin-bottom: 20px;
-      }
-
-      .select-button {
-        padding-left: 10px;
-        padding-right: 10px;
-      }
-    }
+  &__info-tooltip {
+    width: 150px;
+    text-align: left;
   }
-}
 
-.saving-tooltip-container {
-  width: 150px;
-  text-align: left;
+  &__subscription-form {
+    width: 100%;
+  }
+
+  &__subscription-form-count-row {
+    display: flex;
+    justify-content: space-between;
+    border: none;
+    padding: 0;
+    margin: 0 -0.25rem;
+  }
+
+  &__subscription-counter-button {
+    width: 36px;
+    height: 36px;
+    padding: 0.5rem;
+  }
+
+  &__contact-support-text {
+    display: block;
+    font-size: 0.75rem;
+    height: 2.25rem;
+  }
+
+  &__submit-button {
+    width: 100%;
+    margin: 0
+  }
 }
 </style>

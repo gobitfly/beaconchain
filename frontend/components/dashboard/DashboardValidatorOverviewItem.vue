@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
 import type { NumberOrString } from '~/types/value'
 
-const props = defineProps<{ infos: { label: string, value: NumberOrString }[], title: string }>()
+const props = defineProps<{
+  infos?: {
+    label: string,
+    value: NumberOrString,
+  }[],
+  title: string,
+}>()
 </script>
 
 <template>
@@ -25,15 +29,17 @@ const props = defineProps<{ infos: { label: string, value: NumberOrString }[], t
       class="info"
     >
       <BcTooltip :fit-content="true">
-        <FontAwesomeIcon :icon="faInfoCircle" />
+        <BcIcon name="circle-info" />
         <template #tooltip>
           <div class="info-label-list">
-            <div
-              v-for="info in props.infos"
-              :key="info.label"
-            >
-              <span class="bold">{{ info.label }}:</span> {{ info.value }}
-            </div>
+            <slot name="tooltip">
+              <div
+                v-for="info in props.infos"
+                :key="info.label"
+              >
+                <span class="bold">{{ info.label }}:</span> {{ info.value }}
+              </div>
+            </slot>
           </div>
         </template>
       </BcTooltip>

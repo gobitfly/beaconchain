@@ -12,10 +12,10 @@ export function useDashboardKey() {
   }
 
   const dashboardKey = computed(() => data.dashboardKey.value ?? '')
-  const isPublic = computed(() => !!data.isPublic.value)
-  const isShared = computed(() => !!data.isShared.value)
+  const isGuestDashboard = computed(() => !!data.isGuestDashboard.value)
+  const isSharedDashboard = computed(() => !!data.isSharedDashboard.value)
   const publicEntities = computed(() => data.publicEntities.value ?? [])
-  const isPrivate = computed(() => isLoggedIn.value && !isPublic.value)
+  const isPrivateDashboard = computed(() => isLoggedIn.value && !isGuestDashboard.value)
   const setDashboardKey = (key: string) => data.setDashboardKey(key)
   const dashboardType = computed(() => data.dashboardType.value)
 
@@ -23,9 +23,9 @@ export function useDashboardKey() {
     ...data,
     dashboardKey,
     dashboardType,
-    isPrivate,
-    isPublic,
-    isShared,
+    isGuestDashboard,
+    isPrivateDashboard,
+    isSharedDashboard,
     publicEntities,
     setDashboardKey,
   }

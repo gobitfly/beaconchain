@@ -1,4 +1,4 @@
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 export type MultiBarItem = {
   className?: string,
@@ -6,7 +6,7 @@ export type MultiBarItem = {
   componentClass?: string,
   componentProps?: any,
   disabled?: boolean,
-  icon?: IconDefinition,
+  icon?: Icon,
   tooltip?: string,
   value: string,
 }

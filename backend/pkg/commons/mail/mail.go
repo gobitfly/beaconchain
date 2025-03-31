@@ -42,7 +42,10 @@ func SendHTMLMail(to, subject string, msg types.Email, attachment []types.EmailA
 		log.Infof("Email Attachments will not work with SMTP server")
 		err = SendMailSMTP(to, body.Bytes())
 	} else if utils.Config.Frontend.Mail.Mailgun.PrivateKey != "" {
-		_ = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		err = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		if err != nil {
+			log.Error(err, "error rendering mail template", 0)
+		}
 		content := body.String()
 		err = SendMailMailgun(to, subject, content, createTextMessage(msg), attachment)
 	} else {
@@ -75,18 +78,17 @@ func createTextMessage(msg types.Email) string {
 // It will return a ratelimit-error if the configured ratelimit is exceeded.
 func SendMailRateLimited(content types.TransitEmailContent, maxEmailsPerDay int64, bucket string) error {
 	sendThresholdReachedMail := false
-	count, err := db.CountSentMessage(bucket, content.UserId)
+	incr, newCount, err := db.IncrSentMessagesCount(bucket, content.UserId, 1, maxEmailsPerDay)
 	if err != nil {
-		return err
+		log.Error(err, "error incrementing sent email count", 0)
 	}
 	timeLeft := time.Until(time.Now().Add(utils.Day).Truncate(utils.Day))
 
-	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, count, maxEmailsPerDay, timeLeft)
-	if count > maxEmailsPerDay {
+	log.Debugf("user %d has sent %d of %d emails today, time left is %v", content.UserId, newCount, maxEmailsPerDay, timeLeft)
+	if incr == 0 {
 		return &types.RateLimitError{TimeLeft: timeLeft}
-	} else if count == maxEmailsPerDay {
-		sendThresholdReachedMail = true
 	}
+	sendThresholdReachedMail = newCount >= maxEmailsPerDay
 
 	err = SendHTMLMail(content.Address, content.Subject, content.Email, content.Attachments)
 	if err != nil {

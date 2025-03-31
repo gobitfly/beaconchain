@@ -118,9 +118,9 @@ watch(
           :disabled="!currentOffset"
           @click="prev"
         >
-          <IconChevron
+          <BcIcon
+            name="chevron-left"
             class="toggle"
-            direction="left"
           />
         </div>
         <div class="item current-page">
@@ -131,9 +131,9 @@ watch(
           :disabled="data.page! >= data.lastPage!"
           @click="next"
         >
-          <IconChevron
+          <BcIcon
+            name="chevron-right"
             class="toggle"
-            direction="right"
           />
         </div>
         <div
@@ -157,9 +157,9 @@ watch(
           :disabled="!data.prev_cursor"
           @click="emit('setCursor', data.prev_cursor)"
         >
-          <IconChevron
+          <BcIcon
+            name="chevron-left"
             class="toggle"
-            direction="left"
           />
         </div>
         <div
@@ -167,9 +167,9 @@ watch(
           :disabled="!data.next_cursor"
           @click="emit('setCursor', data.next_cursor)"
         >
-          <IconChevron
+          <BcIcon
+            name="chevron-right"
             class="toggle"
-            direction="right"
           />
         </div>
       </template>

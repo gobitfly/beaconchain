@@ -2,9 +2,8 @@
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
-import { useUserDashboardStore } from '~/stores/dashboard/useUserDashboardStore'
 import {
-  COOKIE_DASHBOARD_ID, type CookieDashboard, type Dashboard, type DashboardKey, type DashboardType,
+  type Dashboard, type DashboardKey, type DashboardType, GUEST_DASHBOARD_ID, type GuestDashboard,
 } from '~/types/dashboard'
 
 const { t: $t } = useTranslation()
@@ -14,9 +13,12 @@ const router = useRouter()
 const { has } = useFeatureFlag()
 
 const { isLoggedIn } = useUserStore()
-const { dashboards } = useUserDashboardStore()
+const { dashboards } = storeToRefs(useUserDashboardStore())
 const {
-  dashboardKey, dashboardType, isShared, setDashboardKey,
+  dashboardKey,
+  dashboardType,
+  isSharedDashboard,
+  setDashboardKey,
 } = useDashboardKey()
 
 const emit = defineEmits<{ (e: 'showCreation'): void }>()
@@ -26,14 +28,14 @@ const getDashboardName = (db: Dashboard): string => {
     return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
   }
   else {
-    return db.id === COOKIE_DASHBOARD_ID.ACCOUNT
+    return db.id === GUEST_DASHBOARD_ID.ACCOUNT
       ? $t('dashboard.account_dashboard')
       : $t('dashboard.validator_dashboard')
   }
 }
 
 const items = computed<MenuBarEntry[]>(() => {
-  if (dashboards.value === undefined || isShared.value) {
+  if (dashboards.value === undefined || isSharedDashboard.value) {
     return []
   }
 
@@ -87,13 +89,13 @@ const items = computed<MenuBarEntry[]>(() => {
     }
   }
   addToSortedItems($t('dashboard.header.validator'), dashboards.value?.validator_dashboards?.map((db) => {
-    const cd = db as CookieDashboard
-    return createMenuBarButton('validator', getDashboardName(cd), `${cd.hash !== undefined ? cd.hash : cd.id}`)
+    const gd = db as GuestDashboard
+    return createMenuBarButton('validator', getDashboardName(gd), `${gd.key !== undefined ? gd.key : gd.id}`)
   }))
   if (has('feature-account_dashboards')) {
     addToSortedItems($t('dashboard.header.account'), dashboards.value?.validator_dashboards?.slice(0, 1).map((db) => {
-      const cd = db as CookieDashboard
-      return createMenuBarButton('account', getDashboardName(cd), `${cd.hash ?? cd.id}`)
+      const gd = db as GuestDashboard
+      return createMenuBarButton('account', getDashboardName(gd), `${gd.key ?? gd.id}`)
     }))
   }
   const disabledTooltip = !has('feature-notifications') ? $t('common.coming_soon') : undefined
@@ -114,18 +116,13 @@ const items = computed<MenuBarEntry[]>(() => {
       class="menu-bar"
       :buttons="items"
     />
-    <BcButton
-      v-if="!isShared"
-      variant="secondary"
-      class="p-button-icon-only"
+    <BcButtonIcon
+      v-if="!isSharedDashboard"
+      name="plus"
+      screenreader-text="dashboard.title"
+      variant="flat"
       @click="emit('showCreation')"
-    >
-      <IconPlus
-        title="Add new dashboard"
-        width="100%"
-        height="100%"
-      />
-    </BcButton>
+    />
   </div>
 </template>
 

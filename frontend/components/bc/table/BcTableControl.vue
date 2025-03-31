@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import {
-  faHashtag,
-  faPercent,
-  faTable,
-} from '@fortawesome/pro-solid-svg-icons'
-import { faChartColumn } from '@fortawesome/pro-regular-svg-icons'
-
 interface Props {
   chartDisabled?: boolean,
   disabledFilter?: boolean,
@@ -29,19 +22,41 @@ const onInput = (value: string) => {
   <slot name="bc-table-header">
     <div class="bc-table-header">
       <div class="side left">
-        <BcIconToggle
+        <BcToggleIcon
           v-if="$slots.chart"
           v-model="tableIsShown"
-          :true-icon="faTable"
-          :false-icon="faChartColumn"
           :disabled="chartDisabled"
-        />
-        <BcIconToggle
+        >
+          <template #trueIcon>
+            <BcIcon
+              name="table"
+              size="sm"
+            />
+          </template>
+          <template #falseIcon>
+            <BcIcon
+              name="chart-column"
+              size="sm"
+            />
+          </template>
+        </BcToggleIcon>
+        <BcToggleIcon
           v-if="useAbsoluteValues !== null && tableIsShown"
           v-model="useAbsoluteValues"
-          :true-icon="faHashtag"
-          :false-icon="faPercent"
-        />
+        >
+          <template #trueIcon>
+            <BcIcon
+              size="sm"
+              name="hashtag"
+            />
+          </template>
+          <template #falseIcon>
+            <BcIcon
+              size="sm"
+              name="percent"
+            />
+          </template>
+        </BcToggleIcon>
         <slot name="header-left" />
       </div>
 

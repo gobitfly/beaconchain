@@ -11,13 +11,17 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus" //nolint:depguard
 	"golang.org/x/sync/errgroup"
 )
 
 type ModuleInterface interface {
 	Init() error
 	GetName() string // Used for logging
+	GetMonitoringEventId() constants.Event
 
 	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 
@@ -63,14 +67,12 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		log.Error(err, "beacon-node seems to be unavailable", 0)
 		time.Sleep(time.Second * 10)
 	}
-
 	// start subscription modules
 	startSubscriptionModules(&context, modules)
 }
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
-
 	log.Infof("initialising exporter modules")
 
 	// Initialize modules
@@ -95,6 +97,7 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,
 	})
+	log.Infof("subscribed to node events")
 
 	for event := range events {
 		if event.Error != nil {
@@ -146,16 +149,23 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 	for _, module := range modules {
 		module := module
 		goPool.Go(func() error {
+			start := time.Now()
+			r := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			r(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
+				r(constants.Failure, map[string]string{"error": err.Error()})
+				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
+			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}
 }
-
 func GetModuleContext() (ModuleContext, error) {
+	var moduleContext ModuleContext
+
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
 
 	spec, err := cl.GetSpec()
@@ -176,11 +186,8 @@ func GetModuleContext() (ModuleContext, error) {
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
-
-	moduleContext := ModuleContext{
-		CL:         cl,
-		ConsClient: clClient,
-	}
+	moduleContext.CL = cl
+	moduleContext.ConsClient = clClient
 
 	return moduleContext, nil
 }
@@ -203,11 +210,27 @@ func (m ModuleLog) Infof(format string, args ...interface{}) {
 }
 
 func (m ModuleLog) Debug(message string) {
-	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+	}
 }
 
 func (m ModuleLog) Debugf(format string, args ...interface{}) {
-	log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	if logrus.IsLevelEnabled(logrus.DebugLevel) {
+		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	}
+}
+
+func (m ModuleLog) Trace(message string) {
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
+	}
+}
+
+func (m ModuleLog) Tracef(format string, args ...interface{}) {
+	if logrus.IsLevelEnabled(logrus.TraceLevel) {
+		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+	}
 }
 
 func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {

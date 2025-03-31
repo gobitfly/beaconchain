@@ -1,6 +1,9 @@
 <script setup lang="ts">
-defineProps<{
-  tag?:
+const {
+  is = 'span',
+  screenreaderText,
+} = defineProps<{
+  is?:
     'div'
     | 'h1'
     | 'h2'
@@ -8,14 +11,28 @@ defineProps<{
     | 'h4'
     | 'h5'
     | 'h6'
+    | 'legend'
     | 'p'
     | 'span',
+  screenreaderText: TranslationInput,
 }>()
+
+const { t: $t } = useTranslation()
+
+const translation = computed(() => {
+  if (typeof screenreaderText === 'string') return $t(screenreaderText)
+  if (typeof screenreaderText.interpolation === 'number') return $t(screenreaderText.key, screenreaderText.interpolation)
+  if (Array.isArray(screenreaderText.interpolation)) return $t(screenreaderText.key, screenreaderText.interpolation)
+  return $t(screenreaderText.key, screenreaderText.interpolation)
+})
 </script>
 
 <template>
-  <component :is="tag ?? 'span'" class="bc-screenreader-only">
-    <slot />
+  <component
+    :is
+    class="bc-screenreader-only"
+  >
+    {{ translation }}
   </component>
 </template>
 

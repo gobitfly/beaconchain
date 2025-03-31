@@ -10,9 +10,10 @@ export interface VDBOverviewGroup {
   name: string;
   count: number /* uint64 */;
 }
-export interface VDBOverviewBalances {
+export interface ValidatorBalances {
   total: string /* decimal.Decimal */;
-  effective: string /* decimal.Decimal */;
+  effective_current: string /* decimal.Decimal */; // on-chain
+  effective_latest: string /* decimal.Decimal */; // from premium perks pov: exited validators are counted with their latest eb
   staked_eth: string /* decimal.Decimal */;
 }
 export interface VDBOverviewData {
@@ -24,7 +25,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
-  balances: VDBOverviewBalances;
+  balances: ValidatorBalances;
 }
 export type GetValidatorDashboardResponse = ApiDataResponse<VDBOverviewData>;
 export interface VDBPostArchivingReturnData {
@@ -68,6 +69,9 @@ export interface VDBGroupSummaryMissedRewards {
   sync: string /* decimal.Decimal */;
 }
 export interface VDBGroupSummaryData {
+  efficiency: number /* float64 */;
+  balances: ValidatorBalances;
+  rewards: ClElValue<string /* decimal.Decimal */>;
   attestations_head: StatusCount;
   attestations_source: StatusCount;
   attestations_target: StatusCount;
@@ -129,7 +133,7 @@ export interface VDBGroupRewardsData {
   sync: VDBGroupRewardsDetails;
   slashing: VDBGroupRewardsDetails;
   inactivity: VDBGroupRewardsDetails;
-  proposal: VDBGroupRewardsDetails;
+  proposal_status_count: StatusCount;
   proposal_el_reward: string /* decimal.Decimal */;
   proposal_cl_att_inc_reward: string /* decimal.Decimal */;
   proposal_cl_sync_inc_reward: string /* decimal.Decimal */;
@@ -249,37 +253,27 @@ export type GetValidatorDashboardTotalWithdrawalsResponse = ApiDataResponse<VDBT
  */
 export interface VDBRocketPoolTableRow {
   node: Address;
-  staked: {
-    eth: string /* decimal.Decimal */;
-    rpl: string /* decimal.Decimal */;
-  };
-  minipools: {
-    total: number /* uint64 */;
-    leb_16: number /* uint64 */;
-    leb_8: number /* uint64 */;
-  };
+  staked_eth: string /* decimal.Decimal */;
+  staked_rpl: string /* decimal.Decimal */;
+  minipools_count_total: number /* uint64 */;
+  minipools_count_leb_16: number /* uint64 */;
+  minipools_count_leb_8: number /* uint64 */;
   collateral: PercentageDetails<string /* decimal.Decimal */>;
   avg_commission: number /* float64 */;
-  rpl: {
-    claimed: string /* decimal.Decimal */;
-    unclaimed: string /* decimal.Decimal */;
-  };
+  rpl_claimed: string /* decimal.Decimal */;
+  rpl_unclaimed: string /* decimal.Decimal */;
   effective_rpl: string /* decimal.Decimal */;
   rpl_apr: number /* float64 */;
   rpl_apr_update_ts: number /* int64 */;
   rpl_estimate: string /* decimal.Decimal */;
-  smoothing_pool: {
-    is_opt_in: boolean;
-    claimed: string /* decimal.Decimal */;
-    unclaimed: string /* decimal.Decimal */;
-  };
+  smoothingpool_opt_in: boolean;
+  smoothingpool_claimed: string /* decimal.Decimal */;
+  smoothingpool_unclaimed: string /* decimal.Decimal */;
+  node_deposit_balance: string /* decimal.Decimal */;
+  user_deposit_balance: string /* decimal.Decimal */;
   timezone: string;
   refund_balance: string /* decimal.Decimal */;
   deposit_credit: string /* decimal.Decimal */;
-  rpl_stake: {
-    min: string /* decimal.Decimal */;
-    max: string /* decimal.Decimal */;
-  };
 }
 export type GetValidatorDashboardRocketPoolResponse = ApiPagingResponse<VDBRocketPoolTableRow>;
 export type GetValidatorDashboardTotalRocketPoolResponse = ApiDataResponse<VDBRocketPoolTableRow>;
@@ -327,4 +321,17 @@ export interface VDBPostCreateGroupData {
 export interface VDBPostValidatorsData {
   index: number /* uint64 */;
   group_id: number /* uint64 */;
+}
+/**
+ * helper for frontend
+ */
+export interface PostValidatorDashboardValidatorsRequest {
+  group_id?: number /* uint64 */;
+  validators?: (number | string)[];
+  deposit_address?: string;
+  withdrawal_credential?: string;
+  graffiti?: string;
+}
+export interface PostValidatorDashboardGroupsRequest {
+  name: string;
 }

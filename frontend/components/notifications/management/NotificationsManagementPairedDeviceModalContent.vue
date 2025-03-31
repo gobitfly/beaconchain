@@ -1,7 +1,5 @@
 <script lang="ts" setup>
-import { faTrash } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { type NotificationPairedDevice } from '~/types/api/notifications'
+import type { NotificationPairedDevice } from '~/types/api/notifications'
 
 const { t: $t } = useTranslation()
 
@@ -35,7 +33,7 @@ const hasNotifications = ref(props.device.is_notifications_enabled)
         class="p-button-icon-only margin-inline-start-small"
         @click="emit('remove-device', device.id)"
       >
-        <FontAwesomeIcon :icon="faTrash" />
+        <BcIcon name="trash" />
       </Button>
     </div>
     <div class="toggle-row">

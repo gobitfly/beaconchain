@@ -5,12 +5,10 @@ const {
   getUser,
   isLoggedIn,
 } = useUserStore()
-const { tick } = useInterval(12)
+const { networkInfo } = useNetworkStore()
+const { secondsPerSlot } = networkInfo.value
+const { tick } = useInterval(secondsPerSlot)
 const { refreshLatestState } = useLatestStateStore()
-const {
-  loadAvailableNetworks,
-  setCurrentNetwork,
-} = useNetworkStore()
 
 await useAsyncData('latest_state', () => refreshLatestState(), {
   immediate: true,
@@ -18,12 +16,6 @@ await useAsyncData('latest_state', () => refreshLatestState(), {
 })
 if (isLoggedIn) {
   await useAsyncData('get_user', () => getUser())
-}
-await useAsyncData('get-supported-networks', () => loadAvailableNetworks())
-
-const { chainIdByDefault } = useRuntimeConfig().public
-if (chainIdByDefault) {
-  setCurrentNetwork(Number(chainIdByDefault))
 }
 </script>
 

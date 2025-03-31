@@ -1,10 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faCirclePlus,
-  faRightFromBracket,
-} from '@fortawesome/pro-regular-svg-icons'
-
 const { t: $t } = useTranslation()
 
 const emit = defineEmits<{ (e: 'openDialog'): void }>()
@@ -21,10 +15,15 @@ const handleClick = () => {
   }
   emit('openDialog')
 }
+
+const userDashboardStore = useUserDashboardStore()
+const {
+  refreshDashboards,
+} = userDashboardStore
+
 const {
   dashboards,
-  refreshDashboards,
-} = useUserDashboardStore()
+} = storeToRefs(userDashboardStore)
 
 if (!dashboards.value) {
   refreshDashboards()
@@ -64,13 +63,13 @@ const text = computed(() => {
     <span class="big_text">
       {{ text }}
     </span>
-    <FontAwesomeIcon
+    <BcIcon
       v-if="isLoggedIn"
-      :icon="faCirclePlus"
+      name="circle-plus"
     />
-    <FontAwesomeIcon
+    <BcIcon
       v-else
-      :icon="faRightFromBracket"
+      name="right-from-bracket"
     />
   </div>
 </template>

@@ -15,7 +15,7 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
-const { slotToEpoch } = useNetworkStore()
+const { getEpochFromSlot } = useNetworkStore()
 
 const {
   deposits,
@@ -27,14 +27,16 @@ const {
   totalAmount,
 } = useValidatorDashboardClDepositsStore()
 const {
-  bounce: setQuery, value: query,
+  bounce: setQuery,
+  value: query,
 } = useDebounceValue<
   TableQueryParams | undefined
 >(undefined, 500)
-
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasValidators, overview,
-} = useValidatorDashboardOverviewStore()
+  hasValidators,
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 
 const { width } = useWindowSize()
@@ -118,6 +120,11 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
 const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
   return row.index !== undefined
 }
+
+const {
+  displayCurrencyDefault,
+  selectedCurrencyMain,
+} = useCurrency()
 </script>
 
 <template>
@@ -190,11 +197,11 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
               <template #body="slotProps">
                 <BcLink
                   v-if="slotProps.data.index !== undefined"
-                  :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
+                  :to="`/epoch/${getEpochFromSlot(slotProps.data.slot)}`"
                   target="_blank"
                   class="link"
                 >
-                  <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
+                  <BcFormatNumber :value="getEpochFromSlot(slotProps.data.slot)" />
                 </BcLink>
               </template>
             </Column>
@@ -257,11 +264,23 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                     size="small"
                   />
                 </div>
-                <BcFormatValue
-                  v-else
-                  :value="slotProps.data.amount"
-                  :options="{ fixedDecimalCount: 0 }"
-                />
+                <BcTooltip
+                  fit-content
+                >
+                  <BcFormatAmount
+                    :value="slotProps.data.amount"
+                    target-currency="clDisplayCurrency"
+                    :maximum-fraction-digits="0"
+                  />
+                  <template
+                    v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
+                    #tooltip
+                  >
+                    <BcFormatAmount
+                      :value="slotProps.data.amount"
+                    />
+                  </template>
+                </BcTooltip>
               </template>
             </Column>
             <Column
@@ -303,11 +322,11 @@ const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
                   </div>
                   <BcLink
                     v-if="slotProps.data.index !== undefined"
-                    :to="`/epoch/${slotToEpoch(slotProps.data.slot)}`"
+                    :to="`/epoch/${getEpochFromSlot(slotProps.data.slot)}`"
                     target="_blank"
                     class="link"
                   >
-                    <BcFormatNumber :value="slotToEpoch(slotProps.data.slot)" />
+                    <BcFormatNumber :value="getEpochFromSlot(slotProps.data.slot)" />
                   </BcLink>
                 </div>
                 <div class="row">

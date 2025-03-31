@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { faEdit } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 const emit = defineEmits<{ (e: 'onEdit'): void }>()
 
-interface Props {
+defineProps<{
+  isDisabled?: boolean,
   label?: string,
-  noIcon?: boolean,
   truncateText?: boolean,
-}
-defineProps<Props>()
+}>()
 </script>
 
 <template>
@@ -30,10 +26,11 @@ defineProps<Props>()
       </BcTooltip>
     </slot>
     <div class="icon">
-      <FontAwesomeIcon
-        v-if="!noIcon"
+      <BcButtonIcon
+        screenreader-text="common.edit"
+        name="edit"
+        :is-disabled
         class="link"
-        :icon="faEdit"
         @click="() => emit('onEdit')"
       />
     </div>
@@ -65,6 +62,12 @@ defineProps<Props>()
 
   .content {
     padding-right: var(--padding);
+  }
+
+  .link {
+    &:disabled {
+      cursor: auto;
+    }
   }
 }
 </style>

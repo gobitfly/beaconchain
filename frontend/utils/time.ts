@@ -1,3 +1,5 @@
+export const currentTimestampInSeconds = () => Math.round(Date.now() / 1000)
+
 export const getFutureTimestampInSeconds = (
   {
     seconds = 0,
@@ -5,18 +7,21 @@ export const getFutureTimestampInSeconds = (
 
 export const getSeconds = (
   {
+    days = 0,
     hours = 0,
     minutes = 0,
     seconds = 0,
   }: {
+    days?: number,
     hours?: number,
     minutes?: number,
     seconds?: number,
   },
 ) => {
+  const daysInSeconds = days * 24 * 60 * 60
   const hoursInSeconds = hours * 60 * 60
   const minutesInSeconds = minutes * 60
-  return hoursInSeconds + minutesInSeconds + seconds
+  return daysInSeconds + hoursInSeconds + minutesInSeconds + seconds
 }
 
 export const formatSecondsTo = (seconds: number,
@@ -46,4 +51,34 @@ export const formatSecondsTo = (seconds: number,
   return {
     minutes,
   }
+}
+
+export const getRelativeTime = (timestampInSeconds: number, {
+  locale = 'en-US',
+}: {
+  locale?: string,
+} = {}) => {
+  const seconds = timestampInSeconds - (Date.now() / 1000)
+  const minutes = (seconds / 60)
+  const hours = (minutes / 60)
+
+  if (hours >= 1 || hours <= -1) {
+    return new Intl.RelativeTimeFormat(locale).format(Math.round(hours), 'hours')
+  }
+  if (minutes >= 1 || minutes <= -1) {
+    return new Intl.RelativeTimeFormat(locale).format(Math.round(minutes), 'minutes')
+  }
+  return new Intl.RelativeTimeFormat(locale).format(Math.round(seconds), 'seconds')
+}
+
+export const getDateTime = (timeStampInSeconds: number, {
+  locale = 'en-US',
+}: {
+  locale?: string,
+} = {}) => {
+  return new Intl.DateTimeFormat(locale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(timeStampInSeconds * 1000)
 }

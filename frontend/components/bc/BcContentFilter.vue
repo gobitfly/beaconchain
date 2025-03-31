@@ -1,7 +1,4 @@
 <script lang="ts" setup>
-import { faMagnifyingGlass } from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 const props = defineProps<{
   disabledFilter?: boolean,
   isLoading?: boolean,
@@ -13,9 +10,9 @@ const emit = defineEmits<{ (e: 'filter-changed', value: string): void }>()
 const isFilterVisible = ref(false)
 const filter = ref('')
 
-const button = ref<{ $el: HTMLButtonElement } | null>(null)
+const button = ref<null | { $el: HTMLButtonElement }>(null)
 
-const input = ref<{ $el: HTMLInputElement } | null>(null)
+const input = ref<null | { $el: HTMLInputElement }>(null)
 const focusAndSelect = (inputElement: { $el: HTMLInputElement }) => {
   if (inputElement?.$el) {
     // make sure the input is not disabled anymore
@@ -61,18 +58,18 @@ watchDebounced(filter, () => {
       :class="{ filter_visible: isFilterVisible }"
       @click="handleClick"
     >
-      <BcScreenreaderOnly>
-        {{ isFilterVisible ? $t('filter.open') : $t('filter.close') }}
-      </BcScreenreaderOnly>
+      <BcScreenreaderOnly
+        :screenreader-text="isFilterVisible ? 'filter.open' : 'filter.close'"
+      />
       <BcLoadingSpinner
         v-if="isFilterVisible && isLoading"
         size="full"
         alignment="center"
         loading
       />
-      <FontAwesomeIcon
+      <BcIcon
         v-else
-        :icon="faMagnifyingGlass"
+        name="magnifying-glass"
       />
     </Button>
   </div>

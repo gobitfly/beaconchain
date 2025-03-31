@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import BcTooltip from '../BcTooltip.vue'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 interface Props {
   disabled?: boolean,
-  icon?: IconDefinition,
+  icon?: Icon,
   layout: 'gaudy' | 'minimal',
   selected: boolean,
   subText?: string,
@@ -18,10 +16,17 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
 </script>
 
 <template>
-  <BcTooltip :dont-open-permanently="true" :hover-delay="350" :hide="!tooltip">
+  <BcTooltip
+    :dont-open-permanently="true"
+    :hover-delay="350"
+    :hide="!tooltip"
+  >
     <template #tooltip>
       <div class="button-tooltip">
-        <div v-if="tooltip" class="individual">
+        <div
+          v-if="tooltip"
+          class="individual"
+        >
           {{ tooltip }}
         </div>
         <div>
@@ -35,14 +40,31 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
         </div>
       </div>
     </template>
-    <ToggleButton class="bc-toggle" :class="layout" :disabled :model-value="selected">
+    <ToggleButton
+      class="bc-toggle"
+      :class="layout"
+      :disabled
+      :model-value="selected"
+    >
       <template #icon="slotProps">
-        <slot name="icon" v-bind="slotProps">
-          <FontAwesomeIcon v-if="icon" :icon />
+        <slot
+          name="icon"
+          v-bind="slotProps"
+        >
+          <BcIcon
+            v-if="icon"
+            :name="icon"
+          />
         </slot>
-        <div v-if="text" class="label">
+        <div
+          v-if="text"
+          class="label"
+        >
           {{ text }}
-          <div v-if="subText" class="sub">
+          <div
+            v-if="subText"
+            class="sub"
+          >
             {{ subText }}
           </div>
         </div>

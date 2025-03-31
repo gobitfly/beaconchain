@@ -2,8 +2,8 @@ package types
 
 type ForkVersion struct {
 	Epoch           uint64
-	CurrentVersion  []byte
-	PreviousVersion []byte
+	CurrentVersion  string
+	PreviousVersion string
 }
 
 // https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
@@ -24,10 +24,12 @@ type ClChainConfig struct {
 	AltairForkEpoch      uint64 `yaml:"ALTAIR_FORK_EPOCH"`
 	BellatrixForkVersion string `yaml:"BELLATRIX_FORK_VERSION"`
 	BellatrixForkEpoch   uint64 `yaml:"BELLATRIX_FORK_EPOCH"`
-	CappellaForkVersion  string `yaml:"CAPELLA_FORK_VERSION"`
-	CappellaForkEpoch    uint64 `yaml:"CAPELLA_FORK_EPOCH"`
+	CapellaForkVersion   string `yaml:"CAPELLA_FORK_VERSION"`
+	CapellaForkEpoch     uint64 `yaml:"CAPELLA_FORK_EPOCH"`
 	DenebForkVersion     string `yaml:"DENEB_FORK_VERSION"`
 	DenebForkEpoch       uint64 `yaml:"DENEB_FORK_EPOCH"`
+	ElectraForkVersion   string `yaml:"ELECTRA_FORK_VERSION"`
+	ElectraForkEpoch     uint64 `yaml:"ELECTRA_FORK_EPOCH"`
 	Eip6110ForkVersion   string `yaml:"EIP6110_FORK_VERSION"`
 	Eip6110ForkEpoch     uint64 `yaml:"EIP6110_FORK_EPOCH"`
 	Eip7002ForkVersion   string `yaml:"EIP7002_FORK_VERSION"`
@@ -72,6 +74,12 @@ type ClChainConfig struct {
 	MaxRequestBlobSidecars           uint64 `yaml:"MAX_REQUEST_BLOB_SIDECARS"`
 	MinEpochsForBlobSidecarsRequests uint64 `yaml:"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS"`
 	BlobSidecarSubnetCount           uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT"`
+	// electra
+	MinPerEpochChurnLimitElectra        uint64 `yaml:"MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA"`
+	MaxPerEpochActivationExitChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT"`
+	BlobSidecarSubnetCountElectra       uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT_ELECTRA"`
+	MaxBlobsPerBlockElectra             uint64 `yaml:"MAX_BLOBS_PER_BLOCK_ELECTRA"`
+	MaxRequestBlobSidecarsElectra       uint64 `yaml:"MAX_REQUEST_BLOB_SIDECARS_ELECTRA"`
 
 	// phase0
 	// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/phase0.yaml
@@ -139,4 +147,21 @@ type ClChainConfig struct {
 	FieldElementsPerBlob       uint64 `yaml:"FIELD_ELEMENTS_PER_BLOB"`
 	MaxBlobCommitmentsPerBlock uint64 `yaml:"MAX_BLOB_COMMITMENTS_PER_BLOCK"`
 	MaxBlobsPerBlock           uint64 `yaml:"MAX_BLOBS_PER_BLOCK"`
+
+	// electra
+	// https://github.com/ethereum/consensus-specs/blob/dev/presets/mainnet/electra.yaml
+	MinActivationBalance                  uint64 `yaml:"MIN_ACTIVATION_BALANCE"`
+	MaxEffectiveBalanceElectra            uint64 `yaml:"MAX_EFFECTIVE_BALANCE_ELECTRA"`
+	PendingDepositsLimit                  uint64 `yaml:"PENDING_DEPOSITS_LIMIT"`
+	PendingPartialWithdrawalsLimit        uint64 `yaml:"PENDING_PARTIAL_WITHDRAWALS_LIMIT"`
+	PendingConsolidationsLimit            uint64 `yaml:"PENDING_CONSOLIDATIONS_LIMIT"`
+	MinSlashingPenaltyQuotientElectra     uint64 `yaml:"MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA"`
+	WhistleblowerRewardQuotientElectra    uint64 `yaml:"WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA"`
+	MaxAttesterSlashingsElectra           uint64 `yaml:"MAX_ATTESTER_SLASHINGS_ELECTRA"`
+	MaxAttestationsElectra                uint64 `yaml:"MAX_ATTESTATIONS_ELECTRA"`
+	MaxConsolidationRequestsPerPayload    uint64 `yaml:"MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD"`
+	MaxDepositRequestsPerPayload          uint64 `yaml:"MAX_DEPOSIT_REQUESTS_PER_PAYLOAD"`
+	MaxWithdrawalRequestsPerPayload       uint64 `yaml:"MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD"`
+	MaxPendingPartialsPerWithdrawalsSweep uint64 `yaml:"MAX_PENDING_PARTIALS_PER_WITHDRAWALS_SWEEP"`
+	MaxPendingDepositsPerEpoch            uint64 `yaml:"MAX_PENDING_DEPOSITS_PER_EPOCH"`
 }

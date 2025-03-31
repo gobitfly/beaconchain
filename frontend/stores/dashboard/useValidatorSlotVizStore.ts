@@ -4,7 +4,6 @@ import type {
   SlotVizEpoch,
 } from '~/types/api/slot_viz'
 import type { DashboardKey } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 const validatorSlotVizStore = defineStore('validator_slotViz', () => {
   const data = ref<null | SlotVizEpoch[] | undefined>()
@@ -14,6 +13,7 @@ const validatorSlotVizStore = defineStore('validator_slotViz', () => {
 export function useValidatorSlotVizStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(validatorSlotVizStore())
+  const loading = ref(false)
 
   const slotViz = computed(() => data.value)
 
@@ -22,8 +22,9 @@ export function useValidatorSlotVizStore() {
     if (groups?.length) {
       query = { group_ids: groups.join(',') }
     }
+    loading.value = true
     const res = await fetch<GetValidatorDashboardSlotVizResponse>(
-      API_PATH.DASHBOARD_SLOTVIZ,
+      'DASHBOARD_SLOTVIZ',
       {
         headers: {},
         query,
@@ -32,7 +33,7 @@ export function useValidatorSlotVizStore() {
     )
 
     // We use this hacky solution as we don't have an api endpoint to load a slot viz without validators
-    // So we load it for a small public dashboard and then remove the validator informations from it.
+    // So we load it for a small guest dashboard and then remove the validator informations from it.
     if (!dashboardKey) {
       data.value = res.data.map(e => ({
         ...e,
@@ -45,11 +46,12 @@ export function useValidatorSlotVizStore() {
     else {
       data.value = res.data
     }
-
+    loading.value = false
     return slotViz.value
   }
 
   return {
+    loading,
     refreshSlotViz,
     slotViz,
   }

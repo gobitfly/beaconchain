@@ -3,7 +3,7 @@ import type {
   InternalGetProductSummaryResponse,
   ProductSummary,
 } from '~/types/api/user'
-import { API_PATH } from '~/types/customFetch'
+
 import {
   ProductCategoryPremium,
   ProductStoreAndroidPlaystore,
@@ -45,13 +45,22 @@ export function useProductsStore() {
     )
   })
 
+  const premiumProducts = computed(() => {
+    if (!data.value?.api_products) return {}
+
+    return Object.fromEntries(data.value.premium_products.map(product => [
+      product.product_name,
+      product,
+    ]))
+  })
+
   async function getProducts() {
     if (data.value) {
       return data.value
     }
 
     const res = await fetch<InternalGetProductSummaryResponse>(
-      API_PATH.PRODUCT_SUMMARY,
+      'PRODUCT_SUMMARY',
     )
 
     data.value = res.data
@@ -63,6 +72,7 @@ export function useProductsStore() {
     currentPremiumSubscription,
     getProducts,
     isPremiumSubscribedViaApp,
+    premiumProducts,
     products,
   }
 }

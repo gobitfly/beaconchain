@@ -1,23 +1,17 @@
 <script lang="ts" setup>
-import {
-  faArrowUpRightFromSquare,
-  faPaperPlane,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { API_PATH } from '~/types/customFetch'
 import { Target } from '~/types/links'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
-const notificationsManagementStore = useNotificationsManagementStore()
+const store = useNotificationsManagementStore()
 const {
   status,
 } = useAsyncData(
-  () => notificationsManagementStore
+  () => store
     .getSettings()
-    .then(({ data }) => notificationsManagementStore.settings = data),
+    .then(({ data }) => store.settings = data),
 )
 
 const isVisible = ref(false)
@@ -50,12 +44,12 @@ const muteDropdownList = [
 
 const muteNotifications = (seconds: number) => {
   if (seconds === Number.MAX_SAFE_INTEGER) {
-    return notificationsManagementStore
+    return store
       .settings
       .general_settings
       .do_not_disturb_timestamp = seconds
   }
-  notificationsManagementStore
+  store
     .settings
     .general_settings
     .do_not_disturb_timestamp = getFutureTimestampInSeconds({ seconds })
@@ -65,11 +59,11 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   try {
     await fetch(
       type === 'email'
-        ? API_PATH.NOTIFICATIONS_TEST_EMAIL
-        : API_PATH.NOTIFICATIONS_TEST_PUSH,
+        ? 'NOTIFICATIONS_TEST_EMAIL'
+        : 'NOTIFICATIONS_TEST_PUSH',
     )
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('notifications.general.test_notification_error.toast_message'),
       group: $t('notifications.general.test_notification_error.toast_group'),
@@ -78,31 +72,41 @@ const sendTestNotification = async (type: 'email' | 'push') => {
   }
 }
 
-const pairedDevicesCount = computed(() => notificationsManagementStore.settings.paired_devices?.length || 0)
+const pairedDevicesCount = computed(() => store.settings.paired_devices?.length || 0)
 
 const hasPushNotificationTest = computed(() =>
-  notificationsManagementStore
+  store
     .settings
     .general_settings
     .is_push_notifications_enabled
-    && notificationsManagementStore.settings.paired_devices?.length,
+    && store.settings.paired_devices?.length,
 )
 
 const hasEmailNotificationTest = computed(() =>
-  notificationsManagementStore.settings.general_settings.is_email_notifications_enabled,
+  store.settings.general_settings.is_email_notifications_enabled,
 )
 const openPairdeDevicesModal = () => {
   isVisible.value = true
 }
+const isMuted = computed(() => {
+  const timeStampIsInTheFuture = store.settings.general_settings.do_not_disturb_timestamp > currentTimestampInSeconds()
+  if (
+    store.settings.general_settings.do_not_disturb_timestamp > 0
+    && timeStampIsInTheFuture
+  ) {
+    return true
+  }
+  return false
+})
 
 const textMutedUntil = computed(() => {
-  if (notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
+  if (store.settings.general_settings.do_not_disturb_timestamp === Number.MAX_SAFE_INTEGER) {
     return $t('notifications.general.mute.until_turned_on')
   }
   return $t('notifications.general.mute.until', {
     date: formatTsToAbsolute(
-      notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp,
-      $t('locales.date'),
+      store.settings.general_settings.do_not_disturb_timestamp,
+      'en-US',
       true,
     ),
   })
@@ -110,8 +114,8 @@ const textMutedUntil = computed(() => {
 const {
   refreshOverview,
 } = useNotificationsDashboardOverviewStore()
-watchDebounced(() => notificationsManagementStore.settings.general_settings, async () => {
-  await notificationsManagementStore.saveSettings()
+watchDebounced(() => store.settings.general_settings, async () => {
+  await store.saveSettings()
   // this is a quickfix and should not be needed,
   // reactive data should be updated automatically and  `user actions` should be atomic -> error handling
   await refreshOverview()
@@ -138,6 +142,14 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         loading
       />
     </div>
+    <div class="row">
+      <span>
+        {{ $t('notifications.general.info.global_settings') }}
+        <span class="font-default">
+          {{ $t('notifications.general.info.global_settings_subtext') }}
+        </span>
+      </span>
+    </div>
     <div class="row divider do-not-disturb">
       <div>
         <span>{{ $t("notifications.general.do_not_disturb") }}</span>
@@ -146,12 +158,12 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         }}</span>
       </div>
       <div
-        v-if="notificationsManagementStore.settings.general_settings?.do_not_disturb_timestamp"
+        v-if="isMuted"
         class="unmute-container"
       >
         <Button
           :label="$t('notifications.general.mute.unmute')"
-          @click="notificationsManagementStore.settings.general_settings.do_not_disturb_timestamp = 0"
+          @click="store.settings.general_settings.do_not_disturb_timestamp = 0"
         />
         <div class="muted-until">
           {{ textMutedUntil }}
@@ -177,26 +189,29 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       <div>
         {{ $t("notifications.general.email_notifications") }}
       </div>
-      <BcToggle v-model="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled" />
+      <BcToggle v-model="store.settings.general_settings.is_email_notifications_enabled" />
     </div>
     <div
       class="row"
-      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
     >
       <div>
         {{ $t("notifications.general.push_notifications") }}
-        <span v-if="pairedDevicesCount > 0">
+        <span
+          v-if="pairedDevicesCount > 0"
+          class="paired-devices-count"
+        >
           ({{ pairedDevicesCount }})
-          <FontAwesomeIcon
+          <BcButtonIcon
+            screenreader-text="notifications.general.manage_paired_devices"
             class="link popout"
-            :icon="faArrowUpRightFromSquare"
+            name="arrow-upright-from-square"
             @click="openPairdeDevicesModal"
           />
         </span>
       </div>
       <BcToggle
         v-if="pairedDevicesCount > 0"
-        v-model="notificationsManagementStore.settings.general_settings.is_push_notifications_enabled"
+        v-model="store.settings.general_settings.is_push_notifications_enabled"
       />
       <div v-else>
         {{ tOf($t, "notifications.general.download_app", 0) }}
@@ -211,7 +226,16 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       </div>
     </div>
     <div
-      v-if="notificationsManagementStore.settings.general_settings.is_email_notifications_enabled"
+      class="row"
+      :class="{ divider: hasEmailNotificationTest || hasPushNotificationTest }"
+    >
+      <div>
+        {{ $t("notifications.general.webhook_notifications") }}
+      </div>
+      <BcToggle v-model="store.settings.general_settings.is_webhook_notifications_enabled" />
+    </div>
+    <div
+      v-if="store.settings.general_settings.is_email_notifications_enabled"
       class="row"
     >
       <span>
@@ -222,7 +246,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       >
         {{ $t("common.send") }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />
+          <BcIcon name="paper-plane" />
         </template>
       </BcButton>
     </div>
@@ -238,7 +262,7 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
       >
         {{ $t("common.send") }}
         <template #icon>
-          <FontAwesomeIcon :icon="faPaperPlane" />
+          <BcIcon name="paper-plane" />
         </template>
       </BcButton>
     </div>
@@ -288,6 +312,15 @@ watchDebounced(() => notificationsManagementStore.settings.general_settings, asy
         @include fonts.tiny_text;
         color: var(--text-color-discreet);
       }
+    }
+
+    .paired-devices-count {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .font-default {
+      font-weight: 300;
     }
 
     .popout {

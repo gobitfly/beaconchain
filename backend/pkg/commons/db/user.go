@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -19,49 +20,17 @@ const hour uint64 = 3600
 const day = 24 * hour
 const week = 7 * day
 const month = 30 * day
-const maxJsInt uint64 = 9007199254740991 // 2^53-1 (max safe int in JS)
-
-var freeTierProduct t.PremiumProduct = t.PremiumProduct{
-	ProductName: "Free",
-	PremiumPerks: t.PremiumPerks{
-		AdFree:                      false,
-		ValidatorDashboards:         1,
-		ValidatorsPerDashboard:      20,
-		ValidatorGroupsPerDashboard: 1,
-		ShareCustomDashboards:       false,
-		ManageDashboardViaApi:       false,
-		BulkAdding:                  false,
-		ChartHistorySeconds: t.ChartHistorySeconds{
-			Epoch:  0,
-			Hourly: 12 * hour,
-			Daily:  0,
-			Weekly: 0,
-		},
-		EmailNotificationsPerDay:                       10,
-		ConfigureNotificationsViaApi:                   false,
-		ValidatorGroupNotifications:                    1,
-		WebhookEndpoints:                               1,
-		MobileAppCustomThemes:                          false,
-		MobileAppWidget:                                false,
-		MonitorMachines:                                1,
-		MachineMonitoringHistorySeconds:                3600 * 3,
-		NotificationsMachineCustomThreshold:            false,
-		NotificationsValidatorDashboardGroupEfficiency: false,
-	},
-	PricePerMonthEur: 0,
-	PricePerYearEur:  0,
-	ProductIdMonthly: "premium_free",
-	ProductIdYearly:  "premium_free.yearly",
-}
+const maxJsInt uint64 = 9007199254740991                       // 2^53-1 (max safe int in JS)
+var maxAdminEB = utils.EtherToWei(big.NewInt(int64(maxJsInt))) // some sufficiently high number
 
 var adminPerks = t.PremiumPerks{
-	AdFree:                      false, // admins want to see ads to check ad configuration
-	ValidatorDashboards:         maxJsInt,
-	ValidatorsPerDashboard:      maxJsInt,
-	ValidatorGroupsPerDashboard: maxJsInt,
-	ShareCustomDashboards:       true,
-	ManageDashboardViaApi:       true,
-	BulkAdding:                  true,
+	AdFree:                       false, // admins want to see ads to check ad configuration
+	ValidatorDashboards:          maxJsInt,
+	EffectiveBalancePerDashboard: maxAdminEB,
+	ValidatorGroupsPerDashboard:  maxJsInt,
+	ShareCustomDashboards:        true,
+	ManageDashboardViaApi:        true,
+	BulkAdding:                   true,
 	ChartHistorySeconds: t.ChartHistorySeconds{
 		Epoch:  maxJsInt,
 		Hourly: maxJsInt,
@@ -232,7 +201,7 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 			if p.StripePriceIdMonthly == addon.PriceId || p.StripePriceIdYearly == addon.PriceId {
 				foundAddon = true
 				for i := 0; i < addon.Quantity; i++ {
-					userInfo.PremiumPerks.ValidatorsPerDashboard += p.ExtraDashboardValidators
+					userInfo.PremiumPerks.EffectiveBalancePerDashboard = userInfo.PremiumPerks.EffectiveBalancePerDashboard.Add(p.ExtraDashboardEffectiveBalance)
 					userInfo.Subscriptions = append(userInfo.Subscriptions, t.UserSubscription{
 						ProductId:       utils.PriceIdToProductId(addon.PriceId),
 						ProductName:     p.ProductName,
@@ -249,8 +218,8 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 		}
 	}
 
-	if productSummary.ValidatorsPerDashboardLimit < userInfo.PremiumPerks.ValidatorsPerDashboard {
-		userInfo.PremiumPerks.ValidatorsPerDashboard = productSummary.ValidatorsPerDashboardLimit
+	if productSummary.EffectiveBalancePerDashboardLimit.LessThan(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
+		userInfo.PremiumPerks.EffectiveBalancePerDashboard = productSummary.EffectiveBalancePerDashboardLimit
 	}
 
 	if userInfo.UserGroup == t.UserGroupAdmin {
@@ -260,10 +229,17 @@ func GetUserInfo(ctx context.Context, userId uint64, userDbReader *sqlx.DB) (*t.
 	return userInfo, nil
 }
 
+func premiumLimitNetworkFactor() int64 {
+	// no network-specific premium limits atm, return constant factor
+	return 1
+}
+
 func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO @patrick post-beta put into db instead of hardcoding here and make it configurable
-	return &t.ProductSummary{
-		ValidatorsPerDashboardLimit: 102_000,
-		StripePublicKey:             utils.Config.Frontend.Stripe.PublicKey,
+	freeTierProduct, err := GetFreeTierProduct(ctx)
+	factor := premiumLimitNetworkFactor()
+	summary := t.ProductSummary{
+		EffectiveBalancePerDashboardLimit: utils.EtherToWei(big.NewInt(102_000 * 32 * factor)),
+		StripePublicKey:                   utils.Config.Frontend.Stripe.PublicKey,
 		ApiProducts: []t.ApiProduct{ // TODO @patrick post-beta this data is not final yet
 			{
 				ProductId:        "api_free",
@@ -331,17 +307,17 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			},
 		},
 		PremiumProducts: []t.PremiumProduct{
-			freeTierProduct,
+			*freeTierProduct,
 			{
 				ProductName: "Guppy",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         1,
-					ValidatorsPerDashboard:      100,
-					ValidatorGroupsPerDashboard: 3,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       false,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          1,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(100 * 32 * factor)),
+					ValidatorGroupsPerDashboard:  3,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        false,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  day,
 						Hourly: 7 * day,
@@ -369,13 +345,13 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			{
 				ProductName: "Dolphin",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         2,
-					ValidatorsPerDashboard:      300,
-					ValidatorGroupsPerDashboard: 10,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       false,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          2,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(300 * 32 * factor)),
+					ValidatorGroupsPerDashboard:  10,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        false,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  5 * day,
 						Hourly: month,
@@ -403,13 +379,13 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 			{
 				ProductName: "Orca",
 				PremiumPerks: t.PremiumPerks{
-					AdFree:                      true,
-					ValidatorDashboards:         2,
-					ValidatorsPerDashboard:      1000,
-					ValidatorGroupsPerDashboard: 30,
-					ShareCustomDashboards:       true,
-					ManageDashboardViaApi:       true,
-					BulkAdding:                  true,
+					AdFree:                       true,
+					ValidatorDashboards:          2,
+					EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(1000 * 32 * factor)),
+					ValidatorGroupsPerDashboard:  30,
+					ShareCustomDashboards:        true,
+					ManageDashboardViaApi:        true,
+					BulkAdding:                   true,
 					ChartHistorySeconds: t.ChartHistorySeconds{
 						Epoch:  3 * week,
 						Hourly: 6 * month,
@@ -438,29 +414,64 @@ func GetProductSummary(ctx context.Context) (*t.ProductSummary, error) { // TODO
 		},
 		ExtraDashboardValidatorsPremiumAddon: []t.ExtraDashboardValidatorsPremiumAddon{
 			{
-				ProductName:              "1k extra valis per dashboard",
-				ExtraDashboardValidators: 1000,
-				PricePerMonthEur:         74.99,
-				PricePerYearEur:          719.88,
-				ProductIdMonthly:         "vdb_addon_1k",
-				ProductIdYearly:          "vdb_addon_1k.yearly",
-				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon1k,
-				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon1kYearly,
+				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 1_000*32*factor),
+				ExtraDashboardEffectiveBalance: utils.EtherToWei(big.NewInt(1_000 * 32 * factor)),
+				PricePerMonthEur:               74.99,
+				PricePerYearEur:                719.88,
+				ProductIdMonthly:               "vdb_addon_1k",
+				ProductIdYearly:                "vdb_addon_1k.yearly",
+				StripePriceIdMonthly:           utils.Config.Frontend.Stripe.VdbAddon1k,
+				StripePriceIdYearly:            utils.Config.Frontend.Stripe.VdbAddon1kYearly,
 			},
 			{
-				ProductName:              "10k extra valis per dashboard",
-				ExtraDashboardValidators: 10000,
-				PricePerMonthEur:         449.99,
-				PricePerYearEur:          4319.88,
-				ProductIdMonthly:         "vdb_addon_10k",
-				ProductIdYearly:          "vdb_addon_10k.yearly",
-				StripePriceIdMonthly:     utils.Config.Frontend.Stripe.VdbAddon10k,
-				StripePriceIdYearly:      utils.Config.Frontend.Stripe.VdbAddon10kYearly,
+				ProductName:                    fmt.Sprintf("%d effective balance increase per dashboard", 10_000*32*factor),
+				ExtraDashboardEffectiveBalance: utils.EtherToWei(big.NewInt(10_000 * 32 * factor)),
+				PricePerMonthEur:               449.99,
+				PricePerYearEur:                4319.88,
+				ProductIdMonthly:               "vdb_addon_10k",
+				ProductIdYearly:                "vdb_addon_10k.yearly",
+				StripePriceIdMonthly:           utils.Config.Frontend.Stripe.VdbAddon10k,
+				StripePriceIdYearly:            utils.Config.Frontend.Stripe.VdbAddon10kYearly,
 			},
 		},
-	}, nil
+	}
+
+	return &summary, err
 }
 
-func GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
-	return &freeTierProduct.PremiumPerks, nil
+func GetFreeTierProduct(ctx context.Context) (*t.PremiumProduct, error) {
+	factor := premiumLimitNetworkFactor()
+
+	return &t.PremiumProduct{
+		ProductName: "Free",
+		PremiumPerks: t.PremiumPerks{
+			AdFree:                       false,
+			ValidatorDashboards:          1,
+			EffectiveBalancePerDashboard: utils.EtherToWei(big.NewInt(20 * 32 * factor)),
+			ValidatorGroupsPerDashboard:  1,
+			ShareCustomDashboards:        false,
+			ManageDashboardViaApi:        false,
+			BulkAdding:                   false,
+			ChartHistorySeconds: t.ChartHistorySeconds{
+				Epoch:  0,
+				Hourly: 12 * hour,
+				Daily:  0,
+				Weekly: 0,
+			},
+			EmailNotificationsPerDay:                       10,
+			ConfigureNotificationsViaApi:                   false,
+			ValidatorGroupNotifications:                    1,
+			WebhookEndpoints:                               1,
+			MobileAppCustomThemes:                          false,
+			MobileAppWidget:                                false,
+			MonitorMachines:                                1,
+			MachineMonitoringHistorySeconds:                3600 * 3,
+			NotificationsMachineCustomThreshold:            false,
+			NotificationsValidatorDashboardGroupEfficiency: false,
+		},
+		PricePerMonthEur: 0,
+		PricePerYearEur:  0,
+		ProductIdMonthly: "premium_free",
+		ProductIdYearly:  "premium_free.yearly",
+	}, nil
 }

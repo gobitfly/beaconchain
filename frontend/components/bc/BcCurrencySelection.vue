@@ -1,43 +1,40 @@
 <script setup lang="ts">
-import type { Currency } from '~/types/currencies'
-
-defineProps<{
-  showCurrencyIcon: boolean,
-}>()
-
 const {
-  currency, setCurrency, withLabel,
+  exchangeRates,
+  getCurrencyName,
+  selectedCurrencyMain,
 } = useCurrency()
+const availableCurrencies = computed(
+  () => exchangeRates.value.filter(({ code }) => code !== selectedCurrencyMain.value),
+)
 </script>
 
 <template>
   <BcDropdown
-    v-model="currency"
-    :options="withLabel"
-    option-value="currency"
-    option-label="label"
+    v-model="selectedCurrencyMain"
+    :options="availableCurrencies"
+    option-value="code"
+    option-label="currency"
     variant="header"
-    @update:model-value="(currency: Currency) => setCurrency(currency)"
+    @update:model-value="(currencyCode: CurrencyCode) => selectedCurrencyMain = currencyCode"
   >
     <template #value>
       <span class="item in-header">
         <span
-          v-if="showCurrencyIcon"
           class="icon"
         >
-          <IconCurrency
-            v-if="currency"
-            :currency
-          /> </span>{{ currency }}
+          <BcCurrencyIcon :currency-code="selectedCurrencyMain" />
+        </span>
+        {{ selectedCurrencyMain }}
       </span>
     </template>
-    <template #option="slotProps">
+    <template #option="{ code }">
       <span class="item">
-        <span class="label">{{ slotProps.label }}</span>
-        <span class="currency">{{ slotProps.currency }}</span>
         <span class="icon">
-          <IconCurrency :currency="slotProps.currency" />
+          <BcCurrencyIcon :currency-code="code" />
         </span>
+        <span class="currency">{{ code }}</span>
+        <span class="label">({{ getCurrencyName(code) }})</span>
       </span>
     </template>
   </BcDropdown>
@@ -47,7 +44,7 @@ const {
 .item {
   display: flex;
   justify-content: space-between;
-  gap: var(--padding);
+  gap: var(--padding-small);
 
   &.in-header {
     justify-content: flex-end;
@@ -61,22 +58,12 @@ const {
     flex-grow: 1;
   }
 
-  .currency {
-    width: 30px;
-    text-align: right;
-  }
-
   .icon {
     height: 20px;
     width: 30px;
     display: flex;
     justify-content: flex-end;
 
-    :deep(img),
-    :deep(svg) {
-      max-height: 100%;
-      width: auto;
-    }
   }
 
   &:not(.in-header) {

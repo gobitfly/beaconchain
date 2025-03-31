@@ -1,10 +1,13 @@
 package modules
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"math/big"
+	"slices"
 	"sync"
 	"time"
 
@@ -12,26 +15,30 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
 )
 
 type executionPayloadsExporter struct {
-	ModuleContext   ModuleContext
-	ExportMutex     *sync.Mutex
-	CachedViewMutex *sync.Mutex
+	ModuleContext ModuleContext
+	ExportMutex   *sync.Mutex
+	CooldownTs    time.Time
 }
 
 func NewExecutionPayloadsExporter(moduleContext ModuleContext) ModuleInterface {
 	return &executionPayloadsExporter{
-		ModuleContext:   moduleContext,
-		ExportMutex:     &sync.Mutex{},
-		CachedViewMutex: &sync.Mutex{},
+		ModuleContext: moduleContext,
+		ExportMutex:   &sync.Mutex{},
 	}
 }
 
 func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
+	if time.Now().Before(d.CooldownTs) {
+		log.Warnf("execution rewards finalizer is on cooldown till %s", d.CooldownTs)
+		return nil
+	}
 	// if mutex is locked, return early
 	if !d.ExportMutex.TryLock() {
 		log.Infof("execution payloads exporter is already running")
@@ -40,6 +47,7 @@ func (d *executionPayloadsExporter) OnHead(event *constypes.StandardEventHeadRes
 	defer d.ExportMutex.Unlock()
 	err = d.maintainTable()
 	if err != nil {
+		d.CooldownTs = time.Now().Add(1 * time.Minute)
 		return fmt.Errorf("error maintaining table: %w", err)
 	}
 	return nil
@@ -53,55 +61,17 @@ func (d *executionPayloadsExporter) GetName() string {
 	return "ExecutionPayloads-Exporter"
 }
 
+func (d *executionPayloadsExporter) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleELPayloadExporter
+}
+
 func (d *executionPayloadsExporter) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {
 	return nil // nop
 }
 
 // can take however long it wants to run, is run in a separate goroutine, so no need to worry about blocking
 func (d *executionPayloadsExporter) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
-	// if mutex is locked, return early
-	if !d.CachedViewMutex.TryLock() {
-		log.Infof("execution payloads exporter is already running")
-		return nil
-	}
-	defer d.CachedViewMutex.Unlock()
-
-	start := time.Now()
-	// update cached view
-	err = d.updateCachedView()
-	if err != nil {
-		return err
-	}
-
-	log.Infof("updating execution payloads cached view took %v", time.Since(start))
 	return nil
-}
-
-func (d *executionPayloadsExporter) updateCachedView() (err error) {
-	err = db.CacheQuery(`
-		SELECT DISTINCT ON (uvdv.dashboard_id, uvdv.group_id, b.slot)
-			uvdv.dashboard_id,
-			uvdv.group_id,
-			b.slot,
-			coalesce(cp.cl_attestations_reward / 1e9, 0) + coalesce(cp.cl_sync_aggregate_reward / 1e9, 0) + coalesce(cp.cl_slashing_inclusion_reward / 1e9, 0) + coalesce(rb.value / 1e18, ep.fee_recipient_reward) as reward,
-			coalesce(rb.proposer_fee_recipient, b.exec_fee_recipient) as fee_recipient, 
-			rb.value IS NOT NULL AS is_mev
-		FROM
-			blocks b
-			INNER JOIN execution_payloads ep ON ep.block_hash = b.exec_block_hash
-			INNER JOIN consensus_payloads cp ON cp.slot = b.slot
-			INNER JOIN users_val_dashboards_validators uvdv ON b.proposer = uvdv.validator_index
-			LEFT JOIN relays_blocks rb ON rb.exec_block_hash = b.exec_block_hash
-		WHERE
-			b.status = '1'
-			AND b.exec_block_hash IS NOT NULL AND ep.fee_recipient_reward IS NOT NULL
-		ORDER BY
-			dashboard_id,
-			group_id,
-			slot DESC,
-			rb.value DESC;
-	`, "cached_proposal_rewards", []string{"dashboard_id", "slot"}, []string{"dashboard_id", "reward"}, []string{"dashboard_id"})
-	return err
 }
 
 func (d *executionPayloadsExporter) maintainTable() (err error) {
@@ -133,9 +103,9 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	minBlock := uint64(blocks.MinBlock.Int64)
 	maxBlock := uint64(blocks.MaxBlock.Int64)
 
-	// limit to 1mil blocks to prevent reading too much from bigtable
-	if maxBlock-minBlock > 1e6 {
-		maxBlock = minBlock + 1e6
+	// limit to 200k blocks to prevent reading too much from bigtable
+	if maxBlock-minBlock > 200_000 {
+		maxBlock = minBlock + 200_000
 	}
 
 	log.Infof("min block: %v, max block: %v", blocks.MinBlock, blocks.MaxBlock)
@@ -144,6 +114,7 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	blockChan := make(chan *types.Eth1BlockIndexed, 1000)
 	type Result struct {
 		BlockHash          []byte
+		BlockNumber        uint64
 		FeeRecipientReward decimal.Decimal
 	}
 	resData := make([]Result, 0, maxBlock-minBlock+1)
@@ -151,7 +122,6 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	ctx, abortProcessing := context.WithCancel(context.Background())
 	defer abortProcessing() // to kill the errgroup if something goes wrong
 	group, _ := errgroup.WithContext(ctx)
-
 	// coroutine to process the blocks
 	group.Go(func() error {
 		var block *types.Eth1BlockIndexed
@@ -182,7 +152,7 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 			if err != nil {
 				return fmt.Errorf("error converting tx reward to decimal for block %v: %w", block.Number, err)
 			}
-			resData = append(resData, Result{BlockHash: hash, FeeRecipientReward: dec})
+			resData = append(resData, Result{BlockHash: hash, FeeRecipientReward: dec, BlockNumber: block.Number})
 		}
 	})
 
@@ -199,9 +169,55 @@ func (d *executionPayloadsExporter) maintainTable() (err error) {
 	if err != nil {
 		return fmt.Errorf("error processing blocks: %w", err)
 	}
+	// sanity checks: check if any block hashes are 0x0000000000000000000000000000000000000000000000000000000000000000 or duplicate, check if count matches expected
+	seen := make(map[string]bool)
+	emptyBlockHash := bytes.Repeat([]byte{0}, 32)
+	unseenBlockNumbers := make(map[uint64]bool)
+	for i := minBlock; i <= maxBlock; i++ {
+		unseenBlockNumbers[i] = true
+	}
+	err = error(nil)
+	counter := 0
+	for _, r := range resData {
+		if counter > 25 {
+			err = fmt.Errorf("too many errors, aborting")
+			log.Error(err, "error processing blocks", 0)
+			break
+		}
+		if len(r.BlockHash) == 0 {
+			err = fmt.Errorf("error processing blocks: block hash is empty, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
+		}
+		if bytes.Equal(r.BlockHash, emptyBlockHash) {
+			err = fmt.Errorf("error processing blocks: block hash is all zeros, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
+		}
+		if _, ok := seen[string(r.BlockHash)]; ok {
+			err = fmt.Errorf("error processing blocks: duplicate block hash, block number: %v", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
+		}
+		seen[string(r.BlockHash)] = true
+		if _, ok := unseenBlockNumbers[r.BlockNumber]; !ok {
+			err = fmt.Errorf("error processing blocks: block number %v is not in the unseen map", r.BlockNumber)
+			log.Error(err, "error processing blocks", 0)
+			counter++
+		}
+		delete(unseenBlockNumbers, r.BlockNumber) // noop in case it doesn't exist
+	}
+
+	if err != nil {
+		return err
+	}
+
+	u := slices.Collect(maps.Keys(unseenBlockNumbers))
+	if len(u) > 0 && slices.Min(u) < maxBlock-10 { // we are fine with the last 10 blocks being missing, the indexer might not have caught up yet
+		return fmt.Errorf("error processing blocks: expected %v blocks, got %v, unseen map: %v", maxBlock-minBlock+1, len(resData), maps.Keys(unseenBlockNumbers))
+	}
 
 	// update the execution_payloads table
-
 	log.Infof("preparing copy update to temp table")
 
 	// load data into temp table

@@ -14,11 +14,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/jmoiron/sqlx"
-	"github.com/pkg/errors"
 )
 
 type DataAccessor interface {
 	ValidatorDashboardRepository
+	ValidatorRepository
 	SearchRepository
 	NetworkRepository
 	ClientRepository
@@ -60,8 +60,7 @@ type DataAccessService struct {
 	persistentRedisDbClient *redis.Client
 
 	services *services.Services
-
-	skipServiceInitWait bool
+	config   *types.Config
 }
 
 // ensure DataAccessService pointer implements DataAccessor
@@ -89,8 +88,8 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 
 func createDataAccessService(cfg *types.Config) *DataAccessService {
 	dataAccessService := DataAccessService{
-		dummy:               NewDummyService(),
-		skipServiceInitWait: cfg.SkipDataAccessServiceInitWait,
+		dummy:  NewDummyService(),
+		config: cfg,
 	}
 
 	// Initialize the database
@@ -98,111 +97,27 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(
-			&types.DatabaseConfig{
-				Username:     cfg.WriterDatabase.Username,
-				Password:     cfg.WriterDatabase.Password,
-				Name:         cfg.WriterDatabase.Name,
-				Host:         cfg.WriterDatabase.Host,
-				Port:         cfg.WriterDatabase.Port,
-				MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-				SSL:          cfg.WriterDatabase.SSL,
-			},
-			&types.DatabaseConfig{
-				Username:     cfg.ReaderDatabase.Username,
-				Password:     cfg.ReaderDatabase.Password,
-				Name:         cfg.ReaderDatabase.Name,
-				Host:         cfg.ReaderDatabase.Host,
-				Port:         cfg.ReaderDatabase.Port,
-				MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-				SSL:          cfg.ReaderDatabase.SSL,
-			}, "pgx", "postgres",
-		)
+		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(
-			&types.DatabaseConfig{
-				Username:     cfg.AlloyWriter.Username,
-				Password:     cfg.AlloyWriter.Password,
-				Name:         cfg.AlloyWriter.Name,
-				Host:         cfg.AlloyWriter.Host,
-				Port:         cfg.AlloyWriter.Port,
-				MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-				MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-				SSL:          cfg.AlloyWriter.SSL,
-			},
-			&types.DatabaseConfig{
-				Username:     cfg.AlloyReader.Username,
-				Password:     cfg.AlloyReader.Password,
-				Name:         cfg.AlloyReader.Name,
-				Host:         cfg.AlloyReader.Host,
-				Port:         cfg.AlloyReader.Port,
-				MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-				MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-				SSL:          cfg.AlloyReader.SSL,
-			}, "pgx", "postgres",
-		)
+		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.clickhouseReader, _ = db.MustInitDB(
-			&types.DatabaseConfig{
-				Username:     cfg.ClickHouse.ReaderDatabase.Username,
-				Password:     cfg.ClickHouse.ReaderDatabase.Password,
-				Name:         cfg.ClickHouse.ReaderDatabase.Name,
-				Host:         cfg.ClickHouse.ReaderDatabase.Host,
-				Port:         cfg.ClickHouse.ReaderDatabase.Port,
-				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-				SSL:          true,
-			},
-			// lets just reuse reader to be extra safe
-			&types.DatabaseConfig{
-				Username:     cfg.ClickHouse.ReaderDatabase.Username,
-				Password:     cfg.ClickHouse.ReaderDatabase.Password,
-				Name:         cfg.ClickHouse.ReaderDatabase.Name,
-				Host:         cfg.ClickHouse.ReaderDatabase.Host,
-				Port:         cfg.ClickHouse.ReaderDatabase.Port,
-				MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-				SSL:          true,
-			}, "clickhouse", "clickhouse",
-		)
+		// lets just reuse reader to be extra safe
+		dataAccessService.clickhouseReader, _ = db.MustInitDB(&cfg.ClickHouse.ReaderDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
 	}()
 
 	// Initialize the user database
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		dataAccessService.userWriter, dataAccessService.userReader = db.MustInitDB(
-			&types.DatabaseConfig{
-				Username:     cfg.Frontend.WriterDatabase.Username,
-				Password:     cfg.Frontend.WriterDatabase.Password,
-				Name:         cfg.Frontend.WriterDatabase.Name,
-				Host:         cfg.Frontend.WriterDatabase.Host,
-				Port:         cfg.Frontend.WriterDatabase.Port,
-				MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
-				SSL:          cfg.Frontend.WriterDatabase.SSL,
-			},
-			&types.DatabaseConfig{
-				Username:     cfg.Frontend.ReaderDatabase.Username,
-				Password:     cfg.Frontend.ReaderDatabase.Password,
-				Name:         cfg.Frontend.ReaderDatabase.Name,
-				Host:         cfg.Frontend.ReaderDatabase.Host,
-				Port:         cfg.Frontend.ReaderDatabase.Port,
-				MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
-				MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-				SSL:          cfg.Frontend.ReaderDatabase.SSL,
-			}, "pgx", "postgres",
-		)
+		dataAccessService.userWriter, dataAccessService.userReader = db.MustInitDB(&cfg.Frontend.WriterDatabase, &cfg.Frontend.ReaderDatabase, "pgx", "postgres")
 	}()
 
 	// Initialize the bigtable
@@ -259,7 +174,7 @@ func (d *DataAccessService) StartDataAccessServices() {
 	d.registerNotificationInterfaceTypes()
 	// Initialize the services
 
-	if d.skipServiceInitWait {
+	if d.config.SkipDataAccessServiceInitWait {
 		go d.services.InitServices()
 	} else {
 		d.services.InitServices()
@@ -287,4 +202,4 @@ func (d *DataAccessService) Close() {
 	}
 }
 
-var ErrNotFound = errors.New("not found")
+var ErrNotFound = db.ErrNotFound

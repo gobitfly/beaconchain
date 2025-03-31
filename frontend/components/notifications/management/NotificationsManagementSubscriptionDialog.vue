@@ -8,6 +8,7 @@ const {
 const { t: $t } = useTranslation()
 const {
   secondsPerEpoch,
+  secondsUntilNetworkFinality,
 } = useNetworkStore()
 
 const { user } = useUserStore()
@@ -20,7 +21,8 @@ function closeDialog(): void {
 
 const checkboxes = ref({
   is_attestations_missed_subscribed: props.value?.is_attestations_missed_subscribed ?? false,
-  is_block_proposal_subscribed: props.value?.is_block_proposal_subscribed ?? false,
+  is_block_proposal_missed_subscribed: props.value?.is_block_proposal_missed_subscribed ?? false,
+  is_block_proposal_success_subscribed: props.value?.is_block_proposal_success_subscribed ?? false,
   is_group_efficiency_below_subscribed: props.value?.is_group_efficiency_below_subscribed ?? false,
   is_max_collateral_subscribed: props.value?.is_max_collateral_subscribed ?? false,
   is_min_collateral_subscribed: props.value?.is_min_collateral_subscribed ?? false,
@@ -74,6 +76,12 @@ watch(hasAllEvents, () => {
       checkboxes.value[key] = false
     })
 })
+const { minutes: minutesUntilNetworkFinality } = formatSecondsTo(secondsUntilNetworkFinality.value, {
+  maximumFractionDigits: 0,
+  minimumFractionDigits: 0,
+})
+
+const { hasRocketPool } = useNetworkStore()
 </script>
 
 <template>
@@ -85,7 +93,7 @@ watch(hasAllEvents, () => {
     </div>
 
     <div class="explanation">
-      {{ $t('notifications.subscriptions.validators.explanation') }}
+      {{ $t('notifications.subscriptions.validators.explanation', { count: minutesUntilNetworkFinality }) }}
     </div>
     <div
       class="row-container"
@@ -108,8 +116,12 @@ watch(hasAllEvents, () => {
           :info="$t('notifications.subscriptions.validators.attestation_missed.info', { count: Number(formatSecondsTo(secondsPerEpoch, { minimumFractionDigits: 1 }).minutes) })"
         />
         <BcSettingsRow
-          v-model:checkbox="checkboxes.is_block_proposal_subscribed"
-          :label="$t('notifications.subscriptions.validators.block_proposal.label')"
+          v-model:checkbox="checkboxes.is_block_proposal_success_subscribed"
+          :label="$t('notifications.subscriptions.validators.block_proposal_success.label')"
+        />
+        <BcSettingsRow
+          v-model:checkbox="checkboxes.is_block_proposal_missed_subscribed"
+          :label="$t('notifications.subscriptions.validators.block_proposal_missed.label')"
         />
         <BcSettingsRow
           v-model:checkbox="checkboxes.is_upcoming_block_proposal_subscribed"
@@ -137,12 +149,14 @@ watch(hasAllEvents, () => {
           :has-premium-gem="!hasPremiumPerkGroupEfficiency"
         />
         <BcSettingsRow
+          v-if="hasRocketPool"
           v-model:checkbox="checkboxes.is_min_collateral_subscribed"
           v-model:input="thresholds.min_collateral_threshold"
           has-unit
           :label="$t('notifications.subscriptions.validators.min_collateral_reached.label')"
         />
         <BcSettingsRow
+          v-if="hasRocketPool"
           v-model:checkbox="checkboxes.is_max_collateral_subscribed"
           v-model:input="thresholds.max_collateral_threshold"
           has-unit

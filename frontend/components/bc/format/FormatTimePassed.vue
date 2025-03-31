@@ -1,30 +1,30 @@
 <script setup lang="ts">
 import type { StringUnitLength } from 'luxon'
 import { useFormat } from '~/composables/useFormat'
-import { type AgeFormat } from '~/types/settings'
+import type { AgeFormat } from '~/types/settings'
 import { formatGoTimestamp } from '~/utils/format'
 
 const {
-  formatEpochToDateTime, formatSlotToDateTime,
+  formatEpochToDateTime,
+  formatSlotToDateTime,
 } = useFormat()
 
 interface Props {
-  format?: 'global-setting' | AgeFormat,
+  format?: AgeFormat,
   noUpdate?: boolean,
   type?: 'epoch' | 'go-timestamp' | 'slot', // we can add other types later when needed, we default to epoch
   unitLength?: StringUnitLength,
   value?: number | string,
 }
 const props = defineProps<Props>()
-const { t: $t } = useTranslation()
 const { timestamp } = useDate()
-const { setting } = useGlobalSetting<AgeFormat>('age-format')
+const { ageFormat } = storeToRefs(useSettingsStore())
 
 const initTs = ref(timestamp.value) // store the initial timestamp, in case we don't want to auto update
 
 const mappedSetting = computed(() => {
-  if (!props.format || props.format === 'global-setting') {
-    return setting.value
+  if (!props.format) {
+    return ageFormat.value
   }
   return props.format || 'relative'
 })
@@ -43,7 +43,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
       break
     case 'slot':
@@ -52,7 +52,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
       break
     case 'epoch':
@@ -62,7 +62,7 @@ const label = computed(() => {
         ts,
         mappedSetting.value,
         props.unitLength,
-        $t('locales.date'),
+        'en-US',
       )
   }
 

@@ -1,14 +1,7 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faBars, faCircleUser,
-} from '@fortawesome/pro-solid-svg-icons'
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
 import { useNetworkStore } from '~/stores/useNetworkStore'
-import {
-  SearchbarColors, SearchbarShape,
-} from '~/types/searchbar'
 import {
   mobileHeaderThreshold, smallHeaderThreshold,
 } from '~/types/header'
@@ -17,21 +10,26 @@ defineProps<{
   isHomePage: boolean,
   minimalist: boolean,
 }>()
-const { latestState } = useLatestStateStore()
+const latestStateStore = useLatestStateStore()
+const { latestState } = storeToRefs(latestStateStore)
 const {
-  currentNetwork, networkInfo, slotToEpoch,
+  getEpochFromSlot,
+  networkInfo,
 } = useNetworkStore()
 const {
-  doLogout, isLoggedIn,
+  doLogout,
+  isLoggedIn,
 } = useUserStore()
 const {
-  available, currency, rates,
+  displayCurrencyDefault,
+  exchangeRates,
+  formatAmount,
+  selectedCurrencyMain,
 } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
 const { promoCode } = usePromoCode()
 
-const colorMode = useColorMode()
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
 
@@ -42,23 +40,25 @@ const hideInDevelopmentClass = showInDevelopment
 
 const megaMenu = ref<null | typeof BcHeaderMegaMenu>(null)
 
-const rate = computed(() => {
-  if (isFiat(currency.value) && rates.value?.[currency.value]) {
-    return rates.value[currency.value]
+const hasExchangeRates = computed(() => exchangeRates.value.length > 1)
+
+const currentRate = computed(() => {
+  if (selectedCurrencyMain.value === displayCurrencyDefault.main) {
+    return formatAmount('1', {
+      sourceCurrency: displayCurrencyDefault.main,
+      sourceUnit: 'base',
+      targetCurrency: displayCurrencyDefault.fiat,
+    })
   }
-  else if (rates.value?.USD) {
-    return rates.value.USD
-  }
-  const fiat = available.value?.find(c => isFiat(c))
-  if (fiat && rates.value?.[fiat]) {
-    return rates.value[fiat]
-  }
-  return undefined
+  return formatAmount('1', {
+    sourceCurrency: displayCurrencyDefault.main,
+    sourceUnit: 'base',
+  })
 })
 
 const currentEpoch = computed(() =>
   latestState.value?.current_slot !== undefined
-    ? slotToEpoch(latestState.value.current_slot)
+    ? getEpochFromSlot(latestState.value.current_slot)
     : undefined,
 )
 
@@ -125,41 +125,26 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             />
           </BcLink>
         </span>
-        <span v-if="rate">
-          <span>
-            <IconNetwork
-              :chain-id="currentNetwork"
-              class="network-icon"
-              :harmonize-perceived-size="true"
-              :colored="false"
-            />{{ networkInfo.elCurrency }} </span>:
-          <span>
-            {{ rate.symbol }}
-            <BcFormatNumber
-              class="bold"
-              :value="rate.rate"
-              :max-decimals="2"
-            />
+        <span
+          v-if="hasExchangeRates"
+          class="currency-info"
+        >
+          <BcCurrencyIcon
+            :currency-code="displayCurrencyDefault.main"
+            class="network-icon"
+          />
+          {{ displayCurrencyDefault.main }}:
+          <span
+            class="bold"
+          >
+            {{ currentRate }}
           </span>
         </span>
       </div>
 
-      <div class="grid-cell search-bar">
-        <BcSearchbarGeneral
-          v-if="showInDevelopment && !isHomePage"
-          class="bar"
-          :bar-shape="SearchbarShape.Medium"
-          :color-theme="
-            isSmallScreen && colorMode.value != 'dark'
-              ? SearchbarColors.LightBlue
-              : SearchbarColors.DarkBlue
-          "
-          :screen-width-causing-sudden-change="smallHeaderThreshold"
-        />
-      </div>
-
       <div class="grid-cell controls">
         <BcCurrencySelection
+          v-if="hasExchangeRates"
           class="currency"
           :show-currency-icon="!isMobileScreen"
         />
@@ -178,7 +163,10 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             />
           </BcLink>
         </div>
-        <div v-else-if="!isSmallScreen" class="user-menu">
+        <div
+          v-else-if="!isSmallScreen"
+          class="user-menu"
+        >
           <BcDropdown
             :options="userMenu"
             variant="header"
@@ -188,17 +176,18 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
             @select="handleUserMenuSelect"
           >
             <template #value>
-              <FontAwesomeIcon
+              <BcIcon
                 class="menu-icon"
-                :icon="faCircleUser"
+                name="circle-user"
               />
             </template>
           </BcDropdown>
         </div>
-        <FontAwesomeIcon
-          :icon="faBars"
+        <BcButtonIcon
           class="burger"
-          @click.stop.prevent="toggleMegaMenu"
+          name="bars"
+          screenreader-text="header.open_navigation"
+          @click.stop="toggleMegaMenu"
         />
       </div>
 
@@ -315,11 +304,13 @@ $smallHeaderThreshold: 1024px;
       @media (max-width: $smallHeaderThreshold) {
         display: none;
       }
+      .currency-info {
+        display: flex;
+        align-items: center;
+        gap: var(--padding-small);
+      }
       .network-icon {
-        vertical-align: middle;
-        height: 18px;
-        width: 18px;
-        margin-right: var(--padding-small);
+        width: 1.25rem;
       }
     }
 
@@ -386,6 +377,7 @@ $smallHeaderThreshold: 1024px;
         }
       }
       .burger {
+        color: var(--header-top-font-color);
         height: 24px;
         cursor: pointer;
         @media (min-width: $smallHeaderThreshold) {

@@ -1,10 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faDesktop, faUser,
-} from '@fortawesome/pro-solid-svg-icons'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const {
@@ -30,10 +24,13 @@ const notificationsTotal = computed(() => {
 const { user } = useUserStore()
 const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
-const resetHours = computed(() => overview.value?.next_email_count_reset_timestamp ?? 0)
+const resetHours = computed(
+  () => getRelativeTime(overview.value?.next_email_count_reset_timestamp ?? 0),
+)
+
 const tooltipEmail = computed(() => {
   return $t('notifications.overview.email_tooltip', {
-    hours: resetHours.value,
+    in_x_hours: resetHours.value,
     limit: mailLimit.value,
   })
 })
@@ -54,17 +51,26 @@ const emit = defineEmits<{
         >
           {{ hasEmail ? $t('common.active') : $t('common.inactive') }}
         </div>
-        <div v-if="hasEmail" class="inline-items">
-          <span class="small_text">{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}</span>
+        <div
+          v-if="hasEmail"
+          class="inline-items"
+        >
+          <span
+            class="small_text"
+            :class="{ is_limit_reached: last24hEmailsCount >= mailLimit }"
+          >{{ last24hEmailsCount }}/{{ mailLimit }} {{ $t('common.units.per_day') }}</span>
           <BcTooltip
             tooltip-width="220px"
             :text="tooltipEmail"
           >
-            <FontAwesomeIcon :icon="faInfoCircle" />
+            <BcIcon name="circle-info" />
           </BcTooltip>
           <BcPremiumGem class="gem" />
         </div>
-        <div v-else class="premium-invitation small_text">
+        <div
+          v-else
+          class="premium-invitation small_text"
+        >
           <BcTranslation
             keypath="notifications.overview.notifications_activate_premium.template"
             linkpath="notifications.overview.notifications_activate_premium._link"
@@ -89,7 +95,10 @@ const emit = defineEmits<{
         <div class="big_text">
           {{ hasPushNotifications ? $t('common.active') : $t('common.inactive') }}
         </div>
-        <div v-if="!hasPushNotifications" class="push-invitation small_text">
+        <div
+          v-if="!hasPushNotifications"
+          class="push-invitation small_text"
+        >
           <BcTranslation
             keypath="notifications.overview.notifications_download_app.template"
             linkpath="notifications.overview.notifications_download_app._link"
@@ -103,16 +112,17 @@ const emit = defineEmits<{
         </h3>
         <div class="lists-container">
           <div class="lists-container-column">
-            <BcScreenreaderOnly tag="h4">
-              {{ $t('notifications.overview.headers.validator_groups') }}
-            </BcScreenreaderOnly>
+            <BcScreenreaderOnly
+              is="h4"
+              screenreader-text="notifications.overview.headers.validator_groups"
+            />
             <ol class="icon-list">
               <li
                 v-for="(group, index) in vdbMostNotifiedGroups"
                 :key="group"
                 class="small_text list-item"
               >
-                <FontAwesomeIcon :icon="faDesktop" />
+                <BcIcon name="desktop" />
                 <span class="list-text">
                   {{ index + 1 }}. {{ group || '-' }}
                 </span>
@@ -121,16 +131,17 @@ const emit = defineEmits<{
           </div>
           <BcFeatureFlag feature="feature-account_dashboards">
             <div class="lists-container-column">
-              <BcScreenreaderOnly tag="h4">
-                {{ $t('notifications.overview.headers.account_groups') }}
-              </BcScreenreaderOnly>
+              <BcScreenreaderOnly
+                is="h4"
+                screenreader-text="notifications.overview.headers.account_groups"
+              />
               <ol class="icon-list">
                 <li
                   v-for="(group, index) in adbMostNotifiedGroups"
                   :key="group"
                   class="small_text list-item"
                 >
-                  <FontAwesomeIcon :icon="faUser" />
+                  <BcIcon name="user" />
                   <span class="list-text">
                     {{ index + 1 }}. {{ group || '-' }}
                   </span>
@@ -209,6 +220,9 @@ const emit = defineEmits<{
   display: flex;
   align-items: center;
   gap: .625rem;
+}
+.is_limit_reached {
+  color: var(--negative-color);
 }
 a:hover {
   color: var(--light-blue);

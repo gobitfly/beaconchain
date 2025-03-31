@@ -3,15 +3,16 @@ package misc
 import (
 	"bytes"
 	"context"
-	"os"
-
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math"
 	"math/big"
 	"net/http"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,20 +24,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-redis/redis/v8"
-	"github.com/gobitfly/beaconchain/cmd/misc/commands"
-	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
-	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/gobitfly/beaconchain/pkg/consapi"
-	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
-	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
-	"github.com/gobitfly/beaconchain/pkg/exporter/services"
-	"github.com/gobitfly/beaconchain/pkg/notification"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pkg/errors"
 	utilMath "github.com/protolambda/zrnt/eth2/util/math"
@@ -44,13 +31,30 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/api/option"
 
-	"flag"
+	"github.com/gobitfly/beaconchain/cmd/misc/commands"
+	"github.com/gobitfly/beaconchain/cmd/misc/misctypes"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/consapi"
+	"github.com/gobitfly/beaconchain/pkg/executionlayer"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/modules"
+	"github.com/gobitfly/beaconchain/pkg/exporter/services"
+	"github.com/gobitfly/beaconchain/pkg/notification"
 
 	"github.com/Gurpartap/storekit-go"
 )
 
 var opts = struct {
 	Command             string
+	Config              string
 	User                uint64
 	Addresses           string
 	TargetVersion       int64
@@ -79,6 +83,10 @@ var opts = struct {
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
 	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"update-highest-active-validatorindex": {
+		Bigtable: true,
+		ClNode:   true,
+	},
 }
 
 func Run() {
@@ -93,7 +101,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -138,12 +146,13 @@ func Run() {
 	requires, ok := REQUIRES_LIST[opts.Command]
 	if !ok {
 		requires = misctypes.Requires{
-			Bigtable:   true,
-			Redis:      true,
-			ClNode:     true,
-			ElNode:     true,
-			UserDBs:    true,
-			NetworkDBs: true,
+			Bigtable:      true,
+			Redis:         true,
+			ClNode:        true,
+			ElNode:        true,
+			UserDBs:       true,
+			NetworkDBs:    true,
+			ClickhouseDBs: true,
 		}
 	}
 
@@ -180,94 +189,26 @@ func Run() {
 	}
 
 	if requires.NetworkDBs {
-		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.WriterDatabase.Username,
-			Password:     cfg.WriterDatabase.Password,
-			Name:         cfg.WriterDatabase.Name,
-			Host:         cfg.WriterDatabase.Host,
-			Port:         cfg.WriterDatabase.Port,
-			MaxOpenConns: cfg.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.WriterDatabase.MaxIdleConns,
-			SSL:          cfg.WriterDatabase.SSL,
-		}, &types.DatabaseConfig{
-			Username:     cfg.ReaderDatabase.Username,
-			Password:     cfg.ReaderDatabase.Password,
-			Name:         cfg.ReaderDatabase.Name,
-			Host:         cfg.ReaderDatabase.Host,
-			Port:         cfg.ReaderDatabase.Port,
-			MaxOpenConns: cfg.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.ReaderDatabase.MaxIdleConns,
-			SSL:          cfg.ReaderDatabase.SSL,
-		}, "pgx", "postgres")
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
 
-		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.AlloyWriter.Username,
-			Password:     cfg.AlloyWriter.Password,
-			Name:         cfg.AlloyWriter.Name,
-			Host:         cfg.AlloyWriter.Host,
-			Port:         cfg.AlloyWriter.Port,
-			MaxOpenConns: cfg.AlloyWriter.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyWriter.MaxIdleConns,
-			SSL:          cfg.AlloyWriter.SSL,
-		}, &types.DatabaseConfig{
-			Username:     cfg.AlloyReader.Username,
-			Password:     cfg.AlloyReader.Password,
-			Name:         cfg.AlloyReader.Name,
-			Host:         cfg.AlloyReader.Host,
-			Port:         cfg.AlloyReader.Port,
-			MaxOpenConns: cfg.AlloyReader.MaxOpenConns,
-			MaxIdleConns: cfg.AlloyReader.MaxIdleConns,
-			SSL:          cfg.AlloyReader.SSL,
-		}, "pgx", "postgres")
+		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
 		defer db.AlloyReader.Close()
 		defer db.AlloyWriter.Close()
 	}
 	if requires.UserDBs {
-		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
-			Username:     cfg.Frontend.WriterDatabase.Username,
-			Password:     cfg.Frontend.WriterDatabase.Password,
-			Name:         cfg.Frontend.WriterDatabase.Name,
-			Host:         cfg.Frontend.WriterDatabase.Host,
-			Port:         cfg.Frontend.WriterDatabase.Port,
-			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
-		}, &types.DatabaseConfig{
-			Username:     cfg.Frontend.ReaderDatabase.Username,
-			Password:     cfg.Frontend.ReaderDatabase.Password,
-			Name:         cfg.Frontend.ReaderDatabase.Name,
-			Host:         cfg.Frontend.ReaderDatabase.Host,
-			Port:         cfg.Frontend.ReaderDatabase.Port,
-			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
-			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
-		}, "pgx", "postgres")
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&cfg.Frontend.WriterDatabase, &cfg.Frontend.ReaderDatabase, "pgx", "postgres")
 		defer db.FrontendReaderDB.Close()
 		defer db.FrontendWriterDB.Close()
 	}
 
 	// clickhouse
-	db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&types.DatabaseConfig{
-		Username:     cfg.ClickHouse.WriterDatabase.Username,
-		Password:     cfg.ClickHouse.WriterDatabase.Password,
-		Name:         cfg.ClickHouse.WriterDatabase.Name,
-		Host:         cfg.ClickHouse.WriterDatabase.Host,
-		Port:         cfg.ClickHouse.WriterDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.WriterDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.WriterDatabase.MaxIdleConns,
-	}, &types.DatabaseConfig{
-		Username:     cfg.ClickHouse.ReaderDatabase.Username,
-		Password:     cfg.ClickHouse.ReaderDatabase.Password,
-		Name:         cfg.ClickHouse.ReaderDatabase.Name,
-		Host:         cfg.ClickHouse.ReaderDatabase.Host,
-		Port:         cfg.ClickHouse.ReaderDatabase.Port,
-		MaxOpenConns: cfg.ClickHouse.ReaderDatabase.MaxOpenConns,
-		SSL:          true,
-		MaxIdleConns: cfg.ClickHouse.ReaderDatabase.MaxIdleConns,
-	}, "clickhouse", "clickhouse")
-	defer db.ClickHouseReader.Close()
-	defer db.ClickHouseWriter.Close()
+	if requires.ClickhouseDBs {
+		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
+		defer db.ClickHouseReader.Close()
+		defer db.ClickHouseWriter.Close()
+	}
 
 	// Initialize the persistent redis client
 	if requires.Redis {
@@ -401,7 +342,7 @@ func Run() {
 	case "clear-bigtable":
 		clearBigtable(opts.Table, opts.Family, opts.Columns, opts.Key, opts.DryRun, bt)
 	case "index-old-eth1-blocks":
-		indexOldEth1Blocks(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, bt, erigonClient)
+		indexOldEth1Blocks(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, erigonClient)
 	case "update-aggregation-bits":
 		updateAggreationBits(rpcClient, opts.StartEpoch, opts.EndEpoch, opts.DataConcurrency)
 	case "update-block-finalization-sequentially":
@@ -541,6 +482,8 @@ func Run() {
 		err = collectUserDbNotifications(opts.StartEpoch)
 	case "verify-fcm-tokens":
 		err = verifyFCMTokens()
+	case "update-highest-active-validatorindex":
+		err = updateHighestActiveValidatorIndex(rpcClient)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -550,6 +493,38 @@ func Run() {
 	} else {
 		log.Infof("command executed successfully")
 	}
+}
+
+func updateHighestActiveValidatorIndex(rpcClient *rpc.LighthouseClient) error {
+	var err error
+
+	chainIdStr := fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID)
+
+	bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdStr, utils.Config.RedisCacheEndpoint)
+	if err != nil {
+		return fmt.Errorf("error connecting to bigtable: %w", err)
+	}
+	db.BigtableClient = bt
+
+	for epoch := opts.StartEpoch; epoch <= opts.EndEpoch; epoch++ {
+		valiMap, err := rpcClient.GetBalancesForEpoch(int64(epoch))
+		if err != nil {
+			return err
+		}
+		highestActiveValidatorIndex := uint64(0)
+		for vali := range valiMap {
+			if vali > highestActiveValidatorIndex {
+				highestActiveValidatorIndex = vali
+			}
+		}
+		log.Infof("updating highest active validator: index: %v, epoch: %v", highestActiveValidatorIndex, epoch)
+		err = db.BigtableClient.SaveHighestActiveValidatorIndex(context.Background(), epoch, highestActiveValidatorIndex)
+		if err != nil {
+			return fmt.Errorf("error updating highest active validator index: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func collectNotifications(startEpoch uint64) error {
@@ -1186,7 +1161,7 @@ func debugBlocks(clClient *rpc.LighthouseClient) error {
 			return err
 		}
 
-		elBlock, _, err := elClient.GetBlock(int64(i), "parity/geth")
+		elBlock, _, err := elClient.GetBlock(i, "parity/geth")
 		if err != nil {
 			return err
 		}
@@ -1212,7 +1187,7 @@ func debugBlocks(clClient *rpc.LighthouseClient) error {
 		} else if clBlock.ExecutionPayload.BlockNumber != i {
 			log.Warnf("clBlock.ExecutionPayload.BlockNumber != i: %v != %v", clBlock.ExecutionPayload.BlockNumber, i)
 		} else {
-			logFields["cl.txs"] = len(clBlock.ExecutionPayload.Transactions)
+			logFields["cl.txs"] = clBlock.ExecutionPayload.TransactionsCount
 		}
 
 		log.InfoWithFields(logFields, "debug block")
@@ -1645,7 +1620,7 @@ func indexMissingBlocks(start uint64, end uint64, bt *db.Bigtable, client *rpc.E
 			if _, err := db.BigtableClient.GetBlockFromBlocksTable(block); err != nil {
 				log.Infof("could not load [%v] from blocks table, will try to fetch it from the node and save it", block)
 
-				bc, _, err := client.GetBlock(int64(block), "parity/geth")
+				bc, _, err := client.GetBlock(block, "parity/geth")
 				if err != nil {
 					log.Error(err, fmt.Sprintf("error getting block %v from the node", block), 0)
 					return
@@ -1658,12 +1633,12 @@ func indexMissingBlocks(start uint64, end uint64, bt *db.Bigtable, client *rpc.E
 				}
 			}
 
-			indexOldEth1Blocks(block, block, 1, 1, "all", bt, client)
+			indexOldEth1Blocks(block, block, 1, 1, "all", client)
 		}
 	}
 }
 
-func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, bt *db.Bigtable, client *rpc.ErigonClient) {
+func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, concurrency uint64, transformerFlag string, client *rpc.ErigonClient) {
 	if endBlock > 0 && endBlock < startBlock {
 		log.Error(nil, fmt.Sprintf("endBlock [%v] < startBlock [%v]", endBlock, startBlock), 0)
 		return
@@ -1672,12 +1647,6 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		log.Error(nil, "concurrency must be greater than 0", 0)
 		return
 	}
-	if bt == nil {
-		log.Error(nil, "no bigtable provided", 0)
-		return
-	}
-
-	transforms := make([]func(blk *types.Eth1Block, cache *freecache.Cache) (*types.BulkMutations, *types.BulkMutations, error), 0)
 
 	log.Infof("transformerFlag: %v", transformerFlag)
 	transformerList := strings.Split(transformerFlag, ",")
@@ -1688,52 +1657,40 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		return
 	}
 	log.Infof("transformers: %v", transformerList)
-	importENSChanges := false
-	/**
-	* Add additional transformers you want to sync to this switch case
-	**/
-	for _, t := range transformerList {
-		switch t {
-		case "TransformBlock":
-			transforms = append(transforms, bt.TransformBlock)
-		case "TransformTx":
-			transforms = append(transforms, bt.TransformTx)
-		case "TransformBlobTx":
-			transforms = append(transforms, bt.TransformBlobTx)
-		case "TransformItx":
-			transforms = append(transforms, bt.TransformItx)
-		case "TransformERC20":
-			transforms = append(transforms, bt.TransformERC20)
-		case "TransformERC721":
-			transforms = append(transforms, bt.TransformERC721)
-		case "TransformERC1155":
-			transforms = append(transforms, bt.TransformERC1155)
-		case "TransformWithdrawals":
-			transforms = append(transforms, bt.TransformWithdrawals)
-		case "TransformUncle":
-			transforms = append(transforms, bt.TransformUncle)
-		case "TransformEnsNameRegistered":
-			transforms = append(transforms, bt.TransformEnsNameRegistered)
-			importENSChanges = true
-		case "TransformContract":
-			transforms = append(transforms, bt.TransformContract)
-		default:
-			log.Error(nil, "Invalid transformer flag %v", 0)
-			return
-		}
-	}
 
+	bigtable, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil)
+	if err != nil {
+		log.Fatal(err, "error connecting to bigtable", 0)
+	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
+	store := db2.NewStoreV1FromBigtable(bigtable, database.FreeCache{Cache: cache})
+	transforms, err := executionlayer.TransformerFromList(transformerList)
+	if err != nil {
+		log.Error(nil, err.Error(), 0)
+		return
+	}
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:        utils.Config.RedisCacheEndpoint,
+		ReadTimeout: time.Second * 20,
+	})
+	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
+	indexer := executionlayer.NewIndexer(store, lastBlockStore, transforms...)
+	chainID := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
+
+	importENSChanges := false
+	if slices.Contains(transformerList, "TransformEnsNameRegistered") {
+		importENSChanges = true
+	}
 
 	to := endBlock
 	if endBlock == math.MaxInt64 {
-		lastBlockFromBlocksTable, err := bt.GetLastBlockInBlocksTable()
+		lastBlockFromBlocksTable, err := lastBlockStore.GetInBlocksTable(chainID)
 		if err != nil {
 			log.Error(err, "error retrieving last blocks from blocks table", 0)
 			return
 		}
 
-		to = uint64(lastBlockFromBlocksTable)
+		to = lastBlockFromBlocksTable
 	}
 	blockCount := utilMath.MaxU64(1, batchSize)
 
@@ -1742,15 +1699,15 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		toBlock := utilMath.MinU64(to, from+blockCount-1)
 
 		log.Infof("indexing blocks %v to %v in data table ...", from, toBlock)
-		err := bt.IndexEventsWithTransformers(int64(from), int64(toBlock), transforms, int64(concurrency), cache)
-		if err != nil {
+		if err := indexer.IndexEvents(chainID, from, to, concurrency); err != nil {
 			log.Error(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
 	}
 
 	if importENSChanges {
-		if err := bt.ImportEnsUpdates(client.GetNativeClient(), math.MaxInt64); err != nil {
+		importer := executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
+		if err := importer.Import(chainID, math.MaxInt64); err != nil {
 			log.Error(err, "error importing ens from events", 0)
 			return
 		}

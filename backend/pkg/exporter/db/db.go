@@ -2,8 +2,9 @@ package db
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
 
 	"regexp"
@@ -12,6 +13,10 @@ import (
 	"strings"
 	"time"
 
+	ch "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -19,12 +24,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
-
-	"github.com/attestantio/go-eth2-client/spec/phase0"
 )
 
 func SaveBlock(block *types.Block, forceSlotUpdate bool, tx *sqlx.Tx) error {
@@ -59,7 +62,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1)
 		ON CONFLICT (block_hash) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtExecutionPayload: %w", err)
 	}
 	defer stmtExecutionPayload.Close()
 
@@ -68,7 +71,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40)
 		ON CONFLICT (slot, blockroot) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBlock: %w", err)
 	}
 	defer stmtBlock.Close()
 
@@ -77,7 +80,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_root, withdrawalindex) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtWithdrawals: %w", err)
 	}
 	defer stmtWithdrawals.Close()
 
@@ -86,7 +89,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_root, validatorindex) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBLSChange: %w", err)
 	}
 	defer stmtBLSChange.Close()
 
@@ -95,7 +98,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtProposerSlashing: %w", err)
 	}
 	defer stmtProposerSlashing.Close()
 
@@ -104,25 +107,21 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 		ON CONFLICT (block_slot, block_index) DO UPDATE SET attestation1_indices = excluded.attestation1_indices, attestation2_indices = excluded.attestation2_indices`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtAttesterSlashing: %w", err)
 	}
 	defer stmtAttesterSlashing.Close()
 
-	stmtAttestations, err := tx.Prepare(`
-		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		ON CONFLICT (block_slot, block_index) DO NOTHING`)
-	if err != nil {
-		return err
-	}
-	defer stmtAttestations.Close()
+	stmtAttestations := `
+		INSERT INTO blocks_attestations (block_slot, block_index, block_root, aggregationbits, validators, signature, slot, committeeindex, beaconblockroot, source_epoch, source_root, target_epoch, target_root, committeebits)
+		VALUES (:block_slot, :block_index, :block_root, :aggregationbits, :validators, :signature, :slot, :committeeindex, :beaconblockroot, :source_epoch, :source_root, :target_epoch, :target_root, :committeebits)
+		ON CONFLICT (block_slot, block_index) DO NOTHING`
 
 	stmtDeposits, err := tx.Prepare(`
 		INSERT INTO blocks_deposits (block_slot, block_index, block_root, proof, publickey, withdrawalcredentials, amount, signature, valid_signature)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtDeposits: %w", err)
 	}
 	defer stmtDeposits.Close()
 
@@ -131,7 +130,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_root, index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtBlobs: %w", err)
 	}
 	defer stmtBlobs.Close()
 
@@ -140,7 +139,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4, $5, $6)
 		ON CONFLICT (block_slot, block_index) DO NOTHING`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtVoluntaryExits: %w", err)
 	}
 	defer stmtVoluntaryExits.Close()
 
@@ -149,7 +148,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (epoch, validatorindex, proposerslot) DO UPDATE SET status = excluded.status`)
 	if err != nil {
-		return err
+		return fmt.Errorf("error preparing stmtProposalAssignments: %w", err)
 	}
 	defer stmtProposalAssignments.Close()
 
@@ -211,7 +210,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				ExtraData       []byte
 				BaseFeePerGas   *uint64
 				BlockHash       []byte
-				TxCount         *int64
+				TxCount         *int
 				WithdrawalCount *int64
 				BlobGasUsed     *uint64
 				ExcessBlobGas   *uint64
@@ -221,7 +220,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 			execData := new(exectionPayloadData)
 
 			if b.ExecutionPayload != nil {
-				txCount := int64(len(b.ExecutionPayload.Transactions))
 				withdrawalCount := int64(len(b.ExecutionPayload.Withdrawals))
 				blobTxCount := int64(len(b.BlobKZGCommitments))
 				execData = &exectionPayloadData{
@@ -238,7 +236,7 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					ExtraData:       b.ExecutionPayload.ExtraData,
 					BaseFeePerGas:   &b.ExecutionPayload.BaseFeePerGas,
 					BlockHash:       b.ExecutionPayload.BlockHash,
-					TxCount:         &txCount,
+					TxCount:         &b.ExecutionPayload.TransactionsCount,
 					WithdrawalCount: &withdrawalCount,
 					BlobGasUsed:     &b.ExecutionPayload.BlobGasUsed,
 					ExcessBlobGas:   &b.ExecutionPayload.ExcessBlobGas,
@@ -328,10 +326,47 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					return fmt.Errorf("error executing stmtAttesterSlashing for block %v index %v: %w", b.Slot, i, err)
 				}
 			}
+			type insertData struct {
+				BlockSlot       uint64      `db:"block_slot"`
+				BlockIndex      int         `db:"block_index"`
+				BlockRoot       []byte      `db:"block_root"`
+				AggregationBits []byte      `db:"aggregationbits"`
+				Validators      sql.Scanner `db:"validators"`
+				Signature       []byte      `db:"signature"`
+				Slot            uint64      `db:"slot"`
+				CommitteeIndex  uint16      `db:"committeeindex"`
+				BeaconBlockRoot []byte      `db:"beaconblockroot"`
+				SourceEpoch     uint64      `db:"source_epoch"`
+				SourceRoot      []byte      `db:"source_root"`
+				TargetEpoch     uint64      `db:"target_epoch"`
+				TargetRoot      []byte      `db:"target_root"`
+				CommitteeBits   []byte      `db:"committeebits"`
+			}
+
+			payloads := make([]*insertData, 0)
+
 			for i, a := range b.Attestations {
-				_, err = stmtAttestations.Exec(b.Slot, i, b.BlockRoot, a.AggregationBits, pq.Array(a.Attesters), a.Signature, a.Data.Slot, a.Data.CommitteeIndex, a.Data.BeaconBlockRoot, a.Data.Source.Epoch, a.Data.Source.Root, a.Data.Target.Epoch, a.Data.Target.Root)
+				payloads = append(payloads, &insertData{
+					BlockSlot:       b.Slot,
+					BlockIndex:      i,
+					BlockRoot:       b.BlockRoot,
+					AggregationBits: a.AggregationBits,
+					Validators:      pq.Array(a.Attesters),
+					Signature:       a.Signature,
+					Slot:            a.Data.Slot,
+					CommitteeIndex:  a.Data.CommitteeIndex,
+					BeaconBlockRoot: a.Data.BeaconBlockRoot,
+					SourceEpoch:     a.Data.Source.Epoch,
+					SourceRoot:      a.Data.Source.Root,
+					TargetEpoch:     a.Data.Target.Epoch,
+					TargetRoot:      a.Data.Target.Root,
+					CommitteeBits:   a.CommitteeBits,
+				})
+			}
+			if len(payloads) > 0 {
+				_, err = tx.NamedExec(stmtAttestations, payloads)
 				if err != nil {
-					return fmt.Errorf("error executing stmtAttestations for block %v index %v: %w", b.Slot, i, err)
+					return fmt.Errorf("error executing stmtAttestations for block %v: %w", b.Slot, err)
 				}
 			}
 
@@ -523,7 +558,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 		return fmt.Errorf("error preparing insert validator statement: %w", err)
 	}
 
-	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = $2;`)
+	validatorStatusUpdateStmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = ANY($2);`)
 	if err != nil {
 		return fmt.Errorf("error preparing update validator status statement: %w", err)
 	}
@@ -532,6 +567,7 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 	valiudatorUpdateTs := time.Now()
 
 	validatorStatusCounts := make(map[string]int)
+	validatorStatusUpdateMap := make(map[string][]uint64)
 
 	updates := 0
 	for _, v := range validators {
@@ -625,10 +661,15 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
 				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, thresholdSlot %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, thresholdSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
 				//queries.WriteString(fmt.Sprintf("UPDATE validators SET status = '%s' WHERE validatorindex = %d;\n", v.Status, c.Index))
-				_, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
-				if err != nil {
-					return fmt.Errorf("error updating validator status: %w", err)
+				if validatorStatusUpdateMap[v.Status] == nil {
+					validatorStatusUpdateMap[v.Status] = make([]uint64, 0)
 				}
+				validatorStatusUpdateMap[v.Status] = append(validatorStatusUpdateMap[v.Status], c.Index)
+
+				// _, err := validatorStatusUpdateStmt.Exec(v.Status, c.Index)
+				// if err != nil {
+				// 	return fmt.Errorf("error updating validator status: %w", err)
+				// }
 				//updates++
 			}
 			// if c.Balance != v.Balance {
@@ -670,6 +711,28 @@ func SaveValidators(epoch uint64, validators []*types.Validator, client rpc.Clie
 				log.Infof("WithdrawalCredentials changed for validator %v from %x to %x", v.Index, c.WithdrawalCredentials, v.WithdrawalCredentials)
 				queries.WriteString(fmt.Sprintf("UPDATE validators SET withdrawalcredentials = '\\x%x' WHERE validatorindex = %d;\n", v.WithdrawalCredentials, c.Index))
 				updates++
+			}
+		}
+	}
+
+	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
+	const batchSize = 1000
+
+	for status, validators := range validatorStatusUpdateMap {
+		log.Infof("updating validator status to %s for %d validators", status, len(validators))
+
+		for i := 0; i < len(validators); i += batchSize {
+			end := i + batchSize
+			if end > len(validators) {
+				end = len(validators)
+			}
+
+			log.Infof("applying update batch from index %v to %v", i, end)
+			batch := validators[i:end]
+			_, err := validatorStatusUpdateStmt.Exec(status, pq.Array(batch))
+			if err != nil {
+				log.Error(err, "error updating validator status", 0)
+				return fmt.Errorf("error updating validator status: %w", err)
 			}
 		}
 	}
@@ -898,168 +961,732 @@ func SaveEpoch(epoch uint64, validators []*types.Validator, client rpc.Client, t
 	return nil
 }
 
-func GetLatestDashboardEpoch() (uint64, error) {
-	var lastEpoch uint64
-	err := db.AlloyWriter.Get(&lastEpoch, fmt.Sprintf("SELECT COALESCE(max(epoch), 0) FROM %s", EpochWriterTableName))
-	return lastEpoch, err
+type EpochMetadata struct {
+	Epoch              uint64     `ch:"epoch" db:"epoch"`
+	InsertBatchID      *uuid.UUID `ch:"insert_batch_id" db:"insert_batch_id"`
+	SuccessfulInsert   *time.Time `ch:"successful_insert" db:"successful_insert"`
+	TransferBatchId    *uuid.UUID `ch:"transfer_batch_id" db:"transfer_batch_id"`
+	SuccessfulTransfer *time.Time `ch:"successful_transfer" db:"successful_transfer"`
 }
 
-func GetOldestDashboardEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(min(epoch), 0) FROM %s", EpochWriterTableName))
-	return epoch, err
-}
+//
+// |-GetIncompleteTransferEpochs
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
+// |-GetPendingTransferEpochs
+// | - allocate transfer batch ids
+// | - PushEpochMetadata (transfer_batch_id)
+// | - TransferEpochs
+// | - PushEpochMetadata (successful_transfer)
 
-func GetMinOldHourlyEpoch() (uint64, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT min(epoch_start) as epoch_start FROM %s", HourWriterTableName))
-	return epoch, err
-}
-
-type EpochBounds struct {
-	EpochStart uint64 `db:"epoch_start"`
-	EpochEnd   uint64 `db:"epoch_end"`
-}
-
-type DayBounds struct {
-	Day        time.Time `db:"day"`
-	EpochStart uint64    `db:"epoch_start"`
-	EpochEnd   uint64    `db:"epoch_end"`
-}
-
-func GetLastExportedTotalEpoch() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", RollingTotalWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedHour() (*EpochBounds, error) {
-	var epoch EpochBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT COALESCE(max(epoch_start),0) as epoch_start, COALESCE(max(epoch_end),0) as epoch_end FROM %s", HourWriterTableName))
-	return &epoch, err
-}
-
-func GetLastExportedDay() (*DayBounds, error) {
-	var epoch DayBounds
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT day, epoch_start, epoch_end FROM %[1]s WHERE day = (select max(day) from %[1]s) limit 1;", DayWriterTableName))
-	return &epoch, err
-}
-
-func HasDashboardDataForEpoch(targetEpoch uint64) (bool, error) {
-	var epoch uint64
-	err := db.AlloyWriter.Get(&epoch, fmt.Sprintf("SELECT epoch FROM %s WHERE epoch = $1 LIMIT 1", EpochWriterTableName), targetEpoch)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
+func TransferEpochs(epochs []EpochMetadata) error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_batch").Observe(time.Since(start).Seconds())
+	}()
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	transferBatchID := epochs[0].TransferBatchId
+	for _, e := range epochs {
+		if e.TransferBatchId == nil || *e.TransferBatchId != *transferBatchID {
+			return fmt.Errorf("transfer batch id is not set or not identical for all epochs")
 		}
-		return false, err
 	}
-	return true, nil
-}
-
-// returns epochs between start and end that are missing in the database, start is inclusive end is exclusive
-func GetMissingEpochsBetween(start, end int64) ([]uint64, error) {
-	if start < 0 {
-		start = 0
-	}
-	if end <= start {
-		return nil, nil
-	}
-
-	if end-start > 100 {
-		// for large ranges we use a different approach to avoid making tons of selects
-		// this performs better for large ranges but is slow for short ranges
-		var epochs []uint64
-		err := db.AlloyWriter.Select(&epochs, fmt.Sprintf(`
-			WITH
-			epoch_range AS (
-				SELECT generate_series($1::bigint, $2::bigint) AS epoch
-			),
-			distinct_present_epochs AS (
-				SELECT DISTINCT epoch
-				FROM %s
-				WHERE epoch >= $1 AND epoch <= $2
-			)
-			SELECT epoch_range.epoch
-			FROM epoch_range
-			LEFT JOIN distinct_present_epochs ON epoch_range.epoch = distinct_present_epochs.epoch
-			WHERE distinct_present_epochs.epoch IS NULL
-			ORDER BY epoch_range.epoch
-		`, EpochWriterTableName), start, end-1)
-		return epochs, err
-	}
-
-	query := `SELECT TO_JSON(ARRAY_AGG(epoch)) AS result_array FROM (`
-
-	for epoch := start; epoch < end; epoch++ {
-		if epoch != start {
-			query += " UNION "
-		}
-		query += fmt.Sprintf(`SELECT %[1]d AS epoch WHERE NOT EXISTS (SELECT 1 FROM %[2]s WHERE epoch = %[1]d LIMIT 1)`, epoch, EpochWriterTableName)
-	}
-
-	query += `) AS result_array;`
-
-	var jsonArray sql.NullString
-
-	err := db.AlloyReader.Get(&jsonArray, query)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to query")
-	}
-
-	if !jsonArray.Valid {
-		return nil, nil
-	}
-
-	missingEpochs := make([]uint64, 0)
-	err = json.Unmarshal([]byte(jsonArray.String), &missingEpochs)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal")
-	}
-
-	// sort asc
-	sort.Slice(missingEpochs, func(i, j int) bool {
-		return missingEpochs[i] < missingEpochs[j]
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
 	})
-
-	return missingEpochs, nil
-}
-
-func GetPartitionNamesOfTable(tableName string) ([]string, error) {
-	var partitions []string
-	err := db.AlloyWriter.Select(&partitions, fmt.Sprintf(`
-		SELECT inhrelid::regclass AS partition_name
-		FROM pg_inherits
-		WHERE inhparent = 'public.%s'::regclass order by 1;`, tableName),
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    transferBatchID.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+	}))
+	now := time.Now()
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	for _, e := range epochs {
+		var count int
+		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
+			SELECT count() as count
+			FROM %s
+			FINAL
+			WHERE epoch_timestamp = $1
+			SETTINGS select_sequential_consistency = 1, use_skip_indexes_if_final = 1
+		`, UnsafeEpochsTableName), utils.EpochToTime(e.Epoch))
+		if err != nil {
+			return fmt.Errorf("error fetching epoch count: %w", err)
+		}
+		if count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the unsafe table", e.Epoch)
+		}
+	}
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_sanity_check").Observe(time.Since(now).Seconds())
+	now = time.Now()
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into %s
+		select
+			* EXCEPT _inserted_at
+		from
+			%s FINAL
+		where
+			epoch_timestamp in $1
+	`, FinalEpochsTableName, UnsafeEpochsTableName),
+		epoch_timestamp,
 	)
-	return partitions, err
+	metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_transfer_insert").Observe(time.Since(now).Seconds())
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
 }
 
-func AddToColumnEngine(table, columns string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		SELECT google_columnar_engine_add(
-			relation => '%s',
-			columns => '%s'
-		);
-		`, table, columns))
-	return err
+func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseWriter.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %s
+			FINAL
+			WHERE 
+				(successful_insert IS NULL OR successful_insert < now() - interval 5 day) AND
+				(insert_batch_id IS NOT NULL) AND
+				(successful_transfer IS NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete insert epochs: %w", err)
+	}
+	return epochs, nil
 }
 
-func AddToColumnEngineAllColumns(table string) error {
-	_, err := db.AlloyWriter.Exec(fmt.Sprintf(`
-		SELECT google_columnar_engine_add(
-			relation => '%s'
-		);
-		`, table))
-	return err
+func GetLatestFinishedEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch: %w", err)
+	}
+	return epoch, nil
 }
 
-const EpochWriterTableName = "validator_dashboard_data_epoch"
-const DayWriterTableName = "validator_dashboard_data_daily"
-const HourWriterTableName = "validator_dashboard_data_hourly"
+func GetOldestUnfinishedTransferEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseReader.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(min(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_transfer IS NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching oldest unfinished transfer epoch: %w", err)
+	}
+	return epoch, nil
+}
 
-const RollingTotalWriterTableName = "validator_dashboard_data_rolling_total"
-const RollingDailyWriterTable = "validator_dashboard_data_rolling_daily"
-const RollingWeeklyWriterTable = "validator_dashboard_data_rolling_weekly"
-const RollingMonthlyWriterTable = "validator_dashboard_data_rolling_monthly"
-const RollingNinetyDaysWriterTable = "validator_dashboard_data_rolling_90d"
+func GetLatestUnsafeEpoch() (int64, error) {
+	var epoch int64
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as epoch
+		FROM %s
+		FINAL
+		WHERE successful_insert IS NOT NULL
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest unsafe epoch: %w", err)
+	}
+	return epoch, nil
+}
+
+// enum for rollings (hourly, daily, weekly, monthly, total)
+type Rollings string
+
+const (
+	Rolling1h    Rollings = `validator_dashboard_rolling_1h`
+	Rolling24h   Rollings = `validator_dashboard_rolling_24h`
+	Rolling7d    Rollings = `validator_dashboard_rolling_7d`
+	Rolling30d   Rollings = `validator_dashboard_rolling_30d`
+	Rolling90d   Rollings = `validator_dashboard_rolling_90d`
+	RollingTotal Rollings = `validator_dashboard_rolling_total`
+)
+
+func (r *Rollings) GetDuration() time.Duration {
+	switch *r {
+	case Rolling1h:
+		return time.Hour
+	case Rolling24h:
+		return 24 * time.Hour
+	case Rolling7d:
+		return 7 * 24 * time.Hour
+	case Rolling30d:
+		return 30 * 24 * time.Hour
+	case Rolling90d:
+		return 90 * 24 * time.Hour
+	case RollingTotal:
+		return 25 * 365 * 24 * time.Hour // 25 years
+	}
+	return 0
+}
+
+func NukeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		TRUNCATE TABLE _unsafe_%s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error truncating table %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func GetRollingLastEpoch(rolling Rollings) (int64, error) {
+	// following doesnt handle epoch 0 correctly. fixing is left as an exercise for the reader
+	var epoch int64
+	// -1 if empty table
+	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch_end::Int64)), -1) as epoch
+		FROM _final_%s
+		FINAL
+		SETTINGS select_sequential_consistency = 1
+	`, rolling))
+	if err != nil {
+		return 0, fmt.Errorf("error fetching latest finished epoch for rolling %s: %w", rolling, err)
+	}
+	return epoch, nil
+}
+
+type RollingSourcesSuffix string
+
+const (
+	RollingSourceEpochly RollingSourcesSuffix = `epoch`
+	RollingSourceHourly  RollingSourcesSuffix = `hourly`
+	RollingSourceDaily   RollingSourcesSuffix = `daily`
+	RollingSourceMonthly RollingSourcesSuffix = `monthly`
+)
+
+type MinMax struct {
+	Min *time.Time
+	Max *time.Time
+}
+
+func GetMinMaxForRollingSource(table RollingSourcesSuffix, start time.Time, end *time.Time) (*MinMax, error) {
+	var result MinMax
+	column := "t"
+	if table == RollingSourceEpochly { // we were so close to greatness
+		column = "epoch_timestamp"
+	}
+	keys := []string{column + " >= ?"}
+	values := []interface{}{start}
+	if end != nil {
+		keys = append(keys, column+" < ?")
+		values = append(values, *end)
+	}
+	err := db.ClickHouseWriter.Get(&result, fmt.Sprintf(`
+		SELECT min(toNullable(%[1]s)) as min, max(toNullable(%[1]s)) as max
+		FROM _final_validator_dashboard_data_%[2]s
+		WHERE %[3]s
+		SETTINGS select_sequential_consistency = 1
+	`, column, table, strings.Join(keys, " and ")), values...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching min max for rolling source %s: %w", table, err)
+	}
+	if result.Min == nil || result.Max == nil {
+		return nil, nil
+	}
+	return &result, nil
+}
+
+func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffix, minMax MinMax) error {
+	// transfer the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+		"max_threads":                   2,
+	}))
+	column := "t"
+	selector := `
+		validator_index AS validator_index,
+		any(foo.t) AS t,
+		
+		groupArraySortedIfMergeState(2048)(epoch_map) AS epoch_map,
+		min(epoch_start) AS epoch_start,
+		max(epoch_end) AS epoch_end,
+		
+		argMinStateMerge(balance_start) AS balance_start,
+		argMaxStateMerge(balance_end) AS balance_end,
+		min(balance_min) AS balance_min,
+		max(balance_max) AS balance_max,
+		
+		sum(deposits_count) AS deposits_count,
+		sum(deposits_amount) AS deposits_amount,
+		sum(withdrawals_count) AS withdrawals_count,
+		sum(withdrawals_amount) AS withdrawals_amount,
+		
+		sum(attestations_scheduled) AS attestations_scheduled,
+		sum(attestations_observed) AS attestations_observed,
+		sum(attestations_head_matched) AS attestations_head_matched,
+		sum(attestations_target_matched) AS attestations_target_matched,
+		sum(attestations_source_matched) AS attestations_source_matched,
+		
+		sum(attestations_head_executed) AS attestations_head_executed,
+		sum(attestations_target_executed) AS attestations_target_executed,
+		sum(attestations_source_executed) AS attestations_source_executed,
+		
+		sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+		sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+		
+		sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+		sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+		
+		sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+		sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+		
+		sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+		sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+		
+		sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+		sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+		sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+		sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+		sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+		sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+
+		sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+		sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+		
+		sum(inclusion_delay_sum) AS inclusion_delay_sum,
+		sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+		
+		sum(blocks_scheduled) AS blocks_scheduled,
+		sum(blocks_proposed) AS blocks_proposed,
+		sum(blocks_cl_reward) AS blocks_cl_reward,
+		sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+		sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+		sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+		sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+		sum(blocks_slashing_count) AS blocks_slashing_count,
+		sum(blocks_expected) AS blocks_expected,
+		
+		sum(sync_scheduled) AS sync_scheduled,
+		sum(sync_executed) AS sync_executed,
+		sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+		sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+		sum(sync_localized_max_reward) AS sync_localized_max_reward,
+		sum(sync_committees_expected) AS sync_committees_expected,
+		max(slashed) AS slashed,
+		max(last_executed_duty_epoch) AS last_executed_duty_epoch,
+		max(last_scheduled_sync_epoch) AS last_scheduled_sync_epoch,
+		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch,
+		sum(consolidations_incoming_count) AS consolidations_incoming_count,
+		sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+		sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+		sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount,
+		sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+		sum(efficiency_attestations_dividend) AS efficiency_attestations_dividend,
+		sum(efficiency_attestations_divisor) AS efficiency_attestations_divisor,
+		sum(efficiency_proposals_dividend) AS efficiency_proposals_dividend,
+		sum(efficiency_proposals_divisor) AS efficiency_proposals_divisor,
+		sum(efficiency_sync_dividend) AS efficiency_sync_dividend,
+		sum(efficiency_sync_divisor) AS efficiency_sync_divisor,
+		sum(sync_reward) AS sync_reward,
+		sum(efficiency_dividend) AS efficiency_dividend,
+		sum(efficiency_divisor) AS efficiency_divisor
+	`
+	join := fmt.Sprintf(`
+		left join (
+			select 
+				validator_index,
+				sum(roi_dividend) as roi_dividend,
+				sum(roi_divisor) as roi_divisor
+			from _final_validator_dashboard_roi_%[1]s
+			where
+				%[2]s >= $1 and
+				%[2]s <= $2 
+			group by
+				validator_index
+		) roi
+		on roi.validator_index = a.validator_index`, source, column)
+	extraSelect := ", roi.roi_dividend::Int128 AS roi_dividend, roi.roi_divisor::Int128 AS roi_divisor"
+
+	if source == RollingSourceEpochly {
+		column = "epoch_timestamp"
+		// this is gonna be ugly. but cant avoid sadly without code generation
+		selector = `
+			validator_index AS validator_index,
+			any(epoch_timestamp) AS t,
+			
+			groupArraySortedIfState(2048)(-foo.epoch, validator_index = 0) AS epoch_map,
+			min(foo.epoch) AS epoch_start,
+			max(foo.epoch) AS epoch_end,
+			
+			argMinState(foo.balance_start, foo.epoch) AS balance_start,
+			argMaxState(foo.balance_end, foo.epoch) AS balance_end,
+			least(min(foo.balance_start), min(foo.balance_end)) AS balance_min,
+			greatest(max(foo.balance_start), max(foo.balance_end)) AS balance_max,
+			
+			sum(deposits_count) AS deposits_count,
+			sum(deposits_amount) AS deposits_amount,
+			sum(withdrawals_count) AS withdrawals_count,
+			sum(withdrawals_amount) AS withdrawals_amount,
+			
+			sum(attestations_scheduled) AS attestations_scheduled,
+			sum(attestations_observed) AS attestations_observed,
+			sum(attestations_head_matched) AS attestations_head_matched,
+			sum(attestations_target_matched) AS attestations_target_matched,
+			sum(attestations_source_matched) AS attestations_source_matched,
+
+			sum(attestations_head_executed) AS attestations_head_executed,
+			sum(attestations_target_executed) AS attestations_target_executed,
+			sum(attestations_source_executed) AS attestations_source_executed,
+
+			sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+			sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+			
+			sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+			sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+			
+			sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+			sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+			
+			sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+			sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+			
+			sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+			sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+			sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+			sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+			sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+			sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+			
+			sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+			sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+
+			sum(inclusion_delay_sum) AS inclusion_delay_sum,
+			sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+
+			sum(blocks_scheduled) AS blocks_scheduled,
+			sum(blocks_proposed) AS blocks_proposed,
+			sum(blocks_cl_reward) AS blocks_cl_reward,
+			sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+			sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+			sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+			sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+
+			sum(blocks_slashing_count) AS blocks_slashing_count,
+			sum(blocks_expected) AS blocks_expected,
+			sum(sync_scheduled) AS sync_scheduled,
+			sum(sync_executed) AS sync_executed,
+			sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+			sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+			sum(sync_localized_max_reward) AS sync_localized_max_reward,
+			sum(sync_committees_expected) AS sync_committees_expected,
+			max(slashed) AS slashed,
+			maxIfOrNull(foo.epoch, (foo.blocks_proposed != 0) OR (foo.sync_executed != 0) OR (foo.attestations_observed != 0)) AS last_executed_duty_epoch,
+			maxIfOrNull(foo.epoch, foo.sync_scheduled != 0) AS last_scheduled_sync_epoch,
+			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch,
+			sum(consolidations_incoming_count) AS consolidations_incoming_count,
+			sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+			sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+			sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount,
+			sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+			sum(efficiency_attestations_dividend) AS efficiency_attestations_dividend,
+			sum(efficiency_attestations_divisor) AS efficiency_attestations_divisor,
+			sum(efficiency_proposals_dividend) AS efficiency_proposals_dividend,
+			sum(efficiency_proposals_divisor) AS efficiency_proposals_divisor,
+			sum(efficiency_sync_dividend) AS efficiency_sync_dividend,
+			sum(efficiency_sync_divisor) AS efficiency_sync_divisor,
+			sum(sync_reward) AS sync_reward,
+			sum(efficiency_dividend) AS efficiency_dividend,
+			sum(efficiency_divisor) AS efficiency_divisor,
+			sum(roi_dividend::Int128) AS roi_dividend,
+			sum(roi_divisor::Int128) AS roi_divisor
+		`
+		join = ""
+		extraSelect = ""
+	}
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into _unsafe_%[1]s
+		with a as (select
+			%[2]s
+			from
+				_final_validator_dashboard_data_%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
+			where
+				foo.%[4]s >= $1 and foo.%[4]s <= $2
+			group by 
+				validator_index
+		)
+		select
+			a.*%[5]s
+		from a 
+		%[6]s
+	`, rolling, selector, source, column, extraSelect, join), *minMax.Min, *minMax.Max)
+	if err != nil {
+		return fmt.Errorf("error transferring epochs: %w", err)
+	}
+	return nil
+}
+
+func SwapRollingTables(rolling Rollings) error {
+	// swaps _unsafe_rolling with _final_rolling
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		EXCHANGE TABLES _unsafe_%[1]s AND _final_%[1]s
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func OptimizeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		OPTIMIZE TABLE _unsafe_%s FINAL
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error optimizing table %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func GetPendingInsertEpochs(maxEpoch int64, limit int64) ([]EpochMetadata, error) { // done
+	var epochs []EpochMetadata
+	// max epoch with assigned insert batch id
+	maxAssignedEpoch := int64(0)
+	err := db.ClickHouseWriter.Get(&maxAssignedEpoch, fmt.Sprintf(`
+		SELECT ifNull(max(toNullable(epoch::Int64)), -1) as max_epoch
+		FROM %s
+		FINAL
+		WHERE (insert_batch_id IS NOT NULL)
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching max assigned epoch: %w", err)
+	}
+	// cap the max epoch to the limit
+	if maxAssignedEpoch > maxEpoch {
+		return nil, fmt.Errorf("max assigned epoch %v is greater than the max epoch %v", maxAssignedEpoch, maxEpoch)
+	}
+	if maxEpoch > maxAssignedEpoch+limit {
+		maxEpoch = maxAssignedEpoch + limit
+	}
+	for i := maxAssignedEpoch + 1; i <= maxEpoch; i++ {
+		epochs = append(epochs, EpochMetadata{Epoch: uint64(i)})
+	}
+	return epochs, nil
+}
+
+func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
+	var epochs []EpochMetadata
+	err := db.ClickHouseWriter.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE 
+				-- data has been inserted to the unsafe table
+			    (successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days within any transfer batch
+				(transfer_batch_id NOT IN (select transfer_batch_id from %[1]s WHERE successful_insert < now() - interval 5 day)) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL) AND
+				-- data has been assigned a transfer batch id
+				(transfer_batch_id IS NOT NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
+	}
+	return epochs, nil
+}
+
+func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
+	var epochs []EpochMetadata
+	err := db.ClickHouseWriter.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE
+				-- data has been inserted to the unsafe table
+				(successful_insert IS NOT NULL) AND
+				-- insert to unsafe table is not older than 5 days
+				(successful_insert >= now() - interval 5 day) AND
+				-- data has not been assigned a transfer batch id
+				(transfer_batch_id IS NULL) AND
+				-- data has not been transferred to the final table
+				(successful_transfer IS NULL)
+			ORDER BY epoch ASC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching pending transfer epochs: %w", err)
+	}
+	return epochs, nil
+}
+
+func PushEpochMetadata(metdata []EpochMetadata) error {
+	if len(metdata) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	for _, m := range metdata {
+		if err := batch.AppendStruct(&m); err != nil {
+			return fmt.Errorf("error appending struct to batch: %w", err)
+		}
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
+}
+
+func ElectraGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
+	var hashes [][]byte
+	/*
+		err := db.ReaderDb.Get(&hashes, fmt.Sprintf(`
+			SELECT block_root
+			FROM consensus_layer_events
+			WHERE event_name = 'EpochProcessedEvent' and slot = %d
+		`, (utils.Config.ClConfig.SlotsPerEpoch*epoch)-1))
+	*/
+	// use goqu
+	q := goqu.Dialect("postgres").Select("block_root").
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("EpochProcessedEvent"),
+			goqu.I("slot").Eq((utils.Config.ClConfig.SlotsPerEpoch*epoch)-1),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&hashes, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching block roots for epoch %d: %w", epoch, err)
+	}
+	return hashes, nil
+}
+
+func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, error) {
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	var deposits []struct {
+		Amount uint64 `db:"amount"`
+		Pubkey string `db:"pubkey"`
+	}
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'pubkey'").As("pubkey"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("DepositProcessedEvent"),
+			goqu.I("slot").Gte(startSlot),
+			goqu.I("slot").Lte(endSlot),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&deposits, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
+	}
+	var result []constypes.ElectraDeposit
+	// decode pubkey, is stored in base64
+	for i := range deposits {
+		decodedPubkey, err := base64.StdEncoding.DecodeString(deposits[i].Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding pubkey for deposit %v: %w", deposits[i].Pubkey, err)
+		}
+		result = append(result, constypes.ElectraDeposit{
+			Amount: deposits[i].Amount,
+			Pubkey: decodedPubkey,
+		})
+	}
+	return result, nil
+}
+
+func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsolidation, error) {
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	var consolidations []constypes.ElectraConsolidation
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("data->>'source_index'").As("source_index"),
+		goqu.L("data->>'target_index'").As("target_index"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("ConsolidationProcessedEvent"),
+			goqu.I("slot").Gte(startSlot),
+			goqu.I("slot").Lte(endSlot),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra consolidations for epoch %v: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&consolidations, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra consolidations for epoch %v: %w", epoch, err)
+	}
+	return consolidations, nil
+}
+
+func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExcessBalance, error) {
+	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	var excessBalanceEvents []constypes.ElectraExcessBalance
+	q := goqu.Dialect("postgres").Select(
+		goqu.L("data->>'validator_index'").As("validator_index"),
+		goqu.L("data->>'amount'").As("amount"),
+	).
+		From("consensus_layer_events").
+		Where(
+			goqu.I("event_name").Eq("RemovedExcessBalanceEvent"),
+			goqu.I("slot").Gte(startSlot),
+			goqu.I("slot").Lte(endSlot),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra excess balance events for epoch %v: %w", epoch, err)
+	}
+	err = db.ReaderDb.Select(&excessBalanceEvents, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching electra excess balance events for epoch %v: %w", epoch, err)
+	}
+	return excessBalanceEvents, nil
+}
+
+const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
+const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
+const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
+const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"

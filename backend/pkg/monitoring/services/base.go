@@ -3,10 +3,13 @@ package services
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -42,11 +45,12 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func NewStatusReport(id string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func NewStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
 		flake := utils.GetSnowflake()
+		callerProgramCounter, callerFullFilePath, callerLine, callerOK := runtime.Caller(1)
 		now := time.Now()
 		go func() {
 			if metadata == nil {
@@ -56,10 +60,22 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			metadata["run_id"] = runId
 			metadata["status"] = string(status)
 			metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
+			if callerOK {
+				callerFunction := runtime.FuncForPC(callerProgramCounter).Name()
+				callerFile := filepath.Base(callerFullFilePath)
+				metadata["caller"] = fmt.Sprintf("%s %s:%d", callerFunction, callerFile, callerLine)
+			}
 
 			// report status to monitoring
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			timeoutContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
+			// wrap in clickhouse context so we can set the setting throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert to 0
+			// we have no materialized views on the status_reports table, but it triggers as we need the deduplication setting for the other tables
+			ctx := clickhouse.Context(timeoutContext, clickhouse.WithSettings(
+				clickhouse.Settings{
+					"throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert": 0,
+				},
+			))
 
 			timeouts_at := now.Add(1 * time.Minute)
 			if timeout != constants.Default {
@@ -100,4 +116,20 @@ func NewStatusReport(id string, timeout time.Duration, check_interval time.Durat
 			}
 		}()
 	}
+}
+
+func GetRequiredEvents() []constants.Event {
+	// i would hope this simple of a function doesnt need caching
+	requiredEvents := constants.RequiredEvents
+	if utils.Config.DeploymentType != "production" {
+		return requiredEvents
+	}
+	requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
+	if utils.Config.RocketpoolExporter.Enabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyRocketPool)
+	}
+	if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyPubkeyTags)
+	}
+	return requiredEvents
 }

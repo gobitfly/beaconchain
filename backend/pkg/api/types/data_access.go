@@ -133,6 +133,16 @@ type NotificationMachinesCursor struct {
 	Ts             time.Time
 }
 
+type RocketPoolCursor struct {
+	GenericCursor
+
+	Address            []byte
+	MinipoolsTotal     uint64
+	StakedRpl          decimal.Decimal
+	EffectiveRpl       decimal.Decimal
+	SmoothingpoolOptIn bool
+}
+
 type NotificationClientsCursor struct {
 	GenericCursor
 
@@ -240,8 +250,8 @@ type VDBSlashingsSummaryValidators struct {
 }
 
 type VDBProposalSummaryValidators struct {
-	Proposed []IndexBlocks
-	Missed   []IndexBlocks
+	Proposed []IndexSlots
+	Missed   []IndexSlots
 }
 
 type VDBProtocolModes struct {
@@ -263,14 +273,10 @@ type MobileSubscriptionTransactionGeneric struct {
 }
 
 type VDBValidatorSummaryChartRow struct {
-	Timestamp              time.Time `db:"ts"`
-	GroupId                int64     `db:"group_id"`
-	AttestationReward      float64   `db:"attestation_reward"`
-	AttestationIdealReward float64   `db:"attestations_ideal_reward"`
-	BlocksProposed         float64   `db:"blocks_proposed"`
-	BlocksScheduled        float64   `db:"blocks_scheduled"`
-	SyncExecuted           float64   `db:"sync_executed"`
-	SyncScheduled          float64   `db:"sync_scheduled"`
+	Timestamp          time.Time       `db:"ts"`
+	GroupId            int64           `db:"group_id"`
+	EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
+	EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
 }
 
 // healthz structs
@@ -322,5 +328,6 @@ type CtxKey string
 
 const CtxUserIdKey CtxKey = "user_id"
 const CtxIsMockedKey CtxKey = "is_mocked"
+const CtxIsMockingAllowedKey CtxKey = "is_mocking_allowed"
 const CtxMockSeedKey CtxKey = "mock_seed"
 const CtxDashboardIdKey CtxKey = "dashboard_id"

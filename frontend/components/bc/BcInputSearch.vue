@@ -19,7 +19,7 @@ const { t: $t } = useTranslation()
 
 const input = defineModel<string>()
 
-const elementInput = ref<HTMLElement >()
+const elementInput = ref<HTMLElement>()
 const hasInput = computed(() => input.value?.length)
 
 const idResults = useId()
@@ -227,7 +227,10 @@ const ariaActivedescendant = computed(() => {
               tabindex="-1"
               @click="handleClick(index)"
             >
-              <slot name="result" :item />
+              <slot
+                name="result"
+                :item
+              />
             </BcInputSearchItem>
           </ul>
         </slot>

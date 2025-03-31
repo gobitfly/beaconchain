@@ -9,7 +9,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
-const dialog = ref<{ container: HTMLElement } | undefined>()
+const dialog = ref<undefined | { container: HTMLElement }>()
 
 // requires two way binding as both the parent (only the parent can open the modal)
 // and the component itself (clicking outside the modal closes it) need to update the visibility

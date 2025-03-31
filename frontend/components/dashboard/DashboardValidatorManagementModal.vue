@@ -1,8 +1,4 @@
 <script lang="ts" setup>
-import {
-  faEdit, faTrash,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { DataTableSortEvent } from 'primevue/datatable'
 import { warn } from 'vue'
 import {
@@ -13,17 +9,15 @@ import {
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import type {
   GetValidatorDashboardValidatorsResponse,
+  PostValidatorDashboardValidatorsRequest,
   VDBManageValidatorsTableRow,
   VDBPostValidatorsData,
 } from '~/types/api/validator_dashboard'
 import type { Cursor } from '~/types/datatable'
 import type { NumberOrString } from '~/types/value'
 
-import {
-  API_PATH, type PathValues,
-} from '~/types/customFetch'
+import type { PathValues } from '~/types/customFetch'
 import type { InternalPostSearchResponse } from '~/types/api/search'
-// import type { InternalPostSearchResponse } from '~/types/api/search'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
@@ -34,9 +28,11 @@ const dialog = useDialog()
 
 const visible = defineModel<boolean>()
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  overview, refreshOverview,
-} = useValidatorDashboardOverviewStore()
+  overview,
+} = storeToRefs(validatorDashboardOverviewStore)
+const { refreshOverview } = validatorDashboardOverviewStore
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(25)
@@ -44,12 +40,11 @@ const selectedGroup = ref<number>(-1)
 const {
   addEntities,
   dashboardKey,
-  isPublic: isPublicDashboard,
+  isGuestDashboard,
   removeEntities,
-}
-  = useDashboardKey()
+} = useDashboardKey()
 const {
-  user,
+  premium_perks,
 } = useUserStore()
 
 const initialQuery = {
@@ -67,14 +62,6 @@ const {
 const data = ref<GetValidatorDashboardValidatorsResponse | undefined>()
 const selected = ref<VDBManageValidatorsTableRow[]>()
 const hasNoOpenDialogs = ref(true)
-
-type ValidatorUpdateBody = {
-  deposit_address?: string,
-  graffiti?: string,
-  group_id?: number,
-  validators?: number[],
-  withdrawal_address?: string,
-}
 
 const size = computed(() => {
   return {
@@ -106,12 +93,12 @@ const mapIndexOrPubKey = (
     validator => validator.index ?? validator.public_key)) ]
 }
 
-const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
+const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupId?: number) => {
   if (
     !body.validators?.length
     && !body.deposit_address
     && !body.graffiti
-    && !body.withdrawal_address
+    && !body.withdrawal_credential
   ) {
     warn('no validators selected to change group')
     return
@@ -119,7 +106,7 @@ const changeGroup = async (body: ValidatorUpdateBody, groupId?: number) => {
   body.group_id = groupId && groupId !== -1 ? groupId : 0
 
   await fetch<VDBPostValidatorsData>(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+    'DASHBOARD_VALIDATOR_MANAGEMENT',
     {
       body,
       method: 'POST',
@@ -136,13 +123,13 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     warn('no validators selected to change group')
     return
   }
-  if (isPublicDashboard.value) {
+  if (isGuestDashboard.value) {
     removeEntities(validators.map(v => v.toString()))
     return
   }
 
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT_DELETE,
+    'DASHBOARD_VALIDATOR_MANAGEMENT_DELETE',
     {
       body: JSON.stringify({ validators }),
       method: 'POST',
@@ -154,15 +141,13 @@ const removeValidators = async (validators?: NumberOrString[]) => {
   refreshOverview(dashboardKey.value)
 }
 
-const { premium_perks } = useUserStore()
-
 const editSelected = () => {
   hasNoOpenDialogs.value = false
   dialog.open(DashboardGroupSelectionDialog, {
     data: {
       groupId: selected.value?.[0]?.group_id ?? undefined,
       selectedValidators: selected.value?.length,
-      totalValidatorsValidators: totalValidators?.value,
+      totalValidators: totalValidators?.value,
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
@@ -205,7 +190,7 @@ const loadData = async () => {
   if (dashboardKey.value) {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<GetValidatorDashboardValidatorsResponse>(
-      API_PATH.DASHBOARD_VALIDATOR_MANAGEMENT,
+      'DASHBOARD_VALIDATOR_MANAGEMENT',
       undefined,
       { dashboardKey: dashboardKey.value },
       query.value,
@@ -267,23 +252,41 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     },
     onClose: (response) => {
       hasNoOpenDialogs.value = true
-      response?.data && removeValidators(list)
+      if (response?.data) {
+        removeValidators(list)
+      }
     },
   })
 }
 
-const totalValidators = computed(() => addUpValues(overview.value?.validators))
+const totalValidators = computed(() => {
+  // this is necessary after an `typescript update`
+  // for types created by api, we should use `types` instead of `interfaces`
+  return addUpValues(overview.value?.validators as unknown as Record<string, number>)
+})
 
-const maxValidatorsPerDashboard = computed(() =>
-  isPublicDashboard.value || !user.value?.premium_perks?.validators_per_dashboard
-    ? 20
-    : user.value.premium_perks.validators_per_dashboard,
-)
+const {
+  premiumProducts,
+} = useProductsStore()
 
-const premiumLimit = computed(
-  () => totalValidators.value >= maxValidatorsPerDashboard.value,
-)
-// const hasTooManyValidators = computed(() => totalValidators.value + 1 > maxValidatorsPerDashboard.value)
+const latestEffectiveBalance = computed(() => {
+  return overview.value?.balances.effective_latest
+})
+
+const effectiveBalanceLimitPerDashboard = computed(() => {
+  const freeProduct = premiumProducts.value['Free']
+  const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
+
+  return premium_perks.value?.effective_balance_per_dashboard ?? effectiveBalanceLimitFreeProduct
+})
+
+const hasReachedLimit = computed(() => {
+  if (!latestEffectiveBalance.value || !effectiveBalanceLimitPerDashboard.value) {
+    return false
+  }
+  return isGreaterEquals(latestEffectiveBalance.value, effectiveBalanceLimitPerDashboard.value)
+})
+
 const hasPremiumPerkBulkAdding = computed(() => !!premium_perks.value?.bulk_adding)
 
 const handleInvalidSubmit = () => {
@@ -298,10 +301,7 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     type,
     value,
   } = item
-  if (
-    totalValidators.value + 1 > maxValidatorsPerDashboard.value
-    || (type === 'validator_list' && totalValidators.value + value.validators.length > maxValidatorsPerDashboard.value)
-  ) {
+  if (hasReachedLimit.value) {
     handleInvalidSubmit()
     return
   }
@@ -312,7 +312,7 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     handleInvalidSubmit()
     return
   }
-  if (isPublicDashboard.value) {
+  if (isGuestDashboard.value) {
     if (item.type === 'validator') {
       addEntities([ `${item.value.index}` ])
       resetInput()
@@ -360,7 +360,7 @@ const inputValidator = ref('')
     <BcTableControl
       :search-placeholder="
         $t(
-          isPublicDashboard
+          isGuestDashboard
             ? 'dashboard.validator.summary.search_placeholder_public'
             : 'dashboard.validator.summary.search_placeholder',
         )
@@ -388,9 +388,8 @@ const inputValidator = ref('')
             v-model="inputValidator"
             class="search-bar"
             :has-premium-perk-bulk-adding
-            :total-validators
-            :max-validators-per-dashboard
-            :is-public-dashboard
+            :has-reached-limit
+            :is-guest-dashboard
             @submit="handleSubmit"
           />
         </div>
@@ -455,7 +454,9 @@ const inputValidator = ref('')
             >
               <template #body="slotProps">
                 <div class="balance-col">
-                  <BcFormatValue :value="slotProps.data.balance" />
+                  <BcFormatAmount
+                    :value="slotProps.data.balance"
+                  />
                 </div>
               </template>
             </Column>
@@ -496,17 +497,21 @@ const inputValidator = ref('')
                   @click.stop.prevent="editSelected()"
                 >
                   <span class="edit-label">{{ $t("common.edit") }}</span>
-                  <FontAwesomeIcon
+                  <BcIcon
                     class="edit-icon"
-                    :icon="faEdit"
+                    name="edit"
                   />
                 </Button>
               </template>
               <template #body="slotProps">
                 <div class="action-col">
-                  <FontAwesomeIcon
-                    :icon="faTrash"
-                    class="link"
+                  <BcButtonIcon
+                    class="remove-button"
+                    :screenreader-text="{
+                      key: 'dashboard.validator.management.remove_validator',
+                      interpolation: { validatorIndex: slotProps.data.index },
+                    }"
+                    name="trash"
                     @click="removeRow(slotProps.data)"
                   />
                 </div>
@@ -528,7 +533,7 @@ const inputValidator = ref('')
                   <div class="label">
                     {{ $t("dashboard.validator.col.balance") }}
                   </div>
-                  <BcFormatValue :value="slotProps.data.balance" />
+                  <BcFormatAmount :value="slotProps.data.balance" />
                 </div>
                 <div class="info">
                   <div class="label">
@@ -552,9 +557,7 @@ const inputValidator = ref('')
                   />
                 </div>
                 <div class="info">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.withdrawal_credential") }}
-                  </div>
+                  <div class="label" />
                   <BcFormatHash
                     :hash="slotProps.data.withdrawal_credential"
                     type="withdrawal_credentials"
@@ -565,21 +568,23 @@ const inputValidator = ref('')
 
             <template #bc-table-footer-left>
               <div
-                v-if="maxValidatorsPerDashboard"
                 class="left"
               >
                 <div
                   class="labels"
-                  :class="{ premiumLimit }"
+                  :class="{ 'premium-limit': hasReachedLimit }"
                 >
                   <span>
-                    <BcFormatNumber
-                      :value="totalValidators"
-                      default="0"
-                    /> /
-                    <BcFormatNumber
-                      :value="maxValidatorsPerDashboard"
-                      default="0"
+                    <BcFormatAmount
+                      :value="latestEffectiveBalance ?? '0'"
+                      :maximum-fraction-digits="0"
+                      target-currency="mainDisplayCurrency"
+                    />
+                    /
+                    <BcFormatAmount
+                      :value="effectiveBalanceLimitPerDashboard || '0'"
+                      :maximum-fraction-digits="0"
+                      target-currency="mainDisplayCurrency"
                     />
                   </span>
                 </div>
@@ -634,6 +639,10 @@ const inputValidator = ref('')
   @include fonts.big_text;
 }
 
+.remove-button {
+  color: var(--blue);
+}
+
 .group-selection {
   width: 6rem;
   @media (min-width: $breakpoint-md) {
@@ -648,6 +657,7 @@ const inputValidator = ref('')
   flex-direction: column;
   overflow-y: hidden;
   justify-content: space-between;
+  padding-bottom: var(--padding-medium);
 
   :deep(.p-datatable-wrapper) {
     flex-grow: 1;
@@ -677,7 +687,7 @@ const inputValidator = ref('')
     display: flex;
     gap: var(--padding-small);
 
-    &.premiumLimit {
+    &.premium-limit {
       color: var(--negative-color);
     }
 
@@ -689,10 +699,6 @@ const inputValidator = ref('')
   .gem {
     color: var(--primary-color);
   }
-}
-
-.public-key {
-  width: 134px;
 }
 
 .edit-icon {

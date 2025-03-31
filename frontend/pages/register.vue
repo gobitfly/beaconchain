@@ -3,7 +3,7 @@ import { object as yupObject } from 'yup'
 import { useForm } from 'vee-validate'
 import { Target } from '~/types/links'
 import { tOf } from '~/utils/translation'
-import { API_PATH } from '~/types/customFetch'
+
 import {
   handleMobileAuth, provideMobileAuthParams,
 } from '~/utils/mobileAuth'
@@ -17,7 +17,9 @@ const { promoCode } = usePromoCode()
 useBcSeo('login_and_register.title_register')
 
 const {
-  defineField, errors, handleSubmit,
+  defineField,
+  errors,
+  handleSubmit,
 } = useForm({
   validationSchema: yupObject({
     agreement: checkboxValidation(''),
@@ -49,7 +51,7 @@ const onSubmit = handleSubmit(async (values) => {
     return
   }
   try {
-    await fetch(API_PATH.REGISTER, {
+    await fetch('REGISTER', {
       body: {
         email: values.email,
         password: values.password,
@@ -68,7 +70,7 @@ const onSubmit = handleSubmit(async (values) => {
       await navigateTo('/')
     }
   }
-  catch (error) {
+  catch {
     toast.showError({
       detail: $t('login_and_register.error_register_message'),
       group: $t('login_and_register.error_register_group'),

@@ -1,14 +1,12 @@
 <script lang="ts" setup>
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
-import { API_PATH } from '~/types/customFetch'
 
 interface Props {
   dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
 }
 const {
-  dialogRef, props,
+  dialogRef,
+  props,
 } = useBcDialog<Props>()
 const { t: $t } = useTranslation()
 const { refreshDashboards } = useUserDashboardStore()
@@ -31,7 +29,7 @@ watch(
       // We currently only want to use one public id
       shareGroups.value
         = isPremiumUser.value
-        && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
+          && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
       isNew.value = !p.dashboard.public_ids?.[0]
       if (isNew.value) {
         dashboardName.value = props.value?.dashboard?.name ?? ''
@@ -47,7 +45,7 @@ watch(
 const add = async () => {
   isUpdating.value = true
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID,
+    'DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID',
     {
       body: {
         name: dashboardName.value,
@@ -65,7 +63,7 @@ const edit = async () => {
   isUpdating.value = true
   const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
   await fetch(
-    API_PATH.DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID,
+    'DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID',
     {
       body: {
         name: dashboardName.value,
@@ -149,7 +147,7 @@ const shareGroupTooltip = computed(() => {
           :text="shareGroupTooltip"
           :render-text-as-html="true"
         >
-          <FontAwesomeIcon :icon="faInfoCircle" />
+          <BcIcon name="circle-info" />
         </BcTooltip>
         <BcPremiumGem v-if="!isPremiumUser" />
       </div>

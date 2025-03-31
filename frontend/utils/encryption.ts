@@ -1,12 +1,5 @@
 import { warn } from 'vue'
 
-export function toBase64Url(str: string): string {
-  if (!str) {
-    return ''
-  }
-  return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
 export function fromBase64Url(str: string): string {
   if (!str) {
     return ''
@@ -19,6 +12,13 @@ export function fromBase64Url(str: string): string {
     warn('error getting fromBase64Url', str, e)
     return ''
   }
+}
+
+export function toBase64Url(str: string): string {
+  if (!str) {
+    return ''
+  }
+  return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
 function padBase64(input: string) {

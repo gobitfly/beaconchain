@@ -4,7 +4,7 @@ import type {
   VDBGroupSummaryData,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
+
 import type { SummaryTimeFrame } from '~/types/dashboard/summary'
 
 const validatorDashboardSummaryDetailsStore = defineStore(
@@ -25,7 +25,8 @@ export function useValidatorDashboardSummaryDetailsStore(
 ) {
   const { fetch } = useCustomFetch()
   const {
-    data, timeFrame: storeTimeFrame,
+    data,
+    timeFrame: storeTimeFrame,
   } = storeToRefs(
     validatorDashboardSummaryDetailsStore(),
   )
@@ -43,7 +44,7 @@ export function useValidatorDashboardSummaryDetailsStore(
       storeTimeFrame.value = timeFrame
     }
     const res = await fetch<GetValidatorDashboardGroupSummaryResponse>(
-      API_PATH.DASHBOARD_SUMMARY_DETAILS,
+      'DASHBOARD_SUMMARY_DETAILS',
       { query: { period: timeFrame } },
       {
         dashboardKey,

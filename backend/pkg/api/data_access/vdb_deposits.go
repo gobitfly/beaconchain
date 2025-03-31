@@ -7,11 +7,10 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
-	"strings"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -21,8 +20,8 @@ import (
 )
 
 func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+	// TODO: add default sorting
 	var err error
-	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.ELDepositsCursor
 
 	if cursor != "" {
@@ -53,58 +52,61 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		Valid                 bool          `db:"valid_signature"`
 	}
 
-	query := `
-			SELECT
-				ed.publickey,
-				ed.block_number,
-				ed.log_index,
-				ed.from_address,
-				ed.msg_sender,
-				ed.tx_hash,
-				ed.withdrawal_credentials,
-				ed.amount,
-				ed.valid_signature,
-				ed.block_ts
-		`
+	depositsDs := goqu.Dialect("postgres").
+		From(goqu.T("eth1_deposits").As("ed")).
+		Select(
+			goqu.I("ed.publickey"),
+			goqu.I("ed.block_number"),
+			goqu.L("COALESCE(ed.log_index, 0) AS log_index"),
+			goqu.I("ed.from_address"),
+			goqu.I("ed.msg_sender"),
+			goqu.I("ed.tx_hash"),
+			goqu.I("ed.withdrawal_credentials"),
+			goqu.I("ed.amount"),
+			goqu.I("ed.valid_signature"),
+			goqu.I("ed.block_ts"),
+		)
 
-	var filter interface{}
 	if dashboardId.Validators != nil {
-		query += `
-			FROM
-				eth1_deposits ed
-			WHERE
-				ed.publickey = ANY ($1)`
-		filter = byteaArray
+		depositsDs = depositsDs.
+			Where(goqu.L("ed.publickey = ANY(?)", byteaArray))
 	} else {
-		query += `
-			, cedl.group_id
-			FROM
-				cached_eth1_deposits_lookup cedl
-			INNER JOIN eth1_deposits ed ON ed.block_number = cedl.block_number AND ed.log_index = cedl.log_index
-			WHERE
-				cedl.dashboard_id = $1`
-		filter = dashboardId.Id
+		depositsDs = depositsDs.
+			SelectAppend(
+				goqu.I("cedl.group_id"),
+			).
+			InnerJoin(
+				goqu.T("cached_eth1_deposits_lookup").As("cedl"),
+				goqu.On(
+					goqu.I("ed.block_number").Eq(goqu.I("cedl.block_number")),
+					goqu.I("ed.log_index").Eq(goqu.I("cedl.log_index")),
+				),
+			).
+			Where(goqu.I("cedl.dashboard_id").Eq(dashboardId.Id))
 	}
 
-	params := []interface{}{filter}
-	filterFragment := ` ORDER BY ed.block_number DESC, ed.log_index DESC`
-	if currentCursor.IsValid() {
-		filterFragment = ` AND (ed.block_number < $2 or (ed.block_number = $2 and ed.log_index < $3)) ` + filterFragment
-		params = append(params, currentCursor.BlockNumber, currentCursor.LogIndex)
+	defaultColumns := []t.SortColumn{
+		{Column: goqu.I("ed.block_number"), Desc: true, Offset: currentCursor.BlockNumber},
+		{Column: goqu.I("ed.log_index"), Desc: true, Offset: currentCursor.LogIndex},
+	}
+	order, directions, err := applySortAndPagination(defaultColumns, defaultColumns[0], currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
-		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
+	depositsDs = depositsDs.
+		Order(order...).
+		Limit(uint(limit + 1))
+	if directions != nil {
+		depositsDs = depositsDs.Where(directions)
 	}
 
-	if dashboardId.Validators == nil {
-		filterFragment = strings.Replace(filterFragment, "ed.", "cedl.", -1)
+	query, params, err := depositsDs.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare SQL query: %w", err)
 	}
 
-	params = append(params, limit+1)
-	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
-
-	err = db.AlloyReader.SelectContext(ctx, &data, query+filterFragment, params...)
+	err = db.AlloyReader.SelectContext(ctx, &data, query, params...)
 
 	if err != nil {
 		return nil, nil, err
@@ -219,8 +221,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 }
 
 func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+	// TODO: add default sorting
 	var err error
-	currentDirection := enums.DESC // TODO: expose over parameter
 	var currentCursor t.CLDepositsCursor
 
 	if cursor != "" {
@@ -247,55 +249,111 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		Signature            []byte        `db:"signature"`
 	}
 
-	query := `
-			SELECT
-				bd.publickey,
-				bd.block_slot,
-				bd.block_index,
-				bd.amount,
-				bd.signature,
-				bd.withdrawalcredentials
-		`
+	depositsBridgeDs := goqu.Dialect("postgres").
+		From(goqu.T("blocks_deposits").As("bd")).
+		Select(
+			goqu.I("bd.publickey"),
+			goqu.I("bd.block_slot"),
+			goqu.I("bd.block_index"),
+			goqu.I("bd.amount"),
+			goqu.I("bd.signature"),
+			goqu.I("bd.withdrawalcredentials"),
+		).
+		InnerJoin(
+			goqu.T("blocks").As("b"),
+			goqu.On(
+				goqu.I("bd.block_root").Eq(goqu.I("b.blockroot")),
+				goqu.L("b.status = '1'"),
+			),
+		)
 
-	var filter interface{}
+	depositRequestsDs := goqu.Dialect("postgres").
+		From(goqu.T("blocks_deposit_requests").As("bdr")).
+		Select(
+			goqu.I("bdr.pubkey"),
+			goqu.I("bdr.block_slot"),
+			goqu.I("bdr.request_index"),
+			goqu.I("bdr.amount"),
+			goqu.I("bdr.signature"),
+			goqu.I("bdr.withdrawal_credentials"),
+		).
+		InnerJoin(
+			goqu.T("blocks").As("b"),
+			goqu.On(
+				goqu.I("bdr.block_root").Eq(goqu.I("b.blockroot")),
+				goqu.L("b.status = '1'"),
+			),
+		)
+
 	if dashboardId.Validators != nil {
-		query += `
-			FROM
-				blocks_deposits bd
-			WHERE
-				bd.publickey = ANY ($1)`
-		filter = byteaArray
+		depositsBridgeDs = depositsBridgeDs.
+			Where(goqu.L("bd.publickey = ANY(?)", byteaArray))
+		depositRequestsDs = depositRequestsDs.
+			Where(goqu.L("bdr.pubkey = ANY(?)", byteaArray))
 	} else {
-		query += `
-			, cbdl.group_id
-			FROM
-				cached_blocks_deposits_lookup cbdl
-				INNER JOIN blocks_deposits bd ON bd.block_slot = cbdl.block_slot
-					AND bd.block_index = cbdl.block_index
-			WHERE
-				cbdl.dashboard_id = $1`
-		filter = dashboardId.Id
+		depositsBridgeDs = depositsBridgeDs.
+			SelectAppend(
+				goqu.I("cbdl.group_id"),
+			).
+			InnerJoin(
+				goqu.T("cached_blocks_deposits_lookup").As("cbdl"),
+				goqu.On(
+					goqu.I("bd.block_slot").Eq(goqu.I("cbdl.block_slot")),
+					goqu.I("bd.block_index").Eq(goqu.I("cbdl.block_index")),
+				),
+			).
+			Where(goqu.I("cbdl.dashboard_id").Eq(dashboardId.Id))
+
+		depositRequestsDs = depositRequestsDs.
+			SelectAppend(
+				goqu.I("cbdrl.group_id"),
+			).
+			InnerJoin(
+				goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl"),
+				goqu.On(
+					goqu.I("bdr.block_slot").Eq(goqu.I("cbdrl.block_slot")),
+					goqu.I("bdr.request_index").Eq(goqu.I("cbdrl.request_index")),
+				),
+			).
+			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
 	}
 
-	params := []interface{}{filter}
-	filterFragment := ` ORDER BY bd.block_slot DESC, bd.block_index DESC`
-	if currentCursor.IsValid() {
-		filterFragment = ` AND (bd.block_slot < $2 or (bd.block_slot = $2 and bd.block_index < $3)) ` + filterFragment
-		params = append(params, currentCursor.Slot, currentCursor.SlotIndex)
+	depositsDs := depositsBridgeDs
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		depositsDs = depositsDs.
+			UnionAll(depositRequestsDs)
+		if currentCursor.IsValid() {
+			postElectra := uint64(currentCursor.Slot)/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			if postElectra && currentCursor.Reverse {
+				depositsDs = depositRequestsDs
+			} else if !postElectra && !currentCursor.Reverse {
+				depositsDs = depositsBridgeDs
+			}
+		}
 	}
 
-	if currentDirection == enums.ASC && !currentCursor.IsReverse() || currentDirection == enums.DESC && currentCursor.IsReverse() {
-		filterFragment = strings.Replace(strings.Replace(filterFragment, "<", ">", -1), "DESC", "ASC", -1)
+	defaultColumns := []t.SortColumn{
+		{Column: goqu.I("block_slot"), Desc: true, Offset: currentCursor.Slot},
+		{Column: goqu.I("block_index"), Desc: true, Offset: currentCursor.SlotIndex},
+	}
+	order, directions, err := applySortAndPagination(defaultColumns, defaultColumns[0], currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if dashboardId.Validators == nil {
-		filterFragment = strings.Replace(filterFragment, "bd.", "cbdl.", -1)
+	depositsDs = depositsDs.
+		Order(order...).
+		Limit(uint(limit + 1))
+	if directions != nil {
+		depositsDs = depositsDs.Where(directions)
 	}
 
-	params = append(params, limit+1)
-	filterFragment += fmt.Sprintf(" LIMIT $%d", len(params))
+	query, params, err := depositsDs.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to prepare SQL query: %w", err)
+	}
 
-	err = db.AlloyReader.SelectContext(ctx, &data, query+filterFragment, params...)
+	err = db.AlloyReader.SelectContext(ctx, &data, query, params...)
 
 	if err != nil {
 		return nil, nil, err
@@ -363,43 +421,37 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Con
 		TotalAmount: decimal.Zero,
 	}
 
-	// Resolve validator indices to pubkeys
-	byteaArray, err := d.getValidatorPubkeys(dashboardId)
-	if err != nil {
-		return nil, err
-	}
+	totalDs := goqu.Dialect("postgres").
+		Select(goqu.L("COALESCE(SUM(amount), 0)"))
 
-	query := `
-			SELECT
-				COALESCE(SUM(amount), 0)
-		`
-
-	var filter interface{}
 	if dashboardId.Validators != nil {
-		query += `
-			FROM
-				eth1_deposits
-			WHERE
-				publickey = ANY ($1)`
-		filter = byteaArray
+		// Resolve validator indices to pubkeys
+		byteaArray, err := d.getValidatorPubkeys(dashboardId)
+		if err != nil {
+			return nil, err
+		}
+		totalDs = totalDs.
+			From(goqu.T("eth1_deposits").As("ed")).
+			Where(goqu.L("publickey = ANY(?)", byteaArray))
 	} else {
-		query += `
-			FROM
-				cached_eth1_deposits_lookup
-			WHERE
-				dashboard_id = $1
-			GROUP BY
-				dashboard_id`
-		filter = dashboardId.Id
+		totalDs = totalDs.
+			From(goqu.T("cached_eth1_deposits_lookup")).
+			Where(goqu.I("dashboard_id").Eq(dashboardId.Id)).
+			GroupBy(goqu.I("dashboard_id"))
 	}
 
-	var data int64
-	err = db.AlloyReader.GetContext(ctx, &data, query, filter)
+	query, params, err := totalDs.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare SQL query: %w", err)
+	}
+
+	var sum int64
+	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
-	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
+	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
 
 	return &responseData, nil
 }
@@ -409,43 +461,66 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 		TotalAmount: decimal.Zero,
 	}
 
-	// Resolve validator indices to pubkeys
-	byteaArray, err := d.getValidatorPubkeys(dashboardId)
-	if err != nil {
-		return nil, err
-	}
+	depositsTotalDs := goqu.Dialect("postgres").
+		Select(goqu.L("COALESCE(SUM(amount), 0)").As("amount"))
+	depositRequestsTotalDs := depositsTotalDs
 
-	query := `
-			SELECT
-				COALESCE(SUM(amount), 0)
-		`
-
-	var filter interface{}
 	if dashboardId.Validators != nil {
-		query += `
-			FROM
-				blocks_deposits
-			WHERE
-				publickey = ANY ($1)`
-		filter = byteaArray
+		// Resolve validator indices to pubkeys
+		byteaArray, err := d.getValidatorPubkeys(dashboardId)
+		if err != nil {
+			return nil, err
+		}
+		depositsTotalDs = depositsTotalDs.
+			From(goqu.T("blocks_deposits").As("bd")).
+			Where(goqu.L("publickey = ANY(?)", byteaArray)).
+			InnerJoin(
+				goqu.T("blocks").As("b"),
+				goqu.On(
+					goqu.I("bd.block_root").Eq(goqu.I("b.blockroot")),
+					goqu.L("b.status = '1'"),
+				),
+			)
+		depositRequestsTotalDs = depositRequestsTotalDs.
+			From(goqu.T("blocks_deposit_requests").As("bdr")).
+			Where(goqu.L("pubkey = ANY(?)", byteaArray)).
+			InnerJoin(
+				goqu.T("blocks").As("b"),
+				goqu.On(
+					goqu.I("bdr.block_root").Eq(goqu.I("b.blockroot")),
+					goqu.L("b.status = '1'"),
+				),
+			)
 	} else {
-		query += `
-			FROM
-				cached_blocks_deposits_lookup
-			WHERE
-				dashboard_id = $1
-			GROUP BY
-				dashboard_id`
-		filter = dashboardId.Id
+		depositsTotalDs = depositsTotalDs.
+			From(goqu.T("cached_blocks_deposits_lookup")).
+			Where(goqu.I("dashboard_id").Eq(dashboardId.Id)).
+			GroupBy(goqu.I("dashboard_id"))
+
+		depositRequestsTotalDs = depositRequestsTotalDs.
+			From(goqu.T("cached_blocks_deposit_requests_lookup")).
+			Where(goqu.I("dashboard_id").Eq(dashboardId.Id)).
+			GroupBy(goqu.I("dashboard_id"))
 	}
 
-	var data int64
-	err = db.AlloyReader.GetContext(ctx, &data, query, filter)
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		depositsTotalDs = goqu.Dialect("postgres").
+			Select(goqu.L("COALESCE(SUM(amount), 0)")).
+			From(depositsTotalDs.UnionAll(depositRequestsTotalDs))
+	}
+
+	query, params, err := depositsTotalDs.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare SQL query: %w", err)
+	}
+
+	var sum int64
+	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
-	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(data))
+	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
 
 	return &responseData, nil
 }

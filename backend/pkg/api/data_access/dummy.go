@@ -22,8 +22,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type DummyService struct {
-}
+type DummyService struct{}
 
 // ensure DummyService pointer implements DataAccessor
 var _ DataAccessor = (*DummyService)(nil)
@@ -68,7 +67,7 @@ func populateWithFakeData(ctx context.Context, a interface{}) error {
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(10), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
-func (d *DummyService) StartDataAccessServices() {
+func (*DummyService) StartDataAccessServices() {
 	// nothing to start
 }
 
@@ -95,218 +94,222 @@ func getDummyWithPaging[T any](ctx context.Context) ([]T, *t.Paging, error) {
 	return r, &p, err
 }
 
-func (d *DummyService) Close() {
+func (*DummyService) Close() {
 	// nothing to close
 }
 
-func (d *DummyService) GetLatestSlot(ctx context.Context) (uint64, error) {
+func (*DummyService) GetLatestSlot(ctx context.Context) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetLatestFinalizedEpoch(ctx context.Context) (uint64, error) {
+func (*DummyService) GetLatestFinalizedEpoch(ctx context.Context) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetLatestBlock(ctx context.Context) (uint64, error) {
+func (*DummyService) GetLatestBlock(ctx context.Context) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error) {
+func (*DummyService) GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error) {
 	return getDummyData[[]t.EthConversionRate](ctx)
 }
 
-func (d *DummyService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
+func (*DummyService) GetUserByEmail(ctx context.Context, email string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
+func (*DummyService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) RemoveUser(ctx context.Context, userId uint64) error {
+func (*DummyService) RemoveUser(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateUserEmail(ctx context.Context, userId uint64) error {
+func (*DummyService) UpdateUserEmail(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
+func (*DummyService) UpdateUserPassword(ctx context.Context, userId uint64, password string) error {
 	return nil
 }
 
-func (d *DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
+func (*DummyService) GetEmailConfirmationTime(ctx context.Context, userId uint64) (time.Time, error) {
 	return getDummyData[time.Time](ctx)
 }
 
-func (d *DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
+func (*DummyService) GetPasswordResetTime(ctx context.Context, userId uint64) (time.Time, error) {
 	return getDummyData[time.Time](ctx)
 }
 
-func (d *DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
+func (*DummyService) UpdateEmailConfirmationTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
+func (*DummyService) IsPasswordResetAllowed(ctx context.Context, userId uint64) (bool, error) {
 	return true, nil
 }
 
-func (d *DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
+func (*DummyService) UpdatePasswordResetTime(ctx context.Context, userId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
+func (*DummyService) UpdateEmailConfirmationHash(ctx context.Context, userId uint64, email, confirmationHash string) error {
 	return nil
 }
 
-func (d *DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
+func (*DummyService) UpdatePasswordResetHash(ctx context.Context, userId uint64, confirmationHash string) error {
 	return nil
 }
 
-func (d *DummyService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
+func (*DummyService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
 	return getDummyStruct[t.UserInfo](ctx)
 }
 
-func (d *DummyService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
+func (*DummyService) GetUserCredentialInfo(ctx context.Context, userId uint64) (*t.UserCredentialInfo, error) {
 	return getDummyStruct[t.UserCredentialInfo](ctx)
 }
 
-func (d *DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
+func (*DummyService) GetUserIdByApiKey(ctx context.Context, apiKey string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
+func (*DummyService) GetUserIdByConfirmationHash(ctx context.Context, hash string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
+func (*DummyService) GetUserIdByResetHash(ctx context.Context, hash string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
+func (*DummyService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
 	return getDummyStruct[t.ProductSummary](ctx)
 }
 
-func (d *DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
+func (*DummyService) GetFreeTierPerks(ctx context.Context) (*t.PremiumPerks, error) {
 	return getDummyStruct[t.PremiumPerks](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
+func (*DummyService) GetValidatorDashboardUser(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.DashboardUser, error) {
 	return getDummyStruct[t.DashboardUser](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
+func (*DummyService) GetValidatorDashboardIdByPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBIdPrimary, error) {
 	return getDummyStruct[t.VDBIdPrimary](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
+func (*DummyService) GetValidatorDashboardInfo(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.ValidatorDashboard, error) {
 	r, err := getDummyStruct[t.ValidatorDashboard](ctx)
 	// return semi-valid data to not break staging
 	r.IsArchived = false
 	return r, err
 }
 
-func (d *DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
+func (*DummyService) GetValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary) (string, error) {
 	return getDummyData[string](ctx)
 }
 
-func (d *DummyService) GetValidatorsFromSlices(ctx context.Context, indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
+func (*DummyService) GetValidatorsFromSlices(ctx context.Context, indices []uint64, publicKeys []string) ([]t.VDBValidator, error) {
 	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
+func (*DummyService) GetValidatorsEffectiveBalanceTotal(ctx context.Context, indices []uint64) (uint64, error) {
+	return getDummyData[uint64](ctx)
+}
+
+func (*DummyService) GetUserDashboards(ctx context.Context, userId uint64) (*t.UserDashboardsData, error) {
 	return getDummyStruct[t.UserDashboardsData](ctx)
 }
 
-func (d *DummyService) CreateValidatorDashboard(ctx context.Context, userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
+func (*DummyService) CreateValidatorDashboard(ctx context.Context, userId uint64, name string, network uint64) (*t.VDBPostReturnData, error) {
 	return getDummyStruct[t.VDBPostReturnData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
+func (*DummyService) GetValidatorDashboardOverview(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.VDBOverviewData, error) {
 	return getDummyStruct[t.VDBOverviewData](ctx)
 }
 
-func (d *DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
+func (*DummyService) RemoveValidatorDashboard(ctx context.Context, dashboardId t.VDBIdPrimary) error {
 	return nil
 }
 
-func (d *DummyService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
+func (*DummyService) RemoveValidatorDashboards(ctx context.Context, dashboardIds []uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
+func (*DummyService) UpdateValidatorDashboardArchiving(ctx context.Context, dashboardId t.VDBIdPrimary, archivedReason *enums.VDBArchivedReason) (*t.VDBPostArchivingReturnData, error) {
 	return getDummyStruct[t.VDBPostArchivingReturnData](ctx)
 }
 
-func (d *DummyService) UpdateValidatorDashboardsArchiving(ctx context.Context, dashboards []t.ArchiverDashboardArchiveReason) error {
+func (*DummyService) UpdateValidatorDashboardsArchiving(ctx context.Context, dashboards []t.ArchiverDashboardArchiveReason) error {
 	return nil
 }
 
-func (d *DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
+func (*DummyService) UpdateValidatorDashboardName(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostReturnData, error) {
 	return getDummyStruct[t.VDBPostReturnData](ctx)
 }
 
-func (d *DummyService) CreateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
+func (*DummyService) CreateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, name string) (*t.VDBPostCreateGroupData, error) {
 	return getDummyStruct[t.VDBPostCreateGroupData](ctx)
 }
 
-func (d *DummyService) UpdateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
+func (*DummyService) UpdateValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, name string) (*t.VDBPostCreateGroupData, error) {
 	return getDummyStruct[t.VDBPostCreateGroupData](ctx)
 }
 
-func (d *DummyService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
+func (*DummyService) RemoveValidatorDashboardGroup(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
 	return nil
 }
 
-func (d *DummyService) RemoveValidatorDashboardGroupValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
+func (*DummyService) RemoveValidatorDashboardGroupValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
+func (*DummyService) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64) (bool, error) {
 	return true, nil
 }
 
-func (d *DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
+func (*DummyService) AddValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, validators []t.VDBValidator) ([]t.VDBPostValidatorsData, error) {
 	return getDummyData[[]t.VDBPostValidatorsData](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByDepositAddress(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (*DummyService) GetValidatorsByDepositAddress(ctx context.Context, depositAddress string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByWithdrawalCredential(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, address string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (*DummyService) GetValidatorsByWithdrawalCredentials(ctx context.Context, withdrawalCredentials string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) AddValidatorDashboardValidatorsByGraffiti(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, graffiti string, limit uint64) ([]t.VDBPostValidatorsData, error) {
-	return getDummyData[[]t.VDBPostValidatorsData](ctx)
+func (*DummyService) GetValidatorsByGraffiti(ctx context.Context, graffiti string) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.VDBManageValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBManageValidatorsTableRow](ctx)
 }
 
-func (d *DummyService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
+func (*DummyService) RemoveValidatorDashboardValidators(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) error {
 	return nil
 }
 
-func (d *DummyService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
+func (*DummyService) CreateValidatorDashboardPublicId(ctx context.Context, dashboardId t.VDBIdPrimary, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	return getDummyStruct[t.VDBPublicId](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error) {
+func (*DummyService) GetValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) (*t.VDBPublicId, error) {
 	return getDummyStruct[t.VDBPublicId](ctx)
 }
 
-func (d *DummyService) UpdateValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error) {
+func (*DummyService) UpdateValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic, name string, shareGroups bool) (*t.VDBPublicId, error) {
 	return getDummyStruct[t.VDBPublicId](ctx)
 }
 
-func (d *DummyService) RemoveValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) error {
+func (*DummyService) RemoveValidatorDashboardPublicId(ctx context.Context, publicDashboardId t.VDBIdPublic) error {
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
+func (*DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboardId t.VDBId, groupIds []uint64) ([]t.SlotVizEpoch, error) {
 	r := struct {
 		Epochs []t.SlotVizEpoch `faker:"slice_len=4"`
 	}{}
@@ -314,95 +317,95 @@ func (d *DummyService) GetValidatorDashboardSlotViz(ctx context.Context, dashboa
 	return r.Epochs, err
 }
 
-func (d *DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardSummary(ctx context.Context, dashboardId t.VDBId, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBSummaryColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBSummaryTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBSummaryTableRow](ctx)
 }
-func (d *DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
+func (*DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, protocolModes t.VDBProtocolModes) (*t.VDBGroupSummaryData, error) {
 	return getDummyStruct[t.VDBGroupSummaryData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
+func (*DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
 	return getDummyStruct[t.ChartData[int, float64]](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
+func (*DummyService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
 	return getDummyStruct[t.VDBGeneralSummaryValidators](ctx)
 }
-func (d *DummyService) GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
+func (*DummyService) GetValidatorDashboardSyncSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSyncSummaryValidators, error) {
 	return getDummyStruct[t.VDBSyncSummaryValidators](ctx)
 }
-func (d *DummyService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
+func (*DummyService) GetValidatorDashboardSlashingsSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBSlashingsSummaryValidators, error) {
 	return getDummyStruct[t.VDBSlashingsSummaryValidators](ctx)
 }
-func (d *DummyService) GetValidatorDashboardProposalSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
+func (*DummyService) GetValidatorDashboardProposalSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod) (*t.VDBProposalSummaryValidators, error) {
 	return getDummyStruct[t.VDBProposalSummaryValidators](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardRewards(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRewardsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBRewardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRewardsTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error) {
+func (*DummyService) GetValidatorDashboardGroupRewards(ctx context.Context, dashboardId t.VDBId, groupId int64, epoch uint64, protocolModes t.VDBProtocolModes) (*t.VDBGroupRewardsData, error) {
 	return getDummyStruct[t.VDBGroupRewardsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
+func (*DummyService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes) (*t.ChartData[int, decimal.Decimal], error) {
 	return getDummyStruct[t.ChartData[int, decimal.Decimal]](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardDuties(ctx context.Context, dashboardId t.VDBId, epoch uint64, groupId int64, cursor string, colSort t.Sort[enums.VDBDutiesColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBEpochDutiesTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBEpochDutiesTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardBlocks(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBBlocksColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBBlocksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBBlocksTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
+func (*DummyService) GetValidatorDashboardHeatmap(ctx context.Context, dashboardId t.VDBId, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.VDBHeatmap, error) {
 	return getDummyStruct[t.VDBHeatmap](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
+func (*DummyService) GetValidatorDashboardGroupHeatmap(ctx context.Context, dashboardId t.VDBId, groupId uint64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, timestamp uint64) (*t.VDBHeatmapTooltipData, error) {
 	return getDummyStruct[t.VDBHeatmapTooltipData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBExecutionDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBExecutionDepositsTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBConsensusDepositsTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
+func (*DummyService) GetValidatorDashboardTotalElDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalExecutionDepositsData, error) {
 	return getDummyStruct[t.VDBTotalExecutionDepositsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
+func (*DummyService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId) (*t.VDBTotalConsensusDepositsData, error) {
 	return getDummyStruct[t.VDBTotalConsensusDepositsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsTableRow, *t.Paging, error) {
 	return []t.VDBWithdrawalsTableRow{}, &t.Paging{}, nil
 }
 
-func (d *DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
+func (*DummyService) GetValidatorDashboardTotalWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalWithdrawalsData, error) {
 	return getDummyStruct[t.VDBTotalWithdrawalsData](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardRocketPool(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBRocketPoolColumn], search string, limit uint64) ([]t.VDBRocketPoolTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
+func (*DummyService) GetValidatorDashboardTotalRocketPool(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBRocketPoolTableRow, error) {
 	return getDummyStruct[t.VDBRocketPoolTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardRocketPoolMinipools(ctx context.Context, dashboardId t.VDBId, node string, cursor string, colSort t.Sort[enums.VDBRocketPoolMinipoolsColumn], search string, limit uint64) ([]t.VDBRocketPoolMinipoolsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBRocketPoolMinipoolsTableRow](ctx)
 }
 
-func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
+func (*DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 	return []t.NetworkInfo{
 		{
 			ChainId:           1,
@@ -419,10 +422,15 @@ func (d *DummyService) GetAllNetworks() ([]t.NetworkInfo, error) {
 			Name:              "holesky",
 			NotificationsName: "holesky",
 		},
+		{
+			ChainId:           560048,
+			Name:              "hoodi",
+			NotificationsName: "hoodi",
+		},
 	}, nil
 }
 
-func (d *DummyService) GetAllClients() ([]t.ClientInfo, error) {
+func (*DummyService) GetAllClients() ([]t.ClientInfo, error) {
 	return []t.ClientInfo{
 		// execution_layer
 		{
@@ -502,99 +510,107 @@ func (d *DummyService) GetAllClients() ([]t.ClientInfo, error) {
 	}, nil
 }
 
-func (d *DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
+func (*DummyService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
 	return getDummyStruct[t.SearchValidator](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
+func (*DummyService) GetSearchValidatorByPublicKey(ctx context.Context, chainId uint64, publicKey []byte) (*t.SearchValidator, error) {
 	return getDummyStruct[t.SearchValidator](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
+func (*DummyService) GetSearchValidatorsByDepositAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchValidatorsByDepositAddress, error) {
 	return getDummyStruct[t.SearchValidatorsByDepositAddress](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositAddress, error) {
+func (*DummyService) GetSearchValidatorsByDepositEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByDepositAddress, error) {
 	return getDummyStruct[t.SearchValidatorsByDepositAddress](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	return getDummyStruct[t.SearchValidatorsByWithdrwalCredential](ctx)
+func (*DummyService) GetSearchValidatorsByWithdrawalCredential(ctx context.Context, chainId uint64, credential []byte) (*t.SearchValidatorsByWithdrawalCredential, error) {
+	return getDummyStruct[t.SearchValidatorsByWithdrawalCredential](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrwalCredential, error) {
-	return getDummyStruct[t.SearchValidatorsByWithdrwalCredential](ctx)
+func (*DummyService) GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrawalCredential, error) {
+	return getDummyStruct[t.SearchValidatorsByWithdrawalCredential](ctx)
 }
 
-func (d *DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
+func (*DummyService) GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error) {
 	return getDummyStruct[t.SearchValidatorsByGraffiti](ctx)
 }
 
-func (d *DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
+func (*DummyService) GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error) {
+	return getDummyStruct[t.SearchValidatorsByGraffiti](ctx)
+}
+
+func (*DummyService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
+func (*DummyService) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardValidatorsCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
+func (*DummyService) GetValidatorDashboardEffectiveBalanceTotal(ctx context.Context, dashboardId t.VDBId, onlyActive bool) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
+func (*DummyService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
+	return map[t.VDBValidator]uint64{}, nil
+}
+
+func (*DummyService) GetValidatorDashboardPublicIdCount(ctx context.Context, dashboardId t.VDBIdPrimary) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
+func (*DummyService) GetNotificationOverview(ctx context.Context, userId uint64) (*t.NotificationOverviewData, error) {
 	return getDummyStruct[t.NotificationOverviewData](ctx)
 }
-func (d *DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
+func (*DummyService) GetDashboardNotifications(ctx context.Context, userId uint64, chainIds []uint64, cursor string, colSort t.Sort[enums.NotificationDashboardsColumn], search string, limit uint64) ([]t.NotificationDashboardsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationDashboardsTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
+func (*DummyService) GetValidatorDashboardNotificationDetails(ctx context.Context, dashboardId t.VDBIdPrimary, groupId uint64, epoch uint64, search string) (*t.NotificationValidatorDashboardDetail, error) {
 	return getDummyStruct[t.NotificationValidatorDashboardDetail](ctx)
 }
 
-func (d *DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
+func (*DummyService) GetAccountDashboardNotificationDetails(ctx context.Context, dashboardId uint64, groupId uint64, epoch uint64, search string) (*t.NotificationAccountDashboardDetail, error) {
 	return getDummyStruct[t.NotificationAccountDashboardDetail](ctx)
 }
 
-func (d *DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
+func (*DummyService) GetMachineNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationMachinesColumn], search string, limit uint64) ([]t.NotificationMachinesTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationMachinesTableRow](ctx)
 }
-func (d *DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
+func (*DummyService) GetClientNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationClientsColumn], search string, limit uint64) ([]t.NotificationClientsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationClientsTableRow](ctx)
 }
-func (d *DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
+func (*DummyService) GetNetworkNotifications(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationNetworksColumn], limit uint64) ([]t.NotificationNetworksTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.NotificationNetworksTableRow](ctx)
 }
 
-func (d *DummyService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
+func (*DummyService) GetNotificationSettings(ctx context.Context, userId uint64) (*t.NotificationSettings, error) {
 	return getDummyStruct[t.NotificationSettings](ctx)
 }
-func (d *DummyService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
+func (*DummyService) GetNotificationSettingsDefaultValues(ctx context.Context) (*t.NotificationSettingsDefaultValues, error) {
 	return getDummyStruct[t.NotificationSettingsDefaultValues](ctx)
 }
-func (d *DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
+func (*DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
+func (*DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
+func (*DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	return nil
 }
-func (d *DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {
+func (*DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {
 	return nil
 }
 
-func (d *DummyService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
+func (*DummyService) UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error) {
 	return getDummyStruct[t.NotificationSettingsClient](ctx)
 }
 
-func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
+func (*DummyService) GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error) {
 	r, p, err := getDummyWithPaging[t.NotificationSettingsDashboardsTableRow](ctx)
 	for i, n := range r {
 		var settings interface{}
@@ -608,162 +624,162 @@ func (d *DummyService) GetNotificationSettingsDashboards(ctx context.Context, us
 	}
 	return r, p, err
 }
-func (d *DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
+func (*DummyService) UpdateNotificationSettingsValidatorDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsValidatorDashboard) error {
 	return nil
 }
-func (d *DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
+func (*DummyService) UpdateNotificationSettingsAccountDashboard(ctx context.Context, userId uint64, dashboardId t.VDBIdPrimary, groupId uint64, settings t.NotificationSettingsAccountDashboard) error {
 	return nil
 }
-func (d *DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+func (*DummyService) CreateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
 	return nil
 }
 
-func (d *DummyService) GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error) {
+func (*DummyService) GetAdConfigurations(ctx context.Context, keys []string) ([]t.AdConfigurationData, error) {
 	return getDummyData[[]t.AdConfigurationData](ctx)
 }
 
-func (d *DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
+func (*DummyService) UpdateAdConfiguration(ctx context.Context, key, jquerySelector string, insertMode enums.AdInsertMode, refreshInterval uint64, forAllUsers bool, bannerId uint64, htmlContent string, enabled bool) error {
 	return nil
 }
 
-func (d *DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
+func (*DummyService) RemoveAdConfiguration(ctx context.Context, key string) error {
 	return nil
 }
 
-func (d *DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
+func (*DummyService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) GetUserIdByRefreshToken(ctx context.Context, claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
+func (*DummyService) GetUserIdByRefreshToken(ctx context.Context, claimUserID, claimAppID, claimDeviceID uint64, hashedRefreshToken string) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) MigrateMobileSession(ctx context.Context, oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
+func (*DummyService) MigrateMobileSession(ctx context.Context, oldHashedRefreshToken, newHashedRefreshToken, deviceID, deviceName string) error {
 	return nil
 }
 
-func (d *DummyService) GetAppDataFromRedirectUri(ctx context.Context, callback string) (*t.OAuthAppData, error) {
+func (*DummyService) GetAppDataFromRedirectUri(ctx context.Context, callback string) (*t.OAuthAppData, error) {
 	return getDummyStruct[t.OAuthAppData](ctx)
 }
 
-func (d *DummyService) AddUserDevice(ctx context.Context, userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
+func (*DummyService) AddUserDevice(ctx context.Context, userID uint64, hashedRefreshToken string, deviceID, deviceName string, appID uint64) error {
 	return nil
 }
 
-func (d *DummyService) AddMobileNotificationToken(ctx context.Context, userID uint64, deviceID, notifyToken string) error {
+func (*DummyService) AddMobileNotificationToken(ctx context.Context, userID uint64, deviceID, notifyToken string) error {
 	return nil
 }
 
-func (d *DummyService) GetAppSubscriptionCount(ctx context.Context, userID uint64) (uint64, error) {
+func (*DummyService) GetAppSubscriptionCount(ctx context.Context, userID uint64) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
-func (d *DummyService) AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
+func (*DummyService) AddMobilePurchase(ctx context.Context, tx *sql.Tx, userID uint64, paymentDetails t.MobileSubscription, verifyResponse *userservice.VerifyResponse, extSubscriptionId string) error {
 	return nil
 }
 
-func (d *DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
+func (*DummyService) GetBlockOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
 	return getDummyStruct[t.BlockOverview](ctx)
 }
 
-func (d *DummyService) GetBlockTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
+func (*DummyService) GetBlockTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
 	return getDummyData[[]t.BlockTransactionTableRow](ctx)
 }
 
-func (d *DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+func (*DummyService) GetBlock(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
 	return getDummyStruct[t.BlockSummary](ctx)
 }
 
-func (d *DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
+func (*DummyService) GetBlockVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
 	return getDummyData[[]t.BlockVoteTableRow](ctx)
 }
 
-func (d *DummyService) GetBlockAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
+func (*DummyService) GetBlockAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
 	return getDummyData[[]t.BlockAttestationTableRow](ctx)
 }
 
-func (d *DummyService) GetBlockWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
+func (*DummyService) GetBlockWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
 	return getDummyData[[]t.BlockWithdrawalTableRow](ctx)
 }
 
-func (d *DummyService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+func (*DummyService) GetBlockBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
 	return getDummyData[[]t.BlockBlsChangeTableRow](ctx)
 }
 
-func (d *DummyService) GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+func (*DummyService) GetBlockVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
 	return getDummyData[[]t.BlockVoluntaryExitTableRow](ctx)
 }
 
-func (d *DummyService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
+func (*DummyService) GetBlockBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	return getDummyData[[]t.BlockBlobTableRow](ctx)
 }
 
-func (d *DummyService) GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
+func (*DummyService) GetSlot(ctx context.Context, chainId, block uint64) (*t.BlockSummary, error) {
 	return getDummyStruct[t.BlockSummary](ctx)
 }
 
-func (d *DummyService) GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
+func (*DummyService) GetSlotOverview(ctx context.Context, chainId, block uint64) (*t.BlockOverview, error) {
 	return getDummyStruct[t.BlockOverview](ctx)
 }
 
-func (d *DummyService) GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
+func (*DummyService) GetSlotTransactions(ctx context.Context, chainId, block uint64) ([]t.BlockTransactionTableRow, error) {
 	return getDummyData[[]t.BlockTransactionTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
+func (*DummyService) GetSlotVotes(ctx context.Context, chainId, block uint64) ([]t.BlockVoteTableRow, error) {
 	return getDummyData[[]t.BlockVoteTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
+func (*DummyService) GetSlotAttestations(ctx context.Context, chainId, block uint64) ([]t.BlockAttestationTableRow, error) {
 	return getDummyData[[]t.BlockAttestationTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
+func (*DummyService) GetSlotWithdrawals(ctx context.Context, chainId, block uint64) ([]t.BlockWithdrawalTableRow, error) {
 	return getDummyData[[]t.BlockWithdrawalTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
+func (*DummyService) GetSlotBlsChanges(ctx context.Context, chainId, block uint64) ([]t.BlockBlsChangeTableRow, error) {
 	return getDummyData[[]t.BlockBlsChangeTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
+func (*DummyService) GetSlotVoluntaryExits(ctx context.Context, chainId, block uint64) ([]t.BlockVoluntaryExitTableRow, error) {
 	return getDummyData[[]t.BlockVoluntaryExitTableRow](ctx)
 }
 
-func (d *DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
+func (*DummyService) GetSlotBlobs(ctx context.Context, chainId, block uint64) ([]t.BlockBlobTableRow, error) {
 	return getDummyData[[]t.BlockBlobTableRow](ctx)
 }
 
-func (d *DummyService) GetValidatorDashboardsCountInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
+func (*DummyService) GetValidatorDashboardsCountInfo(ctx context.Context) (map[uint64][]t.ArchiverDashboard, error) {
 	return getDummyData[map[uint64][]t.ArchiverDashboard](ctx)
 }
 
-func (d *DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
+func (*DummyService) GetRocketPoolOverview(ctx context.Context) (*t.RocketPoolData, error) {
 	return getDummyStruct[t.RocketPoolData](ctx)
 }
 
-func (d *DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, error) {
+func (*DummyService) GetApiWeights(ctx context.Context) ([]t.ApiWeightItem, error) {
 	return getDummyData[[]t.ApiWeightItem](ctx)
 }
 
-func (d *DummyService) GetHealthz(ctx context.Context, showAll bool) t.HealthzData {
+func (*DummyService) GetHealthz(ctx context.Context, showAll bool) t.HealthzData {
 	r, _ := getDummyData[t.HealthzData](ctx)
 	return r
 }
 
-func (d *DummyService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
+func (*DummyService) GetLatestBundleForNativeVersion(ctx context.Context, nativeVersion uint64) (*t.MobileAppBundleStats, error) {
 	return getDummyStruct[t.MobileAppBundleStats](ctx)
 }
 
-func (d *DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
+func (*DummyService) IncrementBundleDeliveryCount(ctx context.Context, bundleVerison uint64) error {
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
+func (*DummyService) GetValidatorDashboardMobileWidget(ctx context.Context, dashboardId t.VDBIdPrimary) (*t.MobileWidgetData, error) {
 	return getDummyStruct[t.MobileWidgetData](ctx)
 }
 
-func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*t.MachineMetricsData, error) {
+func (*DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64, limit int, offset int) (*t.MachineMetricsData, error) {
 	data, err := getDummyStruct[t.MachineMetricsData](ctx)
 	if err != nil {
 		return nil, err
@@ -780,24 +796,32 @@ func (d *DummyService) GetUserMachineMetrics(ctx context.Context, userID uint64,
 	return data, nil
 }
 
-func (d *DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64, machine, process string, data []byte) error {
+func (*DummyService) PostUserMachineMetrics(ctx context.Context, userID uint64, machine, process string, data []byte) error {
 	return nil
 }
 
-func (d *DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
+func (*DummyService) GetValidatorDashboardMobileValidators(ctx context.Context, dashboardId t.VDBId, groupId int64, period enums.TimePeriod, cursor string, colSort t.Sort[enums.VDBManageValidatorsColumn], search string, limit uint64) ([]t.MobileValidatorDashboardValidatorsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.MobileValidatorDashboardValidatorsTableRow](ctx)
 }
 
-func (d *DummyService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
+func (*DummyService) QueueTestEmailNotification(ctx context.Context, userId uint64) error {
 	return nil
 }
-func (d *DummyService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
+func (*DummyService) QueueTestPushNotification(ctx context.Context, userId uint64) error {
 	return nil
 }
-func (d *DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
+func (*DummyService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
 	return nil
 }
 
-func (d *DummyService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
+func (*DummyService) GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error) {
 	return getDummyData[uint64](ctx)
+}
+
+func (*DummyService) GetHasUserActiveSubscription(ctx context.Context, userId uint64) (bool, error) {
+	return getDummyData[bool](ctx)
+}
+
+func (*DummyService) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error) {
+	return getDummyData[[]t.VDBValidator](ctx)
 }

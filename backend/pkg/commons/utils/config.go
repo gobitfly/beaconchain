@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -14,7 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/sethvargo/go-envconfig"
 
 	//nolint:depguard
 	"github.com/sirupsen/logrus"
@@ -43,7 +44,10 @@ func readConfigFile(cfg *types.Config, path string) error {
 }
 
 func readConfigEnv(cfg *types.Config) error {
-	return envconfig.Process("", cfg)
+	return envconfig.ProcessWith(context.Background(), &envconfig.Config{
+		Target:           cfg,
+		DefaultOverwrite: true,
+	})
 }
 
 func readConfigSecrets(cfg *types.Config) error {
@@ -93,6 +97,23 @@ func ReadConfig(cfg *types.Config, path string) error {
 		cfg.Frontend.SiteBrand = "beaconcha.in"
 	}
 
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "trace":
+		logrus.SetLevel(logrus.TraceLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logrus.SetLevel(logrus.WarnLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logrus.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logrus.SetLevel(logrus.PanicLevel)
+	}
+
 	err = setCLConfig(cfg)
 	if err != nil {
 		return err
@@ -129,6 +150,12 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisTimestamp = 1638993340
 		case "holesky":
 			cfg.Chain.GenesisTimestamp = 1695902400
+		case "hoodi":
+			cfg.Chain.GenesisTimestamp = 1742213400
+		case "pectra-devnet-5":
+			cfg.Chain.GenesisTimestamp = 1737034260
+		case "pectra-devnet-6":
+			cfg.Chain.GenesisTimestamp = 1738603860
 		default:
 			return fmt.Errorf("tried to set known genesis-timestamp, but unknown chain-name")
 		}
@@ -148,6 +175,8 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.GenesisValidatorsRoot = "0xf5dcb5564e829aab27264b9becd5dfaa017085611224cb3036f573368dbb9d47"
 		case "holesky":
 			cfg.Chain.GenesisValidatorsRoot = "0x9143aa7c615a7f7115e2b6aac319c03529df8242ae705fba9df39b79c59fa8b1"
+		case "hoodi":
+			cfg.Chain.GenesisValidatorsRoot = "0x212f13fc4df078b6cb7db228f1c8307566dcecf900867401a92023d7ba99cb5f"
 		default:
 			return fmt.Errorf("tried to set known genesis-validators-root, but unknown chain-name")
 		}
@@ -229,11 +258,37 @@ func ReadConfig(cfg *types.Config, path string) error {
 			cfg.Chain.Id = 5
 		case "holesky":
 			cfg.Chain.Id = 17000
+		case "hoodi":
+			cfg.Chain.Id = 560048
 		case "sepolia":
 			cfg.Chain.Id = 11155111
 		case "gnosis":
 			cfg.Chain.Id = 100
 		}
+	}
+
+	// dashboard exporter default limits
+
+	if cfg.DashboardExporter.RollingsInParallel == 0 {
+		cfg.DashboardExporter.RollingsInParallel = 3
+	}
+	if cfg.DashboardExporter.RollingPartsInParallel == 0 {
+		cfg.DashboardExporter.RollingPartsInParallel = 3
+	}
+	if cfg.DashboardExporter.TransferInParallel == 0 {
+		cfg.DashboardExporter.TransferInParallel = 3
+	}
+	if cfg.DashboardExporter.TransferAtOnce == 0 {
+		cfg.DashboardExporter.TransferAtOnce = 2
+	}
+	if cfg.DashboardExporter.FetchAtOnceLimit == 0 {
+		cfg.DashboardExporter.FetchAtOnceLimit = 2
+	}
+	if cfg.DashboardExporter.InsertAtOnceLimit == 0 {
+		cfg.DashboardExporter.InsertAtOnceLimit = 2
+	}
+	if cfg.DashboardExporter.InsertInParallel == 0 {
+		cfg.DashboardExporter.InsertInParallel = 2
 	}
 
 	// we check for machine chain id just for safety
@@ -287,6 +342,14 @@ func setELConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &minimalCfg)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &minimalCfg)
+		case "hoodi":
+			err = yaml.Unmarshal([]byte(config.HoodiChainYml), &minimalCfg)
+		case "mekong":
+			err = yaml.Unmarshal([]byte(config.MekongChainYml), &minimalCfg)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &minimalCfg)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &minimalCfg)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ElConfigPath)
 		}
@@ -320,6 +383,8 @@ func setELConfig(cfg *types.Config) error {
 	return nil
 }
 
+var MaxForkEpoch = uint64(18446744073709551615)
+
 func setCLConfig(cfg *types.Config) error {
 	var err error
 	if cfg.Chain.ClConfigPath == "" {
@@ -337,6 +402,12 @@ func setCLConfig(cfg *types.Config) error {
 			err = yaml.Unmarshal([]byte(config.GnosisChainYml), &cfg.Chain.ClConfig)
 		case "holesky":
 			err = yaml.Unmarshal([]byte(config.HoleskyChainYml), &cfg.Chain.ClConfig)
+		case "hoodi":
+			err = yaml.Unmarshal([]byte(config.HoodiChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-5":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet5ChainYml), &cfg.Chain.ClConfig)
+		case "pectra-devnet-6":
+			err = yaml.Unmarshal([]byte(config.PectraDevnet6ChainYml), &cfg.Chain.ClConfig)
 		default:
 			return fmt.Errorf("tried to set known chain-config, but unknown chain-name: %v (path: %v)", cfg.Chain.Name, cfg.Chain.ClConfigPath)
 		}
@@ -356,23 +427,25 @@ func setCLConfig(cfg *types.Config) error {
 			return err
 		}
 
-		maxForkEpoch := uint64(18446744073709551615)
-
 		if jr.Data.AltairForkEpoch == nil {
 			log.Warnf("AltairForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.AltairForkEpoch = &maxForkEpoch
+			jr.Data.AltairForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.BellatrixForkEpoch == nil {
 			log.Warnf("BellatrixForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.BellatrixForkEpoch = &maxForkEpoch
+			jr.Data.BellatrixForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.CapellaForkEpoch == nil {
 			log.Warnf("CapellaForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.CapellaForkEpoch = &maxForkEpoch
+			jr.Data.CapellaForkEpoch = &MaxForkEpoch
 		}
 		if jr.Data.DenebForkEpoch == nil {
 			log.Warnf("DenebForkEpoch not set, defaulting to maxForkEpoch")
-			jr.Data.DenebForkEpoch = &maxForkEpoch
+			jr.Data.DenebForkEpoch = &MaxForkEpoch
+		}
+		if jr.Data.ElectraForkEpoch == nil {
+			log.Warnf("ElectraForkEpoch not set, defaulting to maxForkEpoch")
+			jr.Data.ElectraForkEpoch = &MaxForkEpoch
 		}
 
 		chainCfg := types.ClChainConfig{
@@ -389,10 +462,12 @@ func setCLConfig(cfg *types.Config) error {
 			AltairForkEpoch:                         *jr.Data.AltairForkEpoch,
 			BellatrixForkVersion:                    jr.Data.BellatrixForkVersion,
 			BellatrixForkEpoch:                      *jr.Data.BellatrixForkEpoch,
-			CappellaForkVersion:                     jr.Data.CapellaForkVersion,
-			CappellaForkEpoch:                       *jr.Data.CapellaForkEpoch,
+			CapellaForkVersion:                      jr.Data.CapellaForkVersion,
+			CapellaForkEpoch:                        *jr.Data.CapellaForkEpoch,
 			DenebForkVersion:                        jr.Data.DenebForkVersion,
 			DenebForkEpoch:                          *jr.Data.DenebForkEpoch,
+			ElectraForkVersion:                      jr.Data.ElectraForkVersion,
+			ElectraForkEpoch:                        *jr.Data.ElectraForkEpoch,
 			SecondsPerSlot:                          uint64(jr.Data.SecondsPerSlot),
 			SecondsPerEth1Block:                     uint64(jr.Data.SecondsPerEth1Block),
 			MinValidatorWithdrawabilityDelay:        uint64(jr.Data.MinValidatorWithdrawabilityDelay),
@@ -409,7 +484,7 @@ func setCLConfig(cfg *types.Config) error {
 			DepositContractAddress:                  jr.Data.DepositContractAddress,
 			MaxCommitteesPerSlot:                    uint64(jr.Data.MaxCommitteesPerSlot),
 			TargetCommitteeSize:                     uint64(jr.Data.TargetCommitteeSize),
-			MaxValidatorsPerCommittee:               uint64(jr.Data.TargetCommitteeSize),
+			MaxValidatorsPerCommittee:               uint64(jr.Data.MaxValidatorsPerCommittee),
 			ShuffleRoundCount:                       uint64(jr.Data.ShuffleRoundCount),
 			HysteresisQuotient:                      uint64(jr.Data.HysteresisQuotient),
 			HysteresisDownwardMultiplier:            uint64(jr.Data.HysteresisDownwardMultiplier),
@@ -456,6 +531,8 @@ func setCLConfig(cfg *types.Config) error {
 			MaxWithdrawalsPerPayload:                uint64(jr.Data.MaxWithdrawalsPerPayload),
 			MaxValidatorsPerWithdrawalSweep:         uint64(jr.Data.MaxValidatorsPerWithdrawalsSweep),
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
+			MaxEffectiveBalanceElectra:              uint64(jr.Data.MaxEffectiveBalanceElectra),
+			MinPerEpochChurnLimitElectra:            uint64(jr.Data.MinPerEpochChurnLimitElectra),
 		}
 
 		cfg.Chain.ClConfig = chainCfg
@@ -481,24 +558,6 @@ func setCLConfig(cfg *types.Config) error {
 			return fmt.Errorf("error decoding Chain Config file %v: %v", cfg.Chain.ClConfigPath, err)
 		}
 		cfg.Chain.ClConfig = *chainConfig
-	}
-
-	// rewrite to match to allow trace as well
-	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
-	case "trace":
-		logrus.SetLevel(logrus.TraceLevel)
-	case "debug":
-		logrus.SetLevel(logrus.DebugLevel)
-	case "info":
-		logrus.SetLevel(logrus.InfoLevel)
-	case "warn":
-		logrus.SetLevel(logrus.WarnLevel)
-	case "error":
-		logrus.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logrus.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logrus.SetLevel(logrus.PanicLevel)
 	}
 
 	return nil

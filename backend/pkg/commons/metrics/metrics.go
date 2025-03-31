@@ -29,6 +29,10 @@ var (
 		Name: "deployment_type",
 		Help: "Gauge with deployment-type in label",
 	}, []string{"deployment_type"})
+	DatabaseVersion = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "db_version",
+		Help: "Gauge with database and version in labels",
+	}, []string{"brand", "name", "version"})
 	HttpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "http_requests_total",
 		Help: "Total number of requests by path, method and status_code.",
@@ -70,6 +74,10 @@ var (
 		Name: "notifications_sent",
 		Help: "Counter of notifications sent with the channel and notification type in the label",
 	}, []string{"channel", "status"})
+	NotificationsDropped = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "notifications_dropped",
+		Help: "Counter of notifications deleted from the queue",
+	}, []string{"status"})
 	State = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "state",
 		Help: "Gauge for various states",
@@ -78,6 +86,22 @@ var (
 		Name: "counter",
 		Help: "Generic counter of events with name in labels",
 	}, []string{"name"})
+	NotificationsQueueEventSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "notifications_queue_event_size",
+		Help: "Number of notifications in the queue by event type and status",
+	}, []string{"event_type", "status"})
+	NotificationsQueueChannelSize = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "notifications_queue_channel_size",
+		Help: "Number of notifications in the queue by channel and status",
+	}, []string{"channel", "status"})
+	NotificationsQueuePendingTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_pending_duration_seconds",
+		Help: "How long pending notifications have been in the queue",
+	}, []string{"channel", "event_type"})
+	NotificationsQueueSentTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "notifications_queue_sent_duration_seconds",
+		Help: "Amount of time notification took to be successfully sent",
+	}, []string{"channel", "event_type"})
 )
 
 func init() {

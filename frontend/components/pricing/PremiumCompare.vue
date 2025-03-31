@@ -1,20 +1,14 @@
 <script lang="ts" setup>
 import { get } from 'lodash-es'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import type { PremiumPerks } from '~/types/api/user'
 
 const { t: $t } = useTranslation()
 const { products } = useProductsStore()
+const {
+  displayCurrencyDefault,
+  formatAmount,
+} = useCurrency()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
-
-type CompareValue = {
-  class?: string,
-  tooltip?: string,
-  value?: boolean | string,
-}
-
-type RowType = 'group' | 'header' | 'label' | 'perc'
 
 type CompareRow = {
   className?: string,
@@ -23,6 +17,14 @@ type CompareRow = {
   type: RowType,
   values?: CompareValue[],
 }
+
+type CompareValue = {
+  class?: string,
+  tooltip?: string,
+  value?: boolean | string,
+}
+
+type RowType = 'group' | 'header' | 'label' | 'perc'
 
 const showContent = ref(false)
 
@@ -53,15 +55,14 @@ const rows = computed(() => {
       }
     }
 
-    let tooltip: string | undefined
-    if (property === 'validators_per_dashboard') {
-      tooltip = $t('pricing.pectra_tooltip', { effectiveBalance: formatNumber(perks.validators_per_dashboard * 32) })
+    if (property === 'effective_balance_per_dashboard') {
+      value = formatAmount(`${perks.effective_balance_per_dashboard}`, {
+        maximumFractionDigits: 0,
+        targetCurrency: displayCurrencyDefault.main,
+      })
     }
 
-    return {
-      tooltip,
-      value,
-    }
+    return { value }
   }
   const addRow = (
     type: RowType,
@@ -116,7 +117,7 @@ const rows = computed(() => {
 
   addRow('group', 'dashboard')
   addRow('perc', 'validator_dashboards', 'first-in-group')
-  addRow('perc', 'validators_per_dashboard')
+  addRow('perc', 'effective_balance_per_dashboard')
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
   addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
@@ -231,7 +232,7 @@ const rows = computed(() => {
             :text="value.tooltip"
             class="info-icon"
           >
-            <FontAwesomeIcon :icon="faInfoCircle" />
+            <BcIcon name="circle-info" />
           </BcTooltip>
         </div>
       </div>
@@ -242,7 +243,6 @@ const rows = computed(() => {
       :class="{ 'show-content': showContent }"
     >
       <Button
-        class="pricing_button"
         @click="() => (showContent = !showContent)"
       >
         {{ $t(showContent ? "pricing.hide_feature" : "pricing.show_feature") }}

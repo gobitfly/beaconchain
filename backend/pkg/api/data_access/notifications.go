@@ -20,7 +20,6 @@ import (
 	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -193,27 +192,21 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 
 	// 24h counts
 	eg.Go(func() error {
-		var err error
-		day := time.Now().Truncate(utils.Day).Unix()
-		getMessageCount := func(prefix string) (uint64, error) {
-			key := fmt.Sprintf("%s:%d:%d", prefix, userId, day)
-			res := d.persistentRedisDbClient.Get(ctx, key)
-			if res.Err() == redis.Nil {
-				return 0, nil
-			} else if res.Err() != nil {
-				return 0, res.Err()
-			}
-			return res.Uint64()
-		}
-		response.Last24hEmailCount, err = getMessageCount(notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET)
+		notificationCount, err := db.GetSentMessagesCount(ctx, notification.NOTIFICAION_EMAIL_RATE_LIMIT_BUCKET, types.UserId(userId))
 		if err != nil {
 			return err
 		}
-		response.Last24hPushCount, err = getMessageCount(notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET)
+		response.Last24hEmailCount = uint64(notificationCount)
+
+		notificationCount, err = db.GetSentMessagesCount(ctx, notification.NOTIFICAION_PUSH_RATE_LIMIT_BUCKET, types.UserId(userId))
 		if err != nil {
 			return err
 		}
-		response.Last24hWebhookCount, err = getMessageCount(notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET)
+		response.Last24hPushCount = uint64(notificationCount)
+
+		notificationCount, err = db.GetSentMessagesCount(ctx, notification.NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, types.UserId(userId))
+		response.Last24hWebhookCount = uint64(notificationCount)
+
 		return err
 	})
 
@@ -1090,10 +1083,11 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 
 	// -------------------------------------
 	// Get the notification channels
-	notificationChannels := []struct {
+	type notificationChannelsRow struct {
 		Channel types.NotificationChannel `db:"channel"`
 		Active  bool                      `db:"active"`
-	}{}
+	}
+	notificationChannels := []notificationChannelsRow{}
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &notificationChannels, `
 		SELECT
@@ -1103,6 +1097,15 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		WHERE user_id = $1`, userId)
 		if err != nil {
 			return fmt.Errorf(`error retrieving data for notifications channels: %w`, err)
+		}
+
+		if len(notificationChannels) == 0 {
+			// Set the default values
+			notificationChannels = []notificationChannelsRow{
+				{Channel: types.EmailNotificationChannel, Active: true},
+				{Channel: types.PushNotificationChannel, Active: true},
+				{Channel: types.WebhookNotificationChannel, Active: true},
+			}
 		}
 
 		return nil
@@ -1291,11 +1294,6 @@ func (d *DataAccessService) GetNotificationSettingsDefaultValues(ctx context.Con
 }
 
 func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error {
-	epoch := utils.TimeToEpoch(time.Now())
-
-	var eventsToInsert []goqu.Record
-	var eventsToDelete []goqu.Expression
-
 	tx, err := d.userWriter.BeginTxx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error starting db transactions to update general notification settings: %w", err)
@@ -1331,60 +1329,13 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 		return err
 	}
 
-	// -------------------------------------
-	// Collect the machine and rocketpool events to set and delete
-
-	//Machine events
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineOfflineSubscribed, userId, types.MonitoringMachineOfflineEventName, "", "", epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineStorageUsageSubscribed, userId, types.MonitoringMachineDiskAlmostFullEventName, "", "", epoch, settings.MachineStorageUsageThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineCpuUsageSubscribed, userId, types.MonitoringMachineCpuLoadEventName, "", "", epoch, settings.MachineCpuUsageThreshold)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMachineMemoryUsageSubscribed, userId, types.MonitoringMachineMemoryUsageEventName, "", "", epoch, settings.MachineMemoryUsageThreshold)
-
-	// Insert all the events or update the threshold if they already exist
-	if len(eventsToInsert) > 0 {
-		insertDs := goqu.Dialect("postgres").
-			Insert("users_subscriptions").
-			Cols("user_id", "event_name", "event_filter", "created_ts", "created_epoch", "event_threshold").
-			Rows(eventsToInsert).
-			OnConflict(goqu.DoUpdate(
-				"user_id, event_name, event_filter",
-				goqu.Record{"event_threshold": goqu.L("EXCLUDED.event_threshold")},
-			))
-
-		query, args, err := insertDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Delete all the events
-	if len(eventsToDelete) > 0 {
-		deleteDs := goqu.Dialect("postgres").
-			Delete("users_subscriptions").
-			Where(goqu.Or(eventsToDelete...))
-
-		query, args, err := deleteDs.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		_, err = tx.ExecContext(ctx, query, args...)
-		if err != nil {
-			return err
-		}
-	}
-
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("error committing tx to update general notification settings: %w", err)
 	}
 	return nil
 }
+
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	epoch := utils.TimeToEpoch(time.Now())
 
@@ -1583,10 +1534,22 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Threshold float64         `db:"event_threshold"`
 	}{}
 
-	networkName := "mainnet"
-	if utils.Config.Chain.ClConfig.DepositChainID == 17000 {
-		networkName = "holesky"
+	networks, err := d.GetAllNetworks()
+	if err != nil {
+		return nil, nil, err
 	}
+
+	var networkName string
+	for _, network := range networks {
+		if network.ChainId == utils.Config.Chain.ClConfig.DepositChainID {
+			networkName = network.NotificationsName
+			break
+		}
+	}
+	if networkName == "" {
+		return nil, nil, fmt.Errorf("network with chain id %d to update general notification settings not found", utils.Config.Chain.ClConfig.DepositChainID)
+	}
+
 	wg.Go(func() error {
 		err := d.userReader.SelectContext(ctx, &events, `
 			SELECT
@@ -1606,6 +1569,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 	// Get the validator dashboards
 	valDashboards := []struct {
 		DashboardId   uint64         `db:"dashboard_id"`
+		IsArchived    bool           `db:"is_archived"`
 		DashboardName string         `db:"dashboard_name"`
 		GroupId       uint64         `db:"group_id"`
 		GroupName     string         `db:"group_name"`
@@ -1617,6 +1581,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
 			SELECT
 				d.id AS dashboard_id,
+				d.is_archived IS NOT NULL AS is_archived,
 				d.name AS dashboard_name,
 				g.id AS group_id,
 				g.name AS group_name,
@@ -1721,8 +1686,10 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 				settings.GroupEfficiencyBelowThreshold = event.Threshold
 			case types.ValidatorMissedAttestationEventName:
 				settings.IsAttestationsMissedSubscribed = true
-			case types.ValidatorMissedProposalEventName, types.ValidatorExecutedProposalEventName:
-				settings.IsBlockProposalSubscribed = true
+			case types.ValidatorExecutedProposalEventName:
+				settings.IsBlockProposalSuccessSubscribed = true
+			case types.ValidatorMissedProposalEventName:
+				settings.IsBlockProposalMissedSubscribed = true
 			case types.ValidatorUpcomingProposalEventName:
 				settings.IsUpcomingBlockProposalSubscribed = true
 			case types.SyncCommitteeSoonEventName:
@@ -1773,6 +1740,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 
 		// Set general info
 		resultMap[key].IsAccountDashboard = false
+		resultMap[key].IsArchived = valDashboard.IsArchived
 		resultMap[key].DashboardId = valDashboard.DashboardId
 		resultMap[key].DashboardName = valDashboard.DashboardName
 		resultMap[key].GroupId = valDashboard.GroupId
@@ -1961,9 +1929,8 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsSlashedSubscribed, userId, types.ValidatorGotSlashedEventName, networkName, eventFilter, epoch, 0)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMaxCollateralSubscribed, userId, types.RocketpoolCollateralMaxReachedEventName, networkName, eventFilter, epoch, settings.MaxCollateralThreshold)
 	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsMinCollateralSubscribed, userId, types.RocketpoolCollateralMinReachedEventName, networkName, eventFilter, epoch, settings.MinCollateralThreshold)
-	// Set two events for IsBlockProposalSubscribed
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
-	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalSuccessSubscribed, userId, types.ValidatorExecutedProposalEventName, networkName, eventFilter, epoch, 0)
+	d.AddOrRemoveEvent(&eventsToInsert, &eventsToDelete, settings.IsBlockProposalMissedSubscribed, userId, types.ValidatorMissedProposalEventName, networkName, eventFilter, epoch, 0)
 
 	// Insert all the events or update the threshold if they already exist
 	if len(eventsToInsert) > 0 {

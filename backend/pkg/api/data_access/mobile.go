@@ -7,14 +7,13 @@ import (
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
-	"github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"golang.org/x/sync/errgroup"
@@ -174,8 +173,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
-	data.NetworkEfficiency = utils.CalculateTotalEfficiency(
-		efficiency.AttestationEfficiency[enums.AllTime], efficiency.ProposalEfficiency[enums.AllTime], efficiency.SyncEfficiency[enums.AllTime])
+	data.NetworkEfficiency = efficiency.TotalEfficiency[enums.AllTime].Float64 * 100
 
 	// Validator status
 	eg.Go(func() error {
@@ -214,6 +212,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	eg.Go(func() error {
 		rpNetworkStats, err := d.getInternalRpNetworkStats(ctx)
 		if err != nil {
+			if err == sql.ErrNoRows { // no rocket pool deployment on network
+				return nil
+			}
 			return fmt.Errorf("error retrieving rocketpool network stats: %w", err)
 		}
 		data.RplPrice = rpNetworkStats.RPLPrice
@@ -231,10 +232,9 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				goqu.COALESCE(goqu.SUM("rpln.rpl_stake"), 0).As("rpl_stake")).
 			From(goqu.L("rocketpool_nodes AS rpln")).
 			LeftJoin(goqu.L("rocketpool_minipools AS m"), goqu.On(goqu.L("m.node_address = rpln.address"))).
-			LeftJoin(goqu.L("validators AS v"), goqu.On(goqu.L("m.pubkey = v.pubkey"))).
 			Where(goqu.L("node_deposit_balance IS NOT NULL")).
 			Where(goqu.L("user_deposit_balance IS NOT NULL")).
-			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("uvdv.validator_index = v.validatorindex"))).
+			LeftJoin(goqu.L("users_val_dashboards_validators uvdv"), goqu.On(goqu.L("m.validator_index = uvdv.validator_index"))).
 			Where(goqu.L("uvdv.dashboard_id = ?", dashboardId))
 
 		query, args, err := ds.Prepared(true).ToSQL()
@@ -260,24 +260,24 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		return nil
 	})
 
-	retrieveApr := func(hours int, apr *float64) {
+	retrieveApr := func(timeFrame enums.TimePeriod, apr *float64) {
 		eg.Go(func() error {
-			_, elApr, _, clApr, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
-			*apr = elApr + clApr
+			*apr = incomeInfo.Apr.El + incomeInfo.Apr.Cl
 			return nil
 		})
 	}
 
-	retrieveRewards := func(hours int, rewards *decimal.Decimal) {
+	retrieveRewards := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal]) {
 		eg.Go(func() error {
-			clRewards, _, elRewards, _, err := d.internal_getElClAPR(ctx, wrappedDashboardId, -1, hours)
+			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
-			*rewards = clRewards.Add(elRewards)
+			*rewards = incomeInfo.Rewards
 			return nil
 		})
 	}
@@ -288,60 +288,26 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
 				Select(
-					goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-					goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-					goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-					goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-					goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-					goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled")).
+					goqu.L("COALESCE(SUM(efficiency_dividend::decimal) / NULLIF(SUM(efficiency_divisor::decimal), 0), 0)").As("efficiency"),
+				).
 				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-			var queryResult struct {
-				AttestationReward      decimal.Decimal `db:"attestations_reward"`
-				AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-				BlocksProposed         uint64          `db:"blocks_proposed"`
-				BlocksScheduled        uint64          `db:"blocks_scheduled"`
-				SyncExecuted           uint64          `db:"sync_executed"`
-				SyncScheduled          uint64          `db:"sync_scheduled"`
-			}
+			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
+			*efficiency *= 100
 
-			query, args, err := ds.Prepared(true).ToSQL()
-			if err != nil {
-				return fmt.Errorf("error preparing query: %w", err)
-			}
-
-			err = d.clickhouseReader.GetContext(ctx, &queryResult, query, args...)
-			if err != nil {
-				return err
-			}
-
-			// Calculate efficiency
-			var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-			if !queryResult.AttestationIdealReward.IsZero() {
-				attestationEfficiency.Float64 = queryResult.AttestationReward.Div(queryResult.AttestationIdealReward).InexactFloat64()
-				attestationEfficiency.Valid = true
-			}
-			if queryResult.BlocksScheduled > 0 {
-				proposerEfficiency.Float64 = float64(queryResult.BlocksProposed) / float64(queryResult.BlocksScheduled)
-				proposerEfficiency.Valid = true
-			}
-			if queryResult.SyncScheduled > 0 {
-				syncEfficiency.Float64 = float64(queryResult.SyncExecuted) / float64(queryResult.SyncScheduled)
-				syncEfficiency.Valid = true
-			}
-			*efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
-
-			return nil
+			return err
 		})
 	}
 
-	retrieveRewards(24, &data.Last24hIncome)
-	retrieveRewards(7*24, &data.Last7dIncome)
-	retrieveApr(30*24, &data.Last30dApr)
+	retrieveRewards(enums.Last24h, &data.Last24hIncome)
+	retrieveRewards(enums.Last7d, &data.Last7dIncome)
+	retrieveApr(enums.Last30d, &data.Last30dApr)
 	retrieveEfficiency("validator_dashboard_data_rolling_30d", &data.Last30dEfficiency)
 
 	err = eg.Wait()
+
+	data.ELCLPrice = price.GetPrice(d.config.Frontend.ClCurrency, d.config.Frontend.ElCurrency)
 
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
@@ -357,6 +323,7 @@ func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.R
 				EXTRACT(EPOCH FROM claim_interval_time) / 3600 AS claim_interval_hours,
 				node_operator_rewards,
 				effective_rpl_staked,
+				ts,
 				rpl_price 
 			FROM rocketpool_network_stats 
 			ORDER BY ID 
@@ -372,17 +339,8 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 		return nil, p, err
 	}
 
-	// Get extra information for this result subset
-	validatorMapping, err := d.services.GetCurrentValidatorMapping()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "validator mapping error")
-	}
-
-	pubKeys := make([][]byte, 0, len(result))
 	indices := make([]uint64, 0, len(result))
 	for _, row := range result {
-		metadata := validatorMapping.ValidatorMetadata[row.Index]
-		pubKeys = append(pubKeys, metadata.PublicKey)
 		indices = append(indices, row.Index)
 	}
 
@@ -395,6 +353,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 		DepositAmount     decimal.Decimal `db:"node_deposit_balance"`
 		Status            string          `db:"status"`
 		IsInSmoothingPool bool            `db:"smoothing_pool_opted_in"`
+		Index             uint64          `db:"validator_index"`
 	}
 
 	var rocketPoolMap map[uint64]RocketPoolData
@@ -408,20 +367,20 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 			penalty_count,
 			node_deposit_balance,
 			status,
-			rn.smoothing_pool_opted_in
+			rn.smoothing_pool_opted_in,
+			validator_index
 		FROM rocketpool_minipools
 		LEFT JOIN rocketpool_nodes rn ON rocketpool_minipools.node_address = rn.address
-		WHERE pubkey = ANY($1)
+		WHERE validator_index = ANY($1)
 		`
-		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, pq.ByteaArray(pubKeys))
+		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, indices)
 		if err != nil {
 			return errors.Wrap(err, "error retrieving rocketpool data")
 		}
 
 		rocketPoolMap = make(map[uint64]RocketPoolData, len(rocketPoolResults))
 		for _, row := range rocketPoolResults {
-			validatorIndex := validatorMapping.ValidatorIndices[string(t.PubKey(hexutil.Encode(row.PubKey)))]
-			rocketPoolMap[validatorIndex] = row
+			rocketPoolMap[row.Index] = row
 		}
 		return nil
 	})
@@ -429,7 +388,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 	var efficienciesMap map[uint64]float64
 	wg.Go(func() error {
 		var err error
-		clickhouseTable, _, err := d.getTablesForPeriod(period)
+		clickhouseTable, err := period.Table()
 		if err != nil {
 			return err
 		}
@@ -490,34 +449,22 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 }
 
 func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indices []uint64, table string) (map[uint64]float64, error) {
+	if len(indices) == 0 {
+		return map[uint64]float64{}, nil
+	}
 	ds := goqu.Dialect("postgres").
 		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 		Select(
 			goqu.L("r.validator_index"),
-			goqu.L("COALESCE(r.attestations_reward::decimal, 0) AS attestations_reward"),
-			goqu.L("COALESCE(r.attestations_ideal_reward::decimal, 0) AS attestations_ideal_reward"),
-			goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
-			goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
-			goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
-			goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled"),
+			goqu.L("COALESCE(efficiency_dividend / NULLIF(efficiency_divisor, 0), 0)").As("efficiency"),
 		).Where(goqu.L("r.validator_index IN ?", indices))
 
-	var queryResult []struct {
-		Index                  uint64          `db:"validator_index"`
-		AttestationReward      decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		BlocksProposed         uint64          `db:"blocks_proposed"`
-		BlocksScheduled        uint64          `db:"blocks_scheduled"`
-		SyncExecuted           uint64          `db:"sync_executed"`
-		SyncScheduled          uint64          `db:"sync_scheduled"`
+	type qryResult []struct {
+		Index      uint64  `db:"validator_index"`
+		Efficiency float64 `db:"efficiency"`
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+	queryResult, err := runQueryRows[qryResult](ctx, d.clickhouseReader, ds)
 	if err != nil {
 		return nil, err
 	}
@@ -526,21 +473,7 @@ func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indic
 
 	// Calculate efficiency
 	for _, row := range queryResult {
-		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if !row.AttestationIdealReward.IsZero() {
-			attestationEfficiency.Float64 = row.AttestationReward.Div(row.AttestationIdealReward).InexactFloat64()
-			attestationEfficiency.Valid = true
-		}
-		if row.BlocksScheduled > 0 {
-			proposerEfficiency.Float64 = float64(row.BlocksProposed) / float64(row.BlocksScheduled)
-			proposerEfficiency.Valid = true
-		}
-		if row.SyncScheduled > 0 {
-			syncEfficiency.Float64 = float64(row.SyncExecuted) / float64(row.SyncScheduled)
-			syncEfficiency.Valid = true
-		}
-
-		result[row.Index] = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
+		result[row.Index] = row.Efficiency * 100
 	}
 
 	return result, nil

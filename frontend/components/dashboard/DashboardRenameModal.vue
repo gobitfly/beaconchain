@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { DashboardType } from '~/types/dashboard'
-import { API_PATH } from '~/types/customFetch'
+
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
 const { t: $t } = useTranslation()
@@ -14,7 +14,9 @@ interface Props {
   dashboardType: DashboardType,
 }
 const {
-  dialogRef, props, setHeader,
+  dialogRef,
+  props,
+  setHeader,
 } = useBcDialog<Props>({ pt: { header: { class: 'dashboard-rename-modal-header' } } })
 
 watch(props, (p) => {
@@ -44,8 +46,8 @@ const rename = async () => {
   isLoading.value = true
   const path
     = props.value?.dashboardType === 'validator'
-      ? API_PATH.DASHBOARD_RENAME_VALIDATOR
-      : API_PATH.DASHBOARD_RENAME_ACCOUNT
+      ? 'DASHBOARD_RENAME_VALIDATOR'
+      : 'DASHBOARD_RENAME_ACCOUNT'
   await fetch(
     path,
     { body: { name: name.value } },

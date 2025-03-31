@@ -1,10 +1,10 @@
 import { defineStore } from 'pinia'
-import type { InternalGetUserNotificationNetworksResponse } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
+import type { GetUserNotificationNetworksResponse } from '~/types/api/notifications'
+
 import type { TableQueryParams } from '~/types/datatable'
 
 const notificationsNetworkStore = defineStore('notifications-network-store', () => {
-  const data = ref<InternalGetUserNotificationNetworksResponse | undefined>()
+  const data = ref<GetUserNotificationNetworksResponse | undefined>()
   return { data }
 })
 
@@ -14,7 +14,16 @@ export function useNotificationsNetworkStore() {
   const { fetch } = useCustomFetch()
   const { data } = storeToRefs(notificationsNetworkStore())
   const {
-    cursor, isStoredQuery, onSort, pageSize, pendingQuery, query, setCursor, setPageSize, setSearch, setStoredQuery,
+    cursor,
+    isStoredQuery,
+    onSort,
+    pageSize,
+    pendingQuery,
+    query,
+    setCursor,
+    setPageSize,
+    setSearch,
+    setStoredQuery,
   } = useTableQuery({
     limit: 10, sort: 'timestamp:desc',
   }, 10)
@@ -24,8 +33,8 @@ export function useNotificationsNetworkStore() {
     isLoading.value = true
     setStoredQuery(q)
     try {
-      const result = await fetch<InternalGetUserNotificationNetworksResponse>(
-        API_PATH.NOTIFICATIONS_NETWORK,
+      const result = await fetch<GetUserNotificationNetworksResponse>(
+        'NOTIFICATIONS_NETWORK',
         undefined,
         undefined,
         q,
@@ -38,7 +47,7 @@ export function useNotificationsNetworkStore() {
 
       data.value = result
     }
-    catch (e) {
+    catch {
       data.value = undefined
       isLoading.value = false
     }
@@ -51,7 +60,9 @@ export function useNotificationsNetworkStore() {
 
   watch(query, (q) => {
     if (q) {
-      isLoggedIn.value && loadNetworkNotifications(q)
+      if (isLoggedIn.value) {
+        loadNetworkNotifications(q)
+      }
     }
   }, { immediate: true })
 

@@ -12,10 +12,12 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/klauspost/pgzip"
 
 	"fmt"
@@ -44,12 +46,15 @@ func NewSlotExporter(moduleContext ModuleContext) ModuleInterface {
 	}
 }
 
-var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64
+var latestEpoch, latestSlot, finalizedEpoch, latestProposed uint64 // holy shit these should really be in the slotExporterData struct or some other module might accidentally corrupt them
 
 var processSlotMutex = &sync.Mutex{}
 
-func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (err error) {
-	processSlotMutex.Lock() // only process one slot at a time
+func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err error) {
+	if !processSlotMutex.TryLock() {
+		log.Infof("slotExporter is still running, skipping this run")
+		return nil
+	}
 	defer processSlotMutex.Unlock()
 
 	latestEpoch, latestSlot, finalizedEpoch, latestProposed = 0, 0, 0, 0
@@ -97,11 +102,13 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 	defer utils.Rollback(tx)
 
 	if d.FirstRun {
+		log.Infof("performing first run consistency checks")
 		// get all slots we currently have in the database
 		dbSlots, err := db.GetAllSlots(tx)
 		if err != nil {
 			return fmt.Errorf("error retrieving all db slots: %w", err)
 		}
+		log.Info("retrieved all exported slots from the database")
 
 		if len(dbSlots) > 0 {
 			if dbSlots[0] != 0 {
@@ -118,6 +125,7 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 		}
 
 		if len(dbSlots) > 1 {
+			log.Info("performing gap checks")
 			// export any gaps we might have (for whatever reason)
 			for slotIndex := 1; slotIndex < len(dbSlots); slotIndex++ {
 				previousSlot := dbSlots[slotIndex-1]
@@ -189,15 +197,18 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 		return fmt.Errorf("error retrieving all non finalized slots from the db: %w", err)
 	}
 	for _, dbSlot := range dbNonFinalSlots {
-		header, err := d.Client.GetBlockHeader(dbSlot.Slot)
-
-		if err != nil {
-			return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
-		}
-
 		nodeSlotFinalized := dbSlot.Slot <= head.FinalizedSlot
 
+		var header *constypes.StandardBeaconHeaderResponse
+
 		if nodeSlotFinalized != dbSlot.Finalized {
+			log.Infof("checking slot %d for finalization / reorgs", dbSlot.Slot)
+			header, err = d.Client.GetBlockHeader(dbSlot.Slot)
+
+			if err != nil {
+				return fmt.Errorf("error retrieving block root for slot %v: %w", dbSlot.Slot, err)
+			}
+
 			// slot has finalized, mark it in the db
 			if header != nil && bytes.Equal(dbSlot.BlockRoot, header.Data.Root) {
 				// no reorg happened, simply mark the slot as final
@@ -262,12 +273,16 @@ func (d *slotExporterData) OnHead(event *constypes.StandardEventHeadResponse) (e
 					}
 				}
 			}
-		} else { // check if a late slot has been proposed in the meantime
-			if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
-				log.Infof("exporting new slot %v", dbSlot.Slot)
-				err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
-				if err != nil {
-					return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
+		} else {
+			// check if a late slot has been proposed in the meantime
+			// TODO: reenable once holesky is close to recovery
+			if utils.Config.Chain.Id != 17000 {
+				if len(dbSlot.BlockRoot) < 32 && header != nil { // we have no slot in the db, but the node has a slot, export it
+					log.Infof("exporting new slot %v", dbSlot.Slot)
+					err := ExportSlot(d.Client, dbSlot.Slot, utils.EpochOfSlot(dbSlot.Slot) == head.HeadEpoch, tx)
+					if err != nil {
+						return fmt.Errorf("error exporting slot %v: %w", dbSlot.Slot, err)
+					}
 				}
 			}
 		}
@@ -325,20 +340,27 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		}
 	}
 
-	// save sync & attestation duties to bigtable
-	err = db.BigtableClient.SaveAttestationDuties(attDuties)
-	if err != nil {
-		return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
-	}
-	err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
-	if err != nil {
-		return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
-	}
+	g := errgroup.Group{}
 
-	// save the proposal to bigtable
-	err = db.BigtableClient.SaveProposal(block)
+	// save sync & attestation duties to bigtable
+	g.Go(func() error {
+		err = db.BigtableClient.SaveAttestationDuties(attDuties)
+		if err != nil {
+			return fmt.Errorf("error exporting attestations to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+	g.Go(func() error {
+		err = db.BigtableClient.SaveSyncComitteeDuties(syncDuties)
+		if err != nil {
+			return fmt.Errorf("error exporting sync committee duties to bigtable for slot %v: %w", block.Slot, err)
+		}
+		return nil
+	})
+
+	err = g.Wait()
 	if err != nil {
-		return fmt.Errorf("error exporting proposal to bigtable for slot %v: %w", block.Slot, err)
+		return err
 	}
 
 	// save the block data to the db
@@ -355,9 +377,48 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		epoch := utils.EpochOfSlot(block.Slot)
+		if epoch > utils.Config.ClConfig.ElectraForkEpoch {
+			log.Infof("checking that events have been loaded for epoch %v", epoch)
+			exported, err := db.HasEventsForEpoch(epoch)
+			if err != nil {
+				return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
+			}
+			if !exported {
+				return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
+				// log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
+			} else {
+				log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
+
+				firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+				lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+
+				switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
+
+				consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
+
+				depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
+
+				removedExcessBalanceProcessed, err := db.TransformRemovedExcessBalanceEvents(firstSlot, lastSlot, tx)
+				if err != nil {
+					return fmt.Errorf("error transforming removed excess balance events for epoch %v: %w", epoch, err)
+				}
+				log.Infof("transformed removed excess balance events for epoch %v, processed %d events", epoch, removedExcessBalanceProcessed)
+			}
+		}
 
 		log.Infof("exporting duties & balances for epoch %v", epoch)
-
 		// prepare the duties for export to bigtable
 		syncDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex]bool)
 		attDutiesEpoch := make(map[types.Slot]map[types.ValidatorIndex][]types.Slot)
@@ -471,13 +532,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			}
 			return nil
 		})
-		g.Go(func() error {
-			err := db.BigtableClient.SaveProposalAssignments(epoch, block.EpochAssignments.ProposerAssignments)
-			if err != nil {
-				return fmt.Errorf("error exporting proposal assignments to bigtable: %w", err)
-			}
-			return nil
-		})
 
 		// save the validator balances to bigtable
 		g.Go(func() error {
@@ -487,6 +541,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			}
 			return nil
 		})
+
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
 			// this function sets exports the validator status into the db
@@ -602,7 +657,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				return nil
 			})
 
-			// update cached view of consensus desposits
+			// update cached view of consensus deposits
 			// possible bug: at this point the export tx is not yet committed, so the query will read
 			// stale data
 			g.Go(func() error {
@@ -618,6 +673,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						blocks_deposits bd
 						INNER JOIN validators v ON bd.publickey = v.pubkey
 						INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+						INNER JOIN blocks b ON bd.block_root = b.blockroot and b.status = '1'
 					ORDER BY
 						uvdv.dashboard_id DESC,
 						bd.block_slot DESC,
@@ -632,6 +688,37 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 				log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
 				return nil
 			})
+
+			if config.ClConfig.ElectraForkEpoch != nil && *config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+				// update cached view of consensus deposit requests
+				g.Go(func() error {
+					start := time.Now()
+					err := db.CacheQuery(`
+						SELECT
+							uvdv.dashboard_id,
+							uvdv.group_id,
+							bdr.block_slot,
+							bdr.request_index,
+							bdr.amount
+						FROM
+							blocks_deposit_requests bdr
+							INNER JOIN validators v ON bdr.pubkey = v.pubkey
+							INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
+							INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
+						ORDER BY
+							uvdv.dashboard_id DESC,
+							bdr.block_slot DESC,
+							bdr.request_index DESC;
+						`, "cached_blocks_deposit_requests_lookup",
+						[]string{"dashboard_id", "block_slot", "request_index"},
+						[]string{"dashboard_id", "amount"})
+					if err != nil {
+						return fmt.Errorf("error updating cached view of consensus deposit requests: %w", err)
+					}
+					log.Infof("updating cached view of consensus deposit requests took %s", time.Since(start))
+					return nil
+				})
+			}
 		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {
@@ -681,11 +768,22 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 }
 
 func (d *slotExporterData) Init() error {
+	// // Initialize the slot exporter by doing 20 sync runs
+	// for i := 0; i < 20; i++ {
+	// 	err := d.OnHead(nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
 func (d *slotExporterData) GetName() string {
 	return "Slot-Exporter"
+}
+
+func (d *slotExporterData) GetMonitoringEventId() constants.Event {
+	return constants.Event_ExporterModuleSlotExporter
 }
 
 func (d *slotExporterData) OnChainReorg(event *constypes.StandardEventChainReorg) (err error) {

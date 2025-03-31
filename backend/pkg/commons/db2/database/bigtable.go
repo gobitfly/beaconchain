@@ -1,0 +1,476 @@
+package database
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"sort"
+	"time"
+
+	"cloud.google.com/go/bigtable"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+var ErrNotFound = fmt.Errorf("not found")
+
+const (
+	timeout = time.Minute // Timeout duration for Bigtable operations
+)
+
+type Item struct {
+	Family    string
+	Column    string
+	Data      []byte
+	Timestamp *int64
+}
+
+type Row struct {
+	Key    string
+	Values map[string][]byte
+}
+
+type TableWrapper struct {
+	*BigTable
+	table string
+}
+
+func Wrap(db *BigTable, table string) TableWrapper {
+	return TableWrapper{
+		BigTable: db,
+		table:    table,
+	}
+}
+
+func (w TableWrapper) Read(prefix string, opts ...Option) ([]Row, error) {
+	res, err := w.BigTable.Read(w.table, prefix, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
+}
+
+func (w TableWrapper) GetRow(key string) (*Row, error) {
+	res, err := w.BigTable.GetRow(w.table, key)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
+}
+
+func (w TableWrapper) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
+	if err := w.BigTable.BulkAdd(w.table, itemsByKey, opts...); err != nil {
+		return fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return nil
+}
+
+func (w TableWrapper) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
+	res, err := w.BigTable.GetRowsRange(w.table, high, low, opts...)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
+}
+
+func (w TableWrapper) GetRowsWithKeys(keys []string) ([]Row, error) {
+	res, err := w.BigTable.GetRowsWithKeys(w.table, keys)
+	if err != nil {
+		return nil, fmt.Errorf("table %s: %w", w.table, err)
+	}
+	return res, nil
+}
+
+func (w TableWrapper) DeleteRowsWithKeys(keys []string, opts ...Option) error {
+	return w.BigTable.DeleteRowsWithKeys(w.table, keys, opts...)
+}
+
+// BigTable is a wrapper around Google Cloud Bigtable for storing and retrieving data
+type BigTable struct {
+	client *bigtable.Client
+	admin  *bigtable.AdminClient
+}
+
+func NewBigTableWithClient(ctx context.Context, client *bigtable.Client, adminClient *bigtable.AdminClient, tablesAndFamilies map[string][]string) (*BigTable, error) {
+	if err := initTable(ctx, adminClient, tablesAndFamilies); err != nil {
+		return nil, err
+	}
+
+	return &BigTable{client: client, admin: adminClient}, nil
+}
+
+// NewBigTable initializes a new BigTable
+// It returns a BigTable and an error if any part of the setup fails
+// if tablesAndFamilies is not nil it will try to create the associated tables and families if not already presents
+func NewBigTable(project, instance string, tablesAndFamilies map[string][]string, options ...option.ClientOption) (*BigTable, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	// Create an admin client to manage Bigtable tables
+	adminClient, err := bigtable.NewAdminClient(ctx, project, instance, options...)
+	if err != nil {
+		return nil, fmt.Errorf("could not create admin client: %v", err)
+	}
+
+	// Create a Bigtable client for performing data operations
+	client, err := bigtable.NewClient(ctx, project, instance, options...)
+	if err != nil {
+		return nil, fmt.Errorf("could not create data operations client: %v", err)
+	}
+
+	return NewBigTableWithClient(ctx, client, adminClient, tablesAndFamilies)
+}
+
+// initTable creates the tables and column family in the Bigtable
+func initTable(ctx context.Context, adminClient *bigtable.AdminClient, tablesAndFamilies map[string][]string) error {
+	for table, families := range tablesAndFamilies {
+		if err := createTableAndFamilies(ctx, adminClient, table, families...); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createTableAndFamilies(ctx context.Context, admin *bigtable.AdminClient, tableName string, familyNames ...string) error {
+	// Get the list of existing tables
+	tables, err := admin.Tables(ctx)
+	if err != nil {
+		return fmt.Errorf("could not fetch table list: %w", err)
+	}
+
+	// Create the table if it doesn't exist
+	if !slices.Contains(tables, tableName) {
+		if err := admin.CreateTable(ctx, tableName); err != nil {
+			return fmt.Errorf("could not create table %s: %w", tableName, err)
+		}
+	}
+
+	// Retrieve information about the table
+	tblInfo, err := admin.TableInfo(ctx, tableName)
+	if err != nil {
+		return fmt.Errorf("could not read info for table %s: %w", tableName, err)
+	}
+
+	for _, familyName := range familyNames {
+		// Create the column family if it doesn't exist
+		if !slices.Contains(tblInfo.Families, familyName) {
+			if err := admin.CreateColumnFamily(ctx, tableName, familyName); err != nil {
+				return fmt.Errorf("could not create column family %s: %w", familyName, err)
+			}
+		}
+	}
+	return nil
+}
+
+func (b BigTable) BulkAdd(table string, itemsByKey map[string][]Item, opts ...Option) error {
+	options := newOptions(opts)
+
+	var keys []string
+	var muts []*bigtable.Mutation
+	for key, items := range itemsByKey {
+		mut := bigtable.NewMutation()
+		for _, item := range items {
+			timestamp := bigtable.Timestamp(0)
+			if item.Timestamp != nil {
+				timestamp = bigtable.Timestamp(*item.Timestamp)
+			}
+			mut.Set(item.Family, item.Column, timestamp, item.Data)
+		}
+		keys = append(keys, key)
+		muts = append(muts, mut)
+	}
+	return b.applyBulk(table, keys, muts, options)
+}
+
+func (b BigTable) applyBulk(table string, keys []string, mutations []*bigtable.Mutation, options options) error {
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	bulk := &bulkMutations{
+		Keys: keys,
+		Muts: mutations,
+	}
+	sort.Sort(bulk)
+	for i := int64(0); i < int64(bulk.Len()); i = i + options.BatchSize {
+		from, to := i, i+options.BatchSize
+		if to > int64(bulk.Len()) {
+			to = int64(bulk.Len())
+		}
+		errs, err := tbl.ApplyBulk(ctx, bulk.Keys[from:to], bulk.Muts[from:to])
+		if err != nil {
+			return fmt.Errorf("cannot ApplyBulk err: %w", err)
+		}
+		var bulkErrs []string
+		for _, err := range errs {
+			bulkErrs = append(bulkErrs, err.Error())
+		}
+		if len(bulkErrs) > 0 {
+			return fmt.Errorf("cannot BulkAdd errors: %v", bulkErrs)
+		}
+	}
+	return nil
+}
+
+// Read retrieves all rows from the Bigtable's receiver column family
+// It returns the data in the form of a 2D byte slice and an error if the operation fails
+func (b BigTable) Read(table, prefix string, opts ...Option) ([]Row, error) {
+	options := newOptions(opts)
+
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	readOptions := bigtableReadOptions(options, bigtable.PrefixRange(prefix))
+	var rows []Row
+	err := tbl.ReadRows(ctx, bigtable.PrefixRange(prefix), func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
+		for _, family := range row {
+			for _, item := range family {
+				values[item.Column] = item.Value
+			}
+		}
+		rows = append(rows, Row{
+			Key:    row.Key(),
+			Values: values,
+		})
+		return true
+	}, readOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %w", err)
+	}
+
+	return rows, nil
+}
+
+func (b BigTable) GetRow(table, key string) (*Row, error) {
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var data *Row
+	row, err := tbl.ReadRow(ctx, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not read row: %w", err)
+	}
+	if row == nil {
+		return nil, ErrNotFound
+	}
+	values := make(map[string][]byte)
+	for _, family := range row {
+		for _, item := range family {
+			values[item.Column] = item.Value
+		}
+	}
+	data = &Row{
+		Key:    row.Key(),
+		Values: values,
+	}
+
+	return data, nil
+}
+
+func (b BigTable) GetRowsRange(table, high, low string, opts ...Option) ([]Row, error) {
+	options := newOptions(opts)
+
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	rowRange := bigtable.NewClosedRange(low, high)
+	if options.OpenRange {
+		rowRange = bigtable.NewOpenRange(low, high)
+	}
+	if options.OpenCloseRange {
+		rowRange = bigtable.NewOpenClosedRange(low, high)
+	}
+	if options.ClosedOpenRange {
+		rowRange = bigtable.NewClosedOpenRange(low, high)
+	}
+	readOptions := bigtableReadOptions(options, rowRange)
+	var data []Row
+	err := tbl.ReadRows(ctx, rowRange, func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
+		for _, family := range row {
+			for _, item := range family {
+				values[item.Column] = item.Value
+			}
+		}
+		data = append(data, Row{
+			Key:    row.Key(),
+			Values: values,
+		})
+		return true
+	}, readOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return data, nil
+}
+
+func (b BigTable) GetRowsWithKeys(table string, keys []string) ([]Row, error) {
+	tbl := b.client.Open(table)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var data []Row
+	err := tbl.ReadRows(ctx, bigtable.RowList(keys), func(row bigtable.Row) bool {
+		values := make(map[string][]byte)
+		for _, family := range row {
+			for _, item := range family {
+				values[item.Column] = item.Value
+			}
+		}
+		data = append(data, Row{
+			Key:    row.Key(),
+			Values: values,
+		})
+		return true
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("could not read rows: %w", err)
+	}
+	if len(data) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return data, nil
+}
+
+func (b BigTable) DeleteRowsWithKeys(table string, source []string, opts ...Option) error {
+	options := newOptions(opts)
+
+	var muts []*bigtable.Mutation
+	var keys []string
+	for _, key := range source {
+		if key == "" {
+			continue
+		}
+		mut := bigtable.NewMutation()
+		switch {
+		case options.TimestampRangeFilter != nil && options.FamilyFilter != "" && options.ColumnFilter != "":
+			mut.DeleteTimestampRange(options.FamilyFilter, options.ColumnFilter, bigtable.Timestamp(options.TimestampRangeFilter[0]), bigtable.Timestamp(options.TimestampRangeFilter[1]))
+		case options.ColumnFilter != "" && options.FamilyFilter != "":
+			mut.DeleteCellsInColumn(options.FamilyFilter, options.ColumnFilter)
+		case options.FamilyFilter != "":
+			mut.DeleteCellsInFamily(options.FamilyFilter)
+		default:
+			mut.DeleteRow()
+		}
+		muts = append(muts, mut)
+		keys = append(keys, key)
+	}
+	return b.applyBulk(table, keys, muts, options)
+}
+
+func (b BigTable) Clear() error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	tables, err := b.admin.Tables(ctx)
+	if err != nil {
+		return err
+	}
+	for _, table := range tables {
+		if err := b.admin.DropAllRows(ctx, table); err != nil {
+			return fmt.Errorf("could not drop all rows: %w", err)
+		}
+	}
+	return nil
+}
+
+// Close shuts down the BigTable by closing the Bigtable client connection
+// It returns an error if the operation fails
+func (b BigTable) Close() error {
+	if b.client == nil {
+		return fmt.Errorf("cannot close client: bigtable client is nil")
+	}
+	if err := b.client.Close(); err != nil && status.Code(err) != codes.Canceled {
+		return fmt.Errorf("cannot close client: %w", err)
+	}
+	if b.admin != nil {
+		if err := b.admin.Close(); err != nil && status.Code(err) != codes.Canceled {
+			return fmt.Errorf("cannot close admin client: %w", err)
+		}
+	}
+	return nil
+}
+
+type bulkMutations struct {
+	Keys []string
+	Muts []*bigtable.Mutation
+}
+
+func (bulkMutations *bulkMutations) Len() int {
+	return len(bulkMutations.Keys)
+}
+
+func (bulkMutations *bulkMutations) Less(i, j int) bool {
+	return bulkMutations.Keys[i] < bulkMutations.Keys[j]
+}
+
+func (bulkMutations *bulkMutations) Swap(i, j int) {
+	bulkMutations.Keys[i], bulkMutations.Keys[j] = bulkMutations.Keys[j], bulkMutations.Keys[i]
+	bulkMutations.Muts[i], bulkMutations.Muts[j] = bulkMutations.Muts[j], bulkMutations.Muts[i]
+}
+
+const (
+	KeyStatRange        = "range"
+	KeyStatRowsSeen     = "rowsSeen"
+	KeyStatRowsReturned = "rowsReturned"
+	KeyStatEfficiency   = "efficiency"
+)
+
+func bigtableReadOptions(options options, rowRange bigtable.RowRange) []bigtable.ReadOption {
+	readOptions := []bigtable.ReadOption{bigtable.LimitRows(options.Limit)}
+	if options.StatsReporter != nil {
+		readOptions = append(readOptions, bigtable.WithFullReadStats(func(stats *bigtable.FullReadStats) {
+			efficiency := int64(1)
+			if stats.ReadIterationStats.RowsSeenCount != 0 {
+				efficiency = stats.ReadIterationStats.RowsReturnedCount / stats.ReadIterationStats.RowsSeenCount
+			}
+			options.StatsReporter(
+				"query stats",
+				KeyStatRange, rowRange.String(),
+				KeyStatRowsSeen, stats.ReadIterationStats.RowsSeenCount,
+				KeyStatRowsReturned, stats.ReadIterationStats.RowsReturnedCount,
+				KeyStatEfficiency, efficiency,
+			)
+		}))
+	}
+	var filters []bigtable.Filter
+	if options.RowKeyFilter != "" {
+		filters = append(filters, bigtable.RowKeyFilter(options.RowKeyFilter))
+	}
+	if options.ColumnFilter != "" {
+		filters = append(filters, bigtable.ColumnFilter(options.ColumnFilter))
+	}
+	if options.FamilyFilter != "" {
+		filters = append(filters, bigtable.FamilyFilter(options.FamilyFilter))
+	}
+	if options.TimestampRangeFilter != nil {
+		filters = append(filters,
+			bigtable.TimestampRangeFilterMicros(
+				bigtable.Timestamp(options.TimestampRangeFilter[0]),
+				bigtable.Timestamp(options.TimestampRangeFilter[1]),
+			),
+		)
+	}
+	if options.WithoutValue {
+		filters = append(filters, bigtable.StripValueFilter())
+	}
+	if len(filters) != 0 {
+		if len(filters) == 1 {
+			readOptions = append(readOptions, bigtable.RowFilter(filters[0]))
+		} else {
+			readOptions = append(readOptions, bigtable.RowFilter(bigtable.ChainFilters(filters...)))
+		}
+	}
+	return readOptions
+}

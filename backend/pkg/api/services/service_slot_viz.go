@@ -32,7 +32,7 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.NewStatusReport("api_service_slot_viz", constants.Default, delay)
+		r := services.NewStatusReport(constants.Event_ApiServiceSlotViz, constants.Default, delay)
 		r(constants.Running, nil)
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
@@ -40,7 +40,7 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 			r(constants.Failure, map[string]string{"error": err.Error()})
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
-		r(constants.Success, map[string]string{"took": time.Since(startTime).String()})
+		r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
 		o.Do(func() {
 			wg.Done()
 		})
@@ -228,6 +228,9 @@ func (s *Services) updateSlotVizData() error {
 				dutiesInfo.SlotSyncParticipated[duty.Slot] = make(map[constypes.ValidatorIndex]bool, 0)
 
 				partValidators := utils.GetParticipatingSyncCommitteeValidators(duty.SyncAggregateBits, dutiesInfo.TotalSyncAssignmentsForEpoch[utils.EpochOfSlot(duty.Slot)])
+				if partValidators == nil {
+					log.Error(nil, "couldn't align sync validators", 0, map[string]interface{}{"slot": duty.Slot})
+				}
 				for _, validator := range partValidators {
 					dutiesInfo.SlotSyncParticipated[duty.Slot][validator] = true
 				}

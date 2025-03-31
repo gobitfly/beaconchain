@@ -13,10 +13,11 @@ type VDBOverviewGroup struct {
 	Count uint64 `json:"count"`
 }
 
-type VDBOverviewBalances struct {
-	Total     decimal.Decimal `json:"total"`
-	Effective decimal.Decimal `json:"effective"`
-	StakedEth decimal.Decimal `json:"staked_eth"`
+type ValidatorBalances struct {
+	Total            decimal.Decimal `json:"total"`
+	EffectiveCurrent decimal.Decimal `json:"effective_current"` // on-chain
+	EffectiveLatest  decimal.Decimal `json:"effective_latest"`  // from premium perks pov: exited validators are counted with their latest eb
+	StakedEth        decimal.Decimal `json:"staked_eth"`
 }
 
 type VDBOverviewData struct {
@@ -28,7 +29,7 @@ type VDBOverviewData struct {
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
-	Balances            VDBOverviewBalances                        `json:"balances"`
+	Balances            ValidatorBalances                          `json:"balances"`
 }
 
 type GetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
@@ -77,11 +78,15 @@ type VDBGroupSummarySyncCount struct {
 }
 
 type VDBGroupSummaryMissedRewards struct {
-	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards" faker:"cl_el_eth"`
-	Attestations    decimal.Decimal            `json:"attestations" faker:"eth"`
-	Sync            decimal.Decimal            `json:"sync" faker:"eth"`
+	ProposerRewards ClElValue[decimal.Decimal] `json:"proposer_rewards"`
+	Attestations    decimal.Decimal            `json:"attestations"`
+	Sync            decimal.Decimal            `json:"sync"`
 }
 type VDBGroupSummaryData struct {
+	Efficiency float64                    `json:"efficiency"`
+	Balances   ValidatorBalances          `json:"balances"`
+	Rewards    ClElValue[decimal.Decimal] `json:"rewards"`
+
 	AttestationsHead       StatusCount `json:"attestations_head"`
 	AttestationsSource     StatusCount `json:"attestations_source"`
 	AttestationsTarget     StatusCount `json:"attestations_target"`
@@ -150,8 +155,8 @@ type VDBGroupRewardsData struct {
 	Sync               VDBGroupRewardsDetails `json:"sync"`
 	Slashing           VDBGroupRewardsDetails `json:"slashing"`
 	Inactivity         VDBGroupRewardsDetails `json:"inactivity"`
-	Proposal           VDBGroupRewardsDetails `json:"proposal"`
 
+	ProposalStatusCount         StatusCount     `json:"proposal_status_count"`
 	ProposalElReward            decimal.Decimal `json:"proposal_el_reward"`
 	ProposalClAttIncReward      decimal.Decimal `json:"proposal_cl_att_inc_reward"`
 	ProposalClSyncIncReward     decimal.Decimal `json:"proposal_cl_sync_inc_reward"`
@@ -285,40 +290,32 @@ type GetValidatorDashboardTotalWithdrawalsResponse ApiDataResponse[VDBTotalWithd
 // ------------------------------------------------------------
 // Rocket Pool Tab
 type VDBRocketPoolTableRow struct {
-	Node   Address `json:"node" extensions:"x-order=1"`
-	Staked struct {
-		Eth decimal.Decimal `json:"eth"`
-		Rpl decimal.Decimal `json:"rpl"`
-	} `json:"staked"`
-	Minipools struct {
-		Total uint64 `json:"total"`
-		Leb16 uint64 `json:"leb_16"`
-		Leb8  uint64 `json:"leb_8"`
-	} `json:"minipools"`
-	Collateral    PercentageDetails[decimal.Decimal] `json:"collateral"`
-	AvgCommission float64                            `json:"avg_commission"`
-	Rpl           struct {
-		Claimed   decimal.Decimal `json:"claimed"`
-		Unclaimed decimal.Decimal `json:"unclaimed"`
-	} `json:"rpl"`
-	EffectiveRpl   decimal.Decimal `json:"effective_rpl"`
-	RplApr         float64         `json:"rpl_apr"`
-	RplAprUpdateTs int64           `json:"rpl_apr_update_ts"`
-	RplEstimate    decimal.Decimal `json:"rpl_estimate"`
-	SmoothingPool  struct {
-		IsOptIn   bool            `json:"is_opt_in"`
-		Claimed   decimal.Decimal `json:"claimed"`
-		Unclaimed decimal.Decimal `json:"unclaimed"`
-	} `json:"smoothing_pool"`
+	Address                []byte                             `json:"-"`
+	Node                   Address                            `json:"node" extensions:"x-order=1"`
+	StakedEth              decimal.Decimal                    `json:"staked_eth"`
+	StakedRpl              decimal.Decimal                    `json:"staked_rpl"`
+	MinipoolsTotal         uint64                             `json:"minipools_count_total"`
+	MinipoolsLeb16         uint64                             `json:"minipools_count_leb_16"`
+	MinipoolsLeb8          uint64                             `json:"minipools_count_leb_8"`
+	Collateral             PercentageDetails[decimal.Decimal] `json:"collateral"`
+	AvgCommission          float64                            `json:"avg_commission"`
+	RplClaimed             decimal.Decimal                    `json:"rpl_claimed"`
+	RplUnclaimed           decimal.Decimal                    `json:"rpl_unclaimed"`
+	EffectiveRpl           decimal.Decimal                    `json:"effective_rpl"`
+	RplApr                 float64                            `json:"rpl_apr"`
+	RplAprUpdateTs         int64                              `json:"rpl_apr_update_ts"`
+	RplEstimate            decimal.Decimal                    `json:"rpl_estimate"`
+	SmoothingpoolOptIn     bool                               `json:"smoothingpool_opt_in"`
+	SmoothingpoolClaimed   decimal.Decimal                    `json:"smoothingpool_claimed"`
+	SmoothingpoolUnclaimed decimal.Decimal                    `json:"smoothingpool_unclaimed"`
+	NodeDepositBalance     decimal.Decimal                    `json:"node_deposit_balance"`
+	UserDepositBalance     decimal.Decimal                    `json:"user_deposit_balance"`
 
 	Timezone      string          `json:"timezone"`
 	RefundBalance decimal.Decimal `json:"refund_balance"`
 	DepositCredit decimal.Decimal `json:"deposit_credit"`
-	RplStake      struct {
-		Min decimal.Decimal `json:"min"`
-		Max decimal.Decimal `json:"max"`
-	} `json:"rpl_stake"`
 }
+
 type GetValidatorDashboardRocketPoolResponse ApiPagingResponse[VDBRocketPoolTableRow]
 
 type GetValidatorDashboardTotalRocketPoolResponse ApiDataResponse[VDBRocketPoolTableRow]
@@ -368,4 +365,17 @@ type VDBPostCreateGroupData struct {
 type VDBPostValidatorsData struct {
 	Index   uint64 `json:"index"`
 	GroupId uint64 `json:"group_id"`
+}
+
+// helper for frontend
+type PostValidatorDashboardValidatorsRequest struct {
+	GroupId              uint64        `json:"group_id,omitempty" x-nullable:"true"`
+	Validators           []interface{} `json:"validators,omitempty" tstype:"(number | string)[]"`
+	DepositAddress       string        `json:"deposit_address,omitempty"`
+	WithdrawalCredential string        `json:"withdrawal_credential,omitempty"`
+	Graffiti             string        `json:"graffiti,omitempty"`
+}
+
+type PostValidatorDashboardGroupsRequest struct {
+	Name string `json:"name"`
 }

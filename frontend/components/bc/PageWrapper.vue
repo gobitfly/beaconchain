@@ -13,14 +13,15 @@ defineProps<{
       :minimalist="!!minimalistHeader"
     />
     <BcMaintenanceBanner />
-    <div class="content">
+    <slot name="banner" />
+    <main class="content">
       <slot name="top" />
       <!-- <BcAdControl /> -->
       <slot />
       <div id="bottom_banner" />
       <slot name="bottom" />
-    </div>
-    <BcFooterMainFooter />
+    </main>
+    <BcFooterMain />
   </div>
 </template>
 

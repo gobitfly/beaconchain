@@ -1,0 +1,105 @@
+<script lang="ts" setup>
+import type { ComposerTranslation } from 'vue-i18n'
+import type {
+  AggregationTimeframe,
+  EfficiencyType,
+} from '~/types/dashboard/summary'
+import {
+  ONE_DAY, ONE_HOUR, ONE_WEEK,
+} from '~/utils/format'
+
+interface Props {
+  aggregation?: AggregationTimeframe,
+  efficiencyType?: EfficiencyType,
+  getEpochFromTimestamp: (timestamp: number) => number,
+  getTimestampFromEpoch: (epoch: number) => number,
+  startEpoch?: number,
+  t: ComposerTranslation, // required as dynamically created components via render do not have the proper app context,
+  ts?: number,
+}
+
+const props = defineProps<Props>()
+
+const startTs = computed(() => {
+  if (props.ts) {
+    return props.ts
+  }
+  if (props.startEpoch) {
+    return props.getTimestampFromEpoch(props.startEpoch)
+  }
+  return undefined
+})
+
+const endTs = computed(() => {
+  if (!startTs.value) {
+    return
+  }
+  switch (props.aggregation) {
+    case 'epoch':
+      return
+    case 'hourly':
+      return startTs.value + ONE_HOUR
+    case 'weekly':
+      return startTs.value + ONE_WEEK
+    case 'daily':
+    default:
+      return startTs.value + ONE_DAY
+  }
+})
+
+const dateText = computed(() => {
+  if (!startTs.value) {
+    return
+  }
+  const date = formatGoTimestamp(
+    startTs.value,
+    undefined,
+    'absolute',
+    'narrow',
+    'en-US',
+    true,
+  )
+  if (!endTs.value) {
+    return date
+  }
+  const endDate = formatGoTimestamp(
+    endTs.value,
+    undefined,
+    'absolute',
+    'narrow',
+    'en-US',
+    true,
+  )
+
+  return `${date} - ${endDate}`
+})
+
+const epochText = computed(() => {
+  if (!startTs.value) {
+    return
+  }
+  const startEpoch = props.getEpochFromTimestamp(startTs.value)
+  if (!endTs.value) {
+    return startEpoch
+  }
+  const endEpoch = props.getEpochFromTimestamp(endTs.value)
+  return `${startEpoch} - ${endEpoch}`
+})
+
+const title = computed(() => {
+  if (props.efficiencyType) {
+    return props.t(
+      `dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`,
+    )
+  }
+  return undefined
+})
+</script>
+
+<template>
+  <b>
+    <div>{{ title }}</div>
+    <div>{{ dateText }}</div>
+    <div>{{ t("common.epoch") }} {{ epochText }}</div>
+  </b>
+</template>

@@ -87,3 +87,14 @@ func csrfInjecterMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func contentTypeMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if body is not empty, check if content type is set to json
+		if (r.Method == http.MethodPost || r.Method == http.MethodPut) && r.ContentLength > 0 && r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "bad request: Content-Type header must be application/json", http.StatusBadRequest)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

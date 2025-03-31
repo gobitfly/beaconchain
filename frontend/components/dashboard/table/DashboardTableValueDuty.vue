@@ -20,8 +20,7 @@ defineProps<Props>()
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.attestation"
-        :fixed="0"
-        :precision="0"
+        :maximum-fraction-digits="0"
       />
     </div>
     <div
@@ -32,8 +31,7 @@ defineProps<Props>()
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.proposal"
-        :fixed="0"
-        :precision="0"
+        :maximum-fraction-digits="0"
       />
     </div>
     <div
@@ -44,8 +42,7 @@ defineProps<Props>()
       <BcFormatPercent
         class="round-brackets"
         :percent="duty.sync"
-        :fixed="0"
-        :precision="0"
+        :maximum-fraction-digits="0"
       />
     </div>
     <div

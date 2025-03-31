@@ -97,31 +97,45 @@ func SliceContains(list []string, target string) bool {
 
 // ForkVersionAtEpoch returns the forkversion active a specific epoch
 func ForkVersionAtEpoch(epoch uint64) *types.ForkVersion {
-	if epoch >= Config.Chain.ClConfig.CappellaForkEpoch {
+	if epoch >= Config.Chain.ClConfig.ElectraForkEpoch {
 		return &types.ForkVersion{
-			Epoch:           Config.Chain.ClConfig.CappellaForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.CappellaForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.BellatrixForkVersion),
+			Epoch:           Config.Chain.ClConfig.ElectraForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.ElectraForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.DenebForkVersion,
+		}
+	}
+	if epoch >= Config.Chain.ClConfig.DenebForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.DenebForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.DenebForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.CapellaForkVersion,
+		}
+	}
+	if epoch >= Config.Chain.ClConfig.CapellaForkEpoch {
+		return &types.ForkVersion{
+			Epoch:           Config.Chain.ClConfig.CapellaForkEpoch,
+			CurrentVersion:  Config.Chain.ClConfig.CapellaForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.BellatrixForkVersion,
 		}
 	}
 	if epoch >= Config.Chain.ClConfig.BellatrixForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.BellatrixForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.BellatrixForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.AltairForkVersion),
+			CurrentVersion:  Config.Chain.ClConfig.BellatrixForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.AltairForkVersion,
 		}
 	}
 	if epoch >= Config.Chain.ClConfig.AltairForkEpoch {
 		return &types.ForkVersion{
 			Epoch:           Config.Chain.ClConfig.AltairForkEpoch,
-			CurrentVersion:  MustParseHex(Config.Chain.ClConfig.AltairForkVersion),
-			PreviousVersion: MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
+			CurrentVersion:  Config.Chain.ClConfig.AltairForkVersion,
+			PreviousVersion: Config.Chain.ClConfig.GenesisForkVersion,
 		}
 	}
 	return &types.ForkVersion{
 		Epoch:           0,
-		CurrentVersion:  MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
-		PreviousVersion: MustParseHex(Config.Chain.ClConfig.GenesisForkVersion),
+		CurrentVersion:  Config.Chain.ClConfig.GenesisForkVersion,
+		PreviousVersion: Config.Chain.ClConfig.GenesisForkVersion,
 	}
 }
 
@@ -221,6 +235,9 @@ func SortedUniqueUint64(arr []uint64) []uint64 {
 }
 
 func GetParticipatingSyncCommitteeValidators(syncAggregateBits []byte, validators []uint64) []uint64 {
+	if len(validators) != len(syncAggregateBits)*8 {
+		return nil
+	}
 	participatingValidators := []uint64{}
 	for i := 0; i < len(syncAggregateBits)*8; i++ {
 		val := validators[i]
@@ -238,10 +255,10 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 	}
 }
 
-func SliceToMap[T comparable](s []T) map[T]bool {
-	m := make(map[T]bool)
+func SliceToMap[T comparable](s []T) map[T]struct{} {
+	m := make(map[T]struct{})
 	for _, v := range s {
-		m[v] = true
+		m[v] = struct{}{}
 	}
 	return m
 }
@@ -384,13 +401,28 @@ func GetWithdrawalCredentialsOfAddress(addr common.Address) []byte {
 
 	return result
 }
+func GetMaxEffectiveBalanceByWithdrawalCredentials(withCred []byte) uint64 {
+	if len(withCred) == 0 {
+		return 0
+	}
+	switch withCred[0] {
+	case 0x00, 0x01:
+		// phase0, capella
+		return Config.Chain.ClConfig.MaxEffectiveBalance
+	case 0x02:
+		// electra
+		return Config.Chain.ClConfig.MaxEffectiveBalanceElectra
+	default:
+		return 0
+	}
+}
 
-func Deduplicate(slice []uint64) []uint64 {
-	keys := make(map[uint64]bool)
-	list := []uint64{}
+func Deduplicate[T comparable](slice []T) []T {
+	keys := make(map[T]struct{})
+	list := []T{}
 	for _, entry := range slice {
 		if _, value := keys[entry]; !value {
-			keys[entry] = true
+			keys[entry] = struct{}{}
 			list = append(list, entry)
 		}
 	}
@@ -402,4 +434,11 @@ func FirstN(input string, n int) string {
 		return input
 	}
 	return input[:n]
+}
+
+func Min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
 }

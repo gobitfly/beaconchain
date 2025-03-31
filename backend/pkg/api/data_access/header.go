@@ -72,13 +72,9 @@ func (d *DataAccessService) GetLatestBlockHeightsForEpoch(ctx context.Context, e
 func (d *DataAccessService) GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error) {
 	result := []t.EthConversionRate{}
 
-	availableCurrencies := price.GetAvailableCurrencies()
+	availableCurrencies := utils.Deduplicate(price.GetAvailableCurrencies())
 	for _, code := range availableCurrencies {
-		if code == "ETH" {
-			// Don't return ETH/ETH info
-			continue
-		}
-		rate := price.GetPrice("ETH", code)
+		rate := price.GetPrice(d.config.Frontend.MainCurrency, code)
 		result = append(result, t.EthConversionRate{
 			Currency: price.GetCurrencyLabel(code),
 			Code:     code,

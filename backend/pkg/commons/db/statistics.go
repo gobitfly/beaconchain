@@ -823,7 +823,7 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 	}
 	lastSlot := utils.GetLastBalanceInfoSlotForDay(day)
 
-	log.Infof("gathering deposits + withdrawals")
+	log.Infof("gathering deposits + withdrawals (day: %v, slots: %v-%v)", day, firstSlot, lastSlot)
 
 	type resRowDeposits struct {
 		ValidatorIndex uint64 `db:"validatorindex"`
@@ -831,13 +831,109 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 		DepositsAmount uint64 `db:"deposits_amount"`
 	}
 	resDeposits := make([]*resRowDeposits, 0, 1024)
+	// In this query we are collecting all deposits per validator and sum them up. We need to consider that all deposits after the first valid deposits are valid. Note that there are currently only valid requests in the deposit_requests table.
 	depositsQry := `
-			select validators.validatorindex, count(*) AS deposits, sum(amount) AS deposits_amount
-			from blocks_deposits
-			inner join validators on blocks_deposits.publickey = validators.pubkey
-			inner join blocks on blocks_deposits.block_root = blocks.blockroot
-			where blocks.slot >= $1 and blocks.slot <= $2 and (blocks.status = '1' OR blocks.slot = 0) and blocks_deposits.valid_signature
-			group by validators.validatorindex`
+		with 
+		first_valid_deposits as (
+			select distinct on (publickey)
+				publickey,
+				block_slot,
+				block_index
+			from
+				blocks_deposits
+			where
+				valid_signature
+				and publickey in (select bd.publickey from blocks_deposits bd where bd.valid_signature and bd.block_slot >= $1 and bd.block_slot <= $2)
+			order by
+				publickey,
+				block_slot,
+				block_index
+		),
+		first_valid_deposit_requests as (
+			select
+				distinct on (pubkey)
+				pubkey,
+				block_slot,
+				request_index
+			from
+				blocks_deposit_requests
+			where
+				pubkey in (select bdr.pubkey from blocks_deposit_requests bdr where bdr.block_slot >= $1 and bdr.block_slot <= $2)
+			order by
+				pubkey,
+				block_slot,
+				request_index
+		),
+		deposits as (
+			select
+				validators.validatorindex,
+				count(*) as deposits,
+				sum(amount) as deposits_amount
+			from
+				blocks_deposits
+			inner join validators on
+				blocks_deposits.publickey = validators.pubkey
+			inner join blocks on
+				blocks_deposits.block_root = blocks.blockroot
+			inner join first_valid_deposits on
+				blocks_deposits.publickey = first_valid_deposits.publickey
+			where
+				blocks_deposits.valid_signature
+				and blocks.slot >= $1
+				and blocks.slot <= $2
+				and (blocks.status = '1'
+					or blocks.slot = 0)
+				and (blocks_deposits.block_slot > first_valid_deposits.block_slot  -- any slot after the first valid deposit
+					or (blocks_deposits.block_slot = first_valid_deposits.block_slot -- or the same slot but a equal or higher block-index
+						and blocks_deposits.block_index >= first_valid_deposits.block_index)
+				)
+				group by
+					validators.validatorindex
+		),
+		deposit_requests as (
+			select
+				validators.validatorindex,
+				count(*) as deposits,
+				sum(amount) as deposits_amount
+			from
+				blocks_deposit_requests bdr
+			inner join validators on
+				bdr.pubkey = validators.pubkey
+			inner join blocks on
+				bdr.block_root = blocks.blockroot
+			left join first_valid_deposits on
+				bdr.pubkey = first_valid_deposits.publickey
+			left join first_valid_deposit_requests on
+				bdr.pubkey = first_valid_deposit_requests.pubkey
+			where
+				blocks.slot >= $1
+				and blocks.slot <= $2
+				and (blocks.status = '1'
+					or blocks.slot = 0)
+				and (
+					(first_valid_deposits.block_slot is not null 
+						and bdr.block_slot > first_valid_deposits.block_slot)  -- any slot after the first valid deposit
+					or (first_valid_deposit_requests.block_slot is not null
+						and (bdr.block_slot > first_valid_deposit_requests.block_slot -- or any slot after the first valid deposit request
+							or (bdr.block_slot = first_valid_deposit_requests.block_slot -- or the same slot but a equal or higher index
+							and bdr.request_index >= first_valid_deposit_requests.request_index)
+						)
+					)
+				)
+			group by
+				validators.validatorindex
+		)
+		select
+			validatorindex,
+			sum(deposits) as deposits,
+			sum(deposits_amount) as deposits_amount
+		from (
+			select validatorindex, deposits, deposits_amount from deposits
+			union all
+			select validatorindex, deposits, deposits_amount from deposit_requests
+		) a
+		group by validatorindex
+		;`
 
 	err := WriterDb.Select(&resDeposits, depositsQry, firstSlot, lastSlot)
 	if err != nil {
@@ -1611,7 +1707,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				failedTxCount += 1
 				totalFailedGasUsed = totalFailedGasUsed.Add(gasUsed)
 				totalFailedTxFee = totalFailedTxFee.Add(txFees)
-			case 1:
+			case 1, 2:
 				successTxCount += 1
 			default:
 				log.Fatal(fmt.Errorf("error unknown status code %v hash: %x", tx.Status, tx.Hash), "", 0)
@@ -1841,5 +1937,49 @@ func CheckIfDayIsFinalized(day uint64) error {
 		return fmt.Errorf("delaying statistics export as not all epochs for day %v are finalized. Last epoch of the day [%v] last finalized epoch [%v]", day, lastEpoch, latestFinalizedEpoch)
 	}
 
+	return nil
+}
+
+func AggregateDeposits() error {
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues("statistics_aggregate_eth1_deposits").Observe(time.Since(start).Seconds())
+	}()
+	_, err := WriterDb.Exec(`
+		INSERT INTO eth1_deposits_aggregated (from_address, amount, validcount, invalidcount, slashedcount, totalcount, activecount, pendingcount, voluntary_exit_count)
+		SELECT
+			eth1.from_address,
+			SUM(eth1.amount) as amount,
+			SUM(eth1.validcount) AS validcount,
+			SUM(eth1.invalidcount) AS invalidcount,
+			COUNT(CASE WHEN v.status = 'slashed' THEN 1 END) AS slashedcount,
+			COUNT(v.pubkey) AS totalcount,
+			COUNT(CASE WHEN v.status = 'active_online' OR v.status = 'active_offline' THEN 1 END) as activecount,
+			COUNT(CASE WHEN v.status = 'deposited' THEN 1 END) AS pendingcount,
+			COUNT(CASE WHEN v.status = 'exited' THEN 1 END) AS voluntary_exit_count
+		FROM (
+			SELECT
+				from_address,
+				publickey,
+				SUM(amount) AS amount,
+				COUNT(CASE WHEN valid_signature = 't' THEN 1 END) AS validcount,
+				COUNT(CASE WHEN valid_signature = 'f' THEN 1 END) AS invalidcount
+			FROM eth1_deposits
+			GROUP BY from_address, publickey
+		) eth1
+		LEFT JOIN (SELECT pubkey, status FROM validators) v ON v.pubkey = eth1.publickey
+		GROUP BY eth1.from_address
+		ON CONFLICT (from_address) DO UPDATE SET
+			amount               = excluded.amount,
+			validcount           = excluded.validcount,
+			invalidcount         = excluded.invalidcount,
+			slashedcount         = excluded.slashedcount,
+			totalcount           = excluded.totalcount,
+			activecount          = excluded.activecount,
+			pendingcount         = excluded.pendingcount,
+			voluntary_exit_count = excluded.voluntary_exit_count`)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
 	return nil
 }

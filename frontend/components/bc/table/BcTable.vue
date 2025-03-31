@@ -109,7 +109,7 @@ const sort = computed(() => {
 
 <template>
   <DataTable
-    v-model:expandedRows="expandedRows"
+    v-model:expanded-rows="expandedRows"
     class="bc-table"
     sort-mode="single"
     lazy
@@ -130,21 +130,25 @@ const sort = computed(() => {
       class="expander"
     >
       <template #header>
-        <IconChevron
+        <BcButtonIcon
+          screenreader-text="dashboard.table.action.toggle_all_row_details"
           class="toggle"
-          :direction="allExpanded ? 'bottom' : 'right'"
+          name="chevron-right"
+          :rotation="allExpanded ? '90deg' : '0deg'"
           @click.stop.prevent="toggleAll()"
         />
       </template>
 
       <template #body="slotProps">
-        <IconChevron
+        <BcButtonIcon
           v-if="!isRowExpandable || isRowExpandable(slotProps.data)"
+          screenreader-text="dashboard.table.action.toggle_row_detail"
+          name="chevron-right"
           class="toggle"
-          :direction="
+          :rotation="
             dataKey && expandedRows[slotProps.data[dataKey]]
-              ? 'bottom'
-              : 'right'
+              ? '90deg'
+              : '0deg'
           "
           @click.stop.prevent="toggleItem(slotProps.data)"
         />

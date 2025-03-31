@@ -1,25 +1,23 @@
-import { type StringUnitLength } from 'luxon'
+import type { StringUnitLength } from 'luxon'
+import type { Locale } from '~/i18n/i18n.config'
 import type { AgeFormat } from '~/types/settings'
-import {
-  formatEpochToDate as formatEpochToDateImported,
-  formatEpochToDateTime as formatEpochToDateTimeImported,
-  formatSlotToDateTime as formatSlotToDateTimeImported,
-} from '~/utils/format'
 
 export function useFormat() {
-  const { currentNetwork } = useNetworkStore()
+  const {
+    getTimestampFromEpoch,
+    getTimestampFromSlot,
+  } = useNetworkStore()
 
   function formatEpochToDateTime(
     epoch: number,
     timestamp?: number,
     format?: AgeFormat,
     style?: StringUnitLength,
-    locales?: string,
+    locales?: Locale,
     withTime?: boolean,
   ): null | string | undefined {
-    return formatEpochToDateTimeImported(
-      currentNetwork.value,
-      epoch,
+    return formatTs(
+      getTimestampFromEpoch(epoch),
       timestamp,
       format,
       style,
@@ -33,12 +31,11 @@ export function useFormat() {
     timestamp?: number,
     format?: AgeFormat,
     style?: StringUnitLength,
-    locales?: string,
+    locales?: Locale,
     withTime?: boolean,
   ): null | string | undefined {
-    return formatSlotToDateTimeImported(
-      currentNetwork.value,
-      slot,
+    return formatTs(
+      getTimestampFromSlot(slot),
       timestamp,
       format,
       style,
@@ -49,9 +46,16 @@ export function useFormat() {
 
   function formatEpochToDate(
     epoch: number,
-    locales: string,
+    locales: Locale,
   ): null | string | undefined {
-    return formatEpochToDateImported(currentNetwork.value, epoch, locales)
+    return formatEpochToDateTime(
+      epoch,
+      undefined,
+      'absolute',
+      undefined,
+      locales,
+      false,
+    )
   }
 
   return {

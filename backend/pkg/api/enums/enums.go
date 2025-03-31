@@ -1,6 +1,9 @@
 package enums
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Enum interface {
 	Int() int
@@ -21,10 +24,10 @@ type AdInsertMode int
 var _ EnumFactory[AdInsertMode] = AdInsertMode(0)
 
 const (
-	AdInsertBefore  AdInsertMode = iota
-	AdInsertAfter   AdInsertMode = iota
-	AdInsertReplace AdInsertMode = iota
-	AdInsertInsert  AdInsertMode = iota
+	AdInsertBefore AdInsertMode = iota
+	AdInsertAfter
+	AdInsertReplace
+	AdInsertInsert
 )
 
 func (c AdInsertMode) Int() int {
@@ -152,9 +155,32 @@ func (t TimePeriod) Duration() time.Duration {
 		return 7 * day
 	case Last30d:
 		return 30 * day
+	case AllTime:
+		return -1
 	default:
 		return 0
 	}
+}
+
+func (t TimePeriod) Table() (string, error) {
+	table := ""
+
+	switch t {
+	case TimePeriods.Last1h:
+		table = "validator_dashboard_data_rolling_1h"
+	case TimePeriods.Last24h:
+		table = "validator_dashboard_data_rolling_24h"
+	case TimePeriods.Last7d:
+		table = "validator_dashboard_data_rolling_7d"
+	case TimePeriods.Last30d:
+		table = "validator_dashboard_data_rolling_30d"
+	case TimePeriods.AllTime:
+		table = "validator_dashboard_data_rolling_total"
+	default:
+		return "", fmt.Errorf("not-implemented time period: %v", t)
+	}
+
+	return table, nil
 }
 
 // ----------------

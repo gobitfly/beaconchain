@@ -38,8 +38,7 @@ func (s *ServiceTimeoutDetector) internalProcess() {
 }
 
 func (s *ServiceTimeoutDetector) runChecks() {
-	id := "monitoring_timeouts"
-	r := NewStatusReport(id, constants.Default, 30*time.Second)
+	r := NewStatusReport(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
 	r(constants.Running, nil)
 	if db.ClickHouseReader == nil {
 		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
@@ -109,7 +108,7 @@ func (s *ServiceTimeoutDetector) runChecks() {
 		TimeoutsAt time.Time         `db:"timeouts_at"`
 		Metadata   map[string]string `db:"metadata"`
 	}
-	err := db.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType, constants.CleanShutdownEvent)
+	err := db.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
 	if err != nil {
 		r(constants.Failure, map[string]string{"error": err.Error()})
 		return

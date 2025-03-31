@@ -5,14 +5,14 @@ on:
       - 'backend/pkg/api/types/**'
       - 'frontend/types/api/**'
     branches:
-      - main
-      - staging
+      - '**'
   pull_request:
     paths:
       - 'backend/pkg/api/types/**'
       - 'frontend/types/api/**'
     branches:
-      - '*'
+      - '**'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,13 +26,14 @@ permissions:
 jobs:
   build:
     name: converted-types-check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version-file: 'backend/go.mod'
           cache-dependency-path: 'backend/go.sum'
+          cache: true
       - name: Check if all backend-types have been converted to frontend-types
         working-directory: backend
         run: |

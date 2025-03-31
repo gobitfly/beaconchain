@@ -4,8 +4,17 @@ import type {
   VDBSummaryValidatorsData,
 } from '../api/validator_dashboard'
 
+export type SummaryValidatorsIconRowInfo = {
+  count: number,
+  key: ValidatorSummaryIconRowKey,
+}
+
 export type ValidatorStatus = VDBManageValidatorsTableRow['status']
 
+export type ValidatorSubset = {
+  category: ValidatorSubsetCategory,
+  validators: VDBSummaryValidator[],
+}
 export type ValidatorSubsetCategory =
   | 'all'
   | 'exited_withdrawing'
@@ -14,13 +23,4 @@ export type ValidatorSubsetCategory =
   | 'slashed_withdrawn'
   | VDBSummaryValidatorsData['category']
 
-export type ValidatorSubset = {
-  category: ValidatorSubsetCategory,
-  validators: VDBSummaryValidator[],
-}
 export type ValidatorSummaryIconRowKey = 'exited' | 'offline' | 'online'
-
-export type SummaryValidatorsIconRowInfo = {
-  count: number,
-  key: ValidatorSummaryIconRowKey,
-}

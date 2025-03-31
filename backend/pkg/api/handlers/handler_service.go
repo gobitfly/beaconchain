@@ -1,35 +1,38 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gorilla/mux"
 	"github.com/invopop/jsonschema"
+	"github.com/shopspring/decimal"
 
 	"github.com/alexedwards/scs/v2"
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
-	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	types "github.com/gobitfly/beaconchain/pkg/api/types"
 	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
 type HandlerService struct {
-	daService                   dataaccess.DataAccessor
-	daDummy                     dataaccess.DataAccessor
-	scs                         *scs.SessionManager
-	isPostMachineMetricsEnabled bool // if more config options are needed, consider having the whole config in here
+	daService dataaccess.DataAccessor
+	daDummy   dataaccess.DataAccessor
+	scs       *scs.SessionManager
+	cfg       *commontypes.Config
 }
 
-func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, enablePostMachineMetrics bool) *HandlerService {
+func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAccessor, sessionManager *scs.SessionManager, cfg *commontypes.Config) *HandlerService {
 	if allNetworks == nil {
 		networks, err := dataAccessor.GetAllNetworks()
 		if err != nil {
@@ -39,18 +42,20 @@ func NewHandlerService(dataAccessor dataaccess.DataAccessor, dummy dataaccess.Da
 	}
 
 	return &HandlerService{
-		daService:                   dataAccessor,
-		daDummy:                     dummy,
-		scs:                         sessionManager,
-		isPostMachineMetricsEnabled: enablePostMachineMetrics,
+		daService: dataAccessor,
+		daDummy:   dummy,
+		scs:       sessionManager,
+		cfg:       cfg,
 	}
 }
 
 // getDataAccessor returns the correct data accessor based on the request context.
 // if the request is mocked, the data access dummy is returned; otherwise the data access service.
 // should only be used if getting mocked data for the endpoint is appropriate
-func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccessor {
-	if isMocked(r) {
+func (h *HandlerService) getDataAccessor(ctx context.Context) dataaccess.DataAccessor {
+	isMocked, isMockedOk := ctx.Value(types.CtxIsMockedKey).(bool)                         // set in StoreIsMockedFlagMiddleware
+	isMockingAllowed, isMockingAllowedOk := ctx.Value(types.CtxIsMockingAllowedKey).(bool) // set in Handle function
+	if isMockedOk && isMocked && isMockingAllowedOk && isMockingAllowed {
 		return h.daDummy
 	}
 	return h.daService
@@ -58,6 +63,49 @@ func (h *HandlerService) getDataAccessor(r *http.Request) dataaccess.DataAccesso
 
 // all networks available in the system, filled on startup in NewHandlerService
 var allNetworks []types.NetworkInfo
+
+type InputValidator[T any] interface {
+	Validate(params map[string]string, payload io.ReadCloser) error
+	*T
+}
+
+type BusinessLogicFunc[Input any, Response any] func(ctx context.Context, input Input) (Response, error)
+
+func Handle[Input InputValidator[Value], Value, Response any](defaultCode int, logicFunc BusinessLogicFunc[Value, Response], isMockingAllowed bool) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// prepare input
+		vars := mux.Vars(r)
+		if vars == nil {
+			vars = make(map[string]string)
+		}
+		q := r.URL.Query()
+		for k, v := range q {
+			if _, ok := vars[k]; ok || len(v) == 0 {
+				continue
+			}
+			vars[k] = v[0]
+		}
+		// input validation
+		var input Input = new(Value)
+		err := input.Validate(vars, r.Body)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+		ctx := r.Context()
+		if isMockingAllowed {
+			ctx = context.WithValue(ctx, types.CtxIsMockingAllowedKey, true)
+		}
+		// business logic
+		response, err := logicFunc(ctx, *input)
+		if err != nil {
+			handleErr(w, r, err)
+			return
+		}
+
+		writeResponse(w, r, defaultCode, response)
+	}
+}
 
 // --------------------------------------
 // errors
@@ -81,33 +129,6 @@ type validatorSet struct {
 	PublicKeys []string
 }
 
-// parseDashboardId is a helper function to validate the string dashboard id param.
-func parseDashboardId(id string) (interface{}, error) {
-	var v validationError
-	if reInteger.MatchString(id) {
-		// given id is a normal id
-		id := v.checkUint(id, "dashboard_id")
-		if v.hasErrors() {
-			return nil, v
-		}
-		return types.VDBIdPrimary(id), nil
-	}
-	if reValidatorDashboardPublicId.MatchString(id) {
-		// given id is a public id
-		return types.VDBIdPublic(id), nil
-	}
-	// given id must be an encoded set of validators
-	decodedId, err := base64.RawURLEncoding.DecodeString(id)
-	if err != nil {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	indexes, publicKeys := v.checkValidatorList(string(decodedId), forbidEmpty)
-	if v.hasErrors() {
-		return nil, newBadRequestErr("given value '%s' is not a valid dashboard id", id)
-	}
-	return validatorSet{Indexes: indexes, PublicKeys: publicKeys}, nil
-}
-
 // getDashboardId is a helper function to convert the dashboard id param to a VDBId.
 // precondition: dashboardIdParam must be a valid dashboard id and either a primary id, public id, or list of validators.
 func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam interface{}) (*types.VDBId, error) {
@@ -128,8 +149,17 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 		if len(validators) == 0 {
 			return nil, newNotFoundErr("no validators found for given id")
 		}
-		if len(validators) > maxValidatorsInList {
-			return nil, newBadRequestErr("too many validators in list, maximum is %d", maxValidatorsInList)
+		validatorEb, err := h.daService.GetValidatorDashboardEffectiveBalanceTotal(ctx, types.VDBId{Validators: validators}, false)
+		if err != nil {
+			return nil, err
+		}
+		// TODO check if we also need a count limit because of cf url length limits
+		perks, err := h.daService.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if utils.GWeiToWei(big.NewInt(int64(validatorEb))).GreaterThan(perks.EffectiveBalancePerDashboard) {
+			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", perks.EffectiveBalancePerDashboard.Div(decimal.NewFromInt(1e9)).IntPart())
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
@@ -145,8 +175,9 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 		return dashboardId, nil
 	}
 	// validate dashboard id param
-	dashboardIdParam, err := parseDashboardId(param)
-	if err != nil {
+	var v validationError
+	dashboardIdParam := v.checkDashboardId(param)
+	if err := v.AsError(); err != nil {
 		return nil, err
 	}
 	// convert to VDBId
@@ -158,76 +189,35 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
-const chartDatapointLimit uint64 = 200
-
-type ChartTimeDashboardLimits struct {
-	MinAllowedTs       uint64
-	LatestExportedTs   uint64
-	MaxAllowedInterval uint64
-}
-
-// helper function to retrieve allowed chart timestamp boundaries according to the users premium perks at the current point in time
-func (h *HandlerService) getCurrentChartTimeLimitsForDashboard(ctx context.Context, dashboardId *types.VDBId, aggregation enums.ChartAggregation) (ChartTimeDashboardLimits, error) {
-	limits := ChartTimeDashboardLimits{}
-	var err error
-	premiumPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
-	if err != nil {
-		return limits, err
-	}
-
-	maxAge := getMaxChartAge(aggregation, premiumPerks.ChartHistorySeconds) // can be max int for unlimited, always check for underflows
-	if maxAge == 0 {
-		return limits, newConflictErr("requested aggregation is not available for dashboard owner's premium subscription")
-	}
-	limits.LatestExportedTs, err = h.daService.GetLatestExportedChartTs(ctx, aggregation)
-	if err != nil {
-		return limits, err
-	}
-	limits.MinAllowedTs = limits.LatestExportedTs - min(maxAge, limits.LatestExportedTs)                        // min to prevent underflow
-	secondsPerEpoch := uint64(12 * 32)                                                                          // TODO: fetch dashboards chain id and use correct value for network once available
-	limits.MaxAllowedInterval = chartDatapointLimit*uint64(aggregation.Duration(secondsPerEpoch).Seconds()) - 1 // -1 to make sure we don't go over the limit
-
-	return limits, nil
-}
-
 // getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
 func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks
 	if id.Validators != nil {
 		perk, err := h.daService.GetFreeTierPerks(ctx)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error getting free tier perks: %w", err)
 		}
 		return perk, nil
 	}
 	// could be made into a single query if needed
 	dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, id.Id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting dashboard owner: %w", err)
 	}
 	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			log.Warn("user not found for dashboard owner, returning free tier perks", log.Fields{"dashboard_id": id.Id, "user_id_of_dashboard": dashboardUser.UserId})
+			perk, err := h.daService.GetFreeTierPerks(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error getting free tier perks after user not found: %w", err)
+			}
+			return perk, nil
+		}
+		return nil, fmt.Errorf("error getting user info for dashboard owner: %w", err)
 	}
 
 	return &userInfo.PremiumPerks, nil
-}
-
-// getMaxChartAge returns the maximum age of a chart in seconds based on the given aggregation type and premium perks
-func getMaxChartAge(aggregation enums.ChartAggregation, perkSeconds types.ChartHistorySeconds) uint64 {
-	aggregations := enums.ChartAggregations
-	switch aggregation {
-	case aggregations.Epoch:
-		return perkSeconds.Epoch
-	case aggregations.Hourly:
-		return perkSeconds.Hourly
-	case aggregations.Daily:
-		return perkSeconds.Daily
-	case aggregations.Weekly:
-		return perkSeconds.Weekly
-	default:
-		return 0
-	}
 }
 
 func isUserAdmin(user *types.UserInfo) bool {
@@ -330,16 +320,15 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 	if body, _ := io.ReadAll(io.LimitReader(r.Body, maxBodySize)); len(body) > 0 {
 		requestFields["request_body"] = string(body)
 	}
-	if userId, _ := GetUserIdByContext(r); userId != 0 {
+	if userId, _ := GetUserIdByContext(r.Context()); userId != 0 {
 		requestFields["request_user_id"] = userId
 	}
 	log.Error(err, "error handling request", callerSkip+1, append(additionalInfos, requestFields)...)
 }
 
 func handleErr(w http.ResponseWriter, r *http.Request, err error) {
-	_, isValidationError := err.(validationError)
 	switch {
-	case isValidationError, errors.Is(err, errBadRequest):
+	case errors.Is(err, errBadRequest):
 		returnBadRequest(w, r, err)
 	case errors.Is(err, dataaccess.ErrNotFound):
 		returnNotFound(w, r, err)
@@ -394,7 +383,6 @@ func newForbiddenErr(format string, args ...interface{}) error {
 	return errWithMsg(errForbidden, format, args...)
 }
 
-//nolint:unparam
 func newConflictErr(format string, args ...interface{}) error {
 	return errWithMsg(errConflict, format, args...)
 }
@@ -459,8 +447,8 @@ func mapVDBIndices(indices interface{}) ([]types.VDBSummaryValidatorsData, error
 
 	case *types.VDBProposalSummaryValidators:
 		return []types.VDBSummaryValidatorsData{
-			mapIndexBlocksSlice("proposal_proposed", v.Proposed),
-			mapIndexBlocksSlice("proposal_missed", v.Missed),
+			mapIndexSlotsSlice("proposal_proposed", v.Proposed),
+			mapIndexSlotsSlice("proposal_missed", v.Missed),
 		}, nil
 
 	default:
@@ -492,9 +480,9 @@ func mapIndexTimestampSlice(category string, validators []types.IndexTimestamp) 
 	)
 }
 
-func mapIndexBlocksSlice(category string, validators []types.IndexBlocks) types.VDBSummaryValidatorsData {
+func mapIndexSlotsSlice(category string, validators []types.IndexSlots) types.VDBSummaryValidatorsData {
 	return mapSlice(category, validators,
-		func(v types.IndexBlocks) (uint64, []uint64) { return v.Index, v.Blocks },
+		func(v types.IndexSlots) (uint64, []uint64) { return v.Index, v.Slots },
 	)
 }
 
@@ -570,6 +558,9 @@ type intOrString struct {
 }
 
 func (v *intOrString) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(data, []byte("null")) {
+		return fmt.Errorf("null value not allowed")
+	}
 	// Attempt to unmarshal as uint64 first
 	var intValue uint64
 	if err := json.Unmarshal(data, &intValue); err == nil {
@@ -609,9 +600,4 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 			{Type: "string"}, {Type: "integer"},
 		},
 	}
-}
-
-func isMocked(r *http.Request) bool {
-	isMocked, ok := r.Context().Value(types.CtxIsMockedKey).(bool)
-	return ok && isMocked
 }

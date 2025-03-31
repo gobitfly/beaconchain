@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCaretRight } from '@fortawesome/pro-solid-svg-icons'
 import { uniqBy } from 'lodash-es'
 import type {
   DashboardValidatorContext,
@@ -12,13 +10,13 @@ import type {
   ValidatorSubsetCategory,
 } from '~/types/validator'
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
-import { API_PATH } from '~/types/customFetch'
-import {
-  type GetValidatorDashboardSummaryValidatorsResponse,
-  type VDBGroupSummaryData,
-  type VDBSummaryTableRow,
-  type VDBSummaryValidator,
-  type VDBSummaryValidatorsData,
+
+import type {
+  GetValidatorDashboardSummaryValidatorsResponse,
+  VDBGroupSummaryData,
+  VDBSummaryTableRow,
+  VDBSummaryValidator,
+  VDBSummaryValidatorsData,
 } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useTranslation()
@@ -37,7 +35,8 @@ interface Props {
   timeFrame?: SummaryTimeFrame,
 }
 const {
-  props, setHeader,
+  props,
+  setHeader,
 } = useBcDialog<Props>(undefined)
 
 const isLoading = ref(false)
@@ -53,17 +52,17 @@ watch(
         case 'attestation':
           text = $t('dashboard.validator.summary.row.attestations')
           break
-        case 'sync':
-          text = $t('dashboard.validator.summary.row.sync_committee')
-          break
-        case 'slashings':
-          text = $t('dashboard.validator.summary.row.slashings')
+        case 'group':
+          text = $t('dashboard.validator.col.validators')
           break
         case 'proposal':
           text = $t('dashboard.validator.summary.row.proposals')
           break
-        case 'group':
-          text = $t('dashboard.validator.col.validators')
+        case 'slashings':
+          text = $t('dashboard.validator.summary.row.slashings')
+          break
+        case 'sync':
+          text = $t('dashboard.validator.summary.row.sync_committee')
           break
       }
 
@@ -72,20 +71,20 @@ watch(
       isLoading.value = true
       let duty = ''
       switch (p.context) {
-        case 'sync':
-          duty = 'sync'
-          break
         case 'proposal':
           duty = 'proposal'
           break
         case 'slashings':
           duty = 'slashed'
           break
+        case 'sync':
+          duty = 'sync'
+          break
       }
 
       const res
         = await fetch<GetValidatorDashboardSummaryValidatorsResponse>(
-          API_PATH.DASHBOARD_VALIDATOR_INDICES,
+          'DASHBOARD_VALIDATOR_INDICES',
           {
             query: {
               duty,
@@ -257,7 +256,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
         :key="subset.category"
       >
         <template #headericon>
-          <FontAwesomeIcon :icon="faCaretRight" />
+          <BcIcon name="chevron-right" />
         </template>
         <template #header>
           <DashboardValidatorSubsetListHeader

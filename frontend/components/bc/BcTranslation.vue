@@ -1,15 +1,12 @@
 <script lang="ts" setup>
-import type { MessageSchema } from '~/i18n.config'
-import type { KeyPaths } from '~/types/helper'
-
 defineProps<{
-  boldpath?: KeyPaths<MessageSchema>,
+  boldpath?: TranslationKey,
   /**
    * The path to the key in the translation file (e.g. en.json)
    */
-  keypath: KeyPaths<MessageSchema>,
-  linkpath?: KeyPaths<MessageSchema>,
-  listpath?: KeyPaths<MessageSchema>,
+  keypath: TranslationKey,
+  linkpath?: TranslationKey,
+  listpath?: TranslationKey,
   tag?: keyof HTMLElementTagNameMap,
   /**
    * URL to link to
@@ -36,7 +33,10 @@ defineProps<{
     :tag="tag || 'span'"
   >
     <template #_bold>
-      <span v-if="boldpath" class="bc-translation-bold">{{ $t(boldpath) }}</span>
+      <span
+        v-if="boldpath"
+        class="bc-translation-bold"
+      >{{ $t(boldpath) }}</span>
     </template>
     <template #_link>
       <slot
@@ -53,9 +53,15 @@ defineProps<{
       </slot>
     </template>
     <template #_list>
-      <slot name="_list" :listpath>
+      <slot
+        name="_list"
+        :listpath
+      >
         <ul v-if="listpath">
-          <li v-for="item in $t(listpath).split('\n')" :key="item">
+          <li
+            v-for="item in $t(listpath).split('\n')"
+            :key="item"
+          >
             {{ item }}
           </li>
         </ul>

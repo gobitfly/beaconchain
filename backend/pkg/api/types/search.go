@@ -17,7 +17,7 @@ type SearchValidatorsByDepositAddress struct {
 	Count          uint64 `json:"count"`
 }
 
-type SearchValidatorsByWithdrwalCredential struct {
+type SearchValidatorsByWithdrawalCredential struct {
 	EnsName              string `json:"ens_name,omitempty"`
 	WithdrawalCredential string `json:"withdrawal_credential"`
 	Count                uint64 `json:"count"`
@@ -25,6 +25,7 @@ type SearchValidatorsByWithdrwalCredential struct {
 
 type SearchValidatorsByGraffiti struct {
 	Graffiti string `json:"graffiti"`
+	Hex      string `json:"hex"`
 	Count    uint64 `json:"count"`
 }
 
@@ -35,5 +36,5 @@ type SearchResult struct {
 }
 
 type InternalPostSearchResponse struct {
-	Data []SearchResult `json:"data" tstype:"({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrwalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[]"`
+	Data []SearchResult `json:"data" tstype:"({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[]"`
 }

@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { BcDialogConfirm } from '#components'
-import { API_PATH } from '~/types/customFetch'
 
 const dialog = useDialog()
 const { t: $t } = useTranslation()
@@ -28,7 +27,7 @@ const deleteAction = async () => {
   }
 
   buttonsDisabled.value = true
-  await fetch(API_PATH.USER_DELETE)
+  await fetch('USER_DELETE')
   await navigateTo('/')
 }
 </script>

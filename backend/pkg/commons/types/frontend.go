@@ -591,9 +591,11 @@ type TransitDiscord struct {
 }
 
 type TransitDiscordContent struct {
-	Webhook        UserWebhook
-	DiscordRequest DiscordReq `json:"discordRequest"`
-	UserId         UserId     `json:"userId"`
+	Webhook          UserWebhook
+	DiscordRequest   DiscordReq `json:"discordRequest"`
+	UserId           UserId     `json:"userId"`
+	DashboardId      uint64     `json:"dashboardId"`
+	DashboardGroupId uint64     `json:"dashboardGroupId"`
 }
 
 func (e *TransitDiscordContent) Scan(value interface{}) error {

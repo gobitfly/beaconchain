@@ -30,6 +30,7 @@ const (
 	validatorsByWithdrawalAddress    searchTypeKey = "validators_by_withdrawal_address"
 	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens_name"
 	validatorsByGraffiti             searchTypeKey = "validators_by_graffiti"
+	validatorsByGraffitiHex          searchTypeKey = "validators_by_graffiti_hex"
 )
 
 // source of truth for all possible search types and their regex
@@ -70,6 +71,10 @@ var searchTypeMap = map[searchTypeKey]searchType{
 		regex:        reGraffiti,
 		responseType: string(validatorsByGraffiti),
 	},
+	validatorsByGraffitiHex: {
+		regex:        reGraffitiHex,
+		responseType: string(validatorsByGraffiti),
+	},
 }
 
 type searchType struct {
@@ -87,15 +92,15 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 		Networks []intOrString   `json:"networks,omitempty"`
 		Types    []searchTypeKey `json:"types,omitempty"`
 	}{}
-	if err := v.checkBody(&req, r); err != nil {
+	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
 		return
 	}
 	// if the input slices are empty, the sets will contain all possible values
 	chainIdSet := v.checkNetworkSlice(req.Networks)
 	searchTypeSet := v.checkSearchTypes(req.Types)
-	if v.hasErrors() {
-		handleErr(w, r, v)
+	if err := v.AsError(); err != nil {
+		handleErr(w, r, err)
 		return
 	}
 
@@ -173,6 +178,8 @@ func (h *HandlerService) handleSearchType(ctx context.Context, input string, sea
 		return h.handleSearchValidatorsByWithdrawalEnsName(ctx, input, chainId)
 	case validatorsByGraffiti:
 		return h.handleSearchValidatorsByGraffiti(ctx, input, chainId)
+	case validatorsByGraffitiHex:
+		return h.handleSearchValidatorsByGraffitiHex(ctx, input, chainId)
 	default:
 		return nil, errors.New("invalid search type")
 	}
@@ -267,8 +274,27 @@ func (h *HandlerService) handleSearchValidatorsByWithdrawalEnsName(ctx context.C
 }
 
 func (h *HandlerService) handleSearchValidatorsByGraffiti(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	// regex could only verify max character length, validate max byte length here
+	if len(input) > 32 {
+		return nil, nil // return no error as to not disturb the other search types
+	}
 	result, err := h.daService.GetSearchValidatorsByGraffiti(ctx, chainId, input)
 	return asSearchResult(validatorsByGraffiti, chainId, result, err)
+}
+
+func (h *HandlerService) handleSearchValidatorsByGraffitiHex(ctx context.Context, input string, chainId uint64) (*types.SearchResult, error) {
+	graffitiHex, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	// exclude the empty hex graffiti
+	var graffitiArray [32]byte
+	copy(graffitiArray[:], graffitiHex)
+	if graffitiArray == [32]byte{} {
+		return nil, nil // return no error as to not disturb the other search types
+	}
+	result, err := h.daService.GetSearchValidatorsByGraffitiHex(ctx, chainId, graffitiHex)
+	return asSearchResult(validatorsByGraffitiHex, chainId, result, err)
 }
 
 // --------------------------------------

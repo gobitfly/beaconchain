@@ -1,8 +1,4 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/pro-solid-svg-icons'
-import { faInfoCircle } from '@fortawesome/pro-regular-svg-icons'
-import BcTooltip from '../bc/BcTooltip.vue'
 import type { Feature } from '~/types/pricing'
 
 interface Props {
@@ -21,6 +17,19 @@ defineProps<Props>()
       >
         <div class="name">
           {{ feature.name }}
+          <BcTooltip
+            v-if="feature.tooltip"
+            position="bottom"
+            class="tooltip"
+            fit-content
+          >
+            <BcIcon name="circle-info" />
+            <template #tooltip>
+              <div class="tooltip-content">
+                {{ feature.tooltip }}
+              </div>
+            </template>
+          </BcTooltip>
         </div>
         <div
           v-if="feature.subtext || feature.tooltip"
@@ -29,15 +38,6 @@ defineProps<Props>()
           <div v-if="feature.subtext">
             {{ feature.subtext }}
           </div>
-          <BcTooltip
-            v-if="feature.tooltip"
-            position="top"
-            :fit-content="true"
-            :text="feature.tooltip"
-            class="tooltip-icon"
-          >
-            <FontAwesomeIcon :icon="faInfoCircle" />
-          </BcTooltip>
         </div>
       </div>
       <BcLink
@@ -46,9 +46,9 @@ defineProps<Props>()
         :to="feature.link"
         target="_blank"
       >
-        <FontAwesomeIcon
+        <BcIcon
           class="popout"
-          :icon="faArrowUpRightFromSquare"
+          name="arrow-upright-from-square"
         />
       </BcLink>
     </div>
@@ -77,6 +77,7 @@ defineProps<Props>()
       flex-direction: column;
       gap: 5px;
       text-align: left;
+      flex-grow: 1;
 
       &.unavailable {
         color: var(--text-color-discreet);
@@ -84,10 +85,8 @@ defineProps<Props>()
 
       .name {
         font-size: 15px;
-
-        .slot_container {
-          margin-left: 8px;
-        }
+        display: flex;
+        justify-content: space-between;
       }
 
       .additional-info-row {
@@ -96,10 +95,6 @@ defineProps<Props>()
         color: var(--text-color-discreet);
         font-size: 12px;
         font-weight: 400;
-
-        .tooltip-icon {
-          color: var(--text-color);
-        }
       }
     }
 
@@ -135,5 +130,15 @@ defineProps<Props>()
   .fraction-bar-container {
     height: 11px;
   }
+}
+
+.tooltip {
+  display: flex;
+  align-items: center;
+}
+
+.tooltip-content {
+  width: 130px;
+  text-align: left;
 }
 </style>

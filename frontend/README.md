@@ -22,12 +22,6 @@ On your console, navigate to folder `beaconchain/frontend`.
 
 Type
 
-```bash
-cp .npmrc-example .npmrc
-```
-
-In your `.npmrc` file, replace `FA_TOKEN` with an actual key for Font Awesome.
-
 Then type:
 
 ```bash
@@ -37,13 +31,7 @@ cp .env-example .env
 In file `.env`, write the URLs of the API servers and the secret key to access to them.
 The variable evoking the development is used to show/hide features and components that are not ready for production.
 
-Add the following mapping in your `/etc/hosts` file:
-
-```
-127.0.0.1 local.beaconcha.in
-```
-
-Create server certificates for locally running on https, by runing these commands in the console
+Create server certificates for locally running on https, by runing these comands in the console:
 
 ```bash
 openssl genrsa 2048 > server.key

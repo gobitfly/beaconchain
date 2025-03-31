@@ -4,6 +4,18 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# chore(eslint): add rule to enforce indentation of 4 spaces for json
+898005c54ea6824a895917b4d3c2b52a2a4f72f9
+# chore(eslint): apply `sort-modules` rule
+7816ff9215db01151d0f498b454319949f063e7e
+#chore(eslint): add `newline` rule for `destructured object properties`
+00f3ddc552d796c72860a4892f5084aa54dc396d
+# chore(eslint): add rule to enforce indentation of 4 spaces for json
+5020dfb235f57e3cf91fa65d3b2812dbb969353c
+# chore(eslint): reenabled rule to have only `one attribute` per line in `vue files`
+6a51d528edfc71ffe46653f694a64c563ad70ceb
+# chore(deps): update `eslint rule set` and apply changes
+f67f385625eff411b47e4d82bd8d21f88b5486b6
 #chore(eslint): add `natural sorting` for `json` files 
 f3da99c5c685eae1914aad8513d3b4b2f1cdcaa2
 # style(eslint): add `typescript delimiter` rule

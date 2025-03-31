@@ -16,7 +16,7 @@ import (
 	"github.com/lib/pq"
 )
 
-// Retrieves all subscription for a given event filter
+// Retrieves all active subscriptions for a given event filter
 // Map key corresponds to the event filter which can be
 // a validator pubkey or an eth1 address (for RPL notifications)
 // or a list of validators for the tax report notifications
@@ -144,10 +144,13 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		FROM users_val_dashboards
 		LEFT JOIN users_val_dashboards_groups ON users_val_dashboards_groups.dashboard_id = users_val_dashboards.id
 		LEFT JOIN users_val_dashboards_validators ON users_val_dashboards_validators.dashboard_id = users_val_dashboards_groups.dashboard_id AND users_val_dashboards_validators.group_id = users_val_dashboards_groups.id
-		WHERE users_val_dashboards_validators.validator_index IS NOT NULL AND users_val_dashboards.id = ANY($1)
+		WHERE users_val_dashboards_validators.validator_index IS NOT NULL AND users_val_dashboards.id = ANY($1) AND users_val_dashboards.is_archived IS NULL
 	`, pq.Array(dashboardConfigsToFetch))
 		if err != nil {
 			return nil, fmt.Errorf("error getting dashboard definitions: %v", err)
+		}
+		if len(dashboardDefinitions) == 0 {
+			return subMap, nil
 		}
 		log.Infof("retrieved %d dashboard definitions", len(dashboardDefinitions))
 

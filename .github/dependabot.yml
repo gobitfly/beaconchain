@@ -1,14 +1,15 @@
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file 
 version: 2
 updates:
 - package-ecosystem: "npm"
   directory: "/frontend"
   schedule:
-    interval: "weekly"
+    interval: "daily"
     time: "05:00"
     timezone: "Europe/Berlin"
   target-branch: "staging"
   assignees:
     - "marcel-bitfly"
-    - "benji-bitfly"
+    - "enzo-bitfly"
   commit-message:
-    prefix: "chore(update)"
+    prefix: "chore(deps)"

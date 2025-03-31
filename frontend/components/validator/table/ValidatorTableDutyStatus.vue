@@ -110,15 +110,15 @@ const mapped = computed(() => {
         class="attestations group"
         :class="mapped.total.className"
       >
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.head.className"
           icon="head_attestation"
         />
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.source.className"
           icon="source_attestation"
         />
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.target.className"
           icon="target_attestation"
         />
@@ -132,7 +132,7 @@ const mapped = computed(() => {
         :text="mapped.proposal.tooltip"
         :fit-content="true"
       >
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.proposal.className"
           icon="proposal"
         />
@@ -141,7 +141,7 @@ const mapped = computed(() => {
         :text="mapped.slashing.tooltip"
         :fit-content="true"
       >
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.slashing.className"
           icon="slashing"
         />
@@ -150,7 +150,7 @@ const mapped = computed(() => {
         :text="mapped.sync.tooltip"
         :fit-content="true"
       >
-        <SlotVizIcon
+        <DashboardSlotVizDutyIcon
           :class="mapped.sync.className"
           icon="sync"
         />

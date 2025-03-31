@@ -1,7 +1,10 @@
+//go:build integration
+
 package api_test
 
 import (
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -14,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	embeddedpostgres "github.com/fergusstrange/embedded-postgres"
 	"github.com/gavv/httpexpect/v2"
 	"github.com/go-openapi/spec"
@@ -69,7 +73,6 @@ func teardown() {
 
 func setup() error {
 	configPath := flag.String("config", "", "Path to the config file, if empty string defaults will be used")
-
 	flag.Parse()
 
 	// terminate any currently running postgres instances
@@ -92,26 +95,29 @@ func setup() error {
 		return fmt.Errorf("error running migrations: %w", err)
 	}
 
-	// insert dummy user for testing (email: admin@admin, password: admin)
-	pHash, _ := bcrypt.GenerateFromPassword([]byte("admin"), 10)
-	_, err = tempDb.Exec(`
-      INSERT INTO users (password, email, register_ts, api_key, email_confirmed)
-      VALUES ($1, $2, TO_TIMESTAMP($3), $4, $5)`,
-		string(pHash), "admin@admin.com", time.Now().Unix(), "admin", true,
-	)
-	if err != nil {
-		return fmt.Errorf("error inserting user: %w", err)
-	}
+	for _, user := range testUsers {
+		pHash, _ := bcrypt.GenerateFromPassword([]byte(user.Password), 10)
+		insertDs := goqu.Dialect("postgres").
+			Insert("users").
+			Rows(struct {
+				User
+				RegisterTs   time.Time `db:"register_ts"`
+				PasswordHash string    `db:"password"`
+			}{
+				user,
+				time.Now(),
+				string(pHash),
+			})
 
-	// required for shared dashboard
-	pHash, _ = bcrypt.GenerateFromPassword([]byte("admin"), 10)
-	_, err = tempDb.Exec(`
-      INSERT INTO users (id, password, email, register_ts, api_key, email_confirmed)
-      VALUES ($1, $2, $3, TO_TIMESTAMP($4), $5, $6)`,
-		122558, string(pHash), "admin2@admin.com", time.Now().Unix(), "admin2", true,
-	)
-	if err != nil {
-		return fmt.Errorf("error inserting user 2: %w", err)
+		query, args, err := insertDs.Prepared(true).ToSQL()
+		if err != nil {
+			return fmt.Errorf("error preparing query: %w", err)
+		}
+
+		_, err = tempDb.Exec(query, args...)
+		if err != nil {
+			return err
+		}
 	}
 
 	// insert dummy api weight for testing
@@ -145,7 +151,7 @@ func setup() error {
 
 	utils.Config = cfg
 
-	log.InfoWithFields(log.Fields{"config": *configPath, "version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+	log.InfoWithFields(log.Fields{"version": version.Version, "commit": version.GitCommit, "chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
 
 	log.Info("initializing data access service")
 	dataAccessService := dataaccess.NewDataAccessService(cfg)
@@ -187,10 +193,13 @@ func getExpectConfig(t *testing.T, ts *httptest.Server) httpexpect.Config {
 	}
 }
 
-func login(e *httpexpect.Expect) {
+func login(e *httpexpect.Expect, user *User) {
+	if user == nil {
+		return
+	}
 	e.POST("/api/i/login").
 		WithHeader("Content-Type", "application/json").
-		WithJSON(map[string]interface{}{"email": "admin@admin.com", "password": "admin"}).
+		WithJSON(map[string]interface{}{"email": user.Email, "password": user.Password}).
 		Expect().
 		Status(http.StatusOK)
 }
@@ -207,7 +216,7 @@ func TestInternalGetProductSummaryHandler(t *testing.T) {
 	respData := api_types.InternalGetProductSummaryResponse{}
 	e.GET("/api/i/product-summary").Expect().Status(http.StatusOK).JSON().Decode(&respData)
 
-	assert.NotEqual(t, 0, respData.Data.ValidatorsPerDashboardLimit, "ValidatorsPerDashboardLimit should not be 0")
+	assert.NotEqual(t, 0, respData.Data.EffectiveBalancePerDashboardLimit, "EffectiveBalancePerDashboardLimit should not be 0")
 	assert.NotEqual(t, 0, len(respData.Data.ApiProducts), "ApiProducts should not be empty")
 	assert.NotEqual(t, 0, len(respData.Data.ExtraDashboardValidatorsPremiumAddon), "ExtraDashboardValidatorsPremiumAddon should not be empty")
 	assert.NotEqual(t, 0, len(respData.Data.PremiumProducts), "PremiumProducts should not be empty")
@@ -233,7 +242,7 @@ func TestInternalLoginHandler(t *testing.T) {
 			Status(http.StatusBadRequest).
 			JSON().
 			Object().
-			HasValue("error", "email: given value 'admin' has incorrect format")
+			HasValue("error", "bad request: email: given value 'admin' has incorrect format")
 	})
 	t.Run("login with correct user and wrong password", func(t *testing.T) {
 		e.POST("/api/i/login").
@@ -247,7 +256,7 @@ func TestInternalLoginHandler(t *testing.T) {
 	})
 
 	t.Run("login with correct user and password", func(t *testing.T) {
-		login(e)
+		login(e, &testUsers[0])
 	})
 
 	t.Run("check if user is logged in and has a valid session", func(t *testing.T) {
@@ -293,13 +302,17 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorByIndex, ok := resp.Data[0].Value.(api_types.SearchValidator)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err := json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorByIndex api_types.SearchValidator
+	err = json.Unmarshal(jsonbody, &validatorByIndex)
+	assert.Nil(t, err, "response data should be of type SearchValidator")
 	assert.Equal(t, uint64(5), validatorByIndex.Index, "validator index should be 5")
 
 	// search for validator by pubkey
@@ -320,13 +333,17 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorByPublicKey, ok := resp.Data[0].Value.(api_types.SearchValidator)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err = json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorByPublicKey api_types.SearchValidator
+	err = json.Unmarshal(jsonbody, &validatorByPublicKey)
+	assert.Nil(t, err, "response data should be of type SearchValidator")
 	assert.Equal(t, uint64(5), validatorByPublicKey.Index, "validator index should be 5")
 
 	// search for validator by withdawal address
@@ -346,13 +363,17 @@ func TestInternalSearchHandler(t *testing.T) {
 			"validators_by_withdrawal_credential",
 			"validator_by_index",
 			"validator_by_public_key",
-			"validators_by_graffiti"
+			"validators_by_graffiti",
+			"validators_by_graffiti_hex"
 		]
 	}`)).Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 	assert.NotEqual(t, 0, len(resp.Data), "response data should not be empty")
-	validatorsByWithdrawalAddress, ok := resp.Data[0].Value.(api_types.SearchValidatorsByWithdrwalCredential)
-	assert.True(t, ok, "response data should be of type SearchValidator")
+	jsonbody, err = json.Marshal(resp.Data[0].Value)
+	assert.Nil(t, err, "response data should be convertible to json")
+	var validatorsByWithdrawalAddress api_types.SearchValidatorsByWithdrawalCredential
+	err = json.Unmarshal(jsonbody, &validatorsByWithdrawalAddress)
+	assert.Nil(t, err, "response data should be of type SearchValidatorsByWithdrwalCredential")
 	assert.Greater(t, validatorsByWithdrawalAddress.Count, uint64(0), "returned number of validators should be greater than 0")
 }
 
@@ -490,6 +511,205 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 	}
 }
 
+type User struct {
+	Email    string `db:"email"`
+	Password string
+	ApiKey   string `db:"api_key"`
+	// optional
+	Id             uint   `db:"id" goqu:"omitempty"`
+	UserGroup      string `db:"user_group" goqu:"omitempty"`
+	EmailConfirmed bool   `db:"email_confirmed" goqu:"omitempty"`
+}
+
+var testUsers = []User{
+	{Email: "admin@admin.com", Password: "admin", ApiKey: "admin", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+	// holesky
+	{Id: 122558, Email: "admin2@admin.com", Password: "admin", ApiKey: "admin2", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+	{Id: 14, Email: "default@admin.com", Password: "default", ApiKey: "default", EmailConfirmed: true},
+	{Id: 113321, Email: "admin3@admin.com", Password: "admin", ApiKey: "admin3", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+	{Id: 3, Email: "admin4@admin.com", Password: "admin", ApiKey: "admin4", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+}
+
+func TestSummaryChartDetailed(t *testing.T) {
+	e := httpexpect.WithConfig(getExpectConfig(t, ts))
+
+	type TestConfig struct {
+		Dashboard string
+		User      *User
+	}
+	// holesky
+	cases := []TestConfig{
+		// anonymous
+		{Dashboard: "MSwxNTU2MSwxNTY"},
+		// primary
+		{Dashboard: "v-009b2943-3268-44f7-a137-2878fc73268b"}, // not shared groups
+		{Dashboard: "15", User: &testUsers[2]},
+		// RP
+		{Dashboard: "v-80d7edaa-74fb-4129-a41e-7700756961cf"}, // shared groups
+		{Dashboard: "5090", User: &testUsers[1]},
+		// other
+		{Dashboard: "5113", User: &testUsers[3]},
+		// megatron
+		{Dashboard: "5001", User: &testUsers[4]},
+	}
+
+	baseUrl := "/api/i/validator-dashboards/{id}/summary-chart"
+
+	// anonymous
+	t.Run("anon", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[0].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "hourly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should not be empty")
+		require.Greater(t, len(resp.Data.Series), 0, "summary chart series should not be empty")
+		assert.Equal(t, 1, len(resp.Data.Series), "summary chart series should only contain one group")
+		assert.Equal(t, api_types.AllGroups, resp.Data.Series[0].Id, "summary chart series should contain default group id")
+	})
+
+	t.Run("anon: conflict aggregation", func(t *testing.T) {
+		e.GET(baseUrl, cases[0].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "daily").
+			Expect().Status(http.StatusConflict).JSON().Object().
+			HasValue("error", "conflict: requested aggregation is not available for dashboard owner's premium subscription")
+	})
+
+	// public
+	t.Run("public: no shared_groups filtered", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[1].Dashboard).
+			WithQuery("group_ids", "1,2"). // vdb has 4 non-empty groups
+			WithQuery("aggregation", "hourly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Equal(t, 0, len(resp.Data.Categories), "summary chart categories should be empty")
+		assert.Equal(t, 0, len(resp.Data.Series), "summary chart series should be empty")
+	})
+
+	t.Run("public: no shared_groups success", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[1].Dashboard).
+			WithQuery("group_ids", "-1,1,2"). // vdb has 4 non-empty groups
+			WithQuery("aggregation", "hourly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should not be empty")
+		require.Equal(t, 1, len(resp.Data.Series), "summary chart series should be aggregated")
+		assert.Equal(t, api_types.DefaultGroupId, resp.Data.Series[0].Id, "summary chart series should contain default group id")
+	})
+
+	t.Run("public: conflict aggregation", func(t *testing.T) {
+		e.GET(baseUrl, cases[1].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "daily").
+			Expect().Status(http.StatusConflict).JSON().Object().
+			HasValue("error", "conflict: requested aggregation is not available for dashboard owner's premium subscription")
+	})
+
+	t.Run("public: premium shared_groups", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[3].Dashboard).
+			WithQuery("group_ids", "1,2,3,100").
+			WithQuery("aggregation", "weekly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should not be empty")
+		assert.Greater(t, len(resp.Data.Series), 0, "summary chart series should not be empty")
+		assert.Equal(t, 3, len(resp.Data.Series), "summary chart series should contain data of exactly 3 groups")
+	})
+
+	t.Run("public: invalid group", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[3].Dashboard).
+			WithQuery("group_ids", "100"). // doesn't exist
+			WithQuery("aggregation", "hourly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Equal(t, 0, len(resp.Data.Categories), "summary chart categories should be empty")
+		assert.Equal(t, 0, len(resp.Data.Series), "summary chart series should be empty")
+	})
+
+	t.Run("public: timeframe", func(t *testing.T) {
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		now := time.Now()
+		e.GET(baseUrl, cases[3].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "hourly").
+			WithQuery("before_ts", now.Unix()).
+			WithQuery("after_ts", now.Add(-time.Hour*2).Unix()).
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		for _, category := range resp.Data.Categories {
+			assert.GreaterOrEqual(t, category, uint64(now.Add(-time.Hour*2).Unix()), "summary chart category should be after requested start")
+			assert.LessOrEqual(t, category, uint64(now.Unix()), "summary chart category should be before requested end")
+		}
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should contain at least one entry for timeframe")
+		assert.LessOrEqual(t, len(resp.Data.Categories), 2, "summary chart categories should contain at most two entries for timeframe")
+		assert.Greater(t, len(resp.Data.Series), 0, "summary chart series should not be empty")
+	})
+
+	// private
+	t.Run("private: no premium", func(t *testing.T) {
+		login(e, cases[2].User)
+		e.GET(baseUrl, cases[2].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "daily").
+			Expect().Status(http.StatusConflict).JSON().Object().
+			HasValue("error", "conflict: requested aggregation is not available for dashboard owner's premium subscription")
+	})
+
+	t.Run("private: premium", func(t *testing.T) {
+		login(e, cases[4].User)
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[4].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "weekly").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should not be empty")
+		assert.Greater(t, len(resp.Data.Series), 0, "summary chart series should not be empty")
+	})
+
+	t.Run("private: proposal efficiency", func(t *testing.T) {
+		login(e, cases[4].User)
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[4].Dashboard).
+			WithQuery("group_ids", "-1").
+			WithQuery("aggregation", "weekly").
+			WithQuery("efficiency_type", "proposal").
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		assert.Greater(t, len(resp.Data.Categories), 0, "summary chart categories should not be empty")
+		assert.Greater(t, len(resp.Data.Series), 0, "summary chart series should not be empty")
+	})
+
+	t.Run("private: efficiency values", func(t *testing.T) {
+		login(e, cases[6].User)
+		slot := uint64(3324905) // arbitrary
+		proposalEpochTime := utils.EpochToTime(utils.EpochOfSlot(slot))
+
+		resp := api_types.GetValidatorDashboardSummaryChartResponse{}
+		e.GET(baseUrl, cases[6].Dashboard).
+			WithQuery("group_ids", "0").
+			WithQuery("aggregation", "hourly").
+			WithQuery("after_ts", proposalEpochTime.Add(-2*time.Hour).Unix()).
+			WithQuery("before_ts", proposalEpochTime.Add(1*time.Hour).Unix()).
+			Expect().Status(http.StatusOK).JSON().Decode(&resp)
+
+		// make sure summary match & are only counted once
+		require.Equal(t, 1, len(resp.Data.Series), "summary chart series should contain exactly one entries")
+
+		require.Equal(t, 3, len(resp.Data.Series[0].Data), "summary chart series should contain exactly three entries")
+		assert.Equal(t, 87.9514982445987, resp.Data.Series[0].Data[0], "summary chart el series index 0 should match")
+		assert.Equal(t, 85.00925779021807, resp.Data.Series[0].Data[1], "summary chart el series index 1 should match")
+		assert.Equal(t, 86.44134820702745, resp.Data.Series[0].Data[2], "summary chart el series index 2 should match")
+	})
+}
+
 func TestApiDoc(t *testing.T) {
 	e := httpexpect.WithConfig(getExpectConfig(t, ts))
 
@@ -500,10 +720,9 @@ func TestApiDoc(t *testing.T) {
 			Status(http.StatusOK).JSON().Decode(&resp)
 
 		assert.Equal(t, "/api/v2", resp.BasePath, "swagger base path should be '/api/v2'")
-		require.NotNil(t, 0, resp.Paths, "swagger paths should not nil")
+		require.NotNil(t, resp.Paths, "swagger paths should not nil")
 		assert.NotEqual(t, 0, len(resp.Paths.Paths), "swagger paths should not be empty")
 		assert.NotEqual(t, 0, len(resp.Definitions), "swagger definitions should not be empty")
-		assert.NotEqual(t, 0, len(resp.Host), "swagger host should not be empty")
 	})
 
 	t.Run("test api ratelimit weights endpoint", func(t *testing.T) {

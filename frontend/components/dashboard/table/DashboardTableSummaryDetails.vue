@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
-import {
-  type SummaryDetailsEfficiencyCombinedProp,
-  type SummaryRow,
-  type SummaryTableVisibility,
-  type SummaryTimeFrame,
+import type {
+  SummaryDetailsEfficiencyCombinedProp,
+  SummaryRow,
+  SummaryTableVisibility,
+  SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 
 interface Props {
@@ -19,7 +19,8 @@ const { dashboardKey } = useDashboardKey()
 
 const { t: $t } = useTranslation()
 const {
-  details: summary, getDetails,
+  details: summary,
+  getDetails,
 }
   = useValidatorDashboardSummaryDetailsStore(
     dashboardKey.value,
@@ -39,33 +40,33 @@ watch(
 
 type CombinedPropOrUndefined = SummaryDetailsEfficiencyCombinedProp | undefined
 
-const data = computed<SummaryRow[][]>(() => {
-  const list: SummaryRow[][] = [
+const summarySections = computed<SummaryRow[][]>(() => {
+  const sections: SummaryRow[][] = [
     [],
     [],
     [],
   ]
 
-  const addToList = (
+  const addToSection = (
     index: number,
-    prop?: SummaryDetailsEfficiencyCombinedProp,
+    property?: SummaryDetailsEfficiencyCombinedProp,
   ) => {
-    if (!prop) {
+    if (!property) {
       return
     }
-    const title = $t(`dashboard.validator.summary.row.${prop}`)
+    const title = $t(`dashboard.validator.summary.row.${property}`)
     const row = {
-      prop,
+      property,
       title,
     }
-    list[index].push(row)
+    sections[index].push(row)
   }
 
-  const addPropsTolist = (
-    index: number,
-    props: CombinedPropOrUndefined[],
+  const addSummaryPropertiesToSection = (
+    sectionIndex: number,
+    summaryProperties: CombinedPropOrUndefined[],
   ) => {
-    props.forEach(p => addToList(index, p))
+    summaryProperties.forEach(summaryProperty => addToSection(sectionIndex, summaryProperty))
   }
 
   const rewardCols: CombinedPropOrUndefined[]
@@ -75,7 +76,7 @@ const data = computed<SummaryRow[][]>(() => {
     .attestations
     ? []
     : rewardCols
-  addPropsTolist(0, [
+  addSummaryPropertiesToSection(0, [
     (!props.tableVisibility.efficiency ? 'efficiency' : undefined),
     ...addCols,
     'attestations',
@@ -86,7 +87,7 @@ const data = computed<SummaryRow[][]>(() => {
     'attestation_avg_incl_dist',
   ])
 
-  addPropsTolist(1, [
+  addSummaryPropertiesToSection(1, [
     'sync',
     'validators_sync',
     'proposals',
@@ -96,17 +97,18 @@ const data = computed<SummaryRow[][]>(() => {
   ])
 
   addCols = !props.tableVisibility.attestations ? [] : rewardCols
-  addPropsTolist(2, [
+  addSummaryPropertiesToSection(2, [
     'apr',
     'luck',
+    'missed_rewards',
     ...addCols,
   ])
 
-  return list
+  return sections
 })
 
 const rowClass = (data: SummaryRow) => {
-  if (!data.prop) {
+  if (!data.property) {
     return 'bold' // headline without prop
   }
   const classNames: Partial<
@@ -122,7 +124,7 @@ const rowClass = (data: SummaryRow) => {
     slashings: 'bold spacing-top',
     sync: props.tableVisibility.efficiency ? 'bold' : 'bold spacing-top',
   }
-  return classNames[data.prop]
+  return classNames[data.property]
 }
 </script>
 
@@ -132,25 +134,25 @@ const rowClass = (data: SummaryRow) => {
     class="details-container"
   >
     <div
-      v-for="(list, index) in data"
+      v-for="(summarySection, index) in summarySections"
       :key="index"
       class="group"
     >
       <div
-        v-for="(prop, pIndex) in list"
-        :key="pIndex"
-        :class="rowClass(prop)"
+        v-for="(summaryRow, rowIndex) in summarySection"
+        :key="rowIndex"
+        :class="rowClass(summaryRow)"
         class="row"
       >
         <div class="label">
-          {{ prop.title }}
+          {{ summaryRow.title }}
         </div>
         <DashboardTableSummaryValue
-          v-if="prop.prop"
+          v-if="summaryRow.property"
           class="value"
           :data="summary"
           :absolute
-          :property="prop.prop"
+          :property="summaryRow.property"
           :time-frame
           :row="props.row"
           :in-detail-view="true"

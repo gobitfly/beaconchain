@@ -65,13 +65,13 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		// primary id is used -> user needs to have access to dashboard
-
-		userId, err := GetUserIdByContext(r)
+		ctx := r.Context()
+		userId, err := GetUserIdByContext(ctx)
 		if err != nil {
 			handleErr(w, r, err)
 			return
 		}
-		dashboardUser, err := h.daService.GetValidatorDashboardUser(r.Context(), types.VDBIdPrimary(dashboardId))
+		dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, types.VDBIdPrimary(dashboardId))
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -92,14 +92,15 @@ func (h *HandlerService) VDBAuthMiddleware(next http.Handler) http.Handler {
 func (h *HandlerService) PremiumPerkCheckMiddleware(next http.Handler, hasRequiredPerk func(premiumPerks types.PremiumPerks) bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// get user id from context
-		userId, err := GetUserIdByContext(r)
+		ctx := r.Context()
+		userId, err := GetUserIdByContext(ctx)
 		if err != nil {
 			handleErr(w, r, err)
 			return
 		}
 
 		// get user info
-		userInfo, err := h.daService.GetUserInfo(r.Context(), userId)
+		userInfo, err := h.daService.GetUserInfo(ctx, userId)
 		if err != nil {
 			handleErr(w, r, err)
 			return
@@ -156,7 +157,7 @@ func (h *HandlerService) VDBArchivedCheckMiddleware(next http.Handler) http.Hand
 			return
 		}
 		if dashboard.IsArchived {
-			handleErr(w, r, newForbiddenErr("dashboard with id %v is archived", dashboardId))
+			handleErr(w, r, newForbiddenErr("dashboard with id %s is archived", mux.Vars(r)["dashboard_id"]))
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -176,8 +177,8 @@ func (h *HandlerService) StoreIsMockedFlagMiddleware(next http.Handler) http.Han
 		if mockSeedStr := q.Get("mock_seed"); mockSeedStr != "" {
 			mockSeed = v.checkInt(mockSeedStr, "mock_seed")
 		}
-		if v.hasErrors() {
-			handleErr(w, r, v)
+		if err := v.AsError(); err != nil {
+			handleErr(w, r, err)
 			return
 		}
 		if !isMocked {

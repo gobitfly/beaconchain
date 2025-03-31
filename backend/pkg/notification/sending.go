@@ -17,9 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -64,9 +62,17 @@ func notificationSender() {
 			log.Error(err, "error dispatching notifications", 0)
 		}
 
-		err = garbageCollectNotificationQueue()
+		// Record metrics related to Notification Queue like size of queue and duration of pending notifications
+		collectNotificationQueueMetrics()
+
+		err = garbageCollectSentEvents()
 		if err != nil {
-			log.Error(err, "error garbage collecting notification queue", 0)
+			log.Error(err, "error garbage collecting sent notifications", 0)
+		}
+
+		err = garbageCollectOldPendingEvents()
+		if err != nil {
+			log.Error(err, "error garbage collecting old pending notifications", 0)
 		}
 
 		log.InfoWithFields(log.Fields{"duration": time.Since(start)}, "notifications dispatched and garbage collected")
@@ -107,16 +113,32 @@ func notificationSender() {
 	}
 }
 
-// garbageCollectNotificationQueue deletes entries from the notification queue that have been processed
-func garbageCollectNotificationQueue() error {
-	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE (sent < now() - INTERVAL '30 minutes') OR (created < now() - INTERVAL '1 hour')`)
+func garbageCollectSentEvents() error {
+	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE sent < now() - INTERVAL '30 minutes'`)
 	if err != nil {
-		return fmt.Errorf("error deleting from notification_queue %w", err)
+		return fmt.Errorf("error deleting sent events from notification_queue %w", err)
 	}
 
 	rowsAffected, _ := rows.RowsAffected()
 
-	log.Infof("deleted %v rows from the notification_queue", rowsAffected)
+	log.Infof("deleted %v sent events from the notification_queue", rowsAffected)
+
+	metrics.NotificationsDropped.WithLabelValues(string(Sent)).Add(float64(rowsAffected))
+
+	return nil
+}
+
+func garbageCollectOldPendingEvents() error {
+	rows, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE created < now() - INTERVAL '1 hour'`)
+	if err != nil {
+		return fmt.Errorf("error deleting pending events from notification_queue %w", err)
+	}
+
+	rowsAffected, _ := rows.RowsAffected()
+
+	log.Infof("deleted %v old pending events from the notification_queue", rowsAffected)
+
+	metrics.NotificationsDropped.WithLabelValues(string(Pending)).Add(float64(rowsAffected))
 
 	return nil
 }
@@ -254,9 +276,9 @@ func sendWebhookNotifications() error {
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
 		n := n
-		_, err := db.CountSentMessage(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId)
+		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
 		if err != nil {
-			log.Error(err, "error counting sent webhook", 0)
+			log.Error(err, "error increasing sent webhook count", 0)
 		}
 
 		// do not retry after 5 attempts
@@ -361,115 +383,97 @@ func sendDiscordNotifications() error {
 	if err != nil {
 		return fmt.Errorf("error querying notification queue, err: %w", err)
 	}
-	client := &http.Client{Timeout: time.Second * 30}
+	// webhooks have 5 seconds to respond
+	client := &http.Client{Timeout: time.Second * 5}
 
 	log.Infof("processing %v discord webhook notifications", len(notificationQueueItem))
-	webhookMap := make(map[uint64]types.UserWebhook)
 
-	notifMap := make(map[uint64][]types.TransitDiscord)
-	// generate webhook id => discord req
-	// while mapping. aggregate embeds while doing so, up to 10 per req can be sent
-	for _, n := range notificationQueueItem {
-		// purge the event from existence if the retry counter is over 5
-		if n.Content.Webhook.Retries > 5 {
-			_, err = db.WriterDb.Exec(`DELETE FROM notification_queue where id = $1`, n.Id)
-			if err != nil {
-				log.Warnf("failed to delete notification from queue: %v", err)
-			}
-			continue
-		}
-		if _, exists := webhookMap[n.Content.Webhook.ID]; !exists {
-			webhookMap[n.Content.Webhook.ID] = n.Content.Webhook
-		}
-		if _, exists := notifMap[n.Content.Webhook.ID]; !exists {
-			notifMap[n.Content.Webhook.ID] = make([]types.TransitDiscord, 0)
-		}
-		notifMap[n.Content.Webhook.ID] = append(notifMap[n.Content.Webhook.ID], n)
-	}
 	// use an error group to throttle webhook requests
 	g := &errgroup.Group{}
 	g.SetLimit(50) // issue at most 50 requests at a time
+	for _, n := range notificationQueueItem {
+		n := n
+		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
+		if err != nil {
+			log.Error(err, "error increasing sent discord count", 0)
+		}
 
-	for _, webhook := range webhookMap {
-		webhook := webhook
-		g.Go(func() error {
-			defer func() {
-				// update retries counters in db based on end result
-				if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
-					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, webhook.Retries, webhook.ID)
-				} else {
-					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = $1, webhook_last_sent = now() WHERE id = $2 AND dashboard_id = $3;`, webhook.Retries, webhook.DashboardGroupId, webhook.DashboardId)
-				}
-				if err != nil {
-					log.Warnf("failed to update retries counter to %v for webhook %v: %v", webhook.Retries, webhook.ID, err)
-				}
-
-				// mark notifcations as sent in db
-				ids := make([]uint64, 0)
-				for _, req := range notifMap[webhook.ID] {
-					ids = append(ids, req.Id)
-				}
-				_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() where id = ANY($1)`, pq.Array(ids))
-				if err != nil {
-					log.Warnf("failed to update sent for notifcations in queue: %v", err)
-				}
-			}()
-
-			_, err = url.Parse(webhook.Url)
+		// do not retry after 5 attempts
+		if n.Content.Webhook.Retries > 5 {
+			_, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
 			if err != nil {
-				log.Error(err, "error parsing url", 0, log.Fields{"webhook_id": webhook.ID})
+				return fmt.Errorf("error deleting from notification queue: %w", err)
+			}
+			continue
+		}
+
+		reqBody := new(bytes.Buffer)
+
+		err = json.NewEncoder(reqBody).Encode(n.Content.DiscordRequest)
+		if err != nil {
+			log.Error(err, "error marshalling webhook event", 0)
+		}
+
+		_, err = url.Parse(n.Content.Webhook.Url)
+		if err != nil {
+			_, err := db.WriterDb.Exec(`DELETE FROM notification_queue WHERE id = $1`, n.Id)
+			if err != nil {
+				return fmt.Errorf("error deleting from notification queue: %w", err)
+			}
+			continue
+		}
+
+		g.Go(func() error {
+			if n.Content.Webhook.Retries > 0 {
+				time.Sleep(time.Duration(n.Content.Webhook.Retries) * time.Second)
+			}
+			resp, err := client.Post(n.Content.Webhook.Url, "application/json", reqBody)
+			if err != nil {
+				log.Warnf("error sending discord webhook request: %v", err)
+				metrics.NotificationsSent.WithLabelValues("webhook_discord", "error").Inc()
+				return nil
+			} else {
+				metrics.NotificationsSent.WithLabelValues("webhook_discord", resp.Status).Inc()
+			}
+			defer resp.Body.Close()
+
+			_, err = db.WriterDb.Exec(`UPDATE notification_queue SET sent = now() WHERE id = $1`, n.Id)
+			if err != nil {
+				log.Error(err, "error updating notification_queue table", 0)
 				return nil
 			}
 
-			for i := 0; i < len(notifMap[webhook.ID]); i++ {
-				if webhook.Retries > 5 {
-					break // stop
-				}
-				// sleep between retries
-				time.Sleep(time.Duration(webhook.Retries) * time.Second)
-
-				reqBody := new(bytes.Buffer)
-				err := json.NewEncoder(reqBody).Encode(notifMap[webhook.ID][i].Content.DiscordRequest)
-				if err != nil {
-					log.Error(err, "error marshalling discord webhook event", 0)
-					continue // skip
-				}
-
-				resp, err := client.Post(webhook.Url, "application/json", reqBody)
-				if err != nil {
-					log.Warnf("failed sending discord webhook request %v: %v", webhook.ID, err)
-					metrics.NotificationsSent.WithLabelValues("webhook_discord", "error").Inc()
+			if resp != nil && resp.StatusCode < 400 {
+				// update retries counters in db based on end result
+				if n.Content.Webhook.DashboardId == 0 && n.Content.Webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = $1, last_sent = now() WHERE id = $2;`, n.Content.Webhook.Retries, n.Content.Webhook.ID)
 				} else {
-					metrics.NotificationsSent.WithLabelValues("webhook_discord", resp.Status).Inc()
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = $1, webhook_last_sent = now() WHERE id = $2 AND dashboard_id = $3;`, n.Content.Webhook.Retries, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
 				}
-				if resp != nil && resp.StatusCode < 400 {
-					webhook.Retries = 0
-				} else {
-					webhook.Retries++
-					var errResp types.ErrorResponse
+				if err != nil {
+					log.Warnf("failed to update retries counter to %v for webhook %v: %v", n.Content.Webhook.Retries, n.Content.Webhook.ID, err)
+				}
+			} else {
+				var errResp types.ErrorResponse
 
-					if resp != nil {
-						b, err := io.ReadAll(resp.Body)
-						if err != nil {
-							log.Error(err, "error reading body", 0)
-						} else {
-							errResp.Body = string(b)
-						}
-						errResp.Status = resp.Status
-						resp.Body.Close()
-
-						if resp.StatusCode != http.StatusOK {
-							log.WarnWithFields(map[string]interface{}{"errResp.Body": utils.FirstN(errResp.Body, 1000), "webhook.Url": webhook.Url}, "error pushing discord webhook")
-						}
-						if webhook.DashboardId == 0 && webhook.DashboardGroupId == 0 {
-							_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET request = $2, response = $3 WHERE id = $1;`, webhook.ID, notifMap[webhook.ID][i].Content.DiscordRequest, errResp)
-						}
-						if err != nil {
-							log.Error(err, "error storing failure data in users_webhooks table", 0)
-						}
+				if resp != nil {
+					b, err := io.ReadAll(resp.Body)
+					if err != nil {
+						log.Error(err, "error reading body", 0)
 					}
 
-					i-- // retry, IMPORTANT to be at the END of the ELSE, otherwise the wrong index will be used in the commands above!
+					errResp.Status = resp.Status
+					errResp.Body = string(b)
+				}
+
+				if n.Content.Webhook.DashboardId == 0 && n.Content.Webhook.DashboardGroupId == 0 {
+					_, err = db.FrontendWriterDB.Exec(`UPDATE users_webhooks SET retries = retries + 1, last_sent = now(), request = $2, response = $3 WHERE id = $1;`, n.Content.Webhook.ID, n.Content, errResp)
+				} else {
+					_, err = db.WriterDb.Exec(`UPDATE users_val_dashboards_groups SET webhook_retries = webhook_retries + 1, webhook_last_sent = now() WHERE id = $1 AND dashboard_id = $2;`, n.Content.Webhook.DashboardGroupId, n.Content.Webhook.DashboardId)
+				}
+				if err != nil {
+					log.Error(err, "error updating users_webhooks table", 0)
+					return nil
 				}
 			}
 			return nil
@@ -480,7 +484,6 @@ func sendDiscordNotifications() error {
 	if err != nil {
 		log.Error(err, "error waiting for errgroup", 0)
 	}
-
 	return nil
 }
 
@@ -510,11 +513,11 @@ func SendTestEmail(ctx context.Context, userId types.UserId, dbConn *sqlx.DB) er
 }
 
 func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webhookUrl string, isDiscordWebhook bool) error {
-	count, err := db.CountSentMessage("n_test_push", userId)
+	incr, _, err := db.IncrSentMessagesCount("n_test_push", userId, 1, 100)
 	if err != nil {
 		return err
 	}
-	if count > 10 {
+	if incr == 0 {
 		return fmt.Errorf("rate limit has been exceeded")
 	}
 
@@ -548,4 +551,189 @@ func SendTestWebhookNotification(ctx context.Context, userId types.UserId, webho
 		defer resp.Body.Close()
 	}
 	return nil
+}
+
+type Notification struct {
+	Id      *uint64    `db:"id"`
+	Created *time.Time `db:"created"`
+	Sent    *time.Time `db:"sent"`
+	Channel string     `db:"channel"`
+	Content string     `db:"content"`
+}
+
+type NotificationStatus string
+
+const (
+	Sent    NotificationStatus = "sent"
+	Pending NotificationStatus = "pending"
+
+	// Metrics label for EventType where the event could not be mapped
+	UnknownEvent string = "unknown_event"
+)
+
+/**
+ * Get all notifications which were marked as sent.
+ */
+func GetSentNotifications() ([]Notification, error) {
+	notificationRecords := []Notification{}
+
+	err := db.ReaderDb.Select(&notificationRecords,
+		`SELECT id, created, sent, channel, content 
+		   FROM notification_queue
+		  WHERE sent IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("error querying sent notifications: %w", err)
+	}
+
+	return notificationRecords, nil
+}
+
+/**
+ * Get all notifications which have not yet been sent.
+ */
+func GetPendingNotifications() ([]Notification, error) {
+	notificationRecords := []Notification{}
+
+	err := db.ReaderDb.Select(&notificationRecords,
+		`SELECT id, created, sent, channel, content 
+		   FROM notification_queue
+		  WHERE sent IS NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("error querying pending notifications: %w", err)
+	}
+
+	return notificationRecords, nil
+}
+
+/**
+ * Collects metrics for the Notification system, specifically about its queue.
+ * Provides metrics related to how many notifications are pending and sent, and of what event type they are.
+ * Also provides metrics related to how long the notifications have been in the queue
+ */
+func collectNotificationQueueMetrics() {
+	sentNotifications, err := GetSentNotifications()
+	if err != nil {
+		log.Error(err, "Error retrieving sent notifications. Will skip sending metrics", 0)
+		return // Don't return an error, we don't want to disrupt actual notification sending simply because we couldn't record metrics
+	}
+	pendingNotifications, err := GetPendingNotifications()
+	if err != nil {
+		log.Error(err, "Error retrieving pending notifications. Will skip sending metrics", 0)
+		return // Don't return an error, we don't want to disrupt actual notification sending simply because we couldn't record metrics
+	}
+
+	now := time.Now() // Checking the time once so that it is consistent across all metrics for this collection attempt
+
+	// Record for each sent notification how long it took to send. Honestly, can probably remove this later since this metric can be sent once when the notification itself is delivered.
+	for _, notification := range sentNotifications {
+		eventType := GetEventLabelForNotification(notification)
+
+		// Record the amount of time records that were sent (and that still exist in the queue) took to sent
+		duration := notification.Created.Sub(*notification.Sent).Abs()
+		metrics.NotificationsQueueSentTime.WithLabelValues(notification.Channel, eventType).Observe(duration.Seconds())
+	}
+
+	// Record for each pending notification how long it has been in the queue
+	for _, notification := range pendingNotifications {
+		eventType := GetEventLabelForNotification(notification)
+
+		// Record the amount of time these records have been waiting to been sent
+		duration := notification.Created.Sub(now).Abs()
+		metrics.NotificationsQueuePendingTime.WithLabelValues(notification.Channel, eventType).Observe(duration.Seconds())
+	}
+
+	// Count number of pending notifications in the queue by event type
+	eventTypeCount := CountByEventType(pendingNotifications)
+	for eventType, numNotifications := range eventTypeCount {
+		metrics.NotificationsQueueEventSize.WithLabelValues(eventType, string(Pending)).Set(float64(numNotifications))
+	}
+
+	// Count number of sent notifications in the queue by event type
+	eventTypeCount = CountByEventType(sentNotifications)
+	for eventType, numNotifications := range eventTypeCount {
+		metrics.NotificationsQueueEventSize.WithLabelValues(eventType, string(Sent)).Set(float64(numNotifications))
+	}
+
+	// Count number of pending notifications in the queue by channel
+	channelCount := CountByChannel(pendingNotifications)
+	for channelType, numNotifications := range channelCount {
+		metrics.NotificationsQueueChannelSize.WithLabelValues(channelType, string(Pending)).Set(float64(numNotifications))
+	}
+
+	// Count number of sent notifications in the queue by channel
+	channelCount = CountByChannel(sentNotifications)
+	for channelType, numNotifications := range channelCount {
+		metrics.NotificationsQueueChannelSize.WithLabelValues(channelType, string(Sent)).Set(float64(numNotifications))
+	}
+}
+
+/**
+ * Simple wrapper that enables submitting metrics for notifications with unknown event names.
+ */
+func GetEventLabelForNotification(notification Notification) string {
+	eventName, err := ExtractEventNameFromNotification(notification)
+	if err != nil {
+		return UnknownEvent
+	}
+
+	return string(*eventName)
+}
+
+/**
+ * Because we don't record the event type when recording notifications, we have to do some work to extract them from the
+ * notification message that is eventually sent to the user.
+ */
+func ExtractEventNameFromNotification(notification Notification) (*types.EventName, error) {
+	for eventName, eventDescription := range types.EventLabel {
+		if strings.Contains(notification.Content, eventDescription) {
+			return &eventName, nil
+		}
+	}
+
+	// Also grab legacy labels, unfortunately some systems still submit these.
+	for eventName, eventDescription := range types.LegacyEventLabel {
+		if strings.Contains(notification.Content, eventDescription) {
+			return &eventName, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no EventName found for notification %d matching any event descriptions", notification.Id)
+}
+
+/**
+ * Given a collection of notifications, count the number of notifications with each distinct event type.
+ */
+func CountByEventType(notifications []Notification) map[string]int {
+	eventTypeCountMap := make(map[string]int, len(types.EventLabel)+1) // +1 to account for the "unknown" event type
+	// Initialize the map with all EventLabel types, with the Count set to 0
+	// Must be pre-initialized, because we still want to submit metrics for 0-count EventTypes, so they must exist in this map.
+	for eventType := range types.EventLabel {
+		eventTypeCountMap[string(eventType)] = 0
+	}
+	eventTypeCountMap[UnknownEvent] = 0 // include unknown, which indicates an EventType which we couldn't parse from the Notification's content field
+
+	// Now iterate over the list of events, and increment the value in the map
+	for _, notification := range notifications {
+		eventType := GetEventLabelForNotification(notification)
+		eventTypeCountMap[eventType] = eventTypeCountMap[eventType] + 1
+	}
+	return eventTypeCountMap
+}
+
+/**
+ * Given a collection of notifications, count the number of notifications with each distinct channel type.
+ */
+func CountByChannel(notifications []Notification) map[string]int {
+	channelCountMap := make(map[string]int, len(types.NotificationChannels))
+	// Initialize the map with the Channel types, with the Count set to 0.
+	// Must be pre-initialized, because we still want to submit metrics for 0-count Channels, so they must exist in this map.
+	for _, channelType := range types.NotificationChannels {
+		channelCountMap[string(channelType)] = 0
+	}
+
+	// Now iterate over the list of notifications, and increment the value for each channel
+	for _, notification := range notifications {
+		channelCountMap[notification.Channel] = channelCountMap[notification.Channel] + 1
+	}
+	return channelCountMap
 }

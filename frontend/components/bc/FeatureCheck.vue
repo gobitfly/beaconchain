@@ -1,24 +1,18 @@
 <script lang="ts" setup>
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import {
-  faCheck, faClose,
-} from '@fortawesome/pro-solid-svg-icons'
-
-interface Props {
+defineProps<{
   available?: boolean,
-}
-defineProps<Props>()
+}>()
 </script>
 
 <template>
-  <FontAwesomeIcon
+  <BcIcon
     v-if="available"
-    :icon="faCheck"
+    name="check"
     class="checkmark"
   />
-  <FontAwesomeIcon
+  <BcIcon
     v-else
-    :icon="faClose"
+    name="xmark"
     class="cross"
   />
 </template>

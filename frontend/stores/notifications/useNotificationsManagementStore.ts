@@ -1,12 +1,11 @@
 import type {
-  InternalGetUserNotificationSettingsResponse,
-  InternalPutUserNotificationSettingsGeneralResponse,
-  InternalPutUserNotificationSettingsNetworksResponse,
-  InternalPutUserNotificationSettingsPairedDevicesResponse,
+  GetUserNotificationSettingsResponse,
   NotificationSettings,
   NotificationSettingsNetwork,
+  PutUserNotificationSettingsGeneralResponse,
+  PutUserNotificationSettingsNetworksResponse,
+  PutUserNotificationSettingsPairedDevicesResponse,
 } from '~/types/api/notifications'
-import { API_PATH } from '~/types/customFetch'
 
 export const useNotificationsManagementStore = defineStore('notifications-management-store', () => {
   const { fetch } = useCustomFetch()
@@ -34,21 +33,21 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
   )
 
   const saveSettings = async () => {
-    await fetch<InternalPutUserNotificationSettingsGeneralResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_SAVE, {
+    await fetch<PutUserNotificationSettingsGeneralResponse>(
+      'NOTIFICATIONS_MANAGEMENT_SAVE', {
         body: settings.value.general_settings,
         method: 'PUT',
       })
   }
   const getSettings = () => {
-    return fetch<InternalGetUserNotificationSettingsResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_GENERAL,
+    return fetch<GetUserNotificationSettingsResponse>(
+      'NOTIFICATIONS_MANAGEMENT_GENERAL',
     )
   }
 
   const removeDevice = async (id: number) => {
     await fetch(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE,
+      'NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE',
       {},
       {
         paired_device_id: id,
@@ -66,8 +65,8 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     id: number,
     value: boolean,
   }) => {
-    await fetch<InternalPutUserNotificationSettingsPairedDevicesResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION,
+    await fetch<PutUserNotificationSettingsPairedDevicesResponse>(
+      'NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION',
       {
         body: {
           is_notifications_enabled: value,
@@ -86,8 +85,8 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     chain_id: string,
     settings: NotificationSettingsNetwork,
   }) => {
-    await fetch<InternalPutUserNotificationSettingsNetworksResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION,
+    await fetch<PutUserNotificationSettingsNetworksResponse>(
+      'NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION',
       {
         body: {
           ...settings,
@@ -107,8 +106,8 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     client_id: number,
     is_subscribed: boolean,
   }) => {
-    await fetch<InternalPutUserNotificationSettingsNetworksResponse>(
-      API_PATH.NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION,
+    await fetch<PutUserNotificationSettingsNetworksResponse>(
+      'NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION',
       {
         body: {
           is_subscribed,

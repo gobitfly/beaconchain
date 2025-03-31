@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/rocket-pool/rocketpool-go/utils/eth"
 	"github.com/shopspring/decimal"
+	"golang.org/x/sync/errgroup"
 )
 
 func InitNotificationCollector(pubkeyCachePath string) {
@@ -238,7 +240,7 @@ func collectUpcomingBlockProposalNotifications(notificationsByUserID types.Notif
 		return nil
 	}
 
-	assignments, err := mc.CL.GetPropoalAssignments(nextEpoch)
+	assignments, err := mc.CL.GetProposalAssignments(nextEpoch)
 	if err != nil {
 		return fmt.Errorf("error getting proposal assignments: %w", err)
 	}
@@ -570,13 +572,13 @@ func collectGasPriceNotifications(notificationsByUserID types.NotificationsPerUs
 
 func collectGroupEfficiencyNotifications(notificationsByUserID types.NotificationsPerUserId, epoch uint64, mc modules.ModuleContext) error {
 	type dbResult struct {
-		ValidatorIndex         uint64          `db:"validator_index"`
-		AttestationReward      decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		BlocksProposed         uint64          `db:"blocks_proposed"`
-		BlocksScheduled        uint64          `db:"blocks_scheduled"`
-		SyncExecuted           uint64          `db:"sync_executed"`
-		SyncScheduled          uint64          `db:"sync_scheduled"`
+		ValidatorIndex      uint64          `db:"validator_index"`
+		AttestationDividend decimal.Decimal `db:"attestations_dividend"`
+		AttestationDivisor  decimal.Decimal `db:"attestations_divisor"`
+		ProposalDividend    decimal.Decimal `db:"blocks_dividend"`
+		ProposalDivisor     decimal.Decimal `db:"blocks_divisor"`
+		SyncDividend        decimal.Decimal `db:"sync_dividend"`
+		SyncDivisor         decimal.Decimal `db:"sync_divisor"`
 	}
 
 	// retrieve rewards for the epoch
@@ -591,72 +593,181 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 		effectiveBalanceMap[validator.Index] = validator.Validator.EffectiveBalance
 		activeValidatorsMap[validator.Index] = struct{}{}
 	}
+
+	startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	efficiencyMap := make(map[types.ValidatorIndex]*dbResult, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	efficiencyWg := errgroup.Group{}
+	efficiencyLock := sync.Mutex{}
+	startTs := time.Now()
+	// 1. attestations
 	log.Info("retrieving attestation reward data")
-	attestationRewards, err := mc.CL.GetAttestationRewards(epoch)
-	if err != nil {
-		return fmt.Errorf("error getting attestation rewards: %w", err)
-	}
-
-	efficiencyMap := make(map[types.ValidatorIndex]*dbResult, len(attestationRewards.Data.TotalRewards))
-
-	idealRewardsMap := make(map[uint64]decimal.Decimal)
-	for _, reward := range attestationRewards.Data.IdealRewards {
-		idealRewardsMap[uint64(reward.EffectiveBalance)] = decimal.NewFromInt(int64(reward.Head) + int64(reward.Target) + int64(reward.Source) + int64(reward.InclusionDelay) + int64(reward.Inactivity))
-	}
-	for _, reward := range attestationRewards.Data.TotalRewards {
-		efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)] = &dbResult{
-			ValidatorIndex:         reward.ValidatorIndex,
-			AttestationReward:      decimal.NewFromInt(int64(reward.Head) + int64(reward.Target) + int64(reward.Source) + int64(reward.InclusionDelay) + int64(reward.Inactivity)),
-			AttestationIdealReward: idealRewardsMap[effectiveBalanceMap[reward.ValidatorIndex]],
+	efficiencyWg.Go(func() error {
+		attestationRewards, err := mc.CL.GetAttestationRewards(epoch)
+		if err != nil {
+			return fmt.Errorf("error getting attestation rewards: %w", err)
 		}
-	}
-
-	log.Info("retrieving block proposal data")
-	proposalAssignments, err := mc.CL.GetPropoalAssignments(epoch)
-	if err != nil {
-		return fmt.Errorf("error getting proposal assignments: %w", err)
-	}
-	for _, assignment := range proposalAssignments.Data {
-		if _, ok := efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)]; !ok {
-			efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)] = &dbResult{
-				ValidatorIndex:         assignment.ValidatorIndex,
-				AttestationReward:      decimal.Decimal{},
-				AttestationIdealReward: decimal.Decimal{},
-			}
+		idealAttestationRewardsMap := make(map[uint64]decimal.Decimal)
+		for _, reward := range attestationRewards.Data.IdealRewards {
+			idealAttestationRewardsMap[uint64(reward.EffectiveBalance)] = decimal.NewFromInt(int64(reward.Head) + int64(reward.Target) + int64(reward.Source) + int64(reward.InclusionDelay) + int64(reward.Inactivity))
 		}
-		efficiencyMap[types.ValidatorIndex(assignment.ValidatorIndex)].BlocksScheduled++
-	}
-
-	syncAssignments, err := mc.CL.GetSyncCommitteesAssignments(nil, epoch*utils.Config.Chain.ClConfig.SlotsPerEpoch)
-	if err != nil {
-		return fmt.Errorf("error getting sync committee assignments: %w", err)
-	}
-
-	for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-		log.Infof("retrieving data for slot %v", slot)
-		s, err := mc.CL.GetSlot(slot)
-		if err != nil && strings.Contains(err.Error(), "NOT_FOUND") {
-			continue
-		} else if err != nil {
-			return fmt.Errorf("error getting block header for slot %v: %w", slot, err)
-		}
-		efficiencyMap[types.ValidatorIndex(s.Data.Message.ProposerIndex)].BlocksProposed++
-
-		for i, validatorIndex := range syncAssignments.Data.Validators {
-			if _, ok := efficiencyMap[types.ValidatorIndex(validatorIndex)]; !ok {
-				efficiencyMap[types.ValidatorIndex(validatorIndex)] = &dbResult{
-					ValidatorIndex:         uint64(validatorIndex),
-					AttestationReward:      decimal.Decimal{},
-					AttestationIdealReward: decimal.Decimal{},
+		efficiencyLock.Lock()
+		defer efficiencyLock.Unlock()
+		for _, reward := range attestationRewards.Data.TotalRewards {
+			if _, ok := efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)]; !ok {
+				efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)] = &dbResult{
+					ValidatorIndex: reward.ValidatorIndex,
 				}
 			}
-			efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncScheduled++
+			efficiency := efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)]
+			efficiency.AttestationDividend = decimal.NewFromInt(
+				max(int64(reward.Head), 0) +
+					max(int64(reward.Target), 0) +
+					max(int64(reward.Source), 0) +
+					max(int64(reward.InclusionDelay), 0) +
+					max(int64(reward.Inactivity), 0))
+			efficiency.AttestationDivisor = idealAttestationRewardsMap[effectiveBalanceMap[reward.ValidatorIndex]]
+		}
+		return nil
+	})
 
-			if utils.BitAtVector(s.Data.Message.Body.SyncAggregate.SyncCommitteeBits, i) {
-				efficiencyMap[types.ValidatorIndex(validatorIndex)].SyncExecuted++
+	// 2. sync rewards
+	log.Info("retrieving sync reward data")
+	var maxSyncReward int64
+	for i := range utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		slot := startSlot + i
+		efficiencyWg.Go(func() error {
+			syncRewards, err := mc.CL.GetSyncRewards(slot)
+			if err != nil && strings.Contains(err.Error(), "NOT_FOUND") {
+				return nil
+			} else if err != nil {
+				return fmt.Errorf("error getting sync rewards for slot %v: %w", slot, err)
+			}
+
+			efficiencyLock.Lock()
+			defer efficiencyLock.Unlock()
+			for _, reward := range syncRewards.Data {
+				if _, ok := efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)]; !ok {
+					efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)] = &dbResult{
+						ValidatorIndex: reward.ValidatorIndex,
+					}
+				}
+				efficiency := efficiencyMap[types.ValidatorIndex(reward.ValidatorIndex)]
+				efficiency.SyncDividend = efficiency.SyncDividend.Add(decimal.NewFromInt(max(reward.Reward, 0)))
+				efficiency.SyncDivisor = efficiency.SyncDivisor.Add(decimal.NewFromInt(1)) // don't know max yet, multiply later
+				if reward.Reward > maxSyncReward {
+					maxSyncReward = reward.Reward
+				}
+			}
+			return nil
+		})
+	}
+
+	// 3. proposals
+	log.Info("retrieving proposal reward data")
+	// cache for later
+	type proposerReward struct {
+		Proposer uint64
+		Reward   *decimal.Decimal
+	}
+	proposalRewards := make(map[uint64]*proposerReward)
+	// include (up to) half an epoch lookback/ahead buffer for missed rewards
+	minMedianStart := uint64(0)
+	if startSlot > utils.Config.Chain.ClConfig.SlotsPerEpoch/2 {
+		minMedianStart = startSlot - utils.Config.Chain.ClConfig.SlotsPerEpoch/2
+	}
+	maxMedianEnd := startSlot + utils.Config.Chain.ClConfig.SlotsPerEpoch*3/2
+	proposalAssignmentsWg := errgroup.Group{}
+	var proposalsLock sync.Mutex = sync.Mutex{}
+	// 3.1 Proposal assignments
+	for epoch := minMedianStart / utils.Config.Chain.ClConfig.SlotsPerEpoch; epoch <= maxMedianEnd/utils.Config.Chain.ClConfig.SlotsPerEpoch; epoch++ {
+		proposalAssignmentsWg.Go(func() error {
+			proposalAssignments, err := mc.CL.GetProposalAssignments(epoch)
+			if err != nil {
+				return fmt.Errorf("error getting proposal assignments for epoch %v: %w", epoch, err)
+			}
+
+			proposalsLock.Lock()
+			defer proposalsLock.Unlock()
+			for _, assignment := range proposalAssignments.Data {
+				if uint64(assignment.Slot) >= minMedianStart && uint64(assignment.Slot) <= maxMedianEnd {
+					proposalRewards[uint64(assignment.Slot)] = &proposerReward{Proposer: assignment.ValidatorIndex}
+				}
+			}
+			return nil
+		})
+	}
+	if err = proposalAssignmentsWg.Wait(); err != nil {
+		return err
+	}
+
+	// 3.2 Proposal rewards
+	proposalRewardsWg := errgroup.Group{}
+	for slot := minMedianStart; slot <= maxMedianEnd; slot++ {
+		proposalRewardsWg.Go(func() error {
+			proposalReward, err := mc.CL.GetProposalRewards(slot)
+			if err != nil && strings.Contains(err.Error(), "NOT_FOUND") {
+				return nil
+			} else if err != nil {
+				return fmt.Errorf("error getting proposal rewards for slot %v: %w", slot, err)
+			}
+
+			curReward := proposalRewards[slot]
+			curReward.Reward = &proposalReward.Data.Total
+			return nil
+		})
+	}
+	if err = proposalRewardsWg.Wait(); err != nil {
+		return err
+	}
+
+	// 3.3 Proposal medians
+	efficiencyLock.Lock()
+	for i := range utils.Config.Chain.ClConfig.SlotsPerEpoch {
+		slot := startSlot + i
+		medianArray := make([]uint64, 0, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+		medianStart := uint64(0)
+		if slot > utils.Config.Chain.ClConfig.SlotsPerEpoch/2 {
+			medianStart = slot - utils.Config.Chain.ClConfig.SlotsPerEpoch/2
+		}
+		medianEnd := slot + utils.Config.Chain.ClConfig.SlotsPerEpoch/2
+		for curMedianSlot := medianStart; curMedianSlot < medianEnd; curMedianSlot++ {
+			curReward := proposalRewards[curMedianSlot].Reward
+			if curReward == nil {
+				// not proposed
+				continue
+			}
+			medianArray = append(medianArray, (*curReward).BigInt().Uint64())
+		}
+		if len(medianArray) == 0 {
+			// eg gnosis slot 11737794
+			medianArray = append(medianArray, 0)
+		}
+		slices.Sort(medianArray)
+		var median uint64
+		if len(medianArray)%2 == 0 {
+			median = (medianArray[len(medianArray)/2-1] + medianArray[len(medianArray)/2]) / 2
+		} else {
+			median = medianArray[len(medianArray)/2]
+		}
+
+		if _, ok := efficiencyMap[types.ValidatorIndex(proposalRewards[slot].Proposer)]; !ok {
+			efficiencyMap[types.ValidatorIndex(proposalRewards[slot].Proposer)] = &dbResult{
+				ValidatorIndex: proposalRewards[slot].Proposer,
 			}
 		}
+		efficiency := efficiencyMap[types.ValidatorIndex(proposalRewards[slot].Proposer)]
+		if proposalRewards[slot].Reward != nil {
+			efficiency.ProposalDividend = efficiency.ProposalDividend.Add(*proposalRewards[slot].Reward)
+			efficiency.ProposalDivisor = efficiency.ProposalDivisor.Add(decimal.Max(*proposalRewards[slot].Reward, decimal.NewFromUint64(median)))
+		} else {
+			efficiency.ProposalDivisor = efficiency.ProposalDivisor.Add(decimal.NewFromUint64(median))
+		}
 	}
+	efficiencyLock.Unlock()
+	if err = efficiencyWg.Wait(); err != nil {
+		return err
+	}
+	log.Infof("retrieving efficiency data for epoch %v from node took: %v", epoch, time.Since(startTs))
 
 	subMap, err := GetSubsForEventFilter(types.ValidatorGroupEfficiencyEventName, "", nil, nil)
 	if err != nil {
@@ -706,108 +817,97 @@ func collectGroupEfficiencyNotifications(notificationsByUserID types.Notificatio
 
 	// The commented code below can be used to validate data retrieved from the node against
 	// data in clickhouse
-	// var queryResult []*dbResult
-	// clickhouseTable := "validator_dashboard_data_epoch"
-	// // retrieve efficiency data for the epoch
-	// log.Infof("retrieving efficiency data for epoch %v", epoch)
-	// ds := goqu.Dialect("postgres").
-	// 	From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
-	// 	Select(
-	// 		goqu.L("validator_index"),
-	// 		goqu.L("COALESCE(r.attestations_reward, 0) AS attestations_reward"),
-	// 		goqu.L("COALESCE(r.attestations_ideal_reward, 0) AS attestations_ideal_reward"),
-	// 		goqu.L("COALESCE(r.blocks_proposed, 0) AS blocks_proposed"),
-	// 		goqu.L("COALESCE(r.blocks_scheduled, 0) AS blocks_scheduled"),
-	// 		goqu.L("COALESCE(r.sync_executed, 0) AS sync_executed"),
-	// 		goqu.L("COALESCE(r.sync_scheduled, 0) AS sync_scheduled")).
-	// 	Where(goqu.L("r.epoch_timestamp = ?", utils.EpochToTime(epoch)))
-	// query, args, err := ds.Prepared(true).ToSQL()
-	// if err != nil {
-	// 	return fmt.Errorf("error preparing query: %v", err)
-	// }
+	/*startTs = time.Now()
+	var queryResult []*dbResult
+	clickhouseTable := "validator_dashboard_data_epoch"
+	// retrieve efficiency data for the epoch
+	log.Infof("retrieving efficiency data for epoch %v", epoch)
+	ds := goqu.Dialect("postgres").
+		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
+		Select(
+			goqu.L("validator_index"),
+			goqu.L("efficiency_attestations_dividend").As("attestations_dividend"),
+			goqu.L("efficiency_attestations_divisor").As("attestations_divisor"),
+			goqu.L("efficiency_proposals_dividend").As("blocks_dividend"),
+			goqu.L("efficiency_proposals_divisor").As("blocks_divisor"),
+			goqu.L("efficiency_sync_dividend").As("sync_dividend"),
+			goqu.L("efficiency_sync_divisor").As("sync_divisor"),
+		).
+		Where(goqu.L("r.epoch_timestamp = fromUnixTimestamp(?)", utils.EpochToTime(epoch).Unix()))
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %v", err)
+	}
 
-	// err = db.ClickHouseReader.Select(&queryResult, query, args...)
-	// if err != nil {
-	// 	return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
-	// }
+	err = db.ClickHouseReader.Select(&queryResult, query, args...)
+	if err != nil {
+		return fmt.Errorf("error retrieving data from table %s: %v", clickhouseTable, err)
+	}
 
-	// if len(queryResult) == 0 {
-	// 	return fmt.Errorf("no efficiency data found for epoch %v", epoch)
-	// }
+	if len(queryResult) == 0 {
+		return fmt.Errorf("no efficiency data found for epoch %v", epoch)
+	}
+	log.Infof("retrieving %v efficiency rows for epoch %v from clickhouse took: %v", len(queryResult), epoch, time.Since(startTs))
 
-	// log.Infof("retrieved %v efficiency data rows", len(queryResult))
+	for _, row := range queryResult {
+		if _, ok := activeValidatorsMap[row.ValidatorIndex]; !ok {
+			continue
+		}
+		existing := efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)]
 
-	// for _, row := range queryResult {
-	// 	if _, ok := activeValidatorsMap[row.ValidatorIndex]; !ok {
-	// 		continue
-	// 	}
-	// 	existing := efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)]
-
-	// 	if existing == nil {
-	// 		existing = &dbResult{
-	// 			ValidatorIndex:         row.ValidatorIndex,
-	// 			AttestationReward:      decimal.Decimal{},
-	// 			AttestationIdealReward: decimal.Decimal{},
-	// 		}
-	// 	}
-	// 	if !existing.AttestationIdealReward.Equal(row.AttestationIdealReward) {
-	// 		log.Fatal(fmt.Errorf("ideal reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationIdealReward, row.AttestationIdealReward), "ideal reward mismatch", 0)
-	// 	}
-	// 	if !existing.AttestationReward.Equal(row.AttestationReward) {
-	// 		log.Fatal(fmt.Errorf("attestation reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationReward, row.AttestationReward), "attestation reward mismatch", 0)
-	// 	}
-	// 	if existing.BlocksProposed != row.BlocksProposed {
-	// 		log.Fatal(fmt.Errorf("blocks proposed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.BlocksProposed, row.BlocksProposed), "blocks proposed mismatch", 0)
-	// 	}
-	// 	if existing.BlocksScheduled != row.BlocksScheduled {
-	// 		log.Fatal(fmt.Errorf("blocks scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.BlocksScheduled, row.BlocksScheduled), "blocks scheduled mismatch", 0)
-	// 	}
-	// 	if existing.SyncExecuted != row.SyncExecuted {
-	// 		log.Fatal(fmt.Errorf("sync executed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncExecuted, row.SyncExecuted), "sync executed mismatch", 0)
-	// 	}
-	// 	if existing.SyncScheduled != row.SyncScheduled {
-	// 		log.Fatal(fmt.Errorf("sync scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncScheduled, row.SyncScheduled), "sync scheduled mismatch", 0)
-	// 	}
-	// 	efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
-	// }
+		if existing == nil {
+			existing = &dbResult{
+				ValidatorIndex: row.ValidatorIndex,
+			}
+		}
+		if !existing.AttestationDividend.Equal(row.AttestationDividend) {
+			log.Fatal(fmt.Errorf("ideal reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationDividend, row.AttestationDividend), "attestation dividend mismatch", 0)
+		}
+		if !existing.AttestationDivisor.Equal(row.AttestationDivisor) {
+			log.Fatal(fmt.Errorf("attestation reward mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.AttestationDivisor, row.AttestationDivisor), "attestation divisor mismatch", 0)
+		}
+		if !existing.ProposalDividend.Equal(row.ProposalDividend) {
+			log.Fatal(fmt.Errorf("blocks proposed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.ProposalDividend, row.ProposalDividend), "blocks dividend mismatch", 0)
+		}
+		if !existing.ProposalDivisor.Equal(row.ProposalDivisor) {
+			log.Fatal(fmt.Errorf("blocks scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.ProposalDivisor, row.ProposalDivisor), "blocks divisor mismatch", 0)
+		}
+		if !existing.SyncDividend.Equal(row.SyncDividend) {
+			log.Fatal(fmt.Errorf("sync executed mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncDividend, row.SyncDividend), "sync dividend mismatch", 0)
+		}
+		if !existing.SyncDivisor.Mul(decimal.NewFromInt(maxSyncReward)).Equal(row.SyncDivisor) {
+			log.Fatal(fmt.Errorf("sync scheduled mismatch for validator %v: %v != %v", row.ValidatorIndex, existing.SyncDivisor, row.SyncDivisor), "sync divisor mismatch", 0)
+		}
+		efficiencyMap[types.ValidatorIndex(row.ValidatorIndex)] = row
+	}*/
 
 	for userId, dashboards := range dashboardMap {
 		for dashboardId, groups := range dashboards {
 			for groupId, groupDetails := range groups {
-				attestationReward := decimal.Decimal{}
-				attestationIdealReward := decimal.Decimal{}
-				blocksProposed := uint64(0)
-				blocksScheduled := uint64(0)
-				syncExecuted := uint64(0)
-				syncScheduled := uint64(0)
+				attestationDividend := decimal.Decimal{}
+				attestationDivisor := decimal.Decimal{}
+				proposalDividend := decimal.Decimal{}
+				proposalDivisor := decimal.Decimal{}
+				syncDividend := decimal.Decimal{}
+				syncDivisor := decimal.Decimal{}
 
 				for _, validatorIndex := range groupDetails.Validators {
 					if row, ok := efficiencyMap[validatorIndex]; ok {
-						attestationReward = attestationReward.Add(row.AttestationReward)
-						attestationIdealReward = attestationIdealReward.Add(row.AttestationIdealReward)
-						blocksProposed += row.BlocksProposed
-						blocksScheduled += row.BlocksScheduled
-						syncExecuted += row.SyncExecuted
-						syncScheduled += row.SyncScheduled
+						attestationDividend = attestationDividend.Add(row.AttestationDividend)
+						attestationDivisor = attestationDivisor.Add(row.AttestationDivisor)
+						proposalDividend = proposalDividend.Add(row.ProposalDividend)
+						proposalDivisor = proposalDivisor.Add(row.ProposalDivisor)
+						syncDividend = syncDividend.Add(row.SyncDividend)
+						syncDivisor = syncDivisor.Add(row.SyncDivisor)
 					}
 				}
 
-				var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-
-				if !attestationIdealReward.IsZero() {
-					attestationEfficiency.Float64 = attestationReward.Div(attestationIdealReward).InexactFloat64()
-					attestationEfficiency.Valid = true
+				dividend := attestationDividend.Add(proposalDividend).Add(syncDividend)
+				divisor := attestationDivisor.Add(proposalDivisor).Add(syncDivisor.Mul(decimal.NewFromInt(maxSyncReward)))
+				var efficiency float64
+				if !divisor.IsZero() {
+					efficiency = dividend.Div(divisor).InexactFloat64()
 				}
-				if blocksScheduled > 0 {
-					proposerEfficiency.Float64 = float64(blocksProposed) / float64(blocksScheduled)
-					proposerEfficiency.Valid = true
-				}
-				if syncScheduled > 0 {
-					syncEfficiency.Float64 = float64(syncExecuted) / float64(syncScheduled)
-					syncEfficiency.Valid = true
-				}
-
-				efficiency := utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency) / 100
 
 				log.Infof("efficiency: %v, threshold: %v", efficiency*100, groupDetails.Subscription.EventThreshold*100)
 

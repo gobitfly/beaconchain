@@ -11,7 +11,7 @@ on:
     paths:
       - 'frontend/**'
     branches:
-      - '*'
+      - '**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

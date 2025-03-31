@@ -31,7 +31,10 @@ const emit = defineEmits<{
   ): void,
 }>()
 const handleDelete = () => {
-  if (props.value?.dashboard_id && props.value?.group_id) {
+  if (
+    typeof props.value?.dashboard_id === 'number'
+    && typeof props.value?.group_id === 'number'
+  ) {
     emit('delete', {
       dashboard_id: props.value.dashboard_id,
       group_id: props.value.group_id,
@@ -48,7 +51,10 @@ const handleDelete = () => {
     v-focustrap
     @keydown.esc.stop="close"
   >
-    <BcText tag="h2" variant="lg">
+    <BcText
+      is="h2"
+      variant="lg"
+    >
       {{ $t('notifications.dashboards.dialog.delete_all_notifications.heading') }}
     </BcText>
     <p class="notifications-management-modal-dashboards-delete__content">

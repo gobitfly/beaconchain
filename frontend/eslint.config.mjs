@@ -1,3 +1,4 @@
+import eslintPluginNewlineDestructuring from 'eslint-plugin-newline-destructuring'
 // @ts-check
 import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
@@ -65,7 +66,6 @@ export default withNuxt({
       'single',
     ],
     'no-console': 'warn',
-    'vue/max-attributes-per-line': 'off',
     'vue/max-len': [
       'error',
       {
@@ -111,9 +111,24 @@ export default withNuxt({
     },
   )
   .append(
+    {
+      plugins: { 'newline-destructuring': eslintPluginNewlineDestructuring },
+      rules: {
+        'newline-destructuring/newline': [
+          'error',
+          { items: 1 },
+        ],
+      },
+    },
+  )
+  .append(
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
     {
       rules: {
+        'jsonc/indent': [
+          'error',
+          4,
+        ],
         'jsonc/sort-array-values': [
           'warn',
           {
@@ -150,4 +165,36 @@ export default withNuxt({
         ],
       },
     },
+  )
+  .append({
+    files: [
+      'components/**/*.vue',
+      'composables/**/*.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          message: 'Use `useBcCookie()` instead.',
+          selector:
+          'CallExpression[callee.name="useCookie"]',
+        },
+      ],
+    },
+  },
+  )
+  .append({
+    files: [ 'components/**/*.vue' ],
+    ignores: [ '**/BcIcon.vue' ],
+    rules: {
+      'vue/no-restricted-syntax': [
+        'error',
+        {
+          message: 'Use BcIcon instead.',
+          // match BcIconSomethingThatComesAfter and LazyBcIconAnything but not BcIcon
+          selector: 'VElement[name=/^(lazy)?bcicon(?!$)[a-z]+$/]',
+        },
+      ],
+    },
+  },
   )

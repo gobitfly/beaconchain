@@ -1,9 +1,4 @@
 <script lang="ts" setup>
-import {
-  faDesktop, faTrash, faUser,
-} from '@fortawesome/pro-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-
 import type { ApiPagingResponse } from '~/types/api/common'
 import type {
   NotificationSettingsAccountDashboard,
@@ -107,8 +102,11 @@ const wrappedDashboards: ComputedRef<
     if (settingsValidatorDashboard.is_attestations_missed_subscribed) {
       result.push($t('notifications.subscriptions.validators.attestation_missed.label'))
     }
-    if (settingsValidatorDashboard.is_block_proposal_subscribed) {
-      result.push($t('notifications.subscriptions.validators.block_proposal.label'))
+    if (settingsValidatorDashboard.is_block_proposal_missed_subscribed) {
+      result.push($t('notifications.subscriptions.validators.block_proposal_missed.label'))
+    }
+    if (settingsValidatorDashboard.is_block_proposal_success_subscribed) {
+      result.push($t('notifications.subscriptions.validators.block_proposal_success.label'))
     }
     if (settingsValidatorDashboard.is_upcoming_block_proposal_subscribed) {
       result.push($t('notifications.subscriptions.validators.upcoming_block_proposal.label'))
@@ -196,7 +194,7 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
               })
               closeCallback()
             }
-            catch (error) {
+            catch {
               toast.showError({
                 detail: $t('notifications.subscriptions.error_message'),
                 group: $t('notifications.subscriptions.error_group'),
@@ -210,14 +208,12 @@ const onEdit = (col: Dialog, row: WrappedRow) => {
   }
 }
 
-function getTypeIcon(type: DashboardType) {
-  if (type === 'validator') {
-    return faDesktop
-  }
-  return faUser
-}
 const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0]) => {
   deleteDashboardNotifications(payload).then(() => refreshOverview())
+}
+const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
+  const hasSubscriptions = dashboard.subscriptions?.length
+  return !hasSubscriptions || dashboard.is_archived
 }
 </script>
 
@@ -253,9 +249,24 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.dashboard')"
         >
           <template #body="slotProps">
-            <span>
-              <FontAwesomeIcon
-                :icon="getTypeIcon(slotProps.data.dashboard_type)"
+            <BcTooltip
+              v-if="slotProps.data.is_archived"
+              fit-content
+              tooltip-text-align="left"
+              class="disabled-text"
+              :text="$t('notifications.dashboards.archived')"
+            >
+              <BcIcon
+                :name="slotProps.data.dashboard_type === 'validator' ? 'desktop' : 'user'"
+                class="type-icon"
+              />
+              {{ slotProps.data.dashboard_name }}
+            </BcTooltip>
+            <span
+              v-else
+            >
+              <BcIcon
+                :name="slotProps.data.dashboard_type === 'validator' ? 'desktop' : 'user'"
                 class="type-icon"
               />
               {{ slotProps.data.dashboard_name }}
@@ -270,7 +281,9 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           :header="$t('notifications.col.group')"
         >
           <template #body="slotProps">
-            {{ slotProps.data.group_name }}
+            <span :class="{ 'text-disabled': slotProps.data.is_archived }">
+              {{ slotProps.data.group_name }}
+            </span>
           </template>
         </Column>
         <Column
@@ -283,6 +296,8 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           <template #body="slotProps">
             <BcTablePopoutEdit
               :truncate-text="true"
+              :class="{ 'text-disabled': slotProps.data.is_archived }"
+              :is-disabled="slotProps.data.is_archived"
               :label="slotProps.data.subscriptions.join(', ')"
               @on-edit="onEdit('subscriptions', slotProps.data)"
             />
@@ -297,22 +312,11 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
         >
           <template #body="slotProps">
             <BcTablePopoutEdit
+              :class="{ 'text-disabled': slotProps.data.is_archived }"
+              :is-disabled="slotProps.data.is_archived"
               :truncate-text="true"
               :label="slotProps.data.settings.webhook_url"
               @on-edit="() => onEdit('webhook', slotProps.data)"
-            />
-          </template>
-        </Column>
-        <Column
-          v-if="colsVisible.networks"
-          field="networks"
-          body-class="networks-col"
-          header-class="networks-col"
-          :header="$t('notifications.col.networks')"
-        >
-          <template #body="slotProps">
-            <BcNetworkSelector
-              :readonly-networks="slotProps.data.chain_ids"
             />
           </template>
         </Column>
@@ -324,63 +328,52 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
           <template #body="slotProps">
             <div class="action-row">
               <BcButtonIcon
-                :screenreader-text="
-                  $t('notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
-                     { dashboard_id: slotProps.data.dashboard_name },
-                  )"
-                :disabled="!slotProps.data.subscriptions?.length ? true : null"
+                :screenreader-text="{
+                  key: 'notifications.clients.settings.screenreader.delete_notifications_for_dashboard_id',
+                  interpolation: { dashboard_id: slotProps.data.dashboard_name },
+                }"
+                :disabled="isDeleteButtonDisabled(slotProps.data)"
+                class="link"
+                name="trash"
                 @click="onEdit('delete', slotProps.data)"
-              >
-                <FontAwesomeIcon
-                  :icon="faTrash"
-                  class="link"
-                />
-              </BcButtonIcon>
+              />
             </div>
           </template>
         </Column>
         <template #expansion="slotProps">
           <div class="expansion">
             <div class="info">
-              <div class="label">
+              <div
+                class="label"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+              >
                 {{ $t("notifications.col.subscriptions") }}
               </div>
 
               <BcTablePopoutEdit
                 class="value"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+                :is-disabled="slotProps.data.is_archived"
                 :label="slotProps.data.subscriptions.join(', ')"
                 @on-edit="onEdit('subscriptions', slotProps.data)"
               />
             </div>
             <div class="info">
-              <div class="label">
+              <div
+                class="label"
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+              >
                 {{ $t("notifications.col.webhook") }}
               </div>
 
               <BcTablePopoutEdit
+                :class="{ 'text-disabled': slotProps.data.is_archived }"
+                :is-disabled="slotProps.data.is_archived"
                 class="value"
                 :label="slotProps.data.settings.webhook_url"
+                truncate-text
                 @on-edit="() => onEdit('webhook', slotProps.data)"
               />
-            </div>
-            <div class="info">
-              <div class="label">
-                {{ $t("notifications.col.networks") }}
-              </div>
-
-              <BcTablePopoutEdit
-                class="value"
-                :no-icon="!slotProps.data.is_account_dashboard"
-              >
-                <template #content>
-                  <div class="newtork-row">
-                    <BcNetworkSelector
-                      :readonly-networks="slotProps.data.chain_ids"
-                    />
-                    &nbsp;
-                  </div>
-                </template>
-              </BcTablePopoutEdit>
             </div>
           </div>
         </template>
@@ -428,6 +421,10 @@ const handleDelete = (payload: Parameters<typeof deleteDashboardNotifications>[0
 .action-row {
   display: flex;
   justify-content: flex-end;
+}
+
+.disabled-text {
+  color: var(--text-color-disabled)
 }
 
 :deep(.notifications-management-dashboard-table) {

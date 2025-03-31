@@ -1,4 +1,3 @@
-import { warn } from 'vue'
 import type { FeatureFlag } from '~/types/feature-flags'
 
 export const useFeatureFlag = () => {
@@ -6,7 +5,7 @@ export const useFeatureFlag = () => {
 
   const currentEnvironment = useRuntimeConfig().public.deploymentType as Environment
   if (!currentEnvironment) {
-    warn('Environment variable `deploymentType` is not set.')
+    throw createError('Environment variable `deploymentType` is not provided.')
   }
 
   const staging: FeatureFlag[] = [ 'feature-notifications' ]

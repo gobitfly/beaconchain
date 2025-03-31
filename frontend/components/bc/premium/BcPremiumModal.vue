@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { type BcButton } from '#components'
+import type { BcButton } from '#components'
 
 interface Props {
   description?: string,
@@ -7,7 +7,9 @@ interface Props {
 }
 
 const {
-  dialogRef, props, setHeader,
+  dialogRef,
+  props,
+  setHeader,
 } = useBcDialog<Props>({ contentClass: 'premium-modal' })
 const { t: $t } = useTranslation()
 

@@ -27,10 +27,12 @@ const bcTooltip = ref<HTMLElement | null>(null)
 let scrollParents: HTMLElement[] = []
 const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
 const {
-  doSelect, selected,
+  doSelect,
+  selected,
 } = useTooltipStore()
 const {
-  height, width,
+  height,
+  width,
 } = useWindowSize()
 
 // this const will be avaiable on template
@@ -100,12 +102,12 @@ const setPosition = () => {
       left = rect.left - padding - ttWidth
       top = rect.top + rect.height / 2 - ttHeight / 2
       break
-    case 'top':
-      top = rect.top - padding - ttHeight
-      break
     case 'right':
       left = rect.right + padding
       top = rect.top + rect.height / 2 - ttHeight / 2
+      break
+    case 'top':
+      top = rect.top - padding - ttHeight
       break
   }
   left = Math.max(0, Math.min(left, width.value - ttWidth))
@@ -134,12 +136,12 @@ const setPosition = () => {
         afterLeft = ttWidth
         afterTop = centerY
         break
-      case 'top':
-        afterTop = ttHeight
-        break
       case 'right':
         afterLeft = -10
         afterTop = centerY
+        break
+      case 'top':
+        afterTop = ttHeight
         break
     }
     bcTooltip.value.style.setProperty('--tt-after-left', `${afterLeft}px`)
@@ -260,7 +262,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
+  <span
     ref="bcTooltipOwner"
     class="slot_container"
     @mouseover="onHover()"
@@ -303,7 +305,7 @@ onUnmounted(() => {
         </div>
       </div>
     </Teleport>
-  </div>
+  </span>
 </template>
 
 <style lang="scss" scoped>

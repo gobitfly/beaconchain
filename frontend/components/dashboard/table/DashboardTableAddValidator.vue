@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCirclePlus } from '@fortawesome/pro-regular-svg-icons'
-
 const manageValidatorsModalVisisble = ref(false)
 
 const addValidator = () => {
@@ -17,7 +14,7 @@ const addValidator = () => {
     <span class="big_text">{{
       $t("dashboard.validator.summary.add_validator")
     }}</span>
-    <FontAwesomeIcon :icon="faCirclePlus" />
+    <BcIcon name="circle-plus" />
     <DashboardValidatorManagementModal
       v-model="manageValidatorsModalVisisble"
     />

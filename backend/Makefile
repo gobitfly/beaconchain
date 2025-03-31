@@ -10,13 +10,20 @@ CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
 all: 
 	mkdir -p bin
-	go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go
+	go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./pkg/api/docs -d ./pkg/api/ -g ./handlers/public.go --overridesFile ./pkg/api/docs/.swaggo
 	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o ./bin/bc ./cmd/main.go
 clean:
 	rm -rf bin
 
 test:
 	go test ./...
+
+test-integration:
+	go test -v -tags integration
+
+lint:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.1
+	golangci-lint run --timeout 5m
 
 frontend-types:
 	go run cmd/main.go typescript-converter --out ../frontend/types/api

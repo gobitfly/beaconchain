@@ -1,4 +1,4 @@
-import { type ChartHistorySeconds } from '~/types/api/common'
+import type { ChartHistorySeconds } from '~/types/api/common'
 
 export const SummaryDetailsEfficiencyProps = [
   'attestations_head',
@@ -39,16 +39,6 @@ export const SummaryDetailsEfficiencySpecialProps = [
   'proposals',
   'missed_rewards',
 ] as const
-export type SummaryDetailsEfficiencySpecialProp =
-  (typeof SummaryDetailsEfficiencySpecialProps)[number]
-
-export type SummaryDetailsEfficiencyCombinedProp =
-  | SummaryDetailsEfficiencyCustomProp
-  | SummaryDetailsEfficiencyLuckProp
-  | SummaryDetailsEfficiencyProp
-  | SummaryDetailsEfficiencySpecialProp
-  | SummaryDetailsEfficiencyValidatorProp
-
 export type DashboardValidatorContext =
   | 'attestation'
   | 'dashboard'
@@ -57,8 +47,18 @@ export type DashboardValidatorContext =
   | 'slashings'
   | 'sync'
 
+export type SummaryDetailsEfficiencyCombinedProp =
+  | SummaryDetailsEfficiencyCustomProp
+  | SummaryDetailsEfficiencyLuckProp
+  | SummaryDetailsEfficiencyProp
+  | SummaryDetailsEfficiencySpecialProp
+  | SummaryDetailsEfficiencyValidatorProp
+
+export type SummaryDetailsEfficiencySpecialProp =
+  (typeof SummaryDetailsEfficiencySpecialProps)[number]
+
 export type SummaryRow = {
-  prop?: SummaryDetailsEfficiencyCombinedProp,
+  property?: SummaryDetailsEfficiencyCombinedProp,
   title: string,
 }
 
@@ -69,8 +69,6 @@ export const SummaryTimeFrames = [
   'last_30d',
   'all_time',
 ] as const
-export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
-
 export type SummaryTableVisibility = {
   attestations: boolean,
   efficiency: boolean,
@@ -78,6 +76,8 @@ export type SummaryTableVisibility = {
   reward: boolean,
   validatorsSortable: boolean,
 }
+
+export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
 // export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2

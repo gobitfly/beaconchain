@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 	"time"
 
@@ -41,22 +42,21 @@ func (s *ServiceClickhouseRollings) internalProcess() {
 }
 
 func (s *ServiceClickhouseRollings) runChecks() {
-	rollings := []string{
-		"1h",
-		"24h",
-		"7d",
-		"30d",
-		"90d",
-		"total",
+	rollings := map[string]constants.Event{
+		"1h":    constants.Event_ClickhouseRolling_1h,
+		"24h":   constants.Event_ClickhouseRolling_24h,
+		"7d":    constants.Event_ClickhouseRolling_7d,
+		"30d":   constants.Event_ClickhouseRolling_30d,
+		"90d":   constants.Event_ClickhouseRolling_90d,
+		"total": constants.Event_ClickhouseRolling_total,
 	}
 	wg := sync.WaitGroup{}
-	for _, rolling := range rollings {
+	for rolling := range maps.Keys(rollings) {
 		rolling := rolling
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			id := fmt.Sprintf("ch_rolling_%s", rolling)
-			r := NewStatusReport(id, constants.Default, 30*time.Second)
+			r := NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
 			r(constants.Running, nil)
 			if db.ClickHouseReader == nil {
 				r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})

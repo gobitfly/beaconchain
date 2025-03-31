@@ -1,120 +1,73 @@
-import { defineStore } from 'pinia'
-import { API_PATH } from '~/types/customFetch'
-import type { ApiDataResponse } from '~/types/api/common'
-import * as networkTs from '~/types/network'
-
-interface ApiChainInfo {
-  chain_id: networkTs.ChainIDs,
-  name: string,
-}
-
-const store = defineStore('network-store', () => {
-  const data = ref<{
-    availableNetworks: networkTs.ChainIDs[],
-    currentNetwork: networkTs.ChainIDs,
-  }>({
-    availableNetworks: [ networkTs.ChainIDs.Ethereum ],
-    // this impossible value by defaut must be kept, it ensures that the `computed`
-    // of `currentNetwork` selects the network of highest priority when `setCurrentNetwork()` has not been called yet
-    currentNetwork: networkTs.ChainIDs.Any,
-  })
-  return { data }
-})
+import {
+  type ChainId,
+  ChainInfo,
+} from '~/types/network'
 
 export function useNetworkStore() {
-  const { data } = storeToRefs(store())
+  const { chainIdByDefault } = useRuntimeConfig().public
+  if (!chainIdByDefault) throw createError(
+    {
+      statusMessage: 'NUXT_PUBLIC_CHAIN_ID_BY_DEFAULT has to be set',
+    })
+  const currentNetwork = computed(() => (Number(chainIdByDefault)) as ChainId)
+  const networkInfo = computed(() => ChainInfo[currentNetwork.value])
+  const {
+    clCurrency,
+    displayCurrencyDefault,
+    elCurrency,
+    hasRocketPool,
+    secondsPerSlot,
+    slotsPerEpoch,
+    timeStampSlot0,
+  } = networkInfo.value
+
+  const getNetworkName = (chainId: ChainId) => ChainInfo[chainId].name
+
+  const secondsPerEpoch = computed(() => slotsPerEpoch * secondsPerSlot)
+  const epochsPerDay = computed(() => (24 * 60 * 60) / secondsPerEpoch.value)
+
+  const getTimestampFromSlot = (slot: number) =>
+    timeStampSlot0 + slot * secondsPerSlot
+
+  const getSlotFromTimestamp = (timestamp: number) =>
+    Math.floor((timestamp - timeStampSlot0) / secondsPerSlot)
+
+  const getEpochFromSlot = (slot: number) => Math.floor(slot / slotsPerEpoch)
+
+  const getEpochFromTimestamp = (timestamp: number) => {
+    const slot = getSlotFromTimestamp(timestamp)
+    const epoch = getEpochFromSlot(slot)
+    return epoch
+  }
 
   /**
-   * Needs to be called once, when the front-end is loading. Unnecessary afterwards.
+   *
+   * @returns timestamp in seconds (backend also uses seconds instead of milliseconds like in js)
    */
-  async function loadAvailableNetworks(): Promise<boolean> {
-    try {
-      const { fetch } = useCustomFetch()
-      const response = await fetch<ApiDataResponse<ApiChainInfo[]>>(
-        API_PATH.AVAILABLE_NETWORKS,
-      )
-      if (!response.data || !response.data.length) {
-        return false
-      }
-      data.value.availableNetworks = networkTs.sortChainIDsByPriority(
-        response.data.map(apiInfo => apiInfo.chain_id),
-      )
-      return true
-    }
-    catch {
-      return false
-    }
+  const getTimestampFromEpoch = (epoch: number) => {
+    return timeStampSlot0 + epoch * slotsPerEpoch * secondsPerSlot
   }
 
-  const availableNetworks = computed(() => data.value.availableNetworks)
-  const currentNetwork = computed(() =>
-    availableNetworks.value.includes(data.value.currentNetwork)
-      ? data.value.currentNetwork
-      : availableNetworks.value[0],
+  const numberOfEpochsTheNetworkIsConsideredToBeFinalized = 3
+  const secondsUntilNetworkFinality = computed(
+    () => secondsPerSlot * slotsPerEpoch * numberOfEpochsTheNetworkIsConsideredToBeFinalized,
   )
-  const networkInfo = computed(() => networkTs.ChainInfo[currentNetwork.value])
-
-  function isNetworkDisabled(chainId: networkTs.ChainIDs): boolean {
-    // TODO: return `false` for everything once we are ready
-    return (
-      !useRuntimeConfig().public.showInDevelopment
-      && chainId !== currentNetwork.value
-    )
-  }
-
-  function setCurrentNetwork(chainId: networkTs.ChainIDs) {
-    data.value.currentNetwork = chainId
-  }
-
-  function isMainNet(): boolean {
-    return networkTs.isMainNet(currentNetwork.value)
-  }
-
-  function isL1(): boolean {
-    return networkTs.isL1(currentNetwork.value)
-  }
-
-  function epochsPerDay(): number {
-    return networkTs.epochsPerDay(currentNetwork.value)
-  }
-
-  function epochToTs(epoch: number): number | undefined {
-    return networkTs.epochToTs(currentNetwork.value, epoch)
-  }
-
-  const secondsPerEpoch = computed(() => networkTs.secondsPerEpoch(currentNetwork.value))
-
-  function slotToTs(slot: number): number | undefined {
-    return networkTs.slotToTs(currentNetwork.value, slot)
-  }
-
-  function tsToSlot(ts: number): number {
-    return networkTs.tsToSlot(currentNetwork.value, ts)
-  }
-
-  function slotToEpoch(slot: number): number {
-    return networkTs.slotToEpoch(currentNetwork.value, slot)
-  }
-
-  function tsToEpoch(ts: number): number {
-    return slotToEpoch(tsToSlot(ts))
-  }
 
   return {
-    availableNetworks,
+    clCurrency,
     currentNetwork,
+    displayCurrencyDefault,
+    elCurrency,
     epochsPerDay,
-    epochToTs,
-    isL1,
-    isMainNet,
-    isNetworkDisabled,
-    loadAvailableNetworks,
+    getEpochFromSlot,
+    getEpochFromTimestamp,
+    getNetworkName,
+    getSlotFromTimestamp,
+    getTimestampFromEpoch,
+    getTimestampFromSlot,
+    hasRocketPool,
     networkInfo,
     secondsPerEpoch,
-    setCurrentNetwork,
-    slotToEpoch,
-    slotToTs,
-    tsToEpoch,
-    tsToSlot,
+    secondsUntilNetworkFinality,
   }
 }

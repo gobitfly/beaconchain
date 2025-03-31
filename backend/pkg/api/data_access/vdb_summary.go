@@ -2,8 +2,8 @@ package dataaccess
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"maps"
 	"math"
 	"math/big"
 	"slices"
@@ -36,7 +36,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	wg := errgroup.Group{}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -91,26 +91,28 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	if err != nil {
 		return nil, nil, err
 	}
-	averageNetworkEfficiency := utils.CalculateTotalEfficiency(
-		efficiency.AttestationEfficiency[period], efficiency.ProposalEfficiency[period], efficiency.SyncEfficiency[period])
+	var averageNetworkEfficiency float64
+	if efficiency.TotalEfficiency[period].Valid {
+		averageNetworkEfficiency = efficiency.TotalEfficiency[period].Float64 * 100
+	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main query and get the data
 	var queryResult []struct {
-		GroupId                int64           `db:"result_group_id"`
-		GroupName              string          `db:"group_name"`
-		ValidatorIndices       []uint64        `db:"validator_indices"`
-		ClRewards              int64           `db:"cl_rewards"`
-		AttestationReward      decimal.Decimal `db:"attestations_reward"`
-		AttestationIdealReward decimal.Decimal `db:"attestations_ideal_reward"`
-		AttestationsExecuted   uint64          `db:"attestations_executed"`
-		AttestationsScheduled  uint64          `db:"attestations_scheduled"`
-		BlocksProposed         uint64          `db:"blocks_proposed"`
-		BlocksScheduled        uint64          `db:"blocks_scheduled"`
-		SyncExecuted           uint64          `db:"sync_executed"`
-		SyncScheduled          uint64          `db:"sync_scheduled"`
-		MinEpochStart          int64           `db:"min_epoch_start"`
-		MaxEpochEnd            int64           `db:"max_epoch_end"`
+		GroupId               int64               `db:"result_group_id"`
+		GroupName             string              `db:"group_name"`
+		ValidatorIndices      []uint64            `db:"validator_indices"`
+		ClRewards             int64               `db:"cl_rewards"`
+		EfficiencyDividend    decimal.NullDecimal `db:"efficiency_dividend"`
+		EfficiencyDivisor     decimal.NullDecimal `db:"efficiency_divisor"`
+		AttestationsObserved  uint64              `db:"attestations_observed"`
+		AttestationsScheduled uint64              `db:"attestations_scheduled"`
+		BlocksProposed        uint64              `db:"blocks_proposed"`
+		BlocksScheduled       uint64              `db:"blocks_scheduled"`
+		SyncExecuted          uint64              `db:"sync_executed"`
+		SyncScheduled         uint64              `db:"sync_scheduled"`
+		MinEpochStart         int64               `db:"min_epoch_start"`
+		MaxEpochEnd           int64               `db:"max_epoch_end"`
 	}
 
 	ds := goqu.Dialect("postgres").
@@ -118,17 +120,17 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
-			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS cl_rewards"),
-			goqu.L("COALESCE(SUM(r.attestations_reward)::decimal, 0) AS attestations_reward"),
-			goqu.L("COALESCE(SUM(r.attestations_ideal_reward)::decimal, 0) AS attestations_ideal_reward"),
-			goqu.L("COALESCE(SUM(r.attestations_executed), 0) AS attestations_executed"),
-			goqu.L("COALESCE(SUM(r.attestations_scheduled), 0) AS attestations_scheduled"),
-			goqu.L("COALESCE(SUM(r.blocks_proposed), 0) AS blocks_proposed"),
-			goqu.L("COALESCE(SUM(r.blocks_scheduled), 0) AS blocks_scheduled"),
-			goqu.L("COALESCE(SUM(r.sync_executed), 0) AS sync_executed"),
-			goqu.L("COALESCE(SUM(r.sync_scheduled), 0) AS sync_scheduled"),
-			goqu.L("COALESCE(MIN(r.epoch_start), 0) AS min_epoch_start"),
-			goqu.L("COALESCE(MAX(r.epoch_end), 0) AS max_epoch_end")).
+			goqu.L(d.getTotalRewardsColumns()).As("cl_rewards"),
+			goqu.L("SUM(r.efficiency_dividend::decimal) AS efficiency_dividend"),
+			goqu.L("SUM(r.efficiency_divisor::decimal) AS efficiency_divisor"),
+			goqu.L("SUM(r.attestations_observed) AS attestations_observed"),
+			goqu.L("SUM(r.attestations_scheduled) AS attestations_scheduled"),
+			goqu.L("SUM(r.blocks_proposed) AS blocks_proposed"),
+			goqu.L("SUM(r.blocks_scheduled) AS blocks_scheduled"),
+			goqu.L("SUM(r.sync_executed) AS sync_executed"),
+			goqu.L("SUM(r.sync_scheduled) AS sync_scheduled"),
+			goqu.L("MIN(r.epoch_start) AS min_epoch_start"),
+			goqu.L("MAX(r.epoch_end) AS max_epoch_end")).
 		GroupBy(goqu.L("result_group_id"))
 
 	if len(validators) > 0 {
@@ -188,20 +190,9 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	elRewards := make(map[int64]decimal.Decimal)
 	ds = goqu.Dialect("postgres").
 		Select(
-			goqu.L("SUM(COALESCE(rb.value, ep.fee_recipient_reward * 1e18, 0)) AS el_rewards")).
-		From(goqu.L("blocks b")).
-		LeftJoin(goqu.L("execution_payloads ep"), goqu.On(goqu.L("ep.block_hash = b.exec_block_hash"))).
-		LeftJoin(
-			goqu.Lateral(goqu.Dialect("postgres").
-				From("relays_blocks").
-				Select(
-					goqu.L("exec_block_hash"),
-					goqu.MAX("value").As("value")).
-				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
-			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
-		).
-		Where(goqu.L("b.epoch >= ? AND b.epoch <= ? AND b.status = '1'", epochMin, epochMax)).
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
+		From(goqu.I("execution_rewards_finalized").As("b")).
+		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", epochMin, epochMax)).
 		GroupBy(goqu.L("result_group_id"))
 
 	if len(validators) > 0 {
@@ -272,18 +263,18 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	// ------------------------------------------------------------------------------------------------------------------
 	// Calculate the result
 	total := struct {
-		GroupId                int64
-		Status                 t.VDBSummaryStatus
-		Validators             t.VDBSummaryValidators
-		AttestationReward      decimal.Decimal
-		AttestationIdealReward decimal.Decimal
-		AttestationsExecuted   uint64
-		AttestationsScheduled  uint64
-		BlocksProposed         uint64
-		BlocksScheduled        uint64
-		SyncExecuted           uint64
-		SyncScheduled          uint64
-		Reward                 t.ClElValue[decimal.Decimal]
+		GroupId               int64
+		Status                t.VDBSummaryStatus
+		Validators            t.VDBSummaryValidators
+		EfficiencyDividend    decimal.Decimal
+		EfficiencyDivisor     decimal.Decimal
+		AttestationsObserved  uint64
+		AttestationsScheduled uint64
+		BlocksProposed        uint64
+		BlocksScheduled       uint64
+		SyncExecuted          uint64
+		SyncScheduled         uint64
+		Reward                t.ClElValue[decimal.Decimal]
 	}{
 		GroupId: t.AllGroups,
 	}
@@ -338,8 +329,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Status.SlashedCount += resultEntry.Status.SlashedCount
 
 		// Attestations
-		resultEntry.Attestations.Success = queryEntry.AttestationsExecuted
-		resultEntry.Attestations.Failed = queryEntry.AttestationsScheduled - queryEntry.AttestationsExecuted
+		resultEntry.Attestations.Success = queryEntry.AttestationsObserved
+		resultEntry.Attestations.Failed = queryEntry.AttestationsScheduled - queryEntry.AttestationsObserved
 
 		// Proposals
 		resultEntry.Proposals.Success = queryEntry.BlocksProposed
@@ -354,25 +345,14 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Reward.El = total.Reward.El.Add(resultEntry.Reward.El)
 
 		// Efficiency
-		var attestationEfficiency, proposerEfficiency, syncEfficiency sql.NullFloat64
-		if !queryEntry.AttestationIdealReward.IsZero() {
-			attestationEfficiency.Float64 = queryEntry.AttestationReward.Div(queryEntry.AttestationIdealReward).InexactFloat64()
-			attestationEfficiency.Valid = true
+		if queryEntry.EfficiencyDivisor.Valid {
+			resultEntry.Efficiency = queryEntry.EfficiencyDividend.Decimal.Div(queryEntry.EfficiencyDivisor.Decimal).InexactFloat64() * 100
 		}
-		if queryEntry.BlocksScheduled > 0 {
-			proposerEfficiency.Float64 = float64(queryEntry.BlocksProposed) / float64(queryEntry.BlocksScheduled)
-			proposerEfficiency.Valid = true
-		}
-		if queryEntry.SyncScheduled > 0 {
-			syncEfficiency.Float64 = float64(queryEntry.SyncExecuted) / float64(queryEntry.SyncScheduled)
-			syncEfficiency.Valid = true
-		}
-		resultEntry.Efficiency = utils.CalculateTotalEfficiency(attestationEfficiency, proposerEfficiency, syncEfficiency)
 
 		// Add the duties info to the total
-		total.AttestationReward = total.AttestationReward.Add(queryEntry.AttestationReward)
-		total.AttestationIdealReward = total.AttestationIdealReward.Add(queryEntry.AttestationIdealReward)
-		total.AttestationsExecuted += queryEntry.AttestationsExecuted
+		total.EfficiencyDividend = total.EfficiencyDividend.Add(queryEntry.EfficiencyDividend.Decimal)
+		total.EfficiencyDivisor = total.EfficiencyDivisor.Add(queryEntry.EfficiencyDivisor.Decimal)
+		total.AttestationsObserved += queryEntry.AttestationsObserved
 		total.AttestationsScheduled += queryEntry.AttestationsScheduled
 		total.BlocksProposed += queryEntry.BlocksProposed
 		total.BlocksScheduled += queryEntry.BlocksScheduled
@@ -466,28 +446,17 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		}
 
 		// Attestations
-		totalEntry.Attestations.Success = total.AttestationsExecuted
-		totalEntry.Attestations.Failed = total.AttestationsScheduled - total.AttestationsExecuted
+		totalEntry.Attestations.Success = total.AttestationsObserved
+		totalEntry.Attestations.Failed = total.AttestationsScheduled - total.AttestationsObserved
 
 		// Proposals
 		totalEntry.Proposals.Success = total.BlocksProposed
 		totalEntry.Proposals.Failed = total.BlocksScheduled - total.BlocksProposed
 
 		// Efficiency
-		var totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency sql.NullFloat64
-		if !total.AttestationIdealReward.IsZero() {
-			totalAttestationEfficiency.Float64 = total.AttestationReward.Div(total.AttestationIdealReward).InexactFloat64()
-			totalAttestationEfficiency.Valid = true
+		if !total.EfficiencyDivisor.IsZero() {
+			totalEntry.Efficiency = total.EfficiencyDividend.Div(total.EfficiencyDivisor).InexactFloat64() * 100
 		}
-		if total.BlocksScheduled > 0 {
-			totalProposerEfficiency.Float64 = float64(total.BlocksProposed) / float64(total.BlocksScheduled)
-			totalProposerEfficiency.Valid = true
-		}
-		if total.SyncScheduled > 0 {
-			totalSyncEfficiency.Float64 = float64(total.SyncExecuted) / float64(total.SyncScheduled)
-			totalSyncEfficiency.Valid = true
-		}
-		totalEntry.Efficiency = utils.CalculateTotalEfficiency(totalAttestationEfficiency, totalProposerEfficiency, totalSyncEfficiency)
 
 		result = append([]t.VDBSummaryTableRow{totalEntry}, result...)
 	}
@@ -520,79 +489,38 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// Get the table names based on the period
-	clickhouseTable, hours, err := d.getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}
 
-	validators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		validators = dashboardId.Validators
-	}
-
-	getLastScheduledBlockAndSyncDate := func() (time.Time, time.Time, error) {
-		// we need to go to the all time table for last scheduled block/sync committee epoch
-		clickhouseTotalTable, _, err := d.getTablesForPeriod(enums.AllTime)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
-				goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTotalTable)))
-
-		if dashboardId.Validators == nil {
-			ds = ds.
-				With("validators", goqu.L("(SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = ? AND (group_id = ? OR ?::smallint = -1))", dashboardId.Id, groupId, groupId)).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
-		} else {
-			ds = ds.
-				Where(goqu.L("validator_index IN ?", validators))
-		}
-
-		query, args, err := ds.Prepared(true).ToSQL()
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		var row struct {
-			LastScheduledBlockEpoch *int64 `db:"last_scheduled_block_epoch"`
-			LastSyncEpoch           *int64 `db:"last_scheduled_sync_epoch"`
-		}
-		err = d.clickhouseReader.GetContext(ctx, &row, query, args...)
-		if err != nil {
-			return time.Time{}, time.Time{}, err
-		}
-
-		if row.LastScheduledBlockEpoch == nil || row.LastSyncEpoch == nil {
-			return time.Time{}, time.Time{}, nil
-		}
-
-		return utils.EpochToTime(uint64(*row.LastScheduledBlockEpoch)), utils.EpochToTime(uint64(*row.LastSyncEpoch)), nil
-	}
-
+	// TODO check: why this can't be aggregated?
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
 			goqu.L("epoch_start"),
-			goqu.L("attestations_reward"),
-			goqu.L("attestations_ideal_reward"),
+			goqu.L("epoch_end"),
+			goqu.L("efficiency_dividend"),
+			goqu.L("efficiency_divisor"),
+			goqu.L("efficiency_attestations_dividend"),
+			goqu.L("efficiency_attestations_divisor"),
 			goqu.L("attestations_scheduled"),
-			goqu.L("attestations_executed"),
-			goqu.L("attestation_head_executed"),
-			goqu.L("attestation_source_executed"),
-			goqu.L("attestation_target_executed"),
+			goqu.L("attestations_observed"),
+			goqu.L("attestations_head_executed"),
+			goqu.L("attestations_source_executed"),
+			goqu.L("attestations_target_executed"),
+			goqu.L("attestations_ideal_reward - attestations_reward_rewards_only").As("attestations_missed_rewards"),
 			goqu.L("blocks_scheduled"),
 			goqu.L("blocks_proposed"),
+			goqu.L("blocks_cl_missed_median_reward"),
 			goqu.L("sync_scheduled"),
 			goqu.L("sync_executed"),
 			goqu.L("slashed AS slashed_in_period"),
 			goqu.L("blocks_slashing_count AS slashed_amount"),
 			goqu.L("blocks_expected"),
 			goqu.L("inclusion_delay_sum"),
+			goqu.L("sync_localized_max_reward"),
+			goqu.L("sync_reward_rewards_only"),
 			goqu.L("sync_committees_expected")).
 		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
 
@@ -603,20 +531,25 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			Where(goqu.L("validator_index IN (SELECT validator_index FROM validators)"))
 	} else {
 		ds = ds.
-			Where(goqu.L("validator_index IN ?", validators))
+			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
 	}
 
 	type QueryResult struct {
-		ValidatorIndex         uint32 `db:"validator_index"`
-		EpochStart             uint64 `db:"epoch_start"`
-		AttestationReward      int64  `db:"attestations_reward"`
-		AttestationIdealReward int64  `db:"attestations_ideal_reward"`
+		ValidatorIndex uint32 `db:"validator_index"`
+		EpochStart     uint64 `db:"epoch_start"`
+		EpochEnd       uint64 `db:"epoch_end"`
 
-		AttestationsScheduled     int64 `db:"attestations_scheduled"`
-		AttestationsExecuted      int64 `db:"attestations_executed"`
-		AttestationHeadExecuted   int64 `db:"attestation_head_executed"`
-		AttestationSourceExecuted int64 `db:"attestation_source_executed"`
-		AttestationTargetExecuted int64 `db:"attestation_target_executed"`
+		EfficiencyTotalDividend        decimal.Decimal `db:"efficiency_dividend"`
+		EfficiencyTotalDivisor         decimal.Decimal `db:"efficiency_divisor"`
+		EfficiencyAttestationsDividend decimal.Decimal `db:"efficiency_attestations_dividend"`
+		EfficiencyAttestationsDivisor  decimal.Decimal `db:"efficiency_attestations_divisor"`
+
+		AttestationsScheduled      int64 `db:"attestations_scheduled"`
+		AttestationsObserved       int64 `db:"attestations_observed"`
+		AttestationsHeadExecuted   int64 `db:"attestations_head_executed"`
+		AttestationsSourceExecuted int64 `db:"attestations_source_executed"`
+		AttestationsTargetExecuted int64 `db:"attestations_target_executed"`
+		AttestationsMissedRewards  int64 `db:"attestations_missed_rewards"`
 
 		BlocksScheduled uint32 `db:"blocks_scheduled"`
 		BlocksProposed  uint32 `db:"blocks_proposed"`
@@ -629,6 +562,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 		BlockChance            float64 `db:"blocks_expected"`
 		SyncCommitteesExpected float64 `db:"sync_committees_expected"`
+
+		BlocksCLMissedReward    int64 `db:"blocks_cl_missed_median_reward"`
+		SyncLocalizedMaxRewards int64 `db:"sync_localized_max_reward"`
+		SyncRewardRewardsOnly   int64 `db:"sync_reward_rewards_only"`
 
 		InclusionDelaySum int64 `db:"inclusion_delay_sum"`
 	}
@@ -653,7 +590,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	var lastBlockTs, lastSyncTs time.Time
 	errGroup.Go(func() error {
 		var err error
-		lastBlockTs, lastSyncTs, err = getLastScheduledBlockAndSyncDate()
+		lastBlockTs, lastSyncTs, err = d.getLastScheduledBlockAndSyncDate(ctx, dashboardId, groupId)
+		return err
+	})
+
+	var minEpochStart, maxEpochEnd uint64
+	errGroup.Go(func() error {
+		var err error
+		minEpochStart, maxEpochEnd, err = d.getMinMaxEpochs(ctx, dashboardId, groupId, period)
 		return err
 	})
 
@@ -666,40 +610,55 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		return ret, nil
 	}
 
-	totalAttestationRewards := int64(0)
-	totalIdealAttestationRewards := int64(0)
+	var totalEfficiencyTotalDividend, totalEfficiencyTotalDivisor decimal.Decimal
+	var totalEfficiencyAttestationsDividend, totalEfficiencyAttestationsDivisor decimal.Decimal
+
 	totalBlockChance := float64(0)
 	totalInclusionDelaySum := int64(0)
 	totalInclusionDelayDivisor := int64(0)
+
 	totalSyncExpected := float64(0)
-	totalProposals := uint32(0)
+	totalSyncScheduled := uint32(0)
+	totalSyncExecuted := uint32(0)
 
-	validatorArr := make([]t.VDBValidator, 0)
+	totalBlocksScheduled := uint32(0)
+	totalBlocksProposed := uint32(0)
+
+	totalMissedRewardsBlocksCl := int64(0)
+	totalMissedRewardsAttestations := int64(0)
+	totalMissedRewardsSync := int64(0)
+
+	validators := make([]t.VDBValidator, 0)
 	for _, row := range rows {
-		validatorArr = append(validatorArr, t.VDBValidator(row.ValidatorIndex))
-		totalAttestationRewards += row.AttestationReward
-		totalIdealAttestationRewards += row.AttestationIdealReward
+		validators = append(validators, t.VDBValidator(row.ValidatorIndex))
 
-		ret.AttestationsHead.Success += uint64(row.AttestationHeadExecuted)
-		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationHeadExecuted)
+		ret.AttestationsHead.Success += uint64(row.AttestationsHeadExecuted)
+		ret.AttestationsHead.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsHeadExecuted)
 
-		ret.AttestationsSource.Success += uint64(row.AttestationSourceExecuted)
-		ret.AttestationsSource.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationSourceExecuted)
+		ret.AttestationsSource.Success += uint64(row.AttestationsSourceExecuted)
+		ret.AttestationsSource.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsSourceExecuted)
 
-		ret.AttestationsTarget.Success += uint64(row.AttestationTargetExecuted)
-		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationTargetExecuted)
+		ret.AttestationsTarget.Success += uint64(row.AttestationsTargetExecuted)
+		ret.AttestationsTarget.Failed += uint64(row.AttestationsScheduled) - uint64(row.AttestationsTargetExecuted)
+
+		totalMissedRewardsBlocksCl += row.BlocksCLMissedReward
+		totalMissedRewardsAttestations += row.AttestationsMissedRewards
+		totalMissedRewardsSync += row.SyncLocalizedMaxRewards - row.SyncRewardRewardsOnly
 
 		if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
 			row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
 		}
-
-		totalProposals += row.BlocksScheduled
+		totalBlocksProposed += row.BlocksProposed
+		totalBlocksScheduled += row.BlocksScheduled
 		if row.BlocksScheduled > 0 {
 			if ret.ProposalValidators == nil {
 				ret.ProposalValidators = make([]t.VDBValidator, 0, 10)
 			}
 			ret.ProposalValidators = append(ret.ProposalValidators, t.VDBValidator(row.ValidatorIndex))
 		}
+
+		totalSyncScheduled += row.SyncScheduled
+		totalSyncExecuted += row.SyncExecuted
 
 		ret.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
 		ret.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
@@ -731,34 +690,42 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalInclusionDelaySum += row.InclusionDelaySum
 		totalSyncExpected += row.SyncCommitteesExpected
 
+		totalEfficiencyTotalDividend = totalEfficiencyTotalDividend.Add(row.EfficiencyTotalDividend)
+		totalEfficiencyTotalDivisor = totalEfficiencyTotalDivisor.Add(row.EfficiencyTotalDivisor)
+		totalEfficiencyAttestationsDividend = totalEfficiencyAttestationsDividend.Add(row.EfficiencyAttestationsDividend)
+		totalEfficiencyAttestationsDivisor = totalEfficiencyAttestationsDivisor.Add(row.EfficiencyAttestationsDivisor)
+
 		if row.InclusionDelaySum > 0 {
-			totalInclusionDelayDivisor += row.AttestationsExecuted
+			totalInclusionDelayDivisor += row.AttestationsObserved
 		}
 	}
 
-	_, ret.Apr.El, _, ret.Apr.Cl, err = d.internal_getElClAPR(ctx, dashboardId, groupId, hours)
+	totalMissedRewardsEl, err := d.getMissedELRewards(ctx, dashboardId, groupId, minEpochStart, maxEpochEnd)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(validators) > 0 {
-		validatorArr = validators
+	ret.MissedRewards.Attestations = utils.GWeiToWei(big.NewInt(totalMissedRewardsAttestations))
+	ret.MissedRewards.Sync = utils.GWeiToWei(big.NewInt(totalMissedRewardsSync))
+	ret.MissedRewards.ProposerRewards.Cl = utils.GWeiToWei(big.NewInt(totalMissedRewardsBlocksCl))
+	ret.MissedRewards.ProposerRewards.El = decimal.NewFromFloat(totalMissedRewardsEl)
+
+	incomeInfo, err := d.getElClAPR(ctx, dashboardId, groupId, period)
+	if err != nil {
+		return nil, err
 	}
+	ret.Rewards = incomeInfo.Rewards
+	ret.Apr = incomeInfo.Apr
 
 	pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(rows[0].EpochStart)
 	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validatorArr)
+	err = d.readerDb.GetContext(ctx, &ret.SyncCommitteeCount.PastPeriods, `SELECT COUNT(*) FROM sync_committees WHERE period >= $1 AND period < $2 AND validatorindex = ANY($3)`, pastSyncPeriodCutoff, currentSyncPeriod, validators)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving past sync committee count: %w", err)
 	}
 
-	ret.AttestationEfficiency = float64(totalAttestationRewards) / float64(totalIdealAttestationRewards) * 100
-	if ret.AttestationEfficiency < 0 || math.IsNaN(ret.AttestationEfficiency) {
-		ret.AttestationEfficiency = 0
-	}
-
-	luckHours := float64(hours)
-	if hours == -1 {
+	luckHours := period.Duration().Hours()
+	if period == enums.AllTime {
 		luckHours = time.Since(time.Unix(int64(utils.Config.Chain.GenesisTimestamp), 0)).Hours()
 		if luckHours == 0 {
 			luckHours = 24
@@ -766,7 +733,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	if totalBlockChance > 0 {
-		ret.Luck.Proposal.Percent = (float64(totalProposals)) / totalBlockChance * 100
+		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance * 100
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
 		ret.Luck.Proposal.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalBlockChance) * float64(time.Hour)).Seconds())
@@ -819,167 +786,24 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
+	ret.Efficiency = totalEfficiencyTotalDividend.Div(totalEfficiencyTotalDivisor).InexactFloat64() * 100
+	ret.AttestationEfficiency = totalEfficiencyAttestationsDividend.Div(totalEfficiencyAttestationsDivisor).InexactFloat64() * 100
+
+	rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return nil, err
+	}
+	balances, err := d.calculateValidatorDashboardBalance(ctx, rpOperatorInfo, validators, validatorMapping, protocolModes)
+	if err != nil {
+		return nil, err
+	}
+	ret.Balances = balances
+
 	return ret, nil
-}
-
-func (d *DataAccessService) internal_getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, hours int) (elIncome decimal.Decimal, elAPR float64, clIncome decimal.Decimal, clAPR float64, err error) {
-	table := ""
-
-	switch hours {
-	case 1:
-		table = "validator_dashboard_data_rolling_1h"
-	case 24:
-		table = "validator_dashboard_data_rolling_24h"
-	case 7 * 24:
-		table = "validator_dashboard_data_rolling_7d"
-	case 30 * 24:
-		table = "validator_dashboard_data_rolling_30d"
-	case -1:
-		table = "validator_dashboard_data_rolling_90d"
-	default:
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("invalid hours value: %v", hours)
-	}
-
-	type RewardsResult struct {
-		EpochStart     uint64        `db:"epoch_start"`
-		EpochEnd       uint64        `db:"epoch_end"`
-		ValidatorCount uint64        `db:"validator_count"`
-		Reward         sql.NullInt64 `db:"reward"`
-	}
-
-	var rewardsResultTable RewardsResult
-	var rewardsResultTotal RewardsResult
-
-	rewardsDs := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table))).
-		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
-		Select(
-			goqu.L("MIN(epoch_start) AS epoch_start"),
-			goqu.L("MAX(epoch_end) AS epoch_end"),
-			goqu.L("COUNT(*) AS validator_count"),
-			goqu.L("(SUM(COALESCE(r.balance_end,0)) + SUM(COALESCE(r.withdrawals_amount,0)) - SUM(COALESCE(r.deposits_amount,0)) - SUM(COALESCE(r.balance_start,0))) AS reward"))
-
-	if len(dashboardId.Validators) > 0 {
-		rewardsDs = rewardsDs.
-			Where(goqu.L("validator_index IN ?", dashboardId.Validators))
-	} else {
-		rewardsDs = rewardsDs.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
-
-		if groupId != -1 {
-			rewardsDs = rewardsDs.
-				Where(goqu.L("v.group_id = ?", groupId))
-		}
-	}
-
-	query, args, err := rewardsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.clickhouseReader.GetContext(ctx, &rewardsResultTable, query, args...)
-	if err != nil || !rewardsResultTable.Reward.Valid {
-		return decimal.Zero, 0, decimal.Zero, 0, err
-	}
-
-	if rewardsResultTable.ValidatorCount == 0 {
-		return decimal.Zero, 0, decimal.Zero, 0, nil
-	}
-
-	aprDivisor := hours
-	if hours == -1 { // for all time APR
-		aprDivisor = 90 * 24
-	}
-	clAPR = ((float64(rewardsResultTable.Reward.Int64) / float64(aprDivisor)) / (float64(32e9) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
-	if math.IsNaN(clAPR) {
-		clAPR = 0
-	}
-
-	clIncome = decimal.NewFromInt(rewardsResultTable.Reward.Int64).Mul(decimal.NewFromInt(1e9))
-
-	if hours == -1 {
-		rewardsDs = rewardsDs.
-			From(goqu.L("validator_dashboard_data_rolling_total AS r FINAL"))
-
-		query, args, err = rewardsDs.Prepared(true).ToSQL()
-		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
-		}
-
-		err = d.clickhouseReader.GetContext(ctx, &rewardsResultTotal, query, args...)
-		if err != nil || !rewardsResultTotal.Reward.Valid {
-			return decimal.Zero, 0, decimal.Zero, 0, err
-		}
-
-		clIncome = decimal.NewFromInt(rewardsResultTotal.Reward.Int64).Mul(decimal.NewFromInt(1e9))
-	}
-
-	elDs := goqu.Dialect("postgres").
-		Select(goqu.L("COALESCE(SUM(COALESCE(rb.value / 1e18, fee_recipient_reward)), 0) AS el_reward")).
-		From(goqu.L("blocks AS b")).
-		LeftJoin(goqu.L("execution_payloads AS ep"), goqu.On(goqu.L("b.exec_block_hash = ep.block_hash"))).
-		LeftJoin(
-			goqu.Lateral(goqu.Dialect("postgres").
-				From("relays_blocks").
-				Select(
-					goqu.L("exec_block_hash"),
-					goqu.MAX("value").As("value")).
-				Where(goqu.L("relays_blocks.exec_block_hash = b.exec_block_hash")).
-				GroupBy("exec_block_hash")).As("rb"),
-			goqu.On(goqu.L("rb.exec_block_hash = b.exec_block_hash")),
-		).
-		Where(goqu.L("b.status = '1'"))
-
-	if len(dashboardId.Validators) > 0 {
-		elDs = elDs.
-			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
-	} else {
-		elDs = elDs.
-			InnerJoin(goqu.L("users_val_dashboards_validators v"), goqu.On(goqu.L("b.proposer = v.validator_index"))).
-			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-
-		if groupId != -1 {
-			elDs = elDs.
-				Where(goqu.L("v.group_id = ?", groupId))
-		}
-	}
-
-	elTableDs := elDs.
-		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTable.EpochStart, rewardsResultTable.EpochEnd))
-
-	query, args, err = elTableDs.Prepared(true).ToSQL()
-	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
-	if err != nil {
-		return decimal.Zero, 0, decimal.Zero, 0, err
-	}
-	elIncomeFloat, _ := elIncome.Float64() // EL income is in ETH
-	elAPR = ((elIncomeFloat / float64(aprDivisor)) / (float64(32) * float64(rewardsResultTable.ValidatorCount))) * 24.0 * 365.0 * 100.0
-	if math.IsNaN(elAPR) {
-		elAPR = 0
-	}
-
-	if hours == -1 {
-		elTotalDs := elDs.
-			Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTotal.EpochStart, rewardsResultTotal.EpochEnd))
-
-		query, args, err = elTotalDs.Prepared(true).ToSQL()
-		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, fmt.Errorf("error preparing query: %w", err)
-		}
-
-		err = d.alloyReader.GetContext(ctx, &elIncome, query, args...)
-		if err != nil {
-			return decimal.Zero, 0, decimal.Zero, 0, err
-		}
-	}
-	elIncome = elIncome.Mul(decimal.NewFromInt(1e18))
-
-	return elIncome, elAPR, clIncome, clAPR, nil
 }
 
 // for summary charts: series id is group id, no stack
@@ -991,24 +815,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return ret, nil
 	}
 
-	// log.Infof("retrieving data between %v and %v for aggregation %v", time.Unix(int64(afterTs), 0), time.Unix(int64(beforeTs), 0), aggregation)
-	dataTable := ""
-	dateColumn := ""
-	switch aggregation {
-	case enums.IntervalEpoch:
-		dataTable = "validator_dashboard_data_epoch"
-		dateColumn = "epoch_timestamp"
-	case enums.IntervalHourly:
-		dataTable = "validator_dashboard_data_hourly"
-		dateColumn = "hour"
-	case enums.IntervalDaily:
-		dataTable = "validator_dashboard_data_daily"
-		dateColumn = "day"
-	case enums.IntervalWeekly:
-		dataTable = "validator_dashboard_data_weekly"
-		dateColumn = "week"
-	default:
-		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
+	dataTable, dateColumn, err := getTableAndDateColumn(aggregation)
+	if err != nil {
+		return ret, nil
 	}
 
 	var queryResults []*t.VDBValidatorSummaryChartRow
@@ -1022,56 +831,92 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 	}
 
-	totalLineRequested := requestedGroupsMap[t.AllGroups]
+	// need default or all groups for anon dashboards and shared dashboards without group sharing
+	// TODO could move this to API layer & generalize for all methods
+	if (dashboardId.Validators != nil && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) ||
+		(dashboardId.AggregateGroups && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) {
+		return ret, nil
+	}
+
+	totalLineRequested := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
 	averageNetworkLineRequested := requestedGroupsMap[t.NetworkAverage]
 
-	if dashboardId.Validators != nil {
-		query := fmt.Sprintf(`
-			SELECT
-				%[2]s as ts,
-				0 AS group_id, 
-				COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
-				COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
-				COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
-				COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
-				COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
-				COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-			FROM %[1]s d
-			WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index IN ($3)
-			GROUP BY %[2]s;
-		`, dataTable, dateColumn)
-		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Validators)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
-		}
-	} else {
-		query := fmt.Sprintf(`
-		WITH validators AS (
-			SELECT validator_index as validator_index, group_id FROM users_val_dashboards_validators WHERE dashboard_id = $3 AND (group_id IN ($4) OR $5)
-		)		
-		SELECT
-			%[2]s as ts,
-			v.group_id,
-			COALESCE(SUM(d.attestations_reward), 0) AS attestation_reward,
-			COALESCE(SUM(d.attestations_ideal_reward), 0) AS attestations_ideal_reward,
-			COALESCE(SUM(d.blocks_proposed), 0) AS blocks_proposed,
-			COALESCE(SUM(d.blocks_scheduled), 0) AS blocks_scheduled,
-			COALESCE(SUM(d.sync_executed), 0) AS sync_executed,
-			COALESCE(SUM(d.sync_scheduled), 0) AS sync_scheduled
-		FROM %[1]s d
-		INNER JOIN validators v ON d.validator_index = v.validator_index
-		WHERE %[2]s >= fromUnixTimestamp($1) AND %[2]s <= fromUnixTimestamp($2) AND validator_index in (select validator_index from validators)
-		GROUP BY 1, 2;`, dataTable, dateColumn)
+	var dividendColumn, divisorColumn string
+	switch efficiency {
+	case enums.VDBSummaryChartAll:
+		dividendColumn = "efficiency_dividend"
+		divisorColumn = "efficiency_divisor"
+	case enums.VDBSummaryChartAttestation:
+		dividendColumn = "efficiency_attestations_dividend"
+		divisorColumn = "efficiency_attestations_divisor"
+	case enums.VDBSummaryChartSync:
+		dividendColumn = "efficiency_proposals_dividend"
+		divisorColumn = "efficiency_proposals_divisor"
+	case enums.VDBSummaryChartProposal:
+		dividendColumn = "efficiency_sync_dividend"
+		divisorColumn = "efficiency_sync_divisor"
+	}
 
-		err := d.clickhouseReader.SelectContext(ctx, &queryResults, query, afterTs, beforeTs, dashboardId.Id, groupIds, totalLineRequested)
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
-		}
+	chartDs := goqu.
+		From(goqu.T(dataTable).As("d")).
+		Select(
+			goqu.I(dateColumn).As("ts"),
+			goqu.L("SUM("+dividendColumn+"::decimal) AS efficiency_dividend"),
+			goqu.L("SUM("+divisorColumn+"::decimal) AS efficiency_divisor"),
+		).
+		Where(
+			goqu.I(dateColumn).Between(goqu.Range( // inclusive on both sides
+				goqu.L("fromUnixTimestamp(?)", afterTs),
+				goqu.L("fromUnixTimestamp(?)", beforeTs),
+			)),
+		).
+		GroupBy(goqu.I(dateColumn))
+
+	if dashboardId.Validators != nil {
+		chartDs = chartDs.
+			SelectAppend(goqu.V(0).As("group_id")).
+			Where(
+				goqu.I("validator_index").In(dashboardId.Validators),
+			)
+	} else {
+		chartDs = chartDs.
+			With("validators", goqu.
+				From(goqu.T("users_val_dashboards_validators")).
+				Select(
+					goqu.I("validator_index"),
+					goqu.I("group_id"),
+				).
+				Where(
+					goqu.I("dashboard_id").Eq(dashboardId.Id),
+					goqu.Or(
+						goqu.I("group_id").In(groupIds),
+						goqu.V(totalLineRequested),
+					),
+				),
+			).
+			InnerJoin(
+				goqu.T("validators").As("v"),
+				goqu.On(goqu.I("d.validator_index").Eq(goqu.I("v.validator_index"))),
+			).
+			SelectAppend(goqu.I("group_id")).
+			Where(
+				goqu.I("validator_index").In(
+					goqu.From(goqu.T("validators")).
+						Select("validator_index"),
+				),
+			).
+			GroupByAppend(goqu.I("group_id"))
+	}
+
+	queryResults, err = runQueryRows[[]*t.VDBValidatorSummaryChartRow](ctx, d.clickhouseReader, chartDs)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
 	}
 
 	// convert the returned data to the expected return type (not pretty)
 	tsMap := make(map[time.Time]bool)
 	data := make(map[time.Time]map[int64]float64)
+	groupMap := make(map[int64]bool)
 
 	totalEfficiencyMap := make(map[time.Time]*t.VDBValidatorSummaryChartRow)
 	for _, row := range queryResults {
@@ -1081,13 +926,17 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			data[row.Timestamp] = make(map[int64]float64)
 		}
 
-		if requestedGroupsMap[row.GroupId] {
-			groupEfficiency, err := d.calculateChartEfficiency(efficiency, row)
-			if err != nil {
-				return nil, err
+		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
+			if row.EfficiencyDivisor.IsZero() {
+				data[row.Timestamp][row.GroupId] = 0
+				continue
 			}
-
-			data[row.Timestamp][row.GroupId] = groupEfficiency
+			data[row.Timestamp][row.GroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
+			if data[row.Timestamp][row.GroupId] > 100 {
+				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
+				data[row.Timestamp][row.GroupId] = 100
+			}
+			groupMap[row.GroupId] = true
 		}
 
 		if totalLineRequested {
@@ -1096,12 +945,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 					Timestamp: row.Timestamp,
 				}
 			}
-			totalEfficiencyMap[row.Timestamp].AttestationReward += row.AttestationReward
-			totalEfficiencyMap[row.Timestamp].AttestationIdealReward += row.AttestationIdealReward
-			totalEfficiencyMap[row.Timestamp].BlocksProposed += row.BlocksProposed
-			totalEfficiencyMap[row.Timestamp].BlocksScheduled += row.BlocksScheduled
-			totalEfficiencyMap[row.Timestamp].SyncExecuted += row.SyncExecuted
-			totalEfficiencyMap[row.Timestamp].SyncScheduled += row.SyncScheduled
+			totalEfficiencyMap[row.Timestamp].EfficiencyDividend = totalEfficiencyMap[row.Timestamp].EfficiencyDividend.Add(row.EfficiencyDividend)
+			totalEfficiencyMap[row.Timestamp].EfficiencyDivisor = totalEfficiencyMap[row.Timestamp].EfficiencyDivisor.Add(row.EfficiencyDivisor)
 		}
 	}
 
@@ -1111,23 +956,34 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		if err != nil {
 			return nil, err
 		}
-		averageNetworkEfficiency := utils.CalculateTotalEfficiency(
-			efficiency.AttestationEfficiency[enums.Last24h], efficiency.ProposalEfficiency[enums.Last24h], efficiency.SyncEfficiency[enums.Last24h])
+		var averageNetworkEfficiency float64
+		if efficiency.AttestationEfficiency[enums.Last24h].Valid {
+			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64 * 100
+		}
 
 		for ts := range tsMap {
 			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
 		}
+		groupMap[t.NetworkAverage] = true
 	}
 
 	if totalLineRequested {
-		for _, row := range totalEfficiencyMap {
-			totalEfficiency, err := d.calculateChartEfficiency(efficiency, row)
-			if err != nil {
-				return nil, err
-			}
-
-			data[row.Timestamp][t.AllGroups] = totalEfficiency
+		totalLineGroupId := int64(t.AllGroups)
+		if dashboardId.AggregateGroups {
+			totalLineGroupId = t.DefaultGroupId
 		}
+		for _, row := range totalEfficiencyMap {
+			if row.EfficiencyDivisor.IsZero() {
+				data[row.Timestamp][totalLineGroupId] = 0
+				continue
+			}
+			data[row.Timestamp][totalLineGroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
+			if data[row.Timestamp][totalLineGroupId] > 100 {
+				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
+				data[row.Timestamp][totalLineGroupId] = 100
+			}
+		}
+		groupMap[totalLineGroupId] = true
 	}
 
 	tsArray := make([]time.Time, 0, len(tsMap))
@@ -1138,13 +994,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return tsArray[i].Before(tsArray[j])
 	})
 
-	groupsArray := make([]int64, 0, len(requestedGroupsMap))
-	for group := range requestedGroupsMap {
-		groupsArray = append(groupsArray, group)
-	}
-	sort.Slice(groupsArray, func(i, j int) bool {
-		return groupsArray[i] < groupsArray[j]
-	})
+	groupsArray := slices.Collect(maps.Keys(groupMap))
+	slices.Sort(groupsArray)
 
 	ret.Categories = make([]uint64, 0, len(tsArray))
 	for _, ts := range tsArray {
@@ -1153,7 +1004,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
 	seriesMap := make(map[int64]*t.ChartSeries[int, float64])
-	for group := range requestedGroupsMap {
+	for _, group := range groupsArray {
 		series := t.ChartSeries[int, float64]{
 			Id:   int(group),
 			Data: make([]float64, 0, len(tsMap)),
@@ -1176,36 +1027,6 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	})
 
 	return ret, nil
-}
-
-func (d *DataAccessService) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
-	var table string
-	var dateColumn string
-	switch aggregation {
-	case enums.IntervalEpoch:
-		table = "view_validator_dashboard_data_epoch_max_ts"
-		dateColumn = "t"
-	case enums.IntervalHourly:
-		table = "view_validator_dashboard_data_hourly_max_ts"
-		dateColumn = "t"
-	case enums.IntervalDaily:
-		table = "view_validator_dashboard_data_daily_max_ts"
-		dateColumn = "t"
-	case enums.IntervalWeekly:
-		table = "view_validator_dashboard_data_weekly_max_ts"
-		dateColumn = "t"
-	default:
-		return 0, fmt.Errorf("unexpected aggregation type: %v", aggregation)
-	}
-
-	query := fmt.Sprintf(`SELECT max(%s) FROM %s`, dateColumn, table)
-	var ts time.Time
-	err := d.clickhouseReader.GetContext(ctx, &ts, query)
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving latest exported chart timestamp: %w", err)
-	}
-
-	return uint64(ts.Unix()), nil
 }
 
 func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
@@ -1328,12 +1149,6 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 	var resultMutex = &sync.RWMutex{}
 	wg := errgroup.Group{}
 
-	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
-	if err != nil {
-		return nil, err
-	}
-
 	// Get the validator indices
 	var groupIds []uint64
 	if !dashboardId.AggregateGroups && groupId != t.AllGroups {
@@ -1369,47 +1184,14 @@ func (d *DataAccessService) GetValidatorDashboardSyncSummaryValidators(ctx conte
 
 	// Get the past sync committee validators
 	wg.Go(func() error {
-		// Get the cutoff period for past sync committees
-		ds := goqu.Dialect("postgres").
-			Select(
-				goqu.L("epoch_start")).
-			From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
-			Limit(1)
-
-		query, args, err := ds.Prepared(true).ToSQL()
+		epochStart, err := d.getEpochStart(ctx, period)
 		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
+			return err
 		}
 
-		var epochStart uint64
-		err = d.clickhouseReader.GetContext(ctx, &epochStart, query, args...)
+		validatorCountMap, err := d.getPastSyncCommittees(ctx, validatorIndices, epochStart, cache.LatestEpoch.Get())
 		if err != nil {
-			return fmt.Errorf("error retrieving cutoff epoch for past sync committees: %w", err)
-		}
-		pastSyncPeriodCutoff := utils.SyncPeriodOfEpoch(epochStart)
-
-		// Get the past sync committee validators
-		currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-		ds = goqu.Dialect("postgres").
-			Select(
-				goqu.L("sc.validatorindex")).
-			From(goqu.L("sync_committees sc")).
-			Where(goqu.L("period >= ? AND period < ? AND validatorindex = ANY(?)", pastSyncPeriodCutoff, currentSyncPeriod, pq.Array(validatorIndices)))
-
-		query, args, err = ds.Prepared(true).ToSQL()
-		if err != nil {
-			return fmt.Errorf("error preparing query: %w", err)
-		}
-
-		var validatorIndices []uint64
-		err = d.alloyReader.SelectContext(ctx, &validatorIndices, query, args...)
-		if err != nil {
-			return fmt.Errorf("error retrieving data for past sync committees: %w", err)
-		}
-
-		validatorCountMap := make(map[uint64]uint64)
-		for _, validatorIndex := range validatorIndices {
-			validatorCountMap[validatorIndex]++
+			return err
 		}
 
 		resultMutex.Lock()
@@ -1437,7 +1219,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 	result := &t.VDBSlashingsSummaryValidators{}
 
 	// Get the table names based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}
@@ -1672,7 +1454,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 	}
 
 	// Get the table name based on the period
-	clickhouseTable, _, err := d.getTablesForPeriod(period)
+	clickhouseTable, err := period.Table()
 	if err != nil {
 		return nil, err
 	}
@@ -1687,6 +1469,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			goqu.L("epoch_start"),
 			goqu.L("epoch_end")).
 		From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
+		Order(goqu.L("epoch_start").Asc()).
 		Limit(1)
 
 	query, args, err := ds.Prepared(true).ToSQL()
@@ -1701,16 +1484,14 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 
 	// Build the query and get the data
 	var queryResult []struct {
-		Slot           uint64        `db:"slot"`
-		Block          sql.NullInt64 `db:"exec_block_number"`
-		Status         string        `db:"status"`
-		ValidatorIndex uint64        `db:"proposer"`
+		Slot           uint64 `db:"slot"`
+		Status         string `db:"status"`
+		ValidatorIndex uint64 `db:"proposer"`
 	}
 
 	ds = goqu.Dialect("postgres").
 		Select(
 			goqu.L("b.slot"),
-			goqu.L("b.exec_block_number"),
 			goqu.L("b.status"),
 			goqu.L("b.proposer")).
 		From(goqu.L("blocks b")).
@@ -1747,10 +1528,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 			if _, ok := proposedValidatorMap[row.ValidatorIndex]; !ok {
 				proposedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
 			}
-			if !row.Block.Valid {
-				return nil, fmt.Errorf("error no block number for slot %v found", row.Slot)
-			}
-			proposedValidatorMap[row.ValidatorIndex] = append(proposedValidatorMap[row.ValidatorIndex], uint64(row.Block.Int64))
+			proposedValidatorMap[row.ValidatorIndex] = append(proposedValidatorMap[row.ValidatorIndex], row.Slot)
 		} else {
 			if _, ok := missedValidatorMap[row.ValidatorIndex]; !ok {
 				missedValidatorMap[row.ValidatorIndex] = make([]uint64, 0)
@@ -1759,83 +1537,18 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		}
 	}
 
-	for validatorIndex, blockNumbers := range proposedValidatorMap {
-		result.Proposed = append(result.Proposed, t.IndexBlocks{
-			Index:  validatorIndex,
-			Blocks: blockNumbers,
+	for validatorIndex, slotNumbers := range proposedValidatorMap {
+		result.Proposed = append(result.Proposed, t.IndexSlots{
+			Index: validatorIndex,
+			Slots: slotNumbers,
 		})
 	}
 	for validatorIndex, slotNumbers := range missedValidatorMap {
-		result.Missed = append(result.Missed, t.IndexBlocks{
-			Index:  validatorIndex,
-			Blocks: slotNumbers,
+		result.Missed = append(result.Missed, t.IndexSlots{
+			Index: validatorIndex,
+			Slots: slotNumbers,
 		})
 	}
 
 	return result, nil
-}
-
-func (d *DataAccessService) getCurrentAndUpcomingSyncCommittees(ctx context.Context, latestEpoch uint64) (map[uint64]bool, map[uint64]bool, error) {
-	currentSyncCommitteeValidators := make(map[uint64]bool)
-	upcomingSyncCommitteeValidators := make(map[uint64]bool)
-
-	currentSyncPeriod := utils.SyncPeriodOfEpoch(latestEpoch)
-	ds := goqu.Dialect("postgres").
-		Select(
-			goqu.L("validatorindex"),
-			goqu.L("period")).
-		From("sync_committees").
-		Where(goqu.L("period IN (?, ?)", currentSyncPeriod, currentSyncPeriod+1))
-
-	var queryResult []struct {
-		ValidatorIndex uint64 `db:"validatorindex"`
-		Period         uint64 `db:"period"`
-	}
-
-	query, args, err := ds.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing query: %w", err)
-	}
-
-	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error retrieving sync committee current and next period data: %w", err)
-	}
-
-	for _, queryEntry := range queryResult {
-		if queryEntry.Period == currentSyncPeriod {
-			currentSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-		} else {
-			upcomingSyncCommitteeValidators[queryEntry.ValidatorIndex] = true
-		}
-	}
-
-	return currentSyncCommitteeValidators, upcomingSyncCommitteeValidators, nil
-}
-
-func (d *DataAccessService) getTablesForPeriod(period enums.TimePeriod) (string, int, error) {
-	clickhouseTable := ""
-	hours := 0
-
-	switch period {
-	case enums.TimePeriods.Last1h:
-		clickhouseTable = "validator_dashboard_data_rolling_1h"
-		hours = 1
-	case enums.TimePeriods.Last24h:
-		clickhouseTable = "validator_dashboard_data_rolling_24h"
-		hours = 24
-	case enums.TimePeriods.Last7d:
-		clickhouseTable = "validator_dashboard_data_rolling_7d"
-		hours = 7 * 24
-	case enums.TimePeriods.Last30d:
-		clickhouseTable = "validator_dashboard_data_rolling_30d"
-		hours = 30 * 24
-	case enums.TimePeriods.AllTime:
-		clickhouseTable = "validator_dashboard_data_rolling_total"
-		hours = -1
-	default:
-		return "", 0, fmt.Errorf("not-implemented time period: %v", period)
-	}
-
-	return clickhouseTable, hours, nil
 }
