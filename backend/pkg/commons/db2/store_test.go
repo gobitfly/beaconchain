@@ -15,28 +15,42 @@ func TestStoreV1(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer bt.Close()
 	store := NewStoreV1FromBigtable(bt, CachedBalanceUpdates{database.NoopCache{}})
 
 	t.Run("block range", func(t *testing.T) {
-		defer bt.Close()
-		if err := store.SaveBlock("1", &types.Eth1Block{
-			Number: 10,
-		}); err != nil {
-			t.Fatal(err)
+		tests := []struct {
+			name       string
+			start, end uint64
+		}{
+			{
+				name:  "normal",
+				start: 10,
+				end:   20,
+			},
+			{
+				name:  "genesis",
+				start: 0,
+				end:   1,
+			},
 		}
-
-		if err := store.SaveBlock("1", &types.Eth1Block{
-			Number: 11,
-		}); err != nil {
-			t.Fatal(err)
-		}
-
-		blocks, err := store.GetBlocksRange("1", 10, 11)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got, want := len(blocks), 2; got != want {
-			t.Errorf("got %v, want %v", got, want)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				for i := tt.start; i <= tt.end; i++ {
+					if err := store.SaveBlock("1", &types.Eth1Block{
+						Number: i,
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				blocks, err := store.GetBlocksRange("1", tt.start, tt.end)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got, want := len(blocks), int(tt.end-tt.start)+1; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+			})
 		}
 	})
 }
