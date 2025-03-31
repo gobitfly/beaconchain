@@ -896,7 +896,7 @@ func UpdateQueueDeposits(tx *sqlx.Tx) error {
 					SUM(amount) OVER (partition BY publickey ORDER BY (block_slot, block_index) ASC) AS cumTotal
 				FROM blocks_deposits
 				WHERE publickey IN (
-					/* get the pubkeys of the indexes */
+					/* get the pubkeys of the indexes */	
 					select pubkey from validators where validators.validatorindex in (
 						/* get the indexes we need to update */
 						select validatorindex from validator_queue_deposits where block_slot is null or block_index is null
