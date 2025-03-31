@@ -48,21 +48,13 @@ const combinedTotal = computed<number>(
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background-color: var(--text-color-disabled);
+    color: var(--text-color-disabled);
 
-    svg {
-      height: 8px;
-      width: 8px;
-    }
   }
 
   &.online {
     .icon {
-      background-color: var(--positive-color);
-      color: var(--positive-contrast-color);
+      color: var(--positive-color);
     }
 
     span {
@@ -72,8 +64,7 @@ const combinedTotal = computed<number>(
 
   &.offline {
     .icon {
-      background-color: var(--negative-color);
-      color: var(--negative-contrast-color);
+      color: var(--negative-color);
     }
 
     span {
