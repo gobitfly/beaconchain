@@ -138,7 +138,6 @@ type Config struct {
 				Sender     string `yaml:"sender" env:"SENDER"`
 			} `yaml:"mailgun" env:", prefix=MAILGUN_"`
 			Sendgrid struct {
-				Domain string `yaml:"domain" env:"DOMAIN"`
 				ApiKey string `yaml:"apiKey" env:"API_KEY"`
 				Sender string `yaml:"sender" env:"SENDER"`
 			} `yaml:"sendgrid" env:", prefix=SENDGRID_"`
