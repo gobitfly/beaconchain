@@ -9,6 +9,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type syncCommitteesCountExporter struct {
@@ -34,7 +35,7 @@ func (sc syncCommitteesCountExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
+			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := sc.processSyncCommitteesCount()

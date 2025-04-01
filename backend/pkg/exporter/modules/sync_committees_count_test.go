@@ -19,7 +19,6 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 			},
 		},
 	}
-	StatusReporter = stubStatusReporter{}
 
 	t.Run("records exist in db", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)

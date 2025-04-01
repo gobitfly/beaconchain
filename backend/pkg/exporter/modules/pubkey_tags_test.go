@@ -34,8 +34,6 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 		ctx:   ctx,
 	}
 
-	StatusReporter = stubStatusReporter{}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockConsDBClient.On("UpdatePubkeyTags").Return(tt.mockError)

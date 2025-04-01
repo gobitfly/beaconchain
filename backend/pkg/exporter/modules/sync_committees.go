@@ -13,6 +13,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type SyncCommitteeClient interface {
@@ -50,7 +51,7 @@ func (s syncCommitteesExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := s.exportSyncCommittees()

@@ -101,8 +101,6 @@ func TestSyncCommitteesExport(t *testing.T) {
 		},
 	}
 
-	StatusReporter = stubStatusReporter{}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", tt.mockDepositChainID)

@@ -133,3 +133,27 @@ func GetRequiredEvents() []constants.Event {
 	}
 	return requiredEvents
 }
+
+type statusReport interface {
+	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
+}
+
+type stubStatusReporter struct{}
+
+func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return func(status constants.StatusType, metadata map[string]string) {
+		// No-op implementation
+	}
+}
+
+type statusReporter struct{}
+
+func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return NewStatusReport(id, timeout, checkInterval)
+}
+
+var StatusReporter statusReport = stubStatusReporter{}
+
+func InitStatusReport() {
+	StatusReporter = statusReporter{}
+}

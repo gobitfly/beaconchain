@@ -44,7 +44,7 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
-		InitStatusReport()
+		services.InitStatusReport()
 
 		networkLivenessUpdater := newNetworkLivenessUpdater(ctx, moduleCtx.ConsClient, consDB)
 		go networkLivenessUpdater.Export()
@@ -208,30 +208,6 @@ func GetModuleContext() (ModuleContext, error) {
 	moduleContext.ConsClient = clClient
 
 	return moduleContext, nil
-}
-
-type statusReporter interface {
-	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
-}
-
-type stubStatusReporter struct{}
-
-func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return func(status constants.StatusType, metadata map[string]string) {
-		// No-op implementation
-	}
-}
-
-type actualStatusReporter struct{}
-
-func (sr actualStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return services.NewStatusReport(id, timeout, checkInterval)
-}
-
-var StatusReporter statusReporter = stubStatusReporter{}
-
-func InitStatusReport() {
-	StatusReporter = actualStatusReporter{}
 }
 
 type ModuleContext struct {
