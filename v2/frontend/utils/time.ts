@@ -1,3 +1,5 @@
+import type { Locale } from '~/i18n/i18n.config'
+
 export const currentTimestampInSeconds = () => Math.round(Date.now() / 1000)
 
 export const getFutureTimestampInSeconds = (
@@ -32,7 +34,7 @@ export const formatSecondsTo = (seconds: number,
     minimumIntegerDigits = 1,
   }:
   {
-    locale?: string,
+    locale?: Locale,
     maximumFractionDigits?: number,
     minimumFractionDigits?: number,
     minimumIntegerDigits?: number,
@@ -53,32 +55,52 @@ export const formatSecondsTo = (seconds: number,
   }
 }
 
-export const getRelativeTime = (timestampInSeconds: number, {
+export const getRelativeTime = (unixTimestamp: number, {
   locale = 'en-US',
+  style = 'short',
 }: {
-  locale?: string,
+  locale?: Locale,
+  style?: 'long' | 'short',
 } = {}) => {
-  const seconds = timestampInSeconds - (Date.now() / 1000)
+  const seconds = unixTimestamp
   const minutes = (seconds / 60)
   const hours = (minutes / 60)
+  const days = (hours / 24)
+  const weeks = (days / 7)
 
-  if (hours >= 1 || hours <= -1) {
-    return new Intl.RelativeTimeFormat(locale).format(Math.round(hours), 'hours')
+  const formatter = new Intl.RelativeTimeFormat(locale, {
+    style,
+  })
+
+  if (Math.abs(weeks) >= 1) {
+    return formatter.format(Math.round(weeks), 'weeks')
   }
-  if (minutes >= 1 || minutes <= -1) {
-    return new Intl.RelativeTimeFormat(locale).format(Math.round(minutes), 'minutes')
+  if (Math.abs(days) >= 1) {
+    return formatter.format(Math.round(days), 'days')
   }
-  return new Intl.RelativeTimeFormat(locale).format(Math.round(seconds), 'seconds')
+  if (Math.abs(hours) >= 1) {
+    return formatter.format(Math.round(hours), 'hours')
+  }
+  if (Math.abs(minutes) >= 1) {
+    return formatter.format(Math.round(minutes), 'minutes')
+  }
+  return formatter.format(Math.round(seconds), 'seconds')
 }
 
-export const getDateTime = (timeStampInSeconds: number, {
+export const getDateTime = (unixTimestamp: number, {
+  hasDate = true,
+  hasTime = true,
   locale = 'en-US',
 }: {
-  locale?: string,
+  hasDate?: boolean,
+  hasTime?: boolean,
+  locale?: Locale,
 } = {}) => {
   return new Intl.DateTimeFormat(locale, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  }).format(timeStampInSeconds * 1000)
+    day: hasDate ? 'numeric' : undefined,
+    hour: hasTime ? 'numeric' : undefined,
+    minute: hasTime ? 'numeric' : undefined,
+    month: hasDate ? 'short' : undefined,
+    year: hasDate ? 'numeric' : undefined,
+  }).format(unixTimestamp * 1000)
 }

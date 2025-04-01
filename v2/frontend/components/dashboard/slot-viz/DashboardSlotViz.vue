@@ -13,8 +13,8 @@ const {
 } = useValidatorSlotVizStore()
 const { secondsPerSlot = 12 } = networkInfo.value
 const {
-  resetTick,
-  tick,
+  counter,
+  reset: resetIntervalCounter,
 } = useInterval(secondsPerSlot)
 const { getSlotFromTimestamp } = useNetworkStore()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
@@ -53,10 +53,10 @@ const mostRecentScheduledSlotId = computed(() => {
   return id
 })
 const currentSlotId = computed(() => {
-  // in case of some backend issues Inan want's us to tick in the future ... so let's tick
+  // in case of some backend issues Inan want's us to counter in the future ... so let's counter
   return Math.max(
     mostRecentScheduledSlotId.value ?? 0,
-    getSlotFromTimestamp((tick.value ?? 0) / 1000) - 1)
+    getSlotFromTimestamp((counter.value ?? 0) / 1000) - 1)
 })
 
 watch(
@@ -75,12 +75,12 @@ watch(
     useAsyncData('validator_dashboard_slot_viz', () =>
       refreshSlotViz(dashboardKey.value, selectedGroupIds.value),
     )
-    resetTick()
+    resetIntervalCounter()
   },
   { immediate: true },
 )
 watch(
-  () => tick.value,
+  () => counter.value,
   async () => {
     refetchingSlotViz.value = true
     await refreshSlotViz(dashboardKey.value, selectedGroupIds.value)

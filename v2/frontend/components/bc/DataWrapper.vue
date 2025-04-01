@@ -7,12 +7,12 @@ const {
 } = useUserStore()
 const { networkInfo } = useNetworkStore()
 const { secondsPerSlot } = networkInfo.value
-const { tick } = useInterval(secondsPerSlot)
+const { counter } = useInterval(secondsPerSlot)
 const { refreshLatestState } = useLatestStateStore()
 
 await useAsyncData('latest_state', () => refreshLatestState(), {
   immediate: true,
-  watch: [ tick ],
+  watch: [ counter ],
 })
 if (isLoggedIn) {
   await useAsyncData('get_user', () => getUser())

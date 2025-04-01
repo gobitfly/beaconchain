@@ -33,9 +33,7 @@ import type {
   ChartData, ChartSeries,
 } from '~/types/api/common'
 import { DashboardChartRewardsTooltip } from '#components'
-import { useFormat } from '~/composables/useFormat'
 
-const { formatEpochToDate } = useFormat()
 const {
   getTimestampFromEpoch,
 } = useNetworkStore()
@@ -320,7 +318,8 @@ const option = computed<EChartsOption>(() => {
       },
       end: dataZoomEnd.value,
       labelFormatter: (_value: number, valueStr: string) => {
-        return formatEpochToDate(parseInt(valueStr), 'en-US')
+        const unixTimestamp = getTimestampFromEpoch(Number(valueStr))
+        return getDateTime(unixTimestamp, { hasTime: false })
       },
       start: dataZoomStart.value,
       type: 'slider',
@@ -419,13 +418,10 @@ const option = computed<EChartsOption>(() => {
       axisLabel: {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
-        formatter: (value: number) => {
-          const date = formatEpochToDate(value, 'en-US')
-          if (date === undefined) {
-            return ''
-          }
-
-          return `${date}\n${$t('common.epoch')} ${value}`
+        formatter: (epoch: number) => {
+          const unixTimestamp = getTimestampFromEpoch(epoch)
+          const date = getDateTime(unixTimestamp, { hasTime: false })
+          return `${date}\n${$t('common.epoch')} ${epoch}`
         },
         lineHeight: 20,
       },

@@ -12,7 +12,6 @@ defineProps<{
       :is-home-page="!!isHomePage"
       :minimalist="!!minimalistHeader"
     />
-    <BcMaintenanceBanner />
     <slot name="banner" />
     <main class="content">
       <slot name="top" />

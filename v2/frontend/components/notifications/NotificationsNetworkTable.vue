@@ -92,9 +92,8 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                <BcTableDateTime
+                  :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
             </Column>

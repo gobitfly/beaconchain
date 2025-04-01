@@ -51,25 +51,11 @@ const dateText = computed(() => {
   if (!startTs.value) {
     return
   }
-  const date = formatGoTimestamp(
-    startTs.value,
-    undefined,
-    'absolute',
-    'narrow',
-    'en-US',
-    true,
-  )
+  const date = getDateTime(startTs.value)
   if (!endTs.value) {
     return date
   }
-  const endDate = formatGoTimestamp(
-    endTs.value,
-    undefined,
-    'absolute',
-    'narrow',
-    'en-US',
-    true,
-  )
+  const endDate = getDateTime(endTs.value)
 
   return `${date} - ${endDate}`
 })
