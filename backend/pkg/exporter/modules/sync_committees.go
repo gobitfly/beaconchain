@@ -51,8 +51,7 @@ func (s syncCommitteesExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			deploymentType := utils.Config.DeploymentType
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, deploymentType, constants.Default, time.Second*12)
+			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := s.exportSyncCommittees()

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -29,7 +28,7 @@ func (s *FlakyTestService) internalProcess() {
 			return
 		case <-time.After(10 * time.Second):
 			err := fmt.Errorf("random error")
-			NewStatusReport("flaky_test", utils.Config.DeploymentType, constants.Default, constants.Default)(constants.Failure, map[string]string{"error": err.Error()})
+			NewStatusReport("flaky_test", constants.Default, constants.Default)(constants.Failure, map[string]string{"error": err.Error()})
 		}
 	}
 }

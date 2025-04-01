@@ -8,7 +8,6 @@ import (
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
@@ -36,7 +35,7 @@ func (p *pubkeyTagsUpdater) Update() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, utils.Config.DeploymentType, p.delay, time.Second*12)
+			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := p.db.UpdatePubkeyTags()
