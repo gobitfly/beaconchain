@@ -46,7 +46,10 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 
 		networkLivenessUpdater := newNetworkLivenessUpdater(ctx, moduleCtx.ConsClient, consDB)
 		go networkLivenessUpdater.Export()
-		go genesisDepositsExporter(moduleCtx.ConsClient)
+
+		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
+		go genesisExporter.Export()
+
 		go syncCommitteesExporter(moduleCtx.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
