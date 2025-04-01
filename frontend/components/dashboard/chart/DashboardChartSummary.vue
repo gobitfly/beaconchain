@@ -26,7 +26,6 @@ import {
 } from '~/utils/colors'
 import type { GetValidatorDashboardSummaryChartResponse } from '~/types/api/validator_dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { formatTsToTime } from '~/utils/format'
 
 import {
   type AggregationTimeframe,
@@ -258,16 +257,6 @@ const fontWeightLight = parseInt(styles.getPropertyValue('--roboto-light'))
 const fontWeightMedium = parseInt(styles.getPropertyValue('--roboto-medium'))
 let lastMouseYPos = 0
 
-const formatTSToDate = (value: string) => {
-  return formatGoTimestamp(
-    Number(value),
-    undefined,
-    'absolute',
-    'narrow',
-    'en-US',
-    false,
-  )
-}
 const formatTSToEpoch = (value: string) => {
   return `${$t('common.epoch')} ${getEpochFromTimestamp(Number(value))}`
 }
@@ -275,16 +264,16 @@ const formatToDateOrEpoch = (value: string) => {
   if (aggregation.value === 'epoch') {
     return formatTSToEpoch(value)
   }
-  return formatTSToDate(value)
+  return getDateTime(Number(value))
 }
 
 const formatTimestamp = (value: string) => {
-  const date = formatTSToDate(value)
+  const date = getDateTime(Number(value), { hasTime: false })
   switch (aggregation.value) {
     case 'epoch':
       return `${date}\n${formatTSToEpoch(value)}`
     case 'hourly':
-      return `${date}\n${formatTsToTime(Number(value), 'en-US')}`
+      return `${date}\n${getDateTime(Number(value), { hasDate: false })}`
     default:
       return date
   }

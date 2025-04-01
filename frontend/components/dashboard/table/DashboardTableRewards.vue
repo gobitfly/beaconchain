@@ -138,6 +138,7 @@ const findNextEpochDuties = (epoch: number) => {
 
   return list.join(', ')
 }
+const { getTimestampFromEpoch } = useNetworkStore()
 </script>
 
 <template>
@@ -196,8 +197,10 @@ const findNextEpochDuties = (epoch: number) => {
               <template #header>
                 <BcTableAgeHeader />
               </template>
-              <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.epoch" />
+              <template #body="{ data }">
+                <BcTableDateTime
+                  :unix-timestamp="getTimestampFromEpoch(data.epoch)"
+                />
               </template>
             </Column>
             <Column

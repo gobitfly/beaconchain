@@ -566,10 +566,6 @@
         "title_login": "Sign in",
         "title_register": "Sign up"
     },
-    "maintenance": {
-        "ongoing": "Maintenance: Some features are unavailable",
-        "planned": "Maintenance is scheduled ({date})"
-    },
     "navigation": {
         "back": "Back",
         "cancel": "Cancel",

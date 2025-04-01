@@ -7,7 +7,6 @@ import type {
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useValidatorDashboardClDepositsStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const { dashboardKey } = useDashboardKey()
 
@@ -15,7 +14,10 @@ const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
-const { getEpochFromSlot } = useNetworkStore()
+const {
+  getEpochFromSlot,
+  getTimestampFromSlot,
+} = useNetworkStore()
 
 const {
   deposits,
@@ -229,10 +231,9 @@ const {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
+                <BcTableDateTime
                   v-if="slotProps.data.index !== undefined"
-                  :value="slotProps.data.slot"
-                  type="slot"
+                  :unix-timestamp="getTimestampFromSlot(slotProps.data.epoch)"
                 />
               </template>
             </Column>

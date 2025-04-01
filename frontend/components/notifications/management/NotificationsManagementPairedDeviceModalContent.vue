@@ -46,7 +46,7 @@ const hasNotifications = ref(props.device.is_notifications_enabled)
     <div class="paired-row">
       {{
         $t("notifications.general.paired_devices.paired_date", {
-          date: formatGoTimestamp(device.paired_timestamp),
+          date: getDateTime(device.paired_timestamp),
         })
       }}
     </div>

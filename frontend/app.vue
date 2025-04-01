@@ -15,7 +15,6 @@ useHead(
 )
 useWindowSizeProvider()
 useBcToastProvider()
-useDateProvider()
 
 const { latestState } = storeToRefs(useLatestStateStore())
 const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])

@@ -96,6 +96,7 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
     },
   })
 }
+const { getTimestampFromEpoch } = useNetworkStore()
 </script>
 
 <template>
@@ -144,9 +145,8 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
-                  :value="slotProps.data.epoch"
-                  type="epoch"
+                <BcTableDateTime
+                  :unix-timestamp="getTimestampFromEpoch(slotProps.data.epoch)"
                 />
               </template>
             </Column>

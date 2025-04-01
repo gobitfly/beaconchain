@@ -1,13 +1,13 @@
 <script setup lang="ts">
 const {
-  toggleAgeFormat,
+  toggleDateTimeFormat,
 } = useSettingsStore()
 </script>
 
 <template>
   <BcButtonText
     class="age-header"
-    @click.stop="toggleAgeFormat"
+    @click.stop="toggleDateTimeFormat"
   >
     {{
       $t("table.age")
