@@ -40,6 +40,62 @@ func (_m *ConsensusRepository) GetDepositsCountForBlockSlot() (uint64, error) {
 	return r0, r1
 }
 
+// GetFirstRelayBlock provides a mock function with given fields: tagID
+func (_m *ConsensusRepository) GetFirstRelayBlock(tagID string) (types.RelayBlock, error) {
+	ret := _m.Called(tagID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFirstRelayBlock")
+	}
+
+	var r0 types.RelayBlock
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (types.RelayBlock, error)); ok {
+		return rf(tagID)
+	}
+	if rf, ok := ret.Get(0).(func(string) types.RelayBlock); ok {
+		r0 = rf(tagID)
+	} else {
+		r0 = ret.Get(0).(types.RelayBlock)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(tagID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetLastRelayBlock provides a mock function with given fields: tagID
+func (_m *ConsensusRepository) GetLastRelayBlock(tagID string) (types.RelayBlock, error) {
+	ret := _m.Called(tagID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLastRelayBlock")
+	}
+
+	var r0 types.RelayBlock
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (types.RelayBlock, error)); ok {
+		return rf(tagID)
+	}
+	if rf, ok := ret.Get(0).(func(string) types.RelayBlock); ok {
+		r0 = rf(tagID)
+	} else {
+		r0 = ret.Get(0).(types.RelayBlock)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(tagID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetLatestEpoch provides a mock function with no fields
 func (_m *ConsensusRepository) GetLatestEpoch() (uint64, error) {
 	ret := _m.Called()
@@ -96,6 +152,36 @@ func (_m *ConsensusRepository) GetNetworkLivenessPreviousHeadEpoch() (uint64, er
 	return r0, r1
 }
 
+// GetRelays provides a mock function with no fields
+func (_m *ConsensusRepository) GetRelays() ([]types.Relay, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRelays")
+	}
+
+	var r0 []types.Relay
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]types.Relay, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []types.Relay); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]types.Relay)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SaveBlockDeposits provides a mock function with given fields: validatorIndex, pubkey, withdrawalCredentials, balance
 func (_m *ConsensusRepository) SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error {
 	ret := _m.Called(validatorIndex, pubkey, withdrawalCredentials, balance)
@@ -107,6 +193,24 @@ func (_m *ConsensusRepository) SaveBlockDeposits(validatorIndex uint64, pubkey [
 	var r0 error
 	if rf, ok := ret.Get(0).(func(uint64, []byte, []byte, uint64) error); ok {
 		r0 = rf(validatorIndex, pubkey, withdrawalCredentials, balance)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SaveBlockTagsAndRelays provides a mock function with given fields: tagID, payload
+func (_m *ConsensusRepository) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
+	ret := _m.Called(tagID, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveBlockTagsAndRelays")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, types.BidTrace) error); ok {
+		r0 = rf(tagID, payload)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -161,6 +265,60 @@ func (_m *ConsensusRepository) UpdateBlockDepositsSignature() error {
 	var r0 error
 	if rf, ok := ret.Get(0).(func() error); ok {
 		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateRelay provides a mock function with given fields: tagID, endpoint
+func (_m *ConsensusRepository) UpdateRelay(tagID string, endpoint string) error {
+	ret := _m.Called(tagID, endpoint)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateRelay")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(tagID, endpoint)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateRelayExportFailureCount provides a mock function with given fields: exportFailureCount, tagID, endpoint
+func (_m *ConsensusRepository) UpdateRelayExportFailureCount(exportFailureCount uint64, tagID string, endpoint string) error {
+	ret := _m.Called(exportFailureCount, tagID, endpoint)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateRelayExportFailureCount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(uint64, string, string) error); ok {
+		r0 = rf(exportFailureCount, tagID, endpoint)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateRelayLastExportTry provides a mock function with given fields: tagID, endpoint
+func (_m *ConsensusRepository) UpdateRelayLastExportTry(tagID string, endpoint string) error {
+	ret := _m.Called(tagID, endpoint)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateRelayLastExportTry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(string, string) error); ok {
+		r0 = rf(tagID, endpoint)
 	} else {
 		r0 = ret.Error(0)
 	}
