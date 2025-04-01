@@ -27,7 +27,7 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 	}
 
 	mockConsDBClient := new(dbmocks.ConsensusRepository)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
 	exporter := pubkeyTagsUpdater{
@@ -37,7 +37,7 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 	}
 
 	utils.Config = &types.Config{
-		DeploymentType: "develorment",
+		DeploymentType: "development",
 	}
 
 	for _, tt := range tests {
