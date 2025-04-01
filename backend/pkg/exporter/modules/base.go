@@ -44,9 +44,12 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
 
-		go networkLivenessUpdater(moduleCtx.ConsClient)
+		networkLivenessUpdater := newNetworkLivenessUpdater(ctx, moduleCtx.ConsClient, consDB)
+		go networkLivenessUpdater.Export()
+
 		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
 		go genesisExporter.Export()
+
 		go syncCommitteesExporter(moduleCtx.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
