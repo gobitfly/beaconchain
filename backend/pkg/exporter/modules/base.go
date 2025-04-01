@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -64,7 +65,8 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		}
 
 		if utils.Config.MevBoostRelayExporter.Enabled {
-			go mevBoostRelaysExporter()
+			relaysExporter := newRelaysExporter(ctx, consDB)
+			go relaysExporter.MEVBoostRelaysExporter()
 		}
 	}
 	// wait until the beacon-node is available
