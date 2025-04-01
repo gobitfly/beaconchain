@@ -51,7 +51,8 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
 		go genesisExporter.Export()
 
-		go syncCommitteesExporter(moduleCtx.ConsClient)
+		syncCommitteesExporter := NewSyncCommitteesExporter(ctx, moduleCtx.ConsClient, consDB)
+		go syncCommitteesExporter.Export()
 
 		syncCommitteesCountExporter := newSyncCommitteesCountExporter(ctx, consDB)
 		go syncCommitteesCountExporter.Export()
@@ -165,7 +166,7 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			r := services.NewStatusReport(module.GetMonitoringEventId(), utils.Config.DeploymentType, 5*time.Minute, constants.Default)
 			r(constants.Running, nil)
 			err := f(module)
 			if err != nil {

@@ -3,6 +3,7 @@ package db2
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -31,6 +32,8 @@ type ConsensusRepository interface {
 	SaveSyncCommitteesCount(period uint64, count float64) error
 	GetEpochValidatorsCount(epoch uint64) (uint64, error)
 	GetLatestFinalizedEpoch() (uint64, error)
+	SaveSyncCommitteeData(data []types.SyncCommittee) error
+	GetSyncCommitteesPeriods() ([]uint64, error)
 }
 
 type ConsensusDB struct {
@@ -321,4 +324,41 @@ func (c *ConsensusDB) GetEpochValidatorsCount(epoch uint64) (uint64, error) {
 	var totalCount uint64
 	err := c.WriterDb.Get(&totalCount, "SELECT validatorscount FROM epochs WHERE epoch = $1", epoch)
 	return totalCount, err
+}
+
+func (c *ConsensusDB) GetSyncCommitteesPeriods() ([]uint64, error) {
+	var periods []uint64
+	err := c.WriterDb.Select(&periods, `SELECT period FROM sync_committees GROUP BY period`)
+	return periods, err
+}
+
+func (c *ConsensusDB) SaveSyncCommitteeData(data []types.SyncCommittee) error {
+	tx, err := c.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	nArgs := 3
+	ids := make([]string, len(data))
+	queryArgs := make([]interface{}, len(data)*nArgs)
+	for i, entry := range data {
+		ids[i] = fmt.Sprintf("($%d,$%d,$%d)", i*nArgs+1, i*nArgs+2, i*nArgs+3)
+		queryArgs[i*nArgs] = entry.Period
+		queryArgs[i*nArgs+1] = entry.ValidatorIndex
+		queryArgs[i*nArgs+2] = entry.CommitteeIndex
+	}
+
+	_, err = tx.Exec(
+		fmt.Sprintf(`
+			INSERT INTO sync_committees (period, validatorindex, committeeindex)
+			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
+			strings.Join(ids, ",")),
+		queryArgs...)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }

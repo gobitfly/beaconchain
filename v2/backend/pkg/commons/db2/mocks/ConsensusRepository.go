@@ -294,6 +294,36 @@ func (_m *ConsensusRepository) GetSyncCommitteesCountPerValidator() (uint64, err
 	return r0, r1
 }
 
+// GetSyncCommitteesPeriods provides a mock function with no fields
+func (_m *ConsensusRepository) GetSyncCommitteesPeriods() ([]uint64, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSyncCommitteesPeriods")
+	}
+
+	var r0 []uint64
+	var r1 error
+	if rf, ok := ret.Get(0).(func() ([]uint64, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() []uint64); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uint64)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetTotalPeriodSyncCommitteesCountPerValidator provides a mock function with no fields
 func (_m *ConsensusRepository) GetTotalPeriodSyncCommitteesCountPerValidator() (uint64, error) {
 	ret := _m.Called()
@@ -369,6 +399,24 @@ func (_m *ConsensusRepository) SaveNetworkLivenessData(head *types.ChainHead) er
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*types.ChainHead) error); ok {
 		r0 = rf(head)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SaveSyncCommitteeData provides a mock function with given fields: data
+func (_m *ConsensusRepository) SaveSyncCommitteeData(data []types.SyncCommittee) error {
+	ret := _m.Called(data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveSyncCommitteeData")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func([]types.SyncCommittee) error); ok {
+		r0 = rf(data)
 	} else {
 		r0 = ret.Error(0)
 	}

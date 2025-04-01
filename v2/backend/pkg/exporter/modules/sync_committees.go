@@ -1,154 +1,170 @@
 package modules
 
 import (
-	"database/sql"
-	"errors"
+	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-
-	"github.com/jmoiron/sqlx"
 )
 
-func syncCommitteesExporter(rpcClient rpc.Client) {
-	for {
-		t0 := time.Now()
-		r := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
-		r(constants.Running, nil)
-		err := exportSyncCommittees(rpcClient)
-		if err != nil {
-			log.Error(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(t0)})
-			r(constants.Failure, map[string]string{"error": err.Error()})
-		}
-		r(constants.Success, map[string]string{"took": time.Since(t0).String(), "took_raw": fmt.Sprintf("%v", time.Since(t0).Milliseconds())})
-		time.Sleep(time.Second * 12)
+type SyncCommitteeClient interface {
+	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
+}
+
+type syncCommitteesExporter struct {
+	client SyncCommitteeClient
+	db     db2.ConsensusRepository
+
+	delay time.Duration
+	ctx   context.Context
+	cache *cache.TieredCacheBase
+}
+
+func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) syncCommitteesExporter {
+	if cache.TieredCache == nil {
+		log.Fatal(nil, "TieredCache is not initialised", 0)
+	}
+
+	return syncCommitteesExporter{
+		client: client,
+		db:     db,
+		delay:  time.Second * 12,
+		ctx:    ctx,
+		cache:  cache.TieredCache,
 	}
 }
 
-func exportSyncCommittees(rpcClient rpc.Client) error {
-	var dbPeriods []uint64
-	err := db.WriterDb.Select(&dbPeriods, `SELECT period FROM sync_committees GROUP BY period`)
+func (s syncCommitteesExporter) Export() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			log.Info("sync committees export loop cancelled")
+			return
+		default:
+			startTime := time.Now()
+			deploymentType := utils.Config.DeploymentType
+			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, deploymentType, constants.Default, time.Second*12)
+			statusReport(constants.Running, nil)
+
+			err := s.exportSyncCommittees()
+			if err != nil {
+				log.Error(err, "error exporting sync_committees", 0, map[string]interface{}{"duration": time.Since(startTime)})
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+			}
+			statusReport(constants.Success, map[string]string{
+				"took":     time.Since(startTime).String(),
+				"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
+			})
+
+			time.Sleep(s.delay)
+		}
+	}
+}
+
+func (s *syncCommitteesExporter) exportSyncCommittees() error {
+	dbPeriods, err := s.db.GetSyncCommitteesPeriods()
 	if err != nil {
 		return err
 	}
+
 	dbPeriodsMap := make(map[uint64]bool, len(dbPeriods))
-	for _, p := range dbPeriods {
-		dbPeriodsMap[p] = true
+	for _, period := range dbPeriods {
+		dbPeriodsMap[period] = true
 	}
-	currEpoch := cache.LatestFinalizedEpoch.Get()
+
+	latestNodeFinalizedEpochKey := fmt.Sprintf("%d:frontend:latestFinalized", utils.Config.Chain.ClConfig.DepositChainID)
+	currEpoch, err := s.cache.GetUint64WithLocalTimeout(latestNodeFinalizedEpochKey, time.Second*5)
+	if err != nil {
+		return fmt.Errorf("error getting latestNodeEpoch from cache: %w", err)
+	}
 	if currEpoch > 0 { // guard against underflows
 		currEpoch = currEpoch - 1
 	}
+
 	lastPeriod := utils.SyncPeriodOfEpoch(currEpoch) + 1 // we can look into the future
 	firstPeriod := utils.SyncPeriodOfEpoch(utils.Config.Chain.ClConfig.AltairForkEpoch)
-	for p := firstPeriod; p <= lastPeriod; p++ {
-		_, exists := dbPeriodsMap[p]
-		if !exists {
-			t0 := time.Now()
-			err = ExportSyncCommitteeAtPeriod(rpcClient, p, nil)
-			if err != nil {
-				return fmt.Errorf("error exporting sync-committee at period %v: %w", p, err)
-			}
-			log.InfoWithFields(log.Fields{
-				"period":   p,
-				"epoch":    utils.FirstEpochOfSyncPeriod(p),
-				"duration": time.Since(t0),
-			}, "exported sync_committee")
+
+	for period := firstPeriod; period <= lastPeriod; period++ {
+		if _, exists := dbPeriodsMap[period]; exists {
+			continue
+		}
+		if err := s.ExportSyncCommitteeData(period); err != nil {
+			return fmt.Errorf("error exporting sync-committee at period %v: %w", period, err)
 		}
 	}
+
 	return nil
 }
 
-func ExportSyncCommitteeAtPeriod(rpcClient rpc.Client, p uint64, providedTx *sqlx.Tx) error {
-	data, err := GetSyncCommitteAtPeriod(rpcClient, p)
+func (s *syncCommitteesExporter) ExportSyncCommitteeData(period uint64) error {
+	startTime := time.Now()
+	defer func(startTime time.Time) {
+		log.InfoWithFields(log.Fields{
+			"period":   period,
+			"epoch":    utils.FirstEpochOfSyncPeriod(period),
+			"duration": time.Since(startTime),
+		}, "exported sync_committee")
+	}(startTime)
+
+	data, err := s.GetSyncCommitteAtPeriod(period)
 	if err != nil {
 		return err
 	}
 
-	tx := providedTx
-	if tx == nil {
-		tx, err = db.WriterDb.Beginx()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err := tx.Rollback()
-			if err != nil && !errors.Is(err, sql.ErrTxDone) {
-				log.Error(err, "error rolling back transaction", 0)
-			}
-		}()
-	}
-
-	nArgs := 3
-	valueArgs := make([]interface{}, len(data)*nArgs)
-	valueIds := make([]string, len(data))
-	for i, entry := range data {
-		valueArgs[i*nArgs+0] = entry.Period
-		valueArgs[i*nArgs+1] = entry.ValidatorIndex
-		valueArgs[i*nArgs+2] = entry.CommitteeIndex
-		valueIds[i] = fmt.Sprintf("($%d,$%d,$%d)", i*nArgs+1, i*nArgs+2, i*nArgs+3)
-	}
-	_, err = tx.Exec(
-		fmt.Sprintf(`
-			INSERT INTO sync_committees (period, validatorindex, committeeindex)
-			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
-			strings.Join(valueIds, ",")),
-		valueArgs...)
+	err = s.db.SaveSyncCommitteeData(data)
 	if err != nil {
 		return err
 	}
 
-	if providedTx == nil {
-		return tx.Commit()
-	}
 	return nil
 }
 
-func GetSyncCommitteAtPeriod(rpcClient rpc.Client, p uint64) ([]SyncCommittee, error) {
-	stateID := uint64(0)
-	if p > 0 {
-		stateID = utils.FirstEpochOfSyncPeriod(p-1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	}
-	epoch := utils.FirstEpochOfSyncPeriod(p)
-	if stateID/utils.Config.Chain.ClConfig.SlotsPerEpoch <= utils.Config.Chain.ClConfig.AltairForkEpoch {
-		stateID = utils.Config.Chain.ClConfig.AltairForkEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
-		epoch = utils.Config.Chain.ClConfig.AltairForkEpoch
-	}
-
-	firstEpoch := utils.FirstEpochOfSyncPeriod(p)
+func (s *syncCommitteesExporter) GetSyncCommitteAtPeriod(period uint64) ([]types.SyncCommittee, error) {
+	stateID, epoch := calculateStateIDAndEpoch(period)
+	firstEpoch := utils.FirstEpochOfSyncPeriod(period)
 	lastEpoch := firstEpoch + utils.Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod - 1
 
-	log.Infof("exporting sync committee assignments for period %v (epoch %v to %v)", p, firstEpoch, lastEpoch)
+	log.Infof("exporting sync committee assignments for period %v (epoch %v to %v)", period, firstEpoch, lastEpoch)
 
 	// Note that the order we receive the validators from the node in is crucial
 	// and determines which bit reflects them in the block sync aggregate bits
-	c, err := rpcClient.GetSyncCommittee(fmt.Sprintf("%d", stateID), epoch)
+	syncCommittee, err := s.client.GetSyncCommittee(fmt.Sprintf("%d", stateID), epoch)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]SyncCommittee, len(c.Validators))
-	for i, idxStr := range c.Validators {
-		result = append(result, SyncCommittee{
-			Period:         p,
+	syncCommitteeResults := []types.SyncCommittee{}
+	for i, idxStr := range syncCommittee.Validators {
+		syncCommitteeResults = append(syncCommitteeResults, types.SyncCommittee{
+			Period:         period,
 			ValidatorIndex: uint64(idxStr),
 			CommitteeIndex: uint64(i),
 		})
 	}
 
-	return result, nil
+	return syncCommitteeResults, nil
 }
 
-type SyncCommittee struct {
-	Period         uint64 `json:"period"`
-	ValidatorIndex uint64 `json:"validatorindex"`
-	CommitteeIndex uint64 `json:"committeeindex"`
+func calculateStateIDAndEpoch(period uint64) (uint64, uint64) {
+	stateID := uint64(0)
+	if period > 0 {
+		stateID = utils.FirstEpochOfSyncPeriod(period-1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	}
+	epoch := utils.FirstEpochOfSyncPeriod(period)
+
+	if stateID/utils.Config.Chain.ClConfig.SlotsPerEpoch <= utils.Config.Chain.ClConfig.AltairForkEpoch {
+		stateID = utils.Config.Chain.ClConfig.AltairForkEpoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
+		epoch = utils.Config.Chain.ClConfig.AltairForkEpoch
+	}
+
+	return stateID, epoch
 }
