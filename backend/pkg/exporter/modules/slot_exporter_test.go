@@ -251,6 +251,11 @@ func TestSlotExporter(t *testing.T) {
 				},
 			},
 		}
+		mockValidatorsStatusUpdate := map[string][]uint64{
+			"pending": {
+				0,
+			},
+		}
 		firstSlot := (utils.EpochOfSlot(mockBlock.Slot) - 1) * 32
 		lastSlot := (utils.EpochOfSlot(mockBlock.Slot) * 32) - 1
 
@@ -278,6 +283,7 @@ func TestSlotExporter(t *testing.T) {
 		mockDB.On("UpdateActivationEpochBalance", mockActivationEpochVal[0].ValidatorIndex, mockBalances[0], mockTx).Return(nil)
 		mockDB.On("UpdateEpochStatus", mockParticipationStats, mockTx).Return(nil)
 		mockDB.On("PrepareValidatorsUpdate", mockCurrentValidators[0], mockBlock.Validators[0], mockTx).Return(mockUpdateCount, queries, nil)
+		mockDB.On("UpdateValidatorsStatus", mockValidatorsStatusUpdate, mockTx).Return(nil)
 		mockDB.On("UpdateValidators", queries, mockUpdateCount, mockTx).Return(nil)
 		mockDB.On("HasEventsForEpoch", firstSlot, lastSlot).Return(true, nil)
 		mockDB.On("TransformSwitchToCompoundingRequests", firstSlot, lastSlot, mockTx).Return(int64(1), nil)
