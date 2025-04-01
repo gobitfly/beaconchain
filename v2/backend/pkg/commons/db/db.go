@@ -598,18 +598,6 @@ func GetSlashingCount() (uint64, error) {
 	return slashings, nil
 }
 
-// GetLatestEpoch will return the latest epoch from the database
-func GetLatestEpoch() (uint64, error) {
-	var epoch uint64
-	err := WriterDb.Get(&epoch, "SELECT COALESCE(MAX(epoch), 0) FROM epochs")
-
-	if err != nil {
-		return 0, fmt.Errorf("error retrieving latest epoch from DB: %w", err)
-	}
-
-	return epoch, nil
-}
-
 func GetAllSlots(tx *sqlx.Tx) ([]uint64, error) {
 	var slots []uint64
 	err := tx.Select(&slots, "SELECT slot FROM blocks ORDER BY slot")

@@ -1,11 +1,14 @@
 package modules
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -36,11 +39,15 @@ type ModuleInterface interface {
 var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
-func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
+func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	if !justV2 {
-		go networkLivenessUpdater(context.ConsClient)
-		go genesisDepositsExporter(context.ConsClient)
-		go syncCommitteesExporter(context.ConsClient)
+		ctx := context.Background()
+		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
+
+		go networkLivenessUpdater(moduleCtx.ConsClient)
+		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
+		go genesisExporter.Export()
+		go syncCommitteesExporter(moduleCtx.ConsClient)
 		go syncCommitteesCountExporter()
 		if utils.Config.SSVExporter.Enabled {
 			go ssvExporter()
@@ -59,7 +66,7 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 	}
 	// wait until the beacon-node is available
 	for {
-		head, err := context.ConsClient.GetChainHead()
+		head, err := moduleCtx.ConsClient.GetChainHead()
 		if err == nil {
 			log.Infof("beacon node is available with head slot: %v", head.HeadSlot)
 			break
@@ -68,10 +75,10 @@ func StartAll(context ModuleContext, modules []ModuleInterface, justV2 bool) {
 		time.Sleep(time.Second * 10)
 	}
 	// start subscription modules
-	startSubscriptionModules(&context, modules)
+	startSubscriptionModules(&moduleCtx, modules)
 }
 
-func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) {
+func startSubscriptionModules(moduleCtx *ModuleContext, modules []ModuleInterface) {
 	goPool := &errgroup.Group{}
 	log.Infof("initialising exporter modules")
 
@@ -92,7 +99,7 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
-	events := context.CL.GetEvents([]types.EventTopic{
+	events := moduleCtx.CL.GetEvents([]types.EventTopic{
 		types.EventHead,
 		types.EventFinalizedCheckpoint,
 		types.EventChainReorg,

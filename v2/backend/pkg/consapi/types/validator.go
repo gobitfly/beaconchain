@@ -65,16 +65,18 @@ type StandardValidator struct {
 	Index     uint64          `json:"index,string"`
 	Balance   uint64          `json:"balance,string"`
 	Status    ValidatorStatus `json:"status"`
-	Validator struct {
-		Pubkey                     hexutil.Bytes `json:"pubkey"`
-		WithdrawalCredentials      hexutil.Bytes `json:"withdrawal_credentials"`
-		EffectiveBalance           uint64        `json:"effective_balance,string"`
-		Slashed                    bool          `json:"slashed"`
-		ActivationEligibilityEpoch uint64        `json:"activation_eligibility_epoch,string"`
-		ActivationEpoch            uint64        `json:"activation_epoch,string"`
-		ExitEpoch                  uint64        `json:"exit_epoch,string"`
-		WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`
-	} `json:"validator"`
+	Validator Validator       `json:"validator"`
+}
+
+type Validator struct {
+	Pubkey                     hexutil.Bytes `json:"pubkey"`
+	WithdrawalCredentials      hexutil.Bytes `json:"withdrawal_credentials"`
+	EffectiveBalance           uint64        `json:"effective_balance,string"`
+	Slashed                    bool          `json:"slashed"`
+	ActivationEligibilityEpoch uint64        `json:"activation_eligibility_epoch,string"`
+	ActivationEpoch            uint64        `json:"activation_epoch,string"`
+	ExitEpoch                  uint64        `json:"exit_epoch,string"`
+	WithdrawableEpoch          uint64        `json:"withdrawable_epoch,string"`
 }
 
 type LightStandardValidator struct {
