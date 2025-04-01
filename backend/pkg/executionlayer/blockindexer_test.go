@@ -137,7 +137,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 			indexer := NewBlockIndexer(
 				store,
 				db2.NewCachedLastBlocks(&database.MemCache{}, store),
-				BlockIndexerConfig{},
+				DefaultConfig.BlockIndexer,
 				client,
 				tt.transformers...,
 			)

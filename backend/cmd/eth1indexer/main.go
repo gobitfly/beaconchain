@@ -19,7 +19,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/gobitfly/beaconchain/pkg/executionlayer"
-	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
 
 	"github.com/coocood/freecache"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,11 +34,13 @@ func Run() {
 	erigonEndpoint := fs.String("erigon", "", "Erigon archive node enpoint")
 	block := fs.Uint64("block", 0, "Index a specific block")
 
-	reorgDepth := fs.Uint64("reorg.depth", 20, "Lookback to check and handle chain reorgs")
+	reorgDepth := fs.Uint64("reorg.depth", executionlayer.DefaultConfig.Reorg.Depth, "Lookback to check and handle chain reorgs")
 
-	bulk := fs.Uint64("bulk", 8000, "Maximum number of blocks to be processed before saving")
-	concurrency := fs.Uint64("concurrency", 30, "Concurrency to use when indexing blocks from erigon")
-	traceMode := fs.String("blocks.tracemode", "parity/geth", "Trace mode to use, can bei either 'parity', 'geth' or 'parity/geth' for both")
+	bulk := fs.Uint64("bulk", executionlayer.DefaultConfig.Indexer.Bulk, "Maximum number of blocks to be processed before saving")
+	concurrency := fs.Uint64("concurrency", executionlayer.DefaultConfig.BlockIndexer.Concurrency, "Concurrency to use when indexing blocks from erigon")
+	blockFrequency := fs.Duration("frequency", executionlayer.DefaultConfig.Service.BlockFrequency, "Frequency used to look for blocks")
+
+	traceMode := fs.String("blocks.tracemode", executionlayer.DefaultConfig.BlockIndexer.TraceMode, "Trace mode to use, can bei either 'parity', 'geth' or 'parity/geth' for both")
 
 	startBlocks := fs.Uint64("resync.start", 0, "Block to start indexing")
 	endBlocks := fs.Uint64("resync.end", 0, "Block to finish indexing")
@@ -52,18 +53,18 @@ func Run() {
 	checkDataGaps := fs.Bool("data.gaps", false, "Check for gaps in the data table")
 	checkDataGapsLookback := fs.Int("data.gaps.lookback", 1000000, "Lookback for gaps check of the blocks table")
 
-	balanceUpdaterBatchSize := fs.Int64("balances.batch", 1000, "Batch size for balance updates")
+	balanceUpdaterBatchSize := fs.Int64("balances.batch", executionlayer.DefaultConfig.Indexer.BalanceUpdaterBatchSize, "Batch size for balance updates")
 
 	tokenPriceExport := fs.Bool("token.price.enabled", false, "Enable token export process")
 	tokenPriceExportList := fs.String("token.price.list", "", "Tokenlist path to use for the token price export")
-	tokenPriceExportFrequency := fs.Duration("token.price.frequency", time.Hour, "Token price export interval")
+	tokenPriceExportFrequency := fs.Duration("token.price.frequency", executionlayer.DefaultConfig.Service.TokenPriceFrequency, "Token price export interval")
 
 	versionFlag := fs.Bool("version", false, "Print version and exit")
 
 	configPath := fs.String("config", "", "Path to the config file, if empty string defaults will be used")
 
-	enableEnsUpdater := fs.Bool("ens.enabled", false, "Enable ens update process")
-	ensBatchSize := fs.Int64("ens.batch", 200, "Batch size for ens updates")
+	enableEnsUpdater := fs.Bool("ens.enabled", executionlayer.DefaultConfig.Indexer.EnableENS, "Enable ens update process")
+	ensBatchSize := fs.Int64("ens.batch", executionlayer.DefaultConfig.Indexer.ENSImportBatchSize, "Batch size for ens updates")
 
 	_ = fs.Parse(os.Args[2:])
 
@@ -159,34 +160,29 @@ func Run() {
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
 	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}})
 
-	batcherConfig := evm.BatcherConfig{
-		Limit: utils.Config.Indexer.BatchLimit,
-	}
+	config := executionlayer.DefaultConfig
+
 	if utils.Config.Indexer.MulticallAddresses != "" {
 		parsed := common.HexToAddress(utils.Config.Indexer.MulticallAddresses)
-		batcherConfig.MulticallAddress = &parsed
+		config.Batcher.MulticallAddress = &parsed
 	}
-	batcher := evm.NewBatcher(nodeChainID, client.GetNativeClient(), batcherConfig)
-
-	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
-	blockIndexer := executionlayer.NewBlockIndexer(store, lastBlockStore, executionlayer.BlockIndexerConfig{
-		Concurrency: *concurrency,
-		TraceMode:   *traceMode,
-	}, client, executionlayer.AllTransformers...)
-	balanceUpdater := executionlayer.NewBalanceUpdater(store, store, batcher)
-	reorgWatcher := executionlayer.NewReorgWatcher(client.GetNativeClient(), store, *reorgDepth, chainID, lastBlockStore)
-
-	pricer := executionlayer.NewTokenPricer(
-		store,
-		chainID,
-		executionlayer.NewLlamaClient(),
-		batcher,
-	)
-
-	var ensImporter *executionlayer.ENSImporter
-	if *enableEnsUpdater {
-		ensImporter = executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
+	if utils.Config.Indexer.BatchLimit != 0 {
+		config.Batcher.Limit = utils.Config.Indexer.BatchLimit
 	}
+	config.BlockIndexer.Concurrency = *concurrency
+	config.BlockIndexer.TraceMode = *traceMode
+
+	config.Reorg.Depth = *reorgDepth
+
+	config.Indexer.BalanceUpdaterBatchSize = *balanceUpdaterBatchSize
+	config.Indexer.ENSImportBatchSize = *ensBatchSize
+	config.Indexer.Bulk = *bulk
+	config.Indexer.EnableENS = *enableEnsUpdater
+
+	config.Service.TokenPriceFrequency = *tokenPriceExportFrequency
+	config.Service.BlockFrequency = *blockFrequency
+
+	service := executionlayer.NewIndexerService(config, store, client, database.FreeCache{Cache: cache}, database.Redis{Client: redisClient})
 
 	start, end := uint64(0), uint64(0)
 	if *block != 0 {
@@ -198,28 +194,6 @@ func Run() {
 	if endBlocks != nil {
 		end = *endBlocks
 	}
-	indexer := executionlayer.NewIndexer(
-		db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}},
-		blockIndexer,
-		&balanceUpdater,
-		store,
-		ensImporter,
-		executionlayer.IndexerConfig{
-			BalanceUpdaterBatchSize: *balanceUpdaterBatchSize,
-			ENSImportBatchSize:      *ensBatchSize,
-			Bulk:                    *bulk,
-		},
-	)
-	service := executionlayer.NewIndexerService(
-		executionlayer.NewStateReader(chainID, client.GetNativeClient(), lastBlockStore),
-		indexer,
-		reorgWatcher,
-		pricer,
-		executionlayer.Config{
-			TokenPriceFrequency: *tokenPriceExportFrequency,
-			BlockFrequency:      12 * time.Second,
-		},
-	)
 	if *tokenPriceExport {
 		go service.SyncTokenPrice(*tokenPriceExportList)
 	}

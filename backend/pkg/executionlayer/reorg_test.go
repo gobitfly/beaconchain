@@ -79,7 +79,7 @@ func TestReorgWatcher(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newFakeClient(tt.nodeBlocks...)
 			store := newStubReorgStore(tt.dbBlocks...)
-			reorg := NewReorgWatcher(client, store, tt.depth, "chainID", tt.lastBlockStore)
+			reorg := NewReorgWatcher(client, store, ReorgConfig{tt.depth}, "chainID", tt.lastBlockStore)
 			if err := reorg.LookForReorg(); err != nil {
 				t.Fatal(err)
 			}
@@ -164,12 +164,12 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	indexer := NewBlockIndexer(
 		store,
 		lastBlockStore,
-		BlockIndexerConfig{},
+		DefaultConfig.BlockIndexer,
 		client,
 		AllTransformers...,
 	)
 
-	reorg := NewReorgWatcher(backend.Client(), store, 0, chainID, lastBlockStore)
+	reorg := NewReorgWatcher(backend.Client(), store, ReorgConfig{Depth: 0}, chainID, lastBlockStore)
 
 	// create root block that won't be reverted
 	backend.Commit()

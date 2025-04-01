@@ -12,31 +12,20 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
 )
 
 var logger = log.Logger.WithField("service", "el_indexer")
 
-type Config struct {
+type ServiceConfig struct {
 	TokenPriceFrequency time.Duration
 	BlockFrequency      time.Duration
-}
-
-var defaultConfig = Config{
-	TokenPriceFrequency: time.Hour,
-	BlockFrequency:      14 * time.Second,
-}
-
-// init set default value for unset fields
-func (config *Config) init() {
-	if config.TokenPriceFrequency == 0 {
-		config.TokenPriceFrequency = defaultConfig.TokenPriceFrequency
-	}
-	if config.BlockFrequency == 0 {
-		config.BlockFrequency = defaultConfig.BlockFrequency
-	}
 }
 
 type IndexerService struct {
@@ -45,11 +34,46 @@ type IndexerService struct {
 	stateReader  StateReader
 	reorgWatcher *ReorgWatcher
 
-	config Config
+	config ServiceConfig
 }
 
-func NewIndexerService(stateReader StateReader, indexer *Indexer, reorgWatcher *ReorgWatcher, tokenPricer *TokenPricer, config Config) *IndexerService {
-	config.init()
+func NewIndexerService(config Config, store db2.StoreV1, client *rpc.ErigonClient, localCache database.RemoteCache, remoteCache database.RemoteCache) *IndexerService {
+	lastBlockStore := db2.NewCachedLastBlocks(remoteCache, store)
+
+	blockIndexer := NewBlockIndexer(store, lastBlockStore, config.BlockIndexer, client, AllTransformers...)
+	batcher := evm.NewBatcher(client.GetChainID(), client.GetNativeClient(), config.Batcher)
+	balanceUpdater := NewBalanceUpdater(store, store, batcher)
+	ensImporter := NewENSImporter(store, db2.NewENSStore(db.WriterDb), NewEnsContracts(client.GetNativeClient()))
+
+	indexer := NewIndexer(
+		db2.CachedBalanceUpdates{RemoteCache: localCache},
+		blockIndexer,
+		&balanceUpdater,
+		store,
+		ensImporter,
+		config.Indexer,
+	)
+
+	tokenPricer := NewTokenPricer(
+		store,
+		client.GetChainID().String(),
+		NewLlamaClient(),
+		batcher,
+	)
+
+	stateReader := NewStateReader(client.GetChainID().String(), client.GetNativeClient(), lastBlockStore)
+	reorgWatcher := NewReorgWatcher(client.GetNativeClient(), store, config.Reorg, client.GetChainID().String(), lastBlockStore)
+
+	return &IndexerService{
+		tokenPricer:  tokenPricer,
+		indexer:      indexer,
+		stateReader:  stateReader,
+		reorgWatcher: reorgWatcher,
+		config:       config.Service,
+	}
+}
+
+func NewIndexerServiceWithComponents(stateReader StateReader, indexer *Indexer, reorgWatcher *ReorgWatcher, tokenPricer *TokenPricer, config ServiceConfig) *IndexerService {
 	return &IndexerService{
 		tokenPricer:  tokenPricer,
 		indexer:      indexer,
@@ -166,27 +190,9 @@ func (state syncState) Fields() map[string]interface{} {
 
 type IndexerConfig struct {
 	BalanceUpdaterBatchSize int64
+	EnableENS               bool
 	ENSImportBatchSize      int64
 	Bulk                    uint64
-}
-
-var defaultIndexerConfig = IndexerConfig{
-	BalanceUpdaterBatchSize: 1000,
-	ENSImportBatchSize:      200,
-	Bulk:                    8000,
-}
-
-// init set default value for unset fields
-func (c *IndexerConfig) init() {
-	if c.BalanceUpdaterBatchSize == 0 {
-		c.BalanceUpdaterBatchSize = defaultIndexerConfig.BalanceUpdaterBatchSize
-	}
-	if c.ENSImportBatchSize == 0 {
-		c.ENSImportBatchSize = defaultIndexerConfig.ENSImportBatchSize
-	}
-	if c.Bulk == 0 {
-		c.Bulk = defaultIndexerConfig.Bulk
-	}
 }
 
 type Indexer struct {
@@ -203,7 +209,9 @@ type Indexer struct {
 }
 
 func NewIndexer(cache db2.CachedBalanceUpdates, blockIndexer *BlockIndexer, balanceUpdater *BalanceUpdater, store db2.StoreV1, ensImporter *ENSImporter, config IndexerConfig) *Indexer {
-	config.init()
+	if !config.EnableENS {
+		ensImporter = nil
+	}
 	return &Indexer{
 		balanceCache:   cache,
 		indexer:        blockIndexer,
