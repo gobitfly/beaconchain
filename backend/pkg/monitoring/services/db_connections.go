@@ -89,7 +89,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
-			r := NewStatusReport(entry.ID, constants.Default, 10*time.Second)
+			r := StatusReporter.NewStatusReport(entry.ID, constants.Default, 10*time.Second)
 			switch edb := entry.DB.(type) {
 			case *sqlx.DB:
 				err := edb.PingContext(ctx)

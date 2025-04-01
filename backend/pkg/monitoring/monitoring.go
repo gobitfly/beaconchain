@@ -45,6 +45,7 @@ func Init(full bool) {
 
 func Start() {
 	log.Infof("starting monitoring services")
+	services.InitStatusReport()
 	for _, service := range monitoredServices {
 		service.Start()
 	}
@@ -56,7 +57,7 @@ func Stop() {
 		service.Stop()
 	}
 	// this prevents status reports that werent shut down cleanly from triggering alerts
-	services.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
+	services.StatusReporter.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
 	if startedClickhouse.Load() {
 		db.ClickHouseNativeWriter.Close()
 	}

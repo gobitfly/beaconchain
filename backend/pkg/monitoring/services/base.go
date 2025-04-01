@@ -45,7 +45,7 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func NewStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func newStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
@@ -149,7 +149,7 @@ func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Du
 type statusReporter struct{}
 
 func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return NewStatusReport(id, timeout, checkInterval)
+	return newStatusReport(id, timeout, checkInterval)
 }
 
 var StatusReporter statusReport = stubStatusReporter{}
