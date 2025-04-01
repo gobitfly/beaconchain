@@ -608,6 +608,24 @@ func (_m *SlotExporterDBRepository) UpdateValidators(queries string, totalUpdate
 	return r0
 }
 
+// UpdateValidatorsStatus provides a mock function with given fields: statusUpdateMap, tx
+func (_m *SlotExporterDBRepository) UpdateValidatorsStatus(statusUpdateMap map[string][]uint64, tx *sqlx.Tx) error {
+	ret := _m.Called(statusUpdateMap, tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateValidatorsStatus")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(map[string][]uint64, *sqlx.Tx) error); ok {
+		r0 = rf(statusUpdateMap, tx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // NewSlotExporterDBRepository creates a new instance of SlotExporterDBRepository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewSlotExporterDBRepository(t interface {
