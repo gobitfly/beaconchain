@@ -3,6 +3,7 @@ package db2
 import (
 	"fmt"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
 )
@@ -13,6 +14,8 @@ type ConsensusRepository interface {
 	SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error
 	UpdateBlockDepositsSignature() error
 	UpdateBlockDepositCount(count int) error
+	SaveNetworkLivenessData(head *types.ChainHead) error
+	GetNetworkLivenessPreviousHeadEpoch() (uint64, error)
 }
 
 type ConsensusDB struct {
@@ -106,4 +109,19 @@ func (c *ConsensusDB) UpdateBlockDepositCount(count int) error {
 	}
 
 	return tx.Commit()
+}
+
+func (c *ConsensusDB) SaveNetworkLivenessData(head *types.ChainHead) error {
+	_, err := c.WriterDb.Exec(`
+        INSERT INTO network_liveness (ts, headepoch, finalizedepoch, justifiedepoch, previousjustifiedepoch)
+        VALUES (NOW(), $1, $2, $3, $4)`,
+		head.HeadEpoch, head.FinalizedEpoch, head.JustifiedEpoch, head.PreviousJustifiedEpoch)
+
+	return err
+}
+
+func (c *ConsensusDB) GetNetworkLivenessPreviousHeadEpoch() (uint64, error) {
+	var headEpoch uint64
+	err := c.WriterDb.Get(&headEpoch, "SELECT COALESCE(MAX(headepoch), 0) FROM network_liveness")
+	return headEpoch, err
 }

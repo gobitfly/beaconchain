@@ -32,6 +32,13 @@ type RemoteCache interface {
 
 var TieredCache *TieredCacheBase
 
+func NewTieredCache(remoteCache RemoteCache, localCacheSize int) *TieredCacheBase {
+	return &TieredCacheBase{
+		remoteCache:  remoteCache,
+		localGoCache: freecache.NewCache(localCacheSize),
+	}
+}
+
 func MustInitTieredCache(redisAddress string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
