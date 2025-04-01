@@ -104,11 +104,7 @@ const textMutedUntil = computed(() => {
     return $t('notifications.general.mute.until_turned_on')
   }
   return $t('notifications.general.mute.until', {
-    date: formatTsToAbsolute(
-      store.settings.general_settings.do_not_disturb_timestamp,
-      'en-US',
-      true,
-    ),
+    date: getDateTime(store.settings.general_settings.do_not_disturb_timestamp),
   })
 })
 const {

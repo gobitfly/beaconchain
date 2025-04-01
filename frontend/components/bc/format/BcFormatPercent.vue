@@ -54,7 +54,8 @@ const data = computed(() => {
       label,
     }
   }
-  const localPercent = percent ?? calculatePercent(value, base)
+
+  const localPercent = percent ?? ((value ?? 0) * 100) / (base ?? 1)
   label = new Intl.NumberFormat('en-Us', {
     maximumFractionDigits,
     // due to the default value of minimumFractionDigits: 2

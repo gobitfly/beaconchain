@@ -113,6 +113,8 @@ const getRowClass = (row: VDBBlocksTableRow) => {
 const isRowExpandable = (row: VDBBlocksTableRow) => {
   return row.status !== 'scheduled'
 }
+
+const { getTimestampFromEpoch } = useNetworkStore()
 </script>
 
 <template>
@@ -241,7 +243,9 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed :value="slotProps.data.epoch" />
+                <BcTableDateTime
+                  :unix-timestamp="getTimestampFromEpoch(slotProps.data.epoch)"
+                />
               </template>
             </Column>
             <Column
@@ -341,9 +345,8 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
                   <div class="label">
                     <BcTableAgeHeader />
                   </div>
-                  <BcFormatTimePassed
-                    class="age-field"
-                    :value="slotProps.data.epoch"
+                  <BcTableDateTime
+                    :unix-timestamp="getTimestampFromEpoch(slotProps.data.epoch)"
                   />
                 </div>
                 <div class="row">

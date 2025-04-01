@@ -83,9 +83,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
-                  type="go-timestamp"
-                  :value="slotProps.data.timestamp"
+                <BcTableDateTime
+                  :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
             </Column>

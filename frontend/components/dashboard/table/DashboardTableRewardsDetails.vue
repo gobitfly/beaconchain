@@ -157,7 +157,7 @@ const openDuties = () => {
         <div class="small-screen-value">
           <b><BcTableAgeHeader class="label" /></b>
           <div class="value">
-            <BcFormatTimePassed :value="row.epoch" />
+            <BcTableDateTime :unix-timestamp="row.epoch" />
           </div>
         </div>
         <div class="small-screen-value">

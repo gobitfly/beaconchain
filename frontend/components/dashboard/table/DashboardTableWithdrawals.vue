@@ -7,7 +7,6 @@ import type {
 import { useValidatorDashboardWithdrawalsStore } from '~/stores/dashboard/useValidatorDashboardWithdrawalsStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 type ExtendedVDBWithdrawalsTableRow = VDBWithdrawalsTableRow & {
   identifier: string,
@@ -21,7 +20,10 @@ const { t: $t } = useTranslation()
 
 const store = useLatestStateStore()
 const { latestState } = storeToRefs(store)
-const { getEpochFromSlot } = useNetworkStore()
+const {
+  getEpochFromSlot,
+  getTimestampFromSlot,
+} = useNetworkStore()
 const {
   getTotalAmount,
   getWithdrawals,
@@ -297,13 +299,12 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
+                <BcTableDateTime
                   v-if="
                     slotProps.data.identifier !== totalIdentifier
                       && !slotProps.data.is_missing_estimate
                   "
-                  type="slot"
-                  :value="slotProps.data.slot"
+                  :unix-timestamp="getTimestampFromSlot(slotProps.data.slot)"
                 />
               </template>
             </Column>
@@ -415,9 +416,8 @@ const isRowInFuture = (row: ExtendedVDBWithdrawalsTableRow) => {
                 </div>
                 <div class="row">
                   <BcTableAgeHeader class="label" />
-                  <BcFormatTimePassed
-                    type="slot"
-                    :value="slotProps.data.slot"
+                  <BcTableDateTime
+                    :unix-timestamp="getTimestampFromSlot(slotProps.data.slot)"
                   />
                 </div>
                 <div class="row">

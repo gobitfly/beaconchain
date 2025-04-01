@@ -108,9 +108,8 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                <BcTableDateTime
+                  :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
             </Column>

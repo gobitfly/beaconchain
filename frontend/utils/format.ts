@@ -1,9 +1,5 @@
-import {
-  DateTime, type StringUnitLength,
-} from 'luxon'
 import type { ComposerTranslation } from 'vue-i18n'
 import type { Locale } from '~/i18n/i18n.config'
-import type { AgeFormat } from '~/types/settings'
 import type { NumberOrString } from '~/types/value'
 
 export const ONE_MINUTE = 60
@@ -68,27 +64,6 @@ export function formatFraction(value: NumberOrString, option?: { locale?: Locale
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   }).format(number * 100)
-}
-export function formatGoTimestamp(
-  timestamp: number | string,
-  compareTimestamp?: number,
-  format?: AgeFormat,
-  style?: StringUnitLength,
-  locales?: Locale,
-  withTime?: boolean,
-) {
-  if (typeof timestamp === 'number') {
-    timestamp *= 1000
-  }
-  const dateTime = new Date(timestamp).getTime()
-  return formatTs(
-    dateTime / 1000,
-    compareTimestamp,
-    format,
-    style,
-    locales,
-    withTime,
-  )
 }
 
 export function formatNumber(value: number | string, {
@@ -208,81 +183,8 @@ export function formatToFraction(value: NumberOrString, option?: { locale?: Loca
   }).format(number / 100)
 }
 
-export function formatTs(
-  ts?: number,
-  timestamp?: number,
-  format: AgeFormat = 'relative',
-  style: StringUnitLength = 'narrow',
-  locales: Locale = 'en-US',
-  withTime = true,
-) {
-  if (ts === undefined) {
-    return undefined
-  }
-
-  if (format === 'relative') {
-    return formatTsToRelative(ts * 1000, timestamp, style, locales)
-  }
-  else {
-    return formatTsToAbsolute(ts, locales, withTime)
-  }
-}
-
-export function formatTsToAbsolute(
-  ts: number,
-  locales: Locale,
-  includeTime?: boolean,
-): string {
-  const timeOptions: Intl.DateTimeFormatOptions = includeTime
-    ? {
-        hour: 'numeric',
-        minute: 'numeric',
-      }
-    : {}
-  const options: Intl.DateTimeFormatOptions = {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    ...timeOptions,
-  }
-  const date = new Date(ts * 1000)
-  return includeTime
-    ? date.toLocaleString(locales, options)
-    : date.toLocaleDateString(locales, options)
-}
-
-export function formatTsToTime(ts: number, locales: Locale): string {
-  const options: Intl.DateTimeFormatOptions = {
-    hour: 'numeric',
-    minute: 'numeric',
-  }
-  const date = new Date(ts * 1000)
-  return date.toLocaleTimeString(locales, options)
-}
-
 export function withCurrency(value: string, currency: string): string {
   return `${value} ${currency}`
-}
-
-function formatTsToRelative(
-  targetTimestamp?: number,
-  baseTimestamp?: number,
-  style: StringUnitLength = 'narrow',
-  locales: Locale = 'en-US',
-): null | string | undefined {
-  if (!targetTimestamp) {
-    return undefined
-  }
-
-  const date = baseTimestamp
-    ? DateTime.fromMillis(baseTimestamp)
-    : DateTime.now()
-  return DateTime.fromMillis(targetTimestamp)
-    .setLocale(locales)
-    .toRelative({
-      base: date,
-      style,
-    })
 }
 
 export const formatValue = (value: string, {

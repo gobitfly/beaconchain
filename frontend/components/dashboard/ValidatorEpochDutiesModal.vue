@@ -146,6 +146,8 @@ watch(
   },
   { immediate: true },
 )
+
+const { getTimestampFromEpoch } = useNetworkStore()
 </script>
 
 <template>
@@ -167,8 +169,9 @@ watch(
     >
       <div>
         <span class="h1">{{ title }}</span>
-        <BcFormatTimePassed
-          :value="props?.epoch"
+        <BcTableDateTime
+          v-if="props?.epoch"
+          :unix-timestamp="getTimestampFromEpoch(props.epoch)"
           class="time-passed"
         />
       </div>

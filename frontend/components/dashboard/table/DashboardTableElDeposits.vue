@@ -213,10 +213,9 @@ const {
                 <BcTableAgeHeader />
               </template>
               <template #body="slotProps">
-                <BcFormatTimePassed
+                <BcTableDateTime
                   v-if="slotProps.data.index !== undefined"
-                  :value="slotProps.data.timestamp"
-                  type="go-timestamp"
+                  :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
             </Column>
