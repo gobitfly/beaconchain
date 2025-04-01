@@ -105,6 +105,12 @@ type SyncAggregate struct {
 	SyncAggregateParticipation float64
 }
 
+type SyncCommittee struct {
+	Period         uint64 `json:"period"`
+	ValidatorIndex uint64 `json:"validatorindex"`
+	CommitteeIndex uint64 `json:"committeeindex"`
+}
+
 // Block is a struct to hold block data
 type Block struct {
 	Status                     uint64

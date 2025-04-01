@@ -2083,19 +2083,23 @@ func UpdateValidatorStatisticsSyncData(day uint64, dryRun bool) error {
 	return nil
 }
 
-func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
+func reExportSyncCommittee(rpcClient rpc.Client, period uint64, dryRun bool) error {
+	ctx := context.Background()
+	consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
+	syncCommitteesExporter := modules.NewSyncCommitteesExporter(ctx, rpcClient, consDB)
+
 	if dryRun {
 		var currentData []struct {
 			ValidatorIndex uint64 `db:"validatorindex"`
 			CommitteeIndex uint64 `db:"committeeindex"`
 		}
 
-		err := db.WriterDb.Select(&currentData, `SELECT validatorindex, committeeindex FROM sync_committees WHERE period = $1`, p)
+		err := db.WriterDb.Select(&currentData, `SELECT validatorindex, committeeindex FROM sync_committees WHERE period = $1`, period)
 		if err != nil {
 			return errors.Wrap(err, "select old entries")
 		}
 
-		newData, err := modules.GetSyncCommitteAtPeriod(rpcClient, p)
+		newData, err := syncCommitteesExporter.GetSyncCommitteAtPeriod(period)
 		if err != nil {
 			return errors.Wrap(err, "export")
 		}
@@ -2121,12 +2125,12 @@ func reExportSyncCommittee(rpcClient rpc.Client, p uint64, dryRun bool) error {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
-		_, err = tx.Exec(`DELETE FROM sync_committees WHERE period = $1`, p)
+		_, err = tx.Exec(`DELETE FROM sync_committees WHERE period = $1`, period)
 		if err != nil {
 			return errors.Wrap(err, "delete old entries")
 		}
 
-		err = modules.ExportSyncCommitteeAtPeriod(rpcClient, p, tx)
+		err = syncCommitteesExporter.ExportSyncCommitteeData(period)
 		if err != nil {
 			return errors.Wrap(err, "export")
 		}

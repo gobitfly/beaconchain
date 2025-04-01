@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
-
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
