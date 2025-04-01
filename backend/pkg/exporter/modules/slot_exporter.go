@@ -1010,8 +1010,10 @@ func SaveValidators(validators []*types.Validator, exporterdb edb.SlotExporterDB
 
 	valiudatorUpdateTs := time.Now()
 	validatorStatusCounts := make(map[string]int)
+	validatorStatusUpdateMap := make(map[string][]uint64)
 	updates := 0
 	var queries strings.Builder
+
 	for _, v := range validators {
 		// exchange farFutureEpoch with the corresponding max sql value
 		if v.WithdrawableEpoch == edb.FarFutureEpoch {
@@ -1070,6 +1072,16 @@ func SaveValidators(validators []*types.Validator, exporterdb edb.SlotExporterDB
 			}
 
 			validatorStatusCounts[v.Status]++
+
+			if c.Status != v.Status {
+				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
+				if validatorStatusUpdateMap[v.Status] == nil {
+					validatorStatusUpdateMap[v.Status] = make([]uint64, 0)
+				}
+				validatorStatusUpdateMap[v.Status] = append(validatorStatusUpdateMap[v.Status], c.Index)
+			}
+
 			updateCount, updateQueries, err := exporterdb.PrepareValidatorsUpdate(c, v, tx)
 			if err != nil {
 				return fmt.Errorf("error preparing validators update: %w", err)
@@ -1078,6 +1090,12 @@ func SaveValidators(validators []*types.Validator, exporterdb edb.SlotExporterDB
 			updates += updateCount
 			queries.WriteString(updateQueries)
 		}
+	}
+
+	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
+	err = exporterdb.UpdateValidatorsStatus(validatorStatusUpdateMap, tx)
+	if err != nil {
+		return fmt.Errorf("error saving validators status: %w", err)
 	}
 
 	if updates > 0 {

@@ -57,6 +57,7 @@ type SlotExporterDBRepository interface {
 	GetValidatorsCurrentState(tx *sqlx.Tx) ([]*types.Validator, error)
 	SaveNewValidator(validator *types.Validator, tx *sqlx.Tx) error
 	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error)
+	UpdateValidatorsStatus(statusUpdateMap map[string][]uint64, tx *sqlx.Tx) error
 	UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error
 	HasEventsForEpoch(epoch uint64) (bool, error)
 	TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
@@ -786,11 +787,6 @@ func (s *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, 
 	var queries strings.Builder
 	updates := 0
 
-	if currentState.Status != newState.Status {
-		log.Debugf("Status changed for validator %v from %v to %v", newState.Index, currentState.Status, newState.Status)
-		queries.WriteString(fmt.Sprintf("UPDATE validators SET status = %s WHERE validatorindex = %d;\n", newState.Status, currentState.Index))
-		updates++
-	}
 	if currentState.Slashed != newState.Slashed {
 		log.Infof("Slashed changed for validator %v from %v to %v", newState.Index, currentState.Slashed, newState.Slashed)
 		queries.WriteString(fmt.Sprintf("UPDATE validators SET slashed = %v WHERE validatorindex = %d;\n", newState.Slashed, currentState.Index))
@@ -823,6 +819,36 @@ func (s *SlotExporterDB) PrepareValidatorsUpdate(currentState *types.Validator, 
 	}
 
 	return updates, queries.String(), nil
+}
+
+func (s *SlotExporterDB) UpdateValidatorsStatus(statusUpdateMap map[string][]uint64, tx *sqlx.Tx) error {
+	stmt, err := tx.Prepare(`UPDATE validators SET status = $1 WHERE validatorindex = ANY($2);`)
+	if err != nil {
+		return fmt.Errorf("error preparing update validator status statement: %w", err)
+	}
+	defer stmt.Close()
+
+	const batchSize = 1000
+	for status, validators := range statusUpdateMap {
+		log.Infof("updating validator status to %s for %d validators", status, len(validators))
+
+		for i := 0; i < len(validators); i += batchSize {
+			end := i + batchSize
+			if end > len(validators) {
+				end = len(validators)
+			}
+
+			log.Infof("applying update batch from index %v to %v", i, end)
+			batch := validators[i:end]
+			_, err := stmt.Exec(status, pq.Array(batch))
+			if err != nil {
+				log.Error(err, "error updating validator status", 0)
+				return fmt.Errorf("error updating validator status: %w", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *SlotExporterDB) UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error {
