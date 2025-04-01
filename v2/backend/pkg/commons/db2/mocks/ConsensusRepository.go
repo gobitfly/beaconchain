@@ -12,6 +12,34 @@ type ConsensusRepository struct {
 	mock.Mock
 }
 
+// GetCountSoFarSyncCommitteesCountPerValidator provides a mock function with given fields: period
+func (_m *ConsensusRepository) GetCountSoFarSyncCommitteesCountPerValidator(period uint64) (float64, error) {
+	ret := _m.Called(period)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCountSoFarSyncCommitteesCountPerValidator")
+	}
+
+	var r0 float64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64) (float64, error)); ok {
+		return rf(period)
+	}
+	if rf, ok := ret.Get(0).(func(uint64) float64); ok {
+		r0 = rf(period)
+	} else {
+		r0 = ret.Get(0).(float64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(period)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetDepositsCountForBlockSlot provides a mock function with no fields
 func (_m *ConsensusRepository) GetDepositsCountForBlockSlot() (uint64, error) {
 	ret := _m.Called()
@@ -33,6 +61,34 @@ func (_m *ConsensusRepository) GetDepositsCountForBlockSlot() (uint64, error) {
 
 	if rf, ok := ret.Get(1).(func() error); ok {
 		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetEpochValidatorsCount provides a mock function with given fields: epoch
+func (_m *ConsensusRepository) GetEpochValidatorsCount(epoch uint64) (uint64, error) {
+	ret := _m.Called(epoch)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEpochValidatorsCount")
+	}
+
+	var r0 uint64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(uint64) (uint64, error)); ok {
+		return rf(epoch)
+	}
+	if rf, ok := ret.Get(0).(func(uint64) uint64); ok {
+		r0 = rf(epoch)
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	if rf, ok := ret.Get(1).(func(uint64) error); ok {
+		r1 = rf(epoch)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -124,6 +180,34 @@ func (_m *ConsensusRepository) GetLatestEpoch() (uint64, error) {
 	return r0, r1
 }
 
+// GetLatestFinalizedEpoch provides a mock function with no fields
+func (_m *ConsensusRepository) GetLatestFinalizedEpoch() (uint64, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLatestFinalizedEpoch")
+	}
+
+	var r0 uint64
+	var r1 error
+	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() uint64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetNetworkLivenessPreviousHeadEpoch provides a mock function with no fields
 func (_m *ConsensusRepository) GetNetworkLivenessPreviousHeadEpoch() (uint64, error) {
 	ret := _m.Called()
@@ -182,6 +266,62 @@ func (_m *ConsensusRepository) GetRelays() ([]types.Relay, error) {
 	return r0, r1
 }
 
+// GetSyncCommitteesCountPerValidator provides a mock function with no fields
+func (_m *ConsensusRepository) GetSyncCommitteesCountPerValidator() (uint64, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSyncCommitteesCountPerValidator")
+	}
+
+	var r0 uint64
+	var r1 error
+	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() uint64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetTotalPeriodSyncCommitteesCountPerValidator provides a mock function with no fields
+func (_m *ConsensusRepository) GetTotalPeriodSyncCommitteesCountPerValidator() (uint64, error) {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTotalPeriodSyncCommitteesCountPerValidator")
+	}
+
+	var r0 uint64
+	var r1 error
+	if rf, ok := ret.Get(0).(func() (uint64, error)); ok {
+		return rf()
+	}
+	if rf, ok := ret.Get(0).(func() uint64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	if rf, ok := ret.Get(1).(func() error); ok {
+		r1 = rf()
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // SaveBlockDeposits provides a mock function with given fields: validatorIndex, pubkey, withdrawalCredentials, balance
 func (_m *ConsensusRepository) SaveBlockDeposits(validatorIndex uint64, pubkey []byte, withdrawalCredentials []byte, balance uint64) error {
 	ret := _m.Called(validatorIndex, pubkey, withdrawalCredentials, balance)
@@ -229,6 +369,24 @@ func (_m *ConsensusRepository) SaveNetworkLivenessData(head *types.ChainHead) er
 	var r0 error
 	if rf, ok := ret.Get(0).(func(*types.ChainHead) error); ok {
 		r0 = rf(head)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// SaveSyncCommitteesCount provides a mock function with given fields: period, count
+func (_m *ConsensusRepository) SaveSyncCommitteesCount(period uint64, count float64) error {
+	ret := _m.Called(period, count)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SaveSyncCommitteesCount")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(uint64, float64) error); ok {
+		r0 = rf(period, count)
 	} else {
 		r0 = ret.Error(0)
 	}

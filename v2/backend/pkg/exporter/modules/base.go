@@ -52,7 +52,10 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		go genesisExporter.Export()
 
 		go syncCommitteesExporter(moduleCtx.ConsClient)
-		go syncCommitteesCountExporter()
+
+		syncCommitteesCountExporter := newSyncCommitteesCountExporter(ctx, consDB)
+		go syncCommitteesCountExporter.Export()
+
 		if utils.Config.SSVExporter.Enabled {
 			go ssvExporter()
 		}
