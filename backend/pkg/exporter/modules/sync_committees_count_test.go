@@ -18,7 +18,6 @@ func TestSyncCommitteesCountExport(t *testing.T) {
 				EpochsPerSyncCommitteePeriod: 32,
 			},
 		},
-		DeploymentType: "development",
 	}
 
 	t.Run("records exist in db", func(t *testing.T) {

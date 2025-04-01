@@ -61,7 +61,6 @@ func TestNetworkLivenessExport(t *testing.T) {
 				DepositChainID: 1,
 			},
 		},
-		DeploymentType: "development",
 	}
 
 	mockConsDBClient := new(mocks.ConsensusRepository)

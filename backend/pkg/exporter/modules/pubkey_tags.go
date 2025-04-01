@@ -9,20 +9,21 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
-	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type pubkeyTagsUpdater struct {
-	db    db2.ConsensusRepository
-	delay time.Duration
-	ctx   context.Context
+	db             db2.ConsensusRepository
+	delay          time.Duration
+	ctx            context.Context
+	statusReporter StatusReporter
 }
 
-func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository) pubkeyTagsUpdater {
+func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository, reporter StatusReporter) pubkeyTagsUpdater {
 	return pubkeyTagsUpdater{
-		db:    db,
-		delay: time.Minute * 10,
-		ctx:   ctx,
+		db:             db,
+		delay:          time.Minute * 10,
+		ctx:            ctx,
+		statusReporter: reporter,
 	}
 }
 
@@ -35,7 +36,7 @@ func (p *pubkeyTagsUpdater) Update() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
+			statusReport := p.statusReporter.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := p.db.UpdatePubkeyTags()

@@ -83,11 +83,12 @@ func TestSyncCommitteesExport(t *testing.T) {
 	defer cancel()
 
 	exporter := syncCommitteesExporter{
-		client: mockClient,
-		db:     mockConsDBClient,
-		delay:  0,
-		ctx:    ctx,
-		cache:  tieredCache,
+		client:         mockClient,
+		db:             mockConsDBClient,
+		delay:          0,
+		ctx:            ctx,
+		cache:          tieredCache,
+		statusReporter: stubStatusReporter{},
 	}
 
 	utils.Config = &types.Config{
@@ -99,7 +100,6 @@ func TestSyncCommitteesExport(t *testing.T) {
 				DepositChainID:               1,
 			},
 		},
-		DeploymentType: "development",
 	}
 
 	for _, tt := range tests {

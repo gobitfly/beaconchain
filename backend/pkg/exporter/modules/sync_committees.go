@@ -13,7 +13,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
-	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type SyncCommitteeClient interface {
@@ -24,22 +23,24 @@ type syncCommitteesExporter struct {
 	client SyncCommitteeClient
 	db     db2.ConsensusRepository
 
-	delay time.Duration
-	ctx   context.Context
-	cache *cache.TieredCacheBase
+	delay          time.Duration
+	ctx            context.Context
+	cache          *cache.TieredCacheBase
+	statusReporter StatusReporter
 }
 
-func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) syncCommitteesExporter {
+func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository, reporter StatusReporter) syncCommitteesExporter {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}
 
 	return syncCommitteesExporter{
-		client: client,
-		db:     db,
-		delay:  time.Second * 12,
-		ctx:    ctx,
-		cache:  cache.TieredCache,
+		client:         client,
+		db:             db,
+		delay:          time.Second * 12,
+		ctx:            ctx,
+		cache:          cache.TieredCache,
+		statusReporter: reporter,
 	}
 }
 
@@ -51,7 +52,7 @@ func (s syncCommitteesExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+			statusReport := s.statusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := s.exportSyncCommittees()

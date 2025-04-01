@@ -6,8 +6,6 @@ import (
 	"time"
 
 	dbmocks "github.com/gobitfly/beaconchain/pkg/commons/db2/mocks"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 )
 
@@ -31,13 +29,10 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 	defer cancel()
 
 	exporter := pubkeyTagsUpdater{
-		db:    mockConsDBClient,
-		delay: 0,
-		ctx:   ctx,
-	}
-
-	utils.Config = &types.Config{
-		DeploymentType: "development",
+		db:             mockConsDBClient,
+		delay:          0,
+		ctx:            ctx,
+		statusReporter: stubStatusReporter{},
 	}
 
 	for _, tt := range tests {

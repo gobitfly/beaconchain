@@ -51,7 +51,7 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		genesisExporter := newGenesisDepositsExporter(ctx, moduleCtx.ConsClient, consDB)
 		go genesisExporter.Export()
 
-		syncCommitteesExporter := NewSyncCommitteesExporter(ctx, moduleCtx.ConsClient, consDB)
+		syncCommitteesExporter := NewSyncCommitteesExporter(ctx, moduleCtx.ConsClient, consDB, statusReporter{})
 		go syncCommitteesExporter.Export()
 
 		syncCommitteesCountExporter := newSyncCommitteesCountExporter(ctx, consDB)
@@ -65,7 +65,7 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		}
 
 		if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
-			pubkeyTagsUpdater := newPubkeyTagsUpdater(ctx, consDB)
+			pubkeyTagsUpdater := newPubkeyTagsUpdater(ctx, consDB, statusReporter{})
 			go pubkeyTagsUpdater.Update()
 		}
 
@@ -207,6 +207,25 @@ func GetModuleContext() (ModuleContext, error) {
 	moduleContext.ConsClient = clClient
 
 	return moduleContext, nil
+}
+
+type StatusReporter interface {
+	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
+}
+
+type statusReporter struct{}
+
+func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return services.NewStatusReport(id, timeout, checkInterval)
+}
+
+// Stub implementation for testing
+type stubStatusReporter struct{}
+
+func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return func(status constants.StatusType, metadata map[string]string) {
+		// No-op implementation
+	}
 }
 
 type ModuleContext struct {
