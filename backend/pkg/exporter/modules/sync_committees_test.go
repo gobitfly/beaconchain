@@ -83,12 +83,11 @@ func TestSyncCommitteesExport(t *testing.T) {
 	defer cancel()
 
 	exporter := syncCommitteesExporter{
-		client:         mockClient,
-		db:             mockConsDBClient,
-		delay:          0,
-		ctx:            ctx,
-		cache:          tieredCache,
-		statusReporter: stubStatusReporter{},
+		client: mockClient,
+		db:     mockConsDBClient,
+		delay:  0,
+		ctx:    ctx,
+		cache:  tieredCache,
 	}
 
 	utils.Config = &types.Config{
@@ -101,6 +100,8 @@ func TestSyncCommitteesExport(t *testing.T) {
 			},
 		},
 	}
+
+	StatusReporter = stubStatusReporter{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

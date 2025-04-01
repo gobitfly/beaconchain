@@ -12,7 +12,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
-	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
 type EpochClient interface {
@@ -57,7 +56,7 @@ func (n *networkLivenessUpdater) Export() {
 			log.Info("network liveness export loop cancelled")
 			return
 		default:
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+			statusReport := StatusReporter.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
 			statusReport(constants.Running, nil)
 
 			head, err := n.client.GetChainHead()

@@ -29,11 +29,12 @@ func TestPubkeyTagsUpdate(t *testing.T) {
 	defer cancel()
 
 	exporter := pubkeyTagsUpdater{
-		db:             mockConsDBClient,
-		delay:          0,
-		ctx:            ctx,
-		statusReporter: stubStatusReporter{},
+		db:    mockConsDBClient,
+		delay: 0,
+		ctx:   ctx,
 	}
+
+	StatusReporter = stubStatusReporter{}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

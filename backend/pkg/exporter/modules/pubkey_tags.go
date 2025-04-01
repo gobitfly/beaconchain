@@ -12,18 +12,16 @@ import (
 )
 
 type pubkeyTagsUpdater struct {
-	db             db2.ConsensusRepository
-	delay          time.Duration
-	ctx            context.Context
-	statusReporter StatusReporter
+	db    db2.ConsensusRepository
+	delay time.Duration
+	ctx   context.Context
 }
 
-func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository, reporter StatusReporter) pubkeyTagsUpdater {
+func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository) pubkeyTagsUpdater {
 	return pubkeyTagsUpdater{
-		db:             db,
-		delay:          time.Minute * 10,
-		ctx:            ctx,
-		statusReporter: reporter,
+		db:    db,
+		delay: time.Minute * 10,
+		ctx:   ctx,
 	}
 }
 
@@ -36,7 +34,7 @@ func (p *pubkeyTagsUpdater) Update() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := p.statusReporter.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
+			statusReport := StatusReporter.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := p.db.UpdatePubkeyTags()
@@ -46,7 +44,6 @@ func (p *pubkeyTagsUpdater) Update() {
 			}
 
 			log.Infof("Updating Pubkey Tags took %v sec.", time.Since(startTime).Seconds())
-
 			statusReport(constants.Success, map[string]string{
 				"took":     time.Since(startTime).String(),
 				"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),

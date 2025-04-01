@@ -23,24 +23,22 @@ type syncCommitteesExporter struct {
 	client SyncCommitteeClient
 	db     db2.ConsensusRepository
 
-	delay          time.Duration
-	ctx            context.Context
-	cache          *cache.TieredCacheBase
-	statusReporter StatusReporter
+	delay time.Duration
+	ctx   context.Context
+	cache *cache.TieredCacheBase
 }
 
-func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository, reporter StatusReporter) syncCommitteesExporter {
+func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) syncCommitteesExporter {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}
 
 	return syncCommitteesExporter{
-		client:         client,
-		db:             db,
-		delay:          time.Second * 12,
-		ctx:            ctx,
-		cache:          cache.TieredCache,
-		statusReporter: reporter,
+		client: client,
+		db:     db,
+		delay:  time.Second * 12,
+		ctx:    ctx,
+		cache:  cache.TieredCache,
 	}
 }
 
@@ -52,7 +50,7 @@ func (s syncCommitteesExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := s.statusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+			statusReport := StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := s.exportSyncCommittees()
