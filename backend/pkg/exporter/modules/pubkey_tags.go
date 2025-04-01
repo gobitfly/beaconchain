@@ -1,52 +1,60 @@
 package modules
 
 import (
+	"context"
+	"fmt"
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
-	monitoringServices "github.com/gobitfly/beaconchain/pkg/monitoring/services"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
 
-func UpdatePubkeyTag() {
+type pubkeyTagsUpdater struct {
+	db    db2.ConsensusRepository
+	delay time.Duration
+	ctx   context.Context
+}
+
+func newPubkeyTagsUpdater(ctx context.Context, db db2.ConsensusRepository) pubkeyTagsUpdater {
+	return pubkeyTagsUpdater{
+		db:    db,
+		delay: time.Minute * 10,
+		ctx:   ctx,
+	}
+}
+
+func (p *pubkeyTagsUpdater) Update() {
 	log.Infof("Started Pubkey Tags Updater")
-	delay := time.Minute * 10
 	for {
-		start := time.Now()
-		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, utils.Config.DeploymentType, delay, time.Second*12)
-		r(constants.Running, nil)
-		tx, err := db.WriterDb.Beginx()
-		if err != nil {
-			log.Error(err, "Error connecting to DB", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
-			// return err
-		}
-		_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
-		SELECT publickey, FORMAT('pool:%s', sps.name) tag
-		FROM eth1_deposits
-		inner join stake_pools_stats as sps on ENCODE(from_address::bytea, 'hex')=sps.address
-		WHERE sps.name NOT LIKE '%Rocketpool -%'
-		ON CONFLICT (publickey, tag) DO NOTHING;`)
-		if err != nil {
-			log.Error(err, "error updating validator_tags", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
-			// return err
-		}
+		select {
+		case <-p.ctx.Done():
+			log.Info("update loop cancelled")
+			return
+		default:
+			startTime := time.Now()
+			statusReport := services.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, utils.Config.DeploymentType, p.delay, time.Second*12)
+			statusReport(constants.Running, nil)
 
-		err = tx.Commit()
-		if err != nil {
-			log.Error(err, "error committing transaction", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			err := p.db.UpdatePubkeyTags()
+			if err != nil {
+				log.Error(err, "error updating validator_tags", 0)
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+			}
+
+			log.Infof("Updating Pubkey Tags took %v sec.", time.Since(startTime).Seconds())
+
+			statusReport(constants.Success, map[string]string{
+				"took":     time.Since(startTime).String(),
+				"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
+			})
+
+			metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(startTime).Seconds())
+
+			time.Sleep(p.delay)
 		}
-		_ = tx.Rollback()
-
-		log.Infof("Updating Pubkey Tags took %v sec.", time.Since(start).Seconds())
-		r(constants.Success, map[string]string{"took": time.Since(start).String(), "took_raw": time.Since(start).String()})
-		metrics.TaskDuration.WithLabelValues("validator_pubkey_tag_updater").Observe(time.Since(start).Seconds())
-
-		time.Sleep(delay)
 	}
 }

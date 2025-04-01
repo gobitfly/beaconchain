@@ -34,6 +34,7 @@ type ConsensusRepository interface {
 	GetLatestFinalizedEpoch() (uint64, error)
 	SaveSyncCommitteeData(data []types.SyncCommittee) error
 	GetSyncCommitteesPeriods() ([]uint64, error)
+	UpdatePubkeyTags() error
 }
 
 type ConsensusDB struct {
@@ -355,6 +356,27 @@ func (c *ConsensusDB) SaveSyncCommitteeData(data []types.SyncCommittee) error {
 			VALUES %s ON CONFLICT (period, validatorindex, committeeindex) DO NOTHING`,
 			strings.Join(ids, ",")),
 		queryArgs...)
+
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (c *ConsensusDB) UpdatePubkeyTags() error {
+	tx, err := c.WriterDb.Beginx()
+	if err != nil {
+		return err
+	}
+	defer utils.Rollback(tx)
+
+	_, err = tx.Exec(`INSERT INTO validator_tags (publickey, tag)
+		SELECT publickey, FORMAT('pool:%s', sps.name) tag
+		FROM eth1_deposits
+		inner join stake_pools_stats as sps on ENCODE(from_address::bytea, 'hex')=sps.address
+		WHERE sps.name NOT LIKE '%Rocketpool -%'
+		ON CONFLICT (publickey, tag) DO NOTHING`)
 
 	if err != nil {
 		return err
