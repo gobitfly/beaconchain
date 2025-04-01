@@ -478,6 +478,24 @@ func (_m *ConsensusRepository) UpdateBlockDepositsSignature() error {
 	return r0
 }
 
+// UpdatePubkeyTags provides a mock function with no fields
+func (_m *ConsensusRepository) UpdatePubkeyTags() error {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdatePubkeyTags")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func() error); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // UpdateRelay provides a mock function with given fields: tagID, endpoint
 func (_m *ConsensusRepository) UpdateRelay(tagID string, endpoint string) error {
 	ret := _m.Called(tagID, endpoint)
