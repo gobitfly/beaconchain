@@ -6,6 +6,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	monitoringServices "github.com/gobitfly/beaconchain/pkg/monitoring/services"
 )
@@ -15,7 +16,7 @@ func UpdatePubkeyTag() {
 	delay := time.Minute * 10
 	for {
 		start := time.Now()
-		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, delay, time.Second*12)
+		r := monitoringServices.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, utils.Config.DeploymentType, delay, time.Second*12)
 		r(constants.Running, nil)
 		tx, err := db.WriterDb.Beginx()
 		if err != nil {
