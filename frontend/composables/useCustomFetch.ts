@@ -77,9 +77,9 @@ export function useCustomFetch() {
     }
 
     options.query = {
+      is_mocked: runtimeConfig.public.isApiMocked ? true : undefined,
       ...options.query,
       ...query,
-      is_mocked: runtimeConfig.public.isApiMocked ? true : undefined,
     }
     options.credentials = 'include'
     const method = options.method || map.method || 'GET'
