@@ -311,13 +311,21 @@ type Paging struct {
 }
 
 func (v *validationError) checkPagingParams(q url.Values) Paging {
+	return v.checkPagingMap(map[string]string{
+		"cursor": q.Get("cursor"),
+		"limit":  q.Get("limit"),
+		"search": q.Get("search"),
+	})
+}
+
+func (v *validationError) checkPagingMap(params map[string]string) Paging {
 	paging := Paging{
-		cursor: q.Get("cursor"),
+		cursor: params["cursor"],
 		limit:  defaultReturnLimit,
-		search: q.Get("search"),
+		search: params["search"],
 	}
 
-	if limitStr := q.Get("limit"); limitStr != "" {
+	if limitStr := params["limit"]; limitStr != "" {
 		paging.limit = v.checkUintMinMax(limitStr, 1, maxQueryLimit, "limit")
 	}
 
