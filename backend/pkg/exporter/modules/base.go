@@ -59,7 +59,6 @@ var EventPoolLimit = 16
 
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) error {
-	services.InitStatusReport()
 	if !justV2 {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)

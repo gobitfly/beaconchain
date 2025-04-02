@@ -5,10 +5,8 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc/mocks"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	consmocks "github.com/gobitfly/beaconchain/pkg/consapi/mocks"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
-
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -16,10 +14,6 @@ func TestStartAll(t *testing.T) {
 	mockChainHeadResponse := &types.ChainHead{
 		HeadEpoch:      12345678,
 		FinalizedEpoch: 12345678,
-	}
-
-	utils.Config = &types.Config{
-		DeploymentType: "development",
 	}
 
 	t.Run("valid data export start", func(t *testing.T) {
