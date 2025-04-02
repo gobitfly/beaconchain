@@ -360,10 +360,6 @@ func (h *HandlerService) InternalDeleteValidatorDashboardGroupValidators(w http.
 	h.PublicDeleteValidatorDashboardGroupValidators(w, r)
 }
 
-func (h *HandlerService) InternalPostValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
-	h.PublicPostValidatorDashboardValidators(w, r)
-}
-
 func (h *HandlerService) InternalDeleteValidatorDashboardValidators(w http.ResponseWriter, r *http.Request) {
 	h.PublicDeleteValidatorDashboardValidators(w, r)
 }

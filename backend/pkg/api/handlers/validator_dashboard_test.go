@@ -2,26 +2,69 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"math/big"
+	"reflect"
+	"runtime"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
 // ------------------------------------------------------------
-
+type dataAccessor = dataaccess.DataAccessor
 type validatorDashboardDataAccessStub struct {
 	dataaccess.DummyService
-	overridePremiumPerks *types.PremiumPerks
-	overrideGroupCount   *uint64
+	premiumPerks       *types.PremiumPerks
+	groupCount         *uint64
+	groupExists        *bool
+	existingValidators []types.VDBValidator
+	fails              map[string]error // map of function names to errors to return
+}
+
+// returns an error if the calling func should fail, with the specified error to return
+func (d *validatorDashboardDataAccessStub) callerErr() error {
+	// get the name of the calling function
+	pc, _, _, ok := runtime.Caller(1)
+	details := runtime.FuncForPC(pc)
+	if len(d.fails) == 0 || !ok || details == nil {
+		return nil
+	}
+	callerName := details.Name()
+	callerName = callerName[strings.LastIndex(callerName, ".")+1:] // name without package prefix
+	if failingErr, ok := d.fails[callerName]; ok {
+		return failingErr
+	}
+	return nil
+}
+
+// option to set a function to fail with a specific error, e.g. withFailing(dataAccessor.GetUserInfo, errNotFound)
+func withFailing(failingFunc interface{}, err error) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		if d.fails == nil {
+			d.fails = make(map[string]error)
+		}
+		funcName := runtime.FuncForPC(reflect.ValueOf(failingFunc).Pointer()).Name()
+		funcName = funcName[strings.LastIndex(funcName, ".")+1:] // name without package prefix
+		d.fails[funcName] = err
+	}
 }
 
 func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id uint64) (*types.UserInfo, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
 	premiumPerks := types.PremiumPerks{
-		ValidatorGroupsPerDashboard: 1,
+		EffectiveBalancePerDashboard: decimal.RequireFromString("100"),
+		ValidatorGroupsPerDashboard:  1,
 		ChartHistorySeconds: types.ChartHistorySeconds{
 			Epoch:  100,
 			Daily:  1000,
@@ -30,8 +73,8 @@ func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id u
 		},
 	}
 
-	if d.overridePremiumPerks != nil {
-		premiumPerks = *d.overridePremiumPerks
+	if d.premiumPerks != nil {
+		premiumPerks = *d.premiumPerks
 	}
 
 	return &types.UserInfo{
@@ -39,31 +82,139 @@ func (d *validatorDashboardDataAccessStub) GetUserInfo(ctx context.Context, id u
 	}, nil
 }
 
+func withUserPremiumPerks(perks types.PremiumPerks) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.premiumPerks = &perks
+	}
+}
+
+func (d *validatorDashboardDataAccessStub) GetFreeTierPerks(ctx context.Context) (*types.PremiumPerks, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return &types.PremiumPerks{
+		AdFree: false, // do not remove, used for testing
+	}, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardUser(ctx context.Context, id types.VDBIdPrimary) (*types.DashboardUser, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return &types.DashboardUser{
+		Id:     id,
+		UserId: uint64(id),
+	}, nil
+}
+
+func withGroupCount(count uint64) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.groupCount = &count
+	}
+}
 func (d *validatorDashboardDataAccessStub) GetValidatorDashboardGroupCount(ctx context.Context, dashboardId types.VDBIdPrimary) (uint64, error) {
+	if err := d.callerErr(); err != nil {
+		return 0, err
+	}
 	var count uint64
-	if d.overrideGroupCount != nil {
-		count = *d.overrideGroupCount
+	if d.groupCount != nil {
+		count = *d.groupCount
 	}
 	return count, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsFromSlices(ctx context.Context, indices []uint64, publicKeys []string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return indices, nil
+}
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsByDepositAddress(ctx context.Context, depositAddress string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+
+	return utils.Uint64Range(0, 9), nil
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorsByWithdrawalCredentials(ctx context.Context, withdrawalCredentials string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return utils.Uint64Range(0, 9), nil
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorsByGraffiti(ctx context.Context, graffiti string) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	return utils.Uint64Range(0, 9), nil
 }
 
 func (*validatorDashboardDataAccessStub) GetLatestExportedChartTs(ctx context.Context, aggregation enums.ChartAggregation) (uint64, error) {
 	return 1000000000, nil // 2001-09-09 01:46:40
 }
 
-type stubOption func(*validatorDashboardDataAccessStub)
+func withGroupExists(exists bool) vdbStubOption {
+	return func(d *validatorDashboardDataAccessStub) {
+		d.groupExists = &exists
+	}
+}
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardGroupExists(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64) (bool, error) {
+	if err := d.callerErr(); err != nil {
+		return false, err
+	}
+	if d.groupExists != nil {
+		return *d.groupExists, nil
+	}
+	return true, nil
+}
 
-func withPremiumPerks(perks types.PremiumPerks) stubOption {
+func withExistingValidators(validators []types.VDBValidator) vdbStubOption {
 	return func(d *validatorDashboardDataAccessStub) {
-		d.overridePremiumPerks = &perks
+		d.existingValidators = validators
 	}
 }
-func withGroupCount(count uint64) stubOption {
-	return func(d *validatorDashboardDataAccessStub) {
-		d.overrideGroupCount = &count
+func (d *validatorDashboardDataAccessStub) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId types.VDBIdPrimary, validators []types.VDBValidator) ([]types.VDBValidator, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
 	}
+	if validators == nil {
+		return d.existingValidators, nil
+	}
+	return slices.DeleteFunc(validators, func(validator types.VDBValidator) bool {
+		return !slices.Contains(d.existingValidators, validator)
+	}), nil
 }
-func validatorDashboardTestSetup(options ...stubOption) (context.Context, *HandlerService) {
+
+func (d *validatorDashboardDataAccessStub) GetValidatorsEffectiveBalances(ctx context.Context, validators []types.VDBValidator, onlyActive bool) (map[types.VDBValidator]uint64, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	// return map of all validators with 1 ETH effective balance
+	response := make(map[types.VDBValidator]uint64, len(validators))
+	for _, validator := range validators {
+		response[validator] = 1
+	}
+	return response, nil
+}
+
+func (d *validatorDashboardDataAccessStub) AddValidatorDashboardValidators(ctx context.Context, dashboardId types.VDBIdPrimary, groupId uint64, validators []types.VDBValidator) ([]types.VDBPostValidatorsData, error) {
+	if err := d.callerErr(); err != nil {
+		return nil, err
+	}
+	response := make([]types.VDBPostValidatorsData, len(validators))
+	for i, validator := range validators {
+		response[i] = types.VDBPostValidatorsData{
+			Index:   validator,
+			GroupId: groupId,
+		}
+	}
+	return response, nil
+}
+
+type vdbStubOption = func(*validatorDashboardDataAccessStub)
+
+func validatorDashboardTestSetup(options ...vdbStubOption) (context.Context, *HandlerService) {
 	d := &validatorDashboardDataAccessStub{}
 	for _, option := range options {
 		option(d)
@@ -72,168 +223,112 @@ func validatorDashboardTestSetup(options ...stubOption) (context.Context, *Handl
 }
 
 // ------------------------------------------------------------
-// POST /validator-dashboards/{dashboard_id}/groups
+// helper functions
 
-func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
-	params := make(map[string]string)
-	t.Run("success", func(t *testing.T) {
-		var i inputPostValidatorDashboardGroups
-		params["dashboard_id"] = "1"
-		body := stringAsBody(`{"name":"test"}`)
-		err := i.Validate(params, body)
-		assert.NoError(t, err)
-		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
-		assert.Equal(t, "test", i.name)
-	})
-	t.Run("empty name", func(t *testing.T) {
-		var i inputPostValidatorDashboardGroups
-		params["dashboard_id"] = "1"
-		body := stringAsBody(`{"name":""}`)
-		err := i.Validate(params, body)
-		assert.Error(t, err)
-	})
-}
-func TestPostValidatorDashboardGroups(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		ctx, h := validatorDashboardTestSetup()
-		input := inputPostValidatorDashboardGroups{
-			dashboardId: 0,
-			name:        "test",
+func TestGetDashboardPremiumPerks(t *testing.T) {
+	t.Run("guest dashboard returns free tier", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(types.PremiumPerks{
+			AdFree: true, // should not be returned by free tier
+		}))
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
 		}
-		_, err := h.PostValidatorDashboardGroups(ctx, input)
+		// validator set should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
 		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
 	})
-	t.Run("group count reached", func(t *testing.T) {
-		ctx, h := validatorDashboardTestSetup(withGroupCount(1))
-		input := inputPostValidatorDashboardGroups{
-			dashboardId: 0,
-			name:        "test",
-		}
-		_, err := h.PostValidatorDashboardGroups(ctx, input)
-		assert.Error(t, err)
-		assert.ErrorIs(t, err, errConflict)
-	})
-}
 
-// ------------------------------------------------------------
-// GET /validator-dashboards/{dashboard_id}/groups/{group_id}/summary
+	t.Run("normal id returns perks", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(types.PremiumPerks{
+			AdFree: true,
+		}))
+		id := types.VDBId{
+			Id: 1,
+		}
+		// normal id should return ad free perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.True(t, perks.AdFree)
+	})
 
-func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		var i inputGetValidatorDashboardGroupSummary
-		params := map[string]string{
-			"dashboard_id": "1",
-			"group_id":     "1",
-			"period":       "all_time",
+	t.Run("non existent user returns free tier", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetUserInfo, dataaccess.ErrNotFound))
+		id := types.VDBId{
+			Id: 1,
 		}
-		err := i.Validate(params, nil)
+		// non existing user id should return free tier perks
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
 		assert.NoError(t, err)
-		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardIdParam)
-		assert.Equal(t, int64(1), i.groupId)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
 	})
-	t.Run("empty dashboard_id", func(t *testing.T) {
-		var i inputGetValidatorDashboardGroupSummary
-		params := map[string]string{
-			"dashboard_id": "",
-			"group_id":     "1",
-			"period":       "all_time",
-		}
-		err := i.Validate(params, nil)
-		assert.Error(t, err)
-	})
-	t.Run("empty group_id", func(t *testing.T) {
-		var i inputGetValidatorDashboardGroupSummary
-		params := map[string]string{
-			"dashboard_id": "1",
-			"group_id":     "",
-			"period":       "all_time",
-		}
-		err := i.Validate(params, nil)
-		assert.Error(t, err)
-	})
-	t.Run("empty period", func(t *testing.T) {
-		var i inputGetValidatorDashboardGroupSummary
-		params := map[string]string{
-			"dashboard_id": "1",
-			"group_id":     "1",
-			"period":       "",
-		}
-		err := i.Validate(params, nil)
-		assert.Error(t, err)
-	})
-}
 
-// ------------------------------------------------------------
-// GET /validator-dashboards/{dashboard_id}/summary-chart
+	t.Run("failing user info fetch returns error for normal id", func(t *testing.T) {
+		errToTrigger := errors.New("user info")
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetUserInfo, errToTrigger))
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
+	})
 
-func TestInputGetValidatorDashboardSummaryChartValidate(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "1",
+	t.Run("failing free tier fetch returns error for guest dashboard", func(t *testing.T) {
+		errToTrigger := errors.New("free tier perks")
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetFreeTierPerks, errToTrigger))
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
 		}
-		err := i.Validate(params, nil)
-		assert.NoError(t, err)
-		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
-		assert.Nil(t, i.afterTs)
-		assert.Nil(t, i.beforeTs)
-	})
-	t.Run("empty dashboard_id", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "",
-		}
-		err := i.Validate(params, nil)
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
 		assert.Error(t, err)
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
 	})
-	t.Run("only set after ts", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "1",
-			"after_ts":     "100",
+
+	t.Run("failing dashboard owner fetch returns error for non-guest dashboard", func(t *testing.T) {
+		errToTrigger := errors.New("dashboard owner")
+		ctx, h := validatorDashboardTestSetup(
+			withFailing(dataAccessor.GetValidatorDashboardUser, errToTrigger),
+		)
+		id := types.VDBId{
+			Id: 1,
 		}
-		err := i.Validate(params, nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, i.afterTs)
-		assert.Nil(t, i.beforeTs)
-		assert.Equal(t, uint64(100), *i.afterTs)
-	})
-	t.Run("only set before ts", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "1",
-			"before_ts":    "100",
-		}
-		err := i.Validate(params, nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, i.beforeTs)
-		assert.Nil(t, i.afterTs)
-		assert.Equal(t, uint64(100), *i.beforeTs)
-	})
-	t.Run("set both ts", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "1",
-			"after_ts":     "100",
-			"before_ts":    "200",
-		}
-		err := i.Validate(params, nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, i.afterTs)
-		assert.NotNil(t, i.beforeTs)
-		assert.Equal(t, uint64(100), *i.afterTs)
-		assert.Equal(t, uint64(200), *i.beforeTs)
-	})
-	t.Run("after ts >= before ts", func(t *testing.T) {
-		var i inputGetValidatorDashboardSummaryChart
-		params := map[string]string{
-			"dashboard_id": "1",
-			"after_ts":     "100",
-			"before_ts":    "100",
-		}
-		err := i.Validate(params, nil)
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "after_ts must be less than before_ts")
+		assert.Nil(t, perks)
+		assert.ErrorIs(t, err, errToTrigger)
+	})
+
+	t.Run("failing user info and failing dashboard owner fetch returns no error for guest dashboard", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(
+			withFailing(dataAccessor.GetUserInfo, errInternalServer),
+			withFailing(dataAccessor.GetValidatorDashboardUser, errInternalServer),
+		)
+		validators := types.VDBIdValidatorSet{1, 2, 3}
+		id := types.VDBId{
+			Validators: validators,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
+		assert.False(t, perks.AdFree)
+	})
+
+	t.Run("failing free tier fetch returns no error for non-guest dashboard", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withFailing(dataAccessor.GetFreeTierPerks, errInternalServer))
+		id := types.VDBId{
+			Id: 1,
+		}
+		perks, err := h.getDashboardPremiumPerks(ctx, id)
+		assert.NoError(t, err)
+		assert.NotNil(t, perks)
 	})
 }
 
@@ -393,13 +488,651 @@ func TestResolveAndValidateTimestamps_Failure(t *testing.T) {
 	}
 }
 
+// ------------------------------------------------------------
+// POST /validator-dashboards/{dashboard_id}/groups
+
+func TestInputPostValidatorDashboardGroupsValidate(t *testing.T) {
+	params := make(map[string]string)
+	t.Run("success", func(t *testing.T) {
+		var i inputPostValidatorDashboardGroups
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`{"name":"test"}`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, "test", i.name)
+	})
+	t.Run("empty name", func(t *testing.T) {
+		var i inputPostValidatorDashboardGroups
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`{"name":""}`)
+		err := i.Validate(params, body)
+		assert.Error(t, err)
+	})
+}
+func TestPostValidatorDashboardGroups(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup()
+		input := inputPostValidatorDashboardGroups{
+			dashboardId: 0,
+			name:        "test",
+		}
+		_, err := h.PostValidatorDashboardGroups(ctx, input)
+		assert.NoError(t, err)
+	})
+	t.Run("group count reached", func(t *testing.T) {
+		ctx, h := validatorDashboardTestSetup(withGroupCount(1))
+		input := inputPostValidatorDashboardGroups{
+			dashboardId: 0,
+			name:        "test",
+		}
+		_, err := h.PostValidatorDashboardGroups(ctx, input)
+		assert.Error(t, err)
+		assert.ErrorIs(t, err, errConflict)
+	})
+}
+
+// ------------------------------------------------------------
+// POST /validator-dashboards/{dashboard_id}/validators
+
+func TestInputPostValidatorDashboardValidatorsValidate(t *testing.T) {
+	params := make(map[string]string)
+	t.Run("success", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"validators":[1,2,"0x8ef6fe20ac0edc364351ed75dd272e127f3d561452bc86fc589e3af893f930cf2e18bc89feba7603e5437380911f90b5"]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.NotNil(t, i.validators)
+		assert.Equal(t, []types.VDBValidator{1, 2}, i.validators.indices)
+		assert.Equal(t, []string{"0x8ef6fe20ac0edc364351ed75dd272e127f3d561452bc86fc589e3af893f930cf2e18bc89feba7603e5437380911f90b5"}, i.validators.publicKeys)
+	})
+	t.Run("empty group_id defaults to default group id", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":[1,2]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, uint64(types.DefaultGroupId), i.groupId)
+	})
+	t.Run("index as string succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":["1","2"]
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, []types.VDBValidator{1, 2}, i.validators.indices)
+	})
+	t.Run("set deposit address succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"deposit_address":"0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F", i.depositAddress)
+	})
+	t.Run("set withdrawal credential succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"withdrawal_credential":"0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273", i.withdrawalCredential)
+	})
+	t.Run("set graffiti succeeds", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+				"graffiti":"hello world"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Equal(t, uint64(1), i.groupId)
+		assert.Nil(t, i.validators)
+		assert.Equal(t, "hello world", i.graffiti)
+	})
+	t.Run("set nothing is invalid", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"group_id":1,
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.ErrorContains(t, err, "exactly one")
+	})
+	t.Run("set more than 1 value is invalid", func(t *testing.T) {
+		var i inputPostValidatorDashboardValidators
+		params["dashboard_id"] = "1"
+		body := stringAsBody(`
+			{
+				"validators":[1,2],
+				"deposit_address":"0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F"
+			}
+		`)
+		err := i.Validate(params, body)
+		assert.ErrorContains(t, err, "exactly one")
+	})
+}
+
+func TestPostValidatorDashboardValidators_Success(t *testing.T) {
+	errTest := errors.New("this function should not be called")
+	testCases := []struct {
+		name     string
+		input    inputPostValidatorDashboardValidators
+		options  []vdbStubOption
+		expected types.PostValidatorDashboardValidatorsResponse
+	}{
+		{
+			name: "add validators by indices",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			options: []vdbStubOption{
+				withExistingValidators([]types.VDBValidator{}),
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				Data: []types.VDBPostValidatorsData{
+					{Index: 1, GroupId: types.DefaultGroupId},
+					{Index: 2, GroupId: types.DefaultGroupId},
+				},
+			},
+		},
+		{
+			name: "add validators by indices with existing",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			options: []vdbStubOption{
+				withExistingValidators([]types.VDBValidator{1}),
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				Data: []types.VDBPostValidatorsData{
+					{Index: 1, GroupId: types.DefaultGroupId},
+					{Index: 2, GroupId: types.DefaultGroupId},
+				},
+			},
+		},
+		{
+			name: "add validators by deposit",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+		{
+			name: "add validators by withdrawal",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByGraffiti, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+		{
+			name: "add validators by graffiti",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "abc",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(10)),
+					BulkAdding:                   true,
+				}),
+				// these should not be called
+				withFailing(dataAccessor.GetValidatorsFromSlices, errTest),
+				withFailing(dataAccessor.GetValidatorsByDepositAddress, errTest),
+				withFailing(dataAccessor.GetValidatorsByWithdrawalCredentials, errTest),
+			},
+			expected: types.PostValidatorDashboardValidatorsResponse{
+				// expects 10 validators with indices 0-9
+				Data: slices.Collect(utils.IterMap(slices.Values(utils.Uint64Range(0, 9)), func(i uint64) types.VDBPostValidatorsData {
+					return types.VDBPostValidatorsData{Index: i, GroupId: types.DefaultGroupId}
+				})),
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(tt.options...)
+			response, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, response)
+		})
+	}
+}
+
+func TestPostValidatorDashboardValidators_Failure_BusinessLogic(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       inputPostValidatorDashboardValidators
+		options     []vdbStubOption
+		expectedErr error
+	}{
+		{
+			name: "group does not exist",
+			options: []vdbStubOption{
+				withGroupExists(false),
+			},
+			expectedErr: dataaccess.ErrNotFound,
+		},
+		{
+			name: "setting deposit address with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "setting withdrawal credential with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "setting graffiti with no bulk adding",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "hello world",
+			},
+			options: []vdbStubOption{
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: false,
+				}),
+			},
+			expectedErr: errForbidden,
+		},
+		{
+			name: "adding more validators than allowed with indices",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   false,
+				}),
+				withExistingValidators(utils.Uint64Range(1, 101)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{0}, // adding validator index 0
+				},
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with indices and existing validators",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 2 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(2)), // 2 validators allowed
+					BulkAdding:                   false,
+				}),
+				withExistingValidators(utils.Uint64Range(0, 1)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{0, 1, 2}, // adding validator index 2 with existing validators 0, 1
+				},
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with deposit",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with deposit",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+		{
+			name: "adding more validators than allowed with graffiti",
+			options: []vdbStubOption{
+				// each validator has an effective balance of 1, so 100 validators are allowed and already exist
+				withUserPremiumPerks(types.PremiumPerks{
+					EffectiveBalancePerDashboard: utils.EtherToGwei(big.NewInt(100)), // 100 validators allowed
+					BulkAdding:                   true,
+				}),
+				withExistingValidators(utils.Uint64Range(10, 109)),
+			},
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "abc", // resolves to validators 0-9 in mock
+			},
+			expectedErr: errConflict,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(tt.options...)
+			_, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
+
+// checks error branches of the PostValidatorDashboardValidators function
+func TestPostValidatorDashboardValidators_Failure_DataAccess(t *testing.T) {
+	testCases := []struct {
+		name        string
+		input       inputPostValidatorDashboardValidators
+		failingFunc any
+		err         error
+	}{
+		{
+			name:        "GetValidatorDashboardGroupExists",
+			failingFunc: dataAccessor.GetValidatorDashboardGroupExists,
+			err:         errors.New("group exists"),
+		},
+		{
+			name:        "GetUserInfo",
+			failingFunc: dataAccessor.GetUserInfo,
+			err:         errors.New("user info"),
+		},
+		{
+			name:        "GetValidatorDashboardValidatorsOfList",
+			failingFunc: dataAccessor.GetValidatorDashboardValidatorsOfList,
+			err:         errors.New("validators of list"),
+		},
+		{
+			name:        "GetValidatorsEffectiveBalances",
+			failingFunc: dataAccessor.GetValidatorsEffectiveBalances,
+			err:         errors.New("effective balances"),
+		},
+		{
+			name:        "AddValidatorDashboardValidators",
+			failingFunc: dataAccessor.AddValidatorDashboardValidators,
+			err:         errors.New("add validators"),
+		},
+		{
+			name: "GetValidatorsFromSlices",
+			input: inputPostValidatorDashboardValidators{
+				validators: &validatorsParam{
+					indices: []types.VDBValidator{1, 2},
+				},
+			},
+			failingFunc: dataAccessor.GetValidatorsFromSlices,
+			err:         errors.New("get validators from slices"),
+		},
+		{
+			name: "GetValidatorsByDepositAddress",
+			input: inputPostValidatorDashboardValidators{
+				depositAddress: "0x12582A27E5e19492b4FcD194a60F8f5e1aa31B0F",
+			},
+			failingFunc: dataAccessor.GetValidatorsByDepositAddress,
+			err:         errors.New("get validators by deposit address"),
+		},
+		{
+			name: "GetValidatorsByWithdrawalCredentials",
+			input: inputPostValidatorDashboardValidators{
+				withdrawalCredential: "0x0023b31ef98a37d86bdce59f64a97231cf1ed39c06412e34db0ccf0435a78273",
+			},
+			failingFunc: dataAccessor.GetValidatorsByWithdrawalCredentials,
+			err:         errors.New("get validators by withdrawal credentials"),
+		},
+		{
+			name: "GetValidatorsByGraffiti",
+			input: inputPostValidatorDashboardValidators{
+				graffiti: "hello world",
+			},
+			failingFunc: dataAccessor.GetValidatorsByGraffiti,
+			err:         errors.New("get validators by graffiti"),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, h := validatorDashboardTestSetup(
+				withFailing(tt.failingFunc, tt.err),
+				withUserPremiumPerks(types.PremiumPerks{
+					BulkAdding: true, // needed to not fail on bulk adding check
+				}),
+			)
+			_, err := h.PostValidatorDashboardValidators(ctx, tt.input)
+			assert.Error(t, err)
+			assert.ErrorIs(t, err, tt.err)
+		})
+	}
+}
+
+// ------------------------------------------------------------
+// GET /validator-dashboards/{dashboard_id}/groups/{group_id}/summary
+
+func TestInputGetValidatorDashboardGroupSummaryValidate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
+		params := map[string]string{
+			"dashboard_id": "1",
+			"group_id":     "1",
+			"period":       "all_time",
+		}
+		err := i.Validate(params, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardIdParam)
+		assert.Equal(t, int64(1), i.groupId)
+	})
+	t.Run("empty dashboard_id", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
+		params := map[string]string{
+			"dashboard_id": "",
+			"group_id":     "1",
+			"period":       "all_time",
+		}
+		err := i.Validate(params, nil)
+		assert.Error(t, err)
+	})
+	t.Run("empty group_id", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
+		params := map[string]string{
+			"dashboard_id": "1",
+			"group_id":     "",
+			"period":       "all_time",
+		}
+		err := i.Validate(params, nil)
+		assert.Error(t, err)
+	})
+	t.Run("empty period", func(t *testing.T) {
+		var i inputGetValidatorDashboardGroupSummary
+		params := map[string]string{
+			"dashboard_id": "1",
+			"group_id":     "1",
+			"period":       "",
+		}
+		err := i.Validate(params, nil)
+		assert.Error(t, err)
+	})
+}
+
+// ------------------------------------------------------------
+// GET /validator-dashboards/{dashboard_id}/summary-chart
+
+func TestInputGetValidatorDashboardSummaryChartValidate(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "1",
+		}
+		err := i.Validate(params, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, types.VDBIdPrimary(1), i.dashboardId)
+		assert.Nil(t, i.afterTs)
+		assert.Nil(t, i.beforeTs)
+	})
+	t.Run("empty dashboard_id", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "",
+		}
+		err := i.Validate(params, nil)
+		assert.Error(t, err)
+	})
+	t.Run("only set after ts", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "1",
+			"after_ts":     "100",
+		}
+		err := i.Validate(params, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, i.afterTs)
+		assert.Nil(t, i.beforeTs)
+		assert.Equal(t, uint64(100), *i.afterTs)
+	})
+	t.Run("only set before ts", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "1",
+			"before_ts":    "100",
+		}
+		err := i.Validate(params, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, i.beforeTs)
+		assert.Nil(t, i.afterTs)
+		assert.Equal(t, uint64(100), *i.beforeTs)
+	})
+	t.Run("set both ts", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "1",
+			"after_ts":     "100",
+			"before_ts":    "200",
+		}
+		err := i.Validate(params, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, i.afterTs)
+		assert.NotNil(t, i.beforeTs)
+		assert.Equal(t, uint64(100), *i.afterTs)
+		assert.Equal(t, uint64(200), *i.beforeTs)
+	})
+	t.Run("after ts >= before ts", func(t *testing.T) {
+		var i inputGetValidatorDashboardSummaryChart
+		params := map[string]string{
+			"dashboard_id": "1",
+			"after_ts":     "100",
+			"before_ts":    "100",
+		}
+		err := i.Validate(params, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "after_ts must be less than before_ts")
+	})
+}
 func TestGetValidatorDashboardSummaryChart_Success(t *testing.T) {
 	perks := types.PremiumPerks{
 		ChartHistorySeconds: types.ChartHistorySeconds{
 			Epoch: 100,
 		},
 	}
-	ctx, h := validatorDashboardTestSetup(withPremiumPerks(perks))
+	ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(perks))
 	input := inputGetValidatorDashboardSummaryChart{
 		dashboardId: types.VDBIdPrimary(1),
 		aggregation: enums.ChartAggregations.Epoch,
@@ -449,7 +1182,7 @@ func TestGetValidatorDashboardSummaryChart_Failure(t *testing.T) {
 			perks := types.PremiumPerks{
 				ChartHistorySeconds: tt.chartSeconds,
 			}
-			ctx, h := validatorDashboardTestSetup(withPremiumPerks(perks))
+			ctx, h := validatorDashboardTestSetup(withUserPremiumPerks(perks))
 			input := inputGetValidatorDashboardSummaryChart{
 				dashboardId: types.VDBIdPrimary(1),
 				aggregation: tt.aggregation,

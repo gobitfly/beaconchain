@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"math"
 	"math/big"
 	"os"
@@ -256,11 +257,31 @@ func ConstantTimeDelay(start time.Time, intendedMinWait time.Duration) {
 }
 
 func SliceToMap[T comparable](s []T) map[T]struct{} {
-	m := make(map[T]struct{})
+	m := make(map[T]struct{}, len(s))
 	for _, v := range s {
 		m[v] = struct{}{}
 	}
 	return m
+}
+
+// IterMap applies a function to each element of a sequence and returns a new sequence of the results
+func IterMap[Input any, Output any](seq iter.Seq[Input], mappingFunc func(Input) Output) iter.Seq[Output] {
+	return func(yield func(Output) bool) {
+		for value := range seq {
+			if !yield(mappingFunc(value)) {
+				return
+			}
+		}
+	}
+}
+
+// Uint64Range returns a slice of uint64 from start to end
+func Uint64Range(start, end uint64) []uint64 {
+	result := make([]uint64, end-start+1)
+	for i := start; i <= end; i++ {
+		result[i-start] = i
+	}
+	return result
 }
 
 func CursorToString[T t.CursorLike](cursor T) (string, error) {

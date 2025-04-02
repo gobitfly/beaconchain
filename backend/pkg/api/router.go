@@ -293,7 +293,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodPut, "/{dashboard_id}/groups/{group_id}", hs.PublicPutValidatorDashboardGroups, hs.InternalPutValidatorDashboardGroups},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}", hs.PublicDeleteValidatorDashboardGroup, hs.InternalDeleteValidatorDashboardGroup},
 		{http.MethodDelete, "/{dashboard_id}/groups/{group_id}/validators", hs.PublicDeleteValidatorDashboardGroupValidators, hs.InternalDeleteValidatorDashboardGroupValidators},
-		{http.MethodPost, "/{dashboard_id}/validators", hs.PublicPostValidatorDashboardValidators, hs.InternalPostValidatorDashboardValidators},
+		{http.MethodPost, "/{dashboard_id}/validators", handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardValidators, allowMocking), handlers.Handle(http.StatusCreated, hs.PostValidatorDashboardValidators, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/validators", hs.PublicGetValidatorDashboardValidators, hs.InternalGetValidatorDashboardValidators},
 		{http.MethodDelete, "/{dashboard_id}/validators", hs.PublicDeleteValidatorDashboardValidators, hs.InternalDeleteValidatorDashboardValidators},
 		{http.MethodPost, "/{dashboard_id}/validators/bulk-deletions", hs.PublicPostValidatorDashboardValidatorBulkDeletions, hs.InternalPostValidatorDashboardValidatorBulkDeletions},

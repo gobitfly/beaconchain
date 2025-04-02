@@ -88,9 +88,9 @@ type searchType struct {
 func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Request) {
 	var v validationError
 	req := struct {
-		Input    string          `json:"input"`
-		Networks []intOrString   `json:"networks,omitempty"`
-		Types    []searchTypeKey `json:"types,omitempty"`
+		Input    string              `json:"input"`
+		Networks []types.IntOrString `json:"networks,omitempty"`
+		Types    []searchTypeKey     `json:"types,omitempty"`
 	}{}
 	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)
@@ -301,7 +301,7 @@ func (h *HandlerService) handleSearchValidatorsByGraffitiHex(ctx context.Context
 //   Input Validation
 
 // if the passed slice is empty, return a set with all chain IDs; otherwise check if the passed networks are valid
-func (v *validationError) checkNetworkSlice(networks []intOrString) []uint64 {
+func (v *validationError) checkNetworkSlice(networks []types.IntOrString) []uint64 {
 	networkSet := map[uint64]struct{}{}
 	// if the list is empty, query all networks
 	if len(networks) == 0 {

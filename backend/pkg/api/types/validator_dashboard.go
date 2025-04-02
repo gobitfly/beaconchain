@@ -349,6 +349,7 @@ type GetValidatorDashboardValidatorsResponse ApiPagingResponse[VDBManageValidato
 
 // ------------------------------------------------------------
 // Misc.
+
 type VDBPostReturnData struct {
 	Id        uint64 `db:"id" json:"id"`
 	UserID    uint64 `db:"user_id" json:"user_id"`
@@ -362,19 +363,18 @@ type VDBPostCreateGroupData struct {
 	Name string `db:"name" json:"name"`
 }
 
-type VDBPostValidatorsData struct {
-	Index   uint64 `json:"index"`
-	GroupId uint64 `json:"group_id"`
-}
-
-// helper for frontend
 type PostValidatorDashboardValidatorsRequest struct {
 	GroupId              uint64        `json:"group_id,omitempty" x-nullable:"true"`
-	Validators           []interface{} `json:"validators,omitempty" tstype:"(number | string)[]"`
+	Validators           []IntOrString `json:"validators,omitempty" tstype:"(number | string)[]"`
 	DepositAddress       string        `json:"deposit_address,omitempty"`
 	WithdrawalCredential string        `json:"withdrawal_credential,omitempty"`
 	Graffiti             string        `json:"graffiti,omitempty"`
 }
+type VDBPostValidatorsData struct {
+	Index   uint64 `json:"index"`
+	GroupId uint64 `json:"group_id"`
+}
+type PostValidatorDashboardValidatorsResponse ApiDataResponse[[]VDBPostValidatorsData]
 
 type PostValidatorDashboardGroupsRequest struct {
 	Name string `json:"name"`

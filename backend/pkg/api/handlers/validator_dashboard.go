@@ -2,12 +2,48 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"time"
 
+	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
+
+// getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
+func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
+	// for guest dashboards, return free tier perks
+	if id.Validators != nil {
+		perk, err := h.daService.GetFreeTierPerks(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("error getting free tier perks: %w", err)
+		}
+		return perk, nil
+	}
+	// could be made into a single query if needed
+	dashboardUser, err := h.daService.GetValidatorDashboardUser(ctx, id.Id)
+	if err != nil {
+		return nil, fmt.Errorf("error getting dashboard owner: %w", err)
+	}
+	userInfo, err := h.daService.GetUserInfo(ctx, dashboardUser.UserId)
+	if err != nil {
+		if errors.Is(err, dataaccess.ErrNotFound) {
+			log.Warn("user not found for dashboard owner, returning free tier perks", log.Fields{"dashboard_id": id.Id, "user_id_of_dashboard": dashboardUser.UserId})
+			perk, err := h.daService.GetFreeTierPerks(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error getting free tier perks after user not found: %w", err)
+			}
+			return perk, nil
+		}
+		return nil, fmt.Errorf("error getting user info for dashboard owner: %w", err)
+	}
+
+	return &userInfo.PremiumPerks, nil
+}
 
 // PostValidatorDashboardGroups godoc
 //
@@ -62,6 +98,165 @@ func (h *HandlerService) PostValidatorDashboardGroups(ctx context.Context, input
 		return r, err
 	}
 	r.Data = *data
+	return r, nil
+}
+
+// PostValidatorDashboardValidators godoc
+//
+//	@Description	Add new validators to a specified dashboard or update the group of already-added validators. This endpoint will add all possible validators or return an error if the subscription plan limits are exceeded. The response will contain a list of added validators.
+//	@Security		ApiKeyInHeader || ApiKeyInQuery
+//	@Tags			Validator Dashboard Management
+//	@Accept			json
+//	@Produce		json
+//	@Param			dashboard_id	path		integer													true	"The ID of the dashboard."
+//	@Param			request			body		types.PostValidatorDashboardValidatorsRequest	true	"`group_id`: (optional) Provide a single group id, to which all validators get added to. If omitted, the default group will be used.<br><br>To add validators or update their group, only one of the following fields can be set:<ul><li>`validators`: Provide a list of validator indices or public keys.</li><li>`deposit_address`: (limited to subscription tiers with 'Bulk adding') Provide a deposit address from which all validators will be added to the dashboard, if possible.</li><li>`withdrawal_credential`: (limited to subscription tiers with 'Bulk adding') Provide a withdrawal credential from which all validators will be added to the dashboard, if possible.</li><li>`graffiti`: (limited to subscription tiers with 'Bulk adding') Provide a graffiti string from which all validators will be added to the dashboard, if possible.</li></ul>"
+//	@Success		201				{object}	types.PostValidatorDashboardValidatorsResponse	"Returns a list of added validators."
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/validators [post]
+func (i *inputPostValidatorDashboardValidators) Validate(params map[string]string, body io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkPrimaryDashboardId(params["dashboard_id"])
+	req := types.PostValidatorDashboardValidatorsRequest{
+		GroupId: types.DefaultGroupId, // default value
+	}
+	if err := v.checkBody(&req, body); err != nil {
+		return err
+	}
+	i.groupId = req.GroupId
+	// make sure exactly one of validators, deposit_address, withdrawal_credential, graffiti is set
+	var setCount int
+
+	if req.Validators != nil {
+		setCount++
+		i.validators = new(validatorsParam)
+		i.validators.indices, i.validators.publicKeys = v.checkValidators(req.Validators, forbidEmpty)
+	}
+	if req.DepositAddress != "" {
+		setCount++
+		i.depositAddress = v.checkRegex(reEthereumAddress, req.DepositAddress, "deposit_address")
+	}
+	if req.WithdrawalCredential != "" {
+		setCount++
+		i.withdrawalCredential = v.checkRegex(reWithdrawalCredential, req.WithdrawalCredential, "withdrawal_credential")
+	}
+	if req.Graffiti != "" {
+		setCount++
+		i.graffiti = v.checkRegex(reGraffiti, req.Graffiti, "graffiti")
+	}
+
+	if setCount != 1 {
+		v.add("body", "exactly one of `validators`, `deposit_address`, `withdrawal_credential`, `graffiti` must be set. Please check the API documentation for more information.")
+	}
+
+	return v.AsError()
+}
+
+type validatorsParam struct {
+	indices    []types.VDBValidator
+	publicKeys []string
+}
+type inputPostValidatorDashboardValidators struct {
+	dashboardId types.VDBIdPrimary
+	groupId     uint64
+	// only one of the following fields can be set
+	validators           *validatorsParam
+	depositAddress       string
+	withdrawalCredential string
+	graffiti             string
+}
+
+func (h *HandlerService) PostValidatorDashboardValidators(ctx context.Context, input inputPostValidatorDashboardValidators) (types.PostValidatorDashboardValidatorsResponse, error) {
+	var r types.PostValidatorDashboardValidatorsResponse
+
+	// check if group exists
+	groupExists, err := h.getDataAccessor(ctx).GetValidatorDashboardGroupExists(ctx, input.dashboardId, input.groupId)
+	if err != nil {
+		return r, fmt.Errorf("error checking group exists: %w", err)
+	}
+	if !groupExists {
+		return r, newNotFoundErr("group not found")
+	}
+
+	// check if user has bulk adding enabled
+	userId, err := GetUserIdByContext(ctx)
+	if err != nil {
+		return r, fmt.Errorf("error getting user id: %w", err)
+	}
+	userInfo, err := h.getDataAccessor(ctx).GetUserInfo(ctx, userId)
+	if err != nil {
+		return r, fmt.Errorf("error getting user info: %w", err)
+	}
+	if input.validators == nil && !userInfo.PremiumPerks.BulkAdding {
+		return r, newForbiddenErr("bulk adding is not available for current subscription plan")
+	}
+
+	// get requested validators
+	var requestedValidators []types.VDBValidator
+	switch {
+	case input.validators != nil:
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, input.validators.indices, input.validators.publicKeys)
+	case input.depositAddress != "":
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsByDepositAddress(ctx, input.depositAddress)
+	case input.withdrawalCredential != "":
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsByWithdrawalCredentials(ctx, input.withdrawalCredential)
+	case input.graffiti != "":
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsByGraffiti(ctx, input.graffiti)
+	}
+	if err != nil {
+		return r, fmt.Errorf("error getting requested validators: %w", err)
+	}
+
+	// get current EB space left for dashboard
+	limitEBWei := userInfo.PremiumPerks.EffectiveBalancePerDashboard
+	ebLimit := utils.GWeiToEther(limitEBWei.BigInt()).BigInt().Uint64()
+	allExistingValidators, err := h.getDataAccessor(ctx).GetValidatorDashboardValidatorsOfList(ctx, input.dashboardId, nil /* fetches all validators */)
+	if err != nil {
+		return r, fmt.Errorf("error getting existing validators: %w", err)
+	}
+	existingEBs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, allExistingValidators, false /* onlyActive */)
+	if err != nil {
+		return r, fmt.Errorf("error getting existing validators' EBs: %w", err)
+	}
+	var totalExistingEb uint64
+	for _, eb := range existingEBs {
+		totalExistingEb += eb
+	}
+	var ebSpaceLeft uint64
+	if ebLimit > totalExistingEb {
+		ebSpaceLeft = ebLimit - totalExistingEb
+	}
+
+	// get EB of new validators
+	newValidators := make([]types.VDBValidator, 0, len(requestedValidators))
+	for _, validator := range requestedValidators {
+		if _, ok := existingEBs[validator]; ok {
+			continue
+		}
+		newValidators = append(newValidators, validator)
+	}
+	requestedEbs, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, newValidators, false /* onlyActive */)
+	if err != nil {
+		return r, fmt.Errorf("error getting new validators' EBs: %w", err)
+	}
+
+	// determine if new validators exceed eb limit
+	var totalNewEb uint64
+	for _, validator := range newValidators {
+		eb, ok := requestedEbs[validator]
+		if !ok {
+			return r, fmt.Errorf("effective balance not found for validator %d", validator)
+		}
+		if totalNewEb += eb; totalNewEb > ebSpaceLeft {
+			return r, newConflictErr("validator addition exceeds dashboard's effective balance limit of current subscription plan")
+		}
+	}
+
+	// insert validators / update groups
+	insertedValidators, err := h.getDataAccessor(ctx).AddValidatorDashboardValidators(ctx, input.dashboardId, input.groupId, requestedValidators)
+	if err != nil {
+		return r, fmt.Errorf("error adding validators: %w", err)
+	}
+	r.Data = insertedValidators
 	return r, nil
 }
 
@@ -197,15 +392,16 @@ func resolveAndValidateTimestamps(
 }
 
 // Main handler using the simplified timestamp resolution.
-func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, input inputGetValidatorDashboardSummaryChart) (*types.GetValidatorDashboardSummaryChartResponse, error) {
+func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, input inputGetValidatorDashboardSummaryChart) (types.GetValidatorDashboardSummaryChartResponse, error) {
+	var r types.GetValidatorDashboardSummaryChartResponse
 	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
 	dashboardPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 	perkSeconds := dashboardPerks.ChartHistorySeconds
 	aggregations := enums.ChartAggregations
@@ -221,12 +417,12 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 		chartSeconds = perkSeconds.Weekly
 	}
 	if chartSeconds == 0 {
-		return nil, newForbiddenErr("requested aggregation is not available for dashboard owner's premium subscription")
+		return r, newForbiddenErr("requested aggregation is not available for dashboard owner's premium subscription")
 	}
 
 	latestExportedTs, err := h.getDataAccessor(ctx).GetLatestExportedChartTs(ctx, input.aggregation)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
 	afterTs, beforeTs, err := resolveAndValidateTimestamps(
@@ -237,15 +433,14 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 		latestExportedTs,
 	)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
 	data, err := h.getDataAccessor(ctx).GetValidatorDashboardSummaryChart(ctx, *dashboardId, input.groupIds, input.efficiencyType, input.aggregation, afterTs, beforeTs)
 	if err != nil {
-		return nil, err
+		return r, err
 	}
 
-	return &types.GetValidatorDashboardSummaryChartResponse{
-		Data: *data,
-	}, nil
+	r.Data = *data
+	return r, nil
 }
