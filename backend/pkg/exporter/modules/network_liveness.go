@@ -8,7 +8,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -29,7 +28,7 @@ type networkLivenessUpdater struct {
 	cache  *cache.TieredCacheBase
 }
 
-func newNetworkLivenessUpdater(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) networkLivenessUpdater {
+func newNetworkLivenessUpdater(ctx context.Context, client ConsClient, db db2.ConsensusRepository) networkLivenessUpdater {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}

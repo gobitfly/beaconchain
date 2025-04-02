@@ -169,7 +169,7 @@ func Run() {
 	var rpcClient *rpc.LighthouseClient
 	if requires.ClNode {
 		cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-		nodeImpl, ok := cl.(*consapi.NodeClient)
+		nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
 		if !ok {
 			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
 		}

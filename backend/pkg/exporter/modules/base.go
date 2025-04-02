@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
@@ -14,7 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
@@ -26,22 +27,33 @@ type ModuleInterface interface {
 	GetName() string // Used for logging
 	GetMonitoringEventId() constants.Event
 
-	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
+	OnHead(*constypes.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
-	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
+	OnFinalizedCheckpoint(*constypes.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
 
-	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
+	OnChainReorg(*constypes.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
+}
+
+type ConsClient interface {
+	GetChainHead() (*types.ChainHead, error)
+	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
+	GetEpochData(epoch uint64, skipHistoricBalances bool) (*types.EpochData, error)
+	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+	GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error)
+	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
+	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+	GetBlockBySlot(slot uint64) (*types.Block, error)
+	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
+	GetValidatorQueue() (*types.ValidatorQueue, error)
 }
 
 type ModuleContext struct {
 	CL         consapi.ClientInt
-	ConsClient *rpc.LighthouseClient
+	ConsClient ConsClient
 }
-
-var Client *rpc.Client
 
 var EventPoolLimit = 16
 
@@ -130,16 +142,16 @@ func initializeModules(modules []ModuleInterface) error {
 	return goPool.Wait()
 }
 
-func getEvents(context *ModuleContext) chan *types.EventResponse {
-	events := context.CL.GetEvents([]types.EventTopic{
-		types.EventHead,
-		types.EventFinalizedCheckpoint,
-		types.EventChainReorg,
+func getEvents(context *ModuleContext) chan *constypes.EventResponse {
+	events := context.CL.GetEvents([]constypes.EventTopic{
+		constypes.EventHead,
+		constypes.EventFinalizedCheckpoint,
+		constypes.EventChainReorg,
 	})
 	return events
 }
 
-func handleEvents(events chan *types.EventResponse, modules []ModuleInterface) {
+func handleEvents(events chan *constypes.EventResponse, modules []ModuleInterface) {
 	eventPool := &errgroup.Group{}
 	eventPool.SetLimit(EventPoolLimit)
 
@@ -151,23 +163,23 @@ func handleEvents(events chan *types.EventResponse, modules []ModuleInterface) {
 	}
 }
 
-func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+func handleEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	if event.Error != nil {
 		return fmt.Errorf("error getting event: %v", event.Error)
 	}
 
 	switch event.Event {
-	case types.EventHead:
+	case constypes.EventHead:
 		err := handleHeadEvent(event, eventPool, modules)
 		if err != nil {
 			return fmt.Errorf("error getting head event: %v", err)
 		}
-	case types.EventFinalizedCheckpoint:
+	case constypes.EventFinalizedCheckpoint:
 		err := handleFinalizedCheckpointEvent(event, eventPool, modules)
 		if err != nil {
 			return fmt.Errorf("error getting finalized checkpoint event: %v", err)
 		}
-	case types.EventChainReorg:
+	case constypes.EventChainReorg:
 		err := handleChainReorgEvent(event, eventPool, modules)
 		if err != nil {
 			return fmt.Errorf("error getting chain reorg event: %v", err)
@@ -177,7 +189,7 @@ func handleEvent(event *types.EventResponse, eventPool *errgroup.Group, modules 
 	return nil
 }
 
-func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+func handleHeadEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.Head()
 	if err != nil {
 		return err
@@ -193,7 +205,7 @@ func handleHeadEvent(event *types.EventResponse, eventPool *errgroup.Group, modu
 	return nil
 }
 
-func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+func handleFinalizedCheckpointEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.FinalizedCheckpoint()
 	if err != nil {
 		return err
@@ -206,7 +218,7 @@ func handleFinalizedCheckpointEvent(event *types.EventResponse, eventPool *errgr
 	return nil
 }
 
-func handleChainReorgEvent(event *types.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+func handleChainReorgEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
 	res, err := event.ChainReorg()
 	if err != nil {
 		return err
