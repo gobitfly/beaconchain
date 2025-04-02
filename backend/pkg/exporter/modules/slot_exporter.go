@@ -12,7 +12,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
@@ -29,9 +28,19 @@ import (
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 )
 
+type SlotExporterClient interface {
+	GetChainHead() (*types.ChainHead, error)
+	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
+	GetBlockBySlot(slot uint64) (*types.Block, error)
+	GetValidatorQueue() (*types.ValidatorQueue, error)
+	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
+	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+}
+
 type slotExporterData struct {
 	ModuleContext
-	Client   rpc.Client
+	Client   SlotExporterClient
 	cache    edb.SlotExporterCacheRepository
 	db       edb.SlotExporterDBRepository
 	bt       edb.SlotExporterBTRepository
@@ -324,7 +333,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	return nil
 }
 
-func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, cache edb.SlotExporterCacheRepository, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
+func ExportSlot(client SlotExporterClient, slot uint64, isHeadEpoch bool, cache edb.SlotExporterCacheRepository, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 	chainID := utils.Config.Chain.ClConfig.DepositChainID
@@ -564,9 +573,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, cache edb.Slot
 
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
-			// this function sets exports the validator status into the db
-			// and also updates the status field in the validators array
-			err := exporterdb.SaveValidators(epoch, block.Validators, client, 10000, tx)
+			err := ExportValidatorData(block.Validators, epoch, chainID, cache, client, exporterdb, bt, tx)
 			if err != nil {
 				return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
 			}
@@ -720,7 +727,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, cache edb.Slot
 		}
 
 		// save the epoch metadata to the database
-		err = exporterdb.SaveEpoch(epoch, block.Validators, client, tx)
+		err = exporterdb.SaveEpoch(epoch, block.Validators, tx)
 		if err != nil {
 			return fmt.Errorf("error saving epoch data: %w", err)
 		}
@@ -745,6 +752,360 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, cache edb.Slot
 			"blockRoot": fmt.Sprintf("%x", block.BlockRoot),
 			"duration":  time.Since(start),
 		}, "! export of slot completed")
+
+	return nil
+}
+
+func ExportValidatorData(validators []*types.Validator, epoch, chainID uint64, cache edb.SlotExporterCacheRepository, client SlotExporterClient, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
+	g := errgroup.Group{}
+
+	// this function sets exports the validator status into the db
+	// and also updates the status field in the validators array
+	err := SaveValidators(validators, exporterdb, bt, tx)
+	if err != nil {
+		return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
+	}
+
+	var genesisBalances map[uint64][]*types.ValidatorBalance
+	if epoch == 0 {
+		var err error
+		indices := make([]uint64, 0, len(validators))
+
+		for _, validator := range validators {
+			indices = append(indices, validator.Index)
+		}
+		genesisBalances, err = bt.GetValidatorBalanceHistory(indices, 0, 0)
+		if err != nil {
+			return fmt.Errorf("error retrieving genesis validator balances: %w", err)
+		}
+	}
+
+	vl, err := exporterdb.GetValidatorsWithMissingBalances(10000, tx)
+	if err != nil {
+		return fmt.Errorf("error retrieving validators with missing balances: %w", err)
+	}
+
+	balanceCache := make(map[uint64]map[uint64]uint64) // cache balances by epoch
+	currentActivationEpoch := uint64(0)
+
+	timeStart := time.Now()
+	for _, validator := range vl {
+		if validator.ActivationEpoch > epoch {
+			continue
+		}
+
+		if validator.ActivationEpoch != currentActivationEpoch {
+			log.Infof("removing epoch %v from the activation epoch balance cache", currentActivationEpoch)
+			delete(balanceCache, currentActivationEpoch) // remove old items from the map
+			currentActivationEpoch = validator.ActivationEpoch
+		}
+
+		var balance map[uint64][]*types.ValidatorBalance
+		if validator.ActivationEpoch == 0 {
+			balance = genesisBalances
+		} else {
+			balance, err = bt.GetValidatorBalanceHistory([]uint64{validator.ValidatorIndex}, validator.ActivationEpoch, validator.ActivationEpoch)
+			if err != nil {
+				return fmt.Errorf("error retrieving validator balance history: %w", err)
+			}
+		}
+
+		foundBalance := uint64(0)
+		if balance[validator.ValidatorIndex] == nil || len(balance[validator.ValidatorIndex]) == 0 {
+			log.Warnf("no activation epoch balance found for validator %v for epoch %v in bigtable, trying node", validator.ValidatorIndex, validator.ActivationEpoch)
+
+			if balanceCache[validator.ActivationEpoch] == nil {
+				balances, err := client.GetBalancesForEpoch(int64(validator.ActivationEpoch))
+				if err != nil {
+					return fmt.Errorf("error retrieving balances for epoch %d: %v", validator.ActivationEpoch, err)
+				}
+				balanceCache[validator.ActivationEpoch] = balances
+			}
+			foundBalance = balanceCache[validator.ActivationEpoch][validator.ValidatorIndex]
+		} else {
+			foundBalance = balance[validator.ValidatorIndex][0].Balance
+		}
+
+		log.Infof("retrieved activation epoch balance of %v for validator %v", foundBalance, validator.ValidatorIndex)
+
+		err = exporterdb.UpdateActivationEpochBalance(validator.ValidatorIndex, foundBalance, tx)
+		if err != nil {
+			return fmt.Errorf("error saving activation epoch balance for validator %v: %w", validator.ValidatorIndex, err)
+		}
+	}
+	log.Infof("updating validator activation epoch balance completed, took %v", time.Since(timeStart))
+
+	err = exporterdb.AnalyzeValidatorsTable(tx)
+	if err != nil {
+		return fmt.Errorf("error analyzing validators table: %w", err)
+	}
+
+	// also update the queue deposit table once every epoch
+	g.Go(func() error {
+		err = exporterdb.UpdateQueueDeposits(tx)
+		if err != nil {
+			return fmt.Errorf("error updating queue deposits cache: %w", err)
+		}
+		return nil
+	})
+
+	// store validator mapping in redis
+	g.Go(func() error {
+		// generate mapping
+		RedisCachedValidatorsMapping := &types.RedisCachedValidatorsMapping{
+			Epoch:   types.Epoch(epoch),
+			Mapping: make([]*types.CachedValidator, len(validators)),
+		}
+
+		activationMapping := make(map[int][]uint64)
+		start := time.Now()
+
+		for _, v := range validators {
+			r := types.CachedValidator{
+				PublicKey:             v.PublicKey,
+				Status:                v.Status,
+				WithdrawalCredentials: v.WithdrawalCredentials,
+				Balance:               v.Balance,
+				EffectiveBalance:      v.EffectiveBalance,
+				Slashed:               v.Slashed,
+			}
+			if v.ActivationEpoch != edb.MaxSqlNumber {
+				r.ActivationEpoch = sql.NullInt64{Int64: int64(v.ActivationEpoch), Valid: true}
+			}
+			if v.ActivationEligibilityEpoch != edb.MaxSqlNumber {
+				r.ActivationEligibilityEpoch = sql.NullInt64{Int64: int64(v.ActivationEligibilityEpoch), Valid: true}
+			}
+			if v.ExitEpoch != edb.MaxSqlNumber {
+				r.ExitEpoch = sql.NullInt64{Int64: int64(v.ExitEpoch), Valid: true}
+			}
+			if v.WithdrawableEpoch != edb.MaxSqlNumber {
+				r.WithdrawableEpoch = sql.NullInt64{Int64: int64(v.WithdrawableEpoch), Valid: true}
+			}
+			RedisCachedValidatorsMapping.Mapping[v.Index] = &r
+			if v.Status == "pending" {
+				a := int(v.ActivationEligibilityEpoch)
+				activationMapping[a] = append(activationMapping[a], v.Index)
+			}
+		}
+		log.Debugf("filled validator mapping, took: %s", time.Since(start))
+
+		start = time.Now()
+		// need to sort as activations don't necessarily have to be in order
+		keys := maps.Keys(activationMapping)
+		sort.Ints(keys)
+		var i int64
+		for _, a := range keys {
+			// don't need to sort as we our validator array is indeed in order
+			for _, vi := range activationMapping[a] {
+				RedisCachedValidatorsMapping.Mapping[vi].Queues.ActivationIndex = sql.NullInt64{Int64: i, Valid: true}
+				i++
+			}
+		}
+		log.Debugf("calculated activation queue indexes, took: %s", time.Since(start))
+
+		// gob struct
+		start = time.Now()
+		var serializedValidatorMapping bytes.Buffer
+		enc := gob.NewEncoder(&serializedValidatorMapping)
+		err := enc.Encode(RedisCachedValidatorsMapping)
+		if err != nil {
+			return fmt.Errorf("error serializing validator mapping to gob for epoch %v: %w", epoch, err)
+		}
+		log.Debugf("encoding validator mapping into gob took %s", time.Since(start))
+
+		// compress using pgzip
+		start = time.Now()
+		var compressedValidatorMapping bytes.Buffer
+		w, err := pgzip.NewWriterLevel(&compressedValidatorMapping, pgzip.BestCompression)
+		if err != nil {
+			return fmt.Errorf("failed to create pgzip writer for epoch %v: %w", epoch, err)
+		}
+		err = w.SetConcurrency(500_000, 10)
+		if err != nil {
+			return fmt.Errorf("failed to set concurrency for pgzip writer for epoch %v: %w", epoch, err)
+		}
+		_, err = w.Write(serializedValidatorMapping.Bytes())
+		if err != nil {
+			return fmt.Errorf("error decompressing validator mapping using pgzip for epoch %v: %w", epoch, err)
+		}
+		err = w.Close()
+		if err != nil {
+			return fmt.Errorf("error closing pgzip writer for epoch %v: %w", epoch, err)
+		}
+		log.Debugf("compressing validator mapping using pgzip took %s", time.Since(start))
+
+		// load into redis
+		start = time.Now()
+		log.Infof("writing validator mappping to redis with no TTL")
+		err = cache.SetValidatorMapping(chainID, compressedValidatorMapping.Bytes(), 0)
+		if err != nil {
+			return fmt.Errorf("error writing validator mapping to redis for epoch %v: %w", epoch, err)
+		}
+		log.Infof("writing validator mapping to redis done, took %s", time.Since(start))
+		return nil
+	})
+
+	// update cached view of consensus desposits
+	// possible bug: at this point the export tx is not yet committed, so the query will read
+	// stale data
+	g.Go(func() error {
+		start := time.Now()
+		err := exporterdb.CacheBlockDepositLookup()
+		if err != nil {
+			return fmt.Errorf("error updating cached view of consensus deposits: %w", err)
+		}
+		log.Infof("updating cached view of consensus deposits took %s", time.Since(start))
+		return nil
+	})
+
+	if config.ClConfig.ElectraForkEpoch != nil && *config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		// update cached view of consensus deposit requests
+		g.Go(func() error {
+			start := time.Now()
+			err := exporterdb.CacheBlockDepositRequestsLookup()
+			if err != nil {
+				return fmt.Errorf("error updating cached view of consensus deposit requests: %w", err)
+			}
+			log.Infof("updating cached view of consensus deposit requests took %s", time.Since(start))
+			return nil
+		})
+	}
+
+	return g.Wait()
+}
+
+func SaveValidators(validators []*types.Validator, exporterdb edb.SlotExporterDBRepository, bt edb.SlotExporterBTRepository, tx *sqlx.Tx) error {
+	currentState, err := exporterdb.GetValidatorsCurrentState(tx)
+	if err != nil {
+		return fmt.Errorf("error retrieving current validator state: %w", err)
+	}
+
+	for ; ; time.Sleep(time.Second) { // wait till the last attestation in memory cache has been populated by the exporter
+		bt.GetLastAttestationCacheMux().Lock()
+		if bt.GetLastAttestationCache() != nil {
+			bt.GetLastAttestationCacheMux().Unlock()
+			break
+		}
+		bt.GetLastAttestationCacheMux().Unlock()
+		log.Infof("waiting until LastAttestation in memory cache is available")
+	}
+
+	currentStateMap := make(map[uint64]*types.Validator, len(currentState))
+	latestBlock := uint64(0)
+
+	// safely access and update the latestBlock and currentStateMap
+	bt.GetLastAttestationCacheMux().Lock()
+	for _, v := range currentState {
+		if bt.GetLastAttestationCache()[v.Index] > latestBlock {
+			latestBlock = bt.GetLastAttestationCache()[v.Index]
+		}
+		currentStateMap[v.Index] = v
+	}
+	bt.GetLastAttestationCacheMux().Unlock()
+
+	lastGlobalAttestedEpoch := int64(latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	latestEpoch := latestBlock / utils.Config.Chain.ClConfig.SlotsPerEpoch
+
+	log.Info("updating validator status and metadata")
+
+	valiudatorUpdateTs := time.Now()
+	validatorStatusCounts := make(map[string]int)
+	validatorStatusUpdateMap := make(map[string][]uint64)
+	updates := 0
+	var queries strings.Builder
+
+	for _, v := range validators {
+		// exchange farFutureEpoch with the corresponding max sql value
+		if v.WithdrawableEpoch == edb.FarFutureEpoch {
+			v.WithdrawableEpoch = edb.MaxSqlNumber
+		}
+		if v.ExitEpoch == edb.FarFutureEpoch {
+			v.ExitEpoch = edb.MaxSqlNumber
+		}
+		if v.ActivationEligibilityEpoch == edb.FarFutureEpoch {
+			v.ActivationEligibilityEpoch = edb.MaxSqlNumber
+		}
+		if v.ActivationEpoch == edb.FarFutureEpoch {
+			v.ActivationEpoch = edb.MaxSqlNumber
+		}
+
+		c := currentStateMap[v.Index]
+
+		if c == nil {
+			if v.Index%1000 == 0 {
+				log.Infof("validator %v is new", v.Index)
+			}
+
+			err := exporterdb.SaveNewValidator(v, tx)
+			if err != nil {
+				log.Error(err, "error saving new validator", 0, map[string]interface{}{"index": v.Index})
+			}
+			validatorStatusCounts[v.Status]++
+		} else {
+			// safely read the last attestation slot for the validator
+			bt.GetLastAttestationCacheMux().Lock()
+			lastAttestationSlot := bt.GetLastAttestationCache()[v.Index]
+			lastValidatorAttestedEpoch := int64(lastAttestationSlot / utils.Config.Chain.ClConfig.SlotsPerEpoch)
+			offline := lastGlobalAttestedEpoch-lastValidatorAttestedEpoch > 1 // validator has not attested in the last two epochs
+			bt.GetLastAttestationCacheMux().Unlock()
+
+			if v.ExitEpoch <= latestEpoch && v.Slashed {
+				v.Status = string(constypes.DbSlashed)
+			} else if v.ExitEpoch <= latestEpoch {
+				v.Status = string(constypes.DbExited)
+			} else if v.ActivationEligibilityEpoch == edb.MaxSqlNumber {
+				v.Status = string(constypes.DbDeposited)
+			} else if v.ActivationEpoch > latestEpoch {
+				v.Status = string(constypes.DbPending)
+			} else if v.Slashed && v.ActivationEpoch < latestEpoch && offline {
+				v.Status = string(constypes.DbSlashingOffline)
+			} else if v.Slashed {
+				v.Status = string(constypes.DbSlashingOnline)
+			} else if v.ExitEpoch < edb.MaxSqlNumber && offline {
+				v.Status = string(constypes.DbExitingOffline)
+			} else if v.ExitEpoch < edb.MaxSqlNumber {
+				v.Status = string(constypes.DbExitingOnline)
+			} else if v.ActivationEpoch < latestEpoch && offline {
+				v.Status = string(constypes.DbActiveOffline)
+			} else {
+				v.Status = string(constypes.DbActiveOnline)
+			}
+
+			validatorStatusCounts[v.Status]++
+
+			if c.Status != v.Status {
+				log.Debugf("Status changed for validator %v from %v to %v", v.Index, c.Status, v.Status)
+				log.Debugf("v.ActivationEpoch %v, latestEpoch %v, lastAttestationSlots[v.Index] %v, lastGlobalAttestedEpoch: %v, lastValidatorAttestedEpoch: %v", v.ActivationEpoch, latestEpoch, lastAttestationSlot, lastGlobalAttestedEpoch, lastValidatorAttestedEpoch)
+				if validatorStatusUpdateMap[v.Status] == nil {
+					validatorStatusUpdateMap[v.Status] = make([]uint64, 0)
+				}
+				validatorStatusUpdateMap[v.Status] = append(validatorStatusUpdateMap[v.Status], c.Index)
+			}
+
+			updateCount, updateQueries, err := exporterdb.PrepareValidatorsUpdate(c, v, tx)
+			if err != nil {
+				return fmt.Errorf("error preparing validators update: %w", err)
+			}
+
+			updates += updateCount
+			queries.WriteString(updateQueries)
+		}
+	}
+
+	log.Infof("processing validator updates for %d status entry", len(validatorStatusUpdateMap))
+	err = exporterdb.UpdateValidatorsStatus(validatorStatusUpdateMap, tx)
+	if err != nil {
+		return fmt.Errorf("error saving validators status: %w", err)
+	}
+
+	if updates > 0 {
+		err := exporterdb.UpdateValidators(queries.String(), updates, tx)
+		if err != nil {
+			return fmt.Errorf("error saving validators update: %w", err)
+		}
+	}
+
+	log.Infof("updating validator status and metadata completed, took %v", time.Since(valiudatorUpdateTs))
 
 	return nil
 }
