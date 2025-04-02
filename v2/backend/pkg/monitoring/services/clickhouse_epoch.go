@@ -6,7 +6,6 @@ import (
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -37,7 +36,7 @@ func (s *ServiceClickhouseEpoch) internalProcess() {
 }
 
 func (s *ServiceClickhouseEpoch) runChecks() {
-	r := NewStatusReport(constants.Event_ClickhouseDashboardEpoch, utils.Config.DeploymentType, constants.Default, 30*time.Second)
+	r := StatusReporter.NewStatusReport(constants.Event_ClickhouseDashboardEpoch, constants.Default, 30*time.Second)
 	r(constants.Running, nil)
 	if db.ClickHouseReader == nil {
 		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})

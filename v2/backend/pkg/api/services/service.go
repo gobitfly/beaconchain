@@ -8,6 +8,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -39,6 +40,7 @@ func NewServices(readerDb, writerDb, alloyReader, alloyWriter, clickhouseReader 
 func (s *Services) InitServices() {
 	wg := &sync.WaitGroup{}
 	log.Infof("initializing services...")
+	services.InitStatusReport()
 	wg.Add(4)
 	go s.startSlotVizDataService(wg)
 	go s.startIndexMappingService(wg)
