@@ -8,26 +8,6 @@ export const ONE_DAY = ONE_HOUR * 24
 export const ONE_WEEK = ONE_DAY * 7
 export const ONE_YEAR = ONE_DAY * 365
 
-export interface NumberFormatConfig {
-  addPositiveSign?: boolean,
-  fixed?: number,
-  precision?: number,
-}
-
-export function addPlusSign(value: string, add = true): string {
-  if (!add || !value || value === '0' || value.startsWith('-')) {
-    return value
-  }
-  return `+${value}`
-}
-
-export function calculatePercent(value?: number, base?: number): number {
-  if (!base) {
-    return 0
-  }
-  return ((value ?? 0) * 100) / base
-}
-
 export function formatFiatCurrency(
   value: number | string,
   options: {
@@ -181,10 +161,6 @@ export function formatToFraction(value: NumberOrString, option?: { locale?: Loca
     // maximumFractionDigits: 0,
     // minimumFractionDigits: 0,
   }).format(number / 100)
-}
-
-export function withCurrency(value: string, currency: string): string {
-  return `${value} ${currency}`
 }
 
 export const formatValue = (value: string, {
