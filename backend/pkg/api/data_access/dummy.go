@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"reflect"
+	"regexp"
 	"slices"
-	"sync"
+	"strings"
 	"time"
 
 	mathrand "math/rand"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-faker/faker/v4"
 	"github.com/go-faker/faker/v4/pkg/interfaces"
 	"github.com/go-faker/faker/v4/pkg/options"
@@ -19,6 +21,7 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	commontypes "github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/userservice"
+	"github.com/lucasjones/reggen"
 	"github.com/shopspring/decimal"
 )
 
@@ -45,25 +48,76 @@ func NewDummyService() *DummyService {
 		})
 		return possibleChainIds[:rand.IntN(len(possibleChainIds))], nil //nolint:gosec
 	})
+	_ = faker.AddProvider("past_timestamp", func(v reflect.Value) (interface{}, error) {
+		past_timestamp, _ := time.Parse("2006-Jan-02", "2023-Jan-01")
+		newer_timestamp, _ := time.Parse("2006-Jan-02", "2025-Jan-01")
+		return randomTimestamp(past_timestamp, newer_timestamp), nil
+	})
+	_ = faker.AddProvider("future_timestamp", func(v reflect.Value) (interface{}, error) {
+		older_timestamp, _ := time.Parse("2006-Jan-02", "2026-Jan-01")
+		future_timestamp, _ := time.Parse("2006-Jan-02", "2028-Jan-01")
+		return randomTimestamp(older_timestamp, future_timestamp), nil
+	})
+	addTagFromRegex("address", t.ReEthereumAddress, func(s string) interface{} {
+		// convert to EIP55
+		return common.HexToAddress(s).Hex()
+	})
+	addTagFromRegex("ens", t.ReEnsName, func(s string) interface{} { return s })
+	addTagFromRegex("pubkey", t.ReValidatorPublicKeyWithPrefix, func(s string) interface{} { return strings.ToLower(s) })
+	addTagFromRegex("tx_hash", t.ReTransactionHash, func(s string) interface{} { return strings.ToLower(s) })
+	addTagFromRegex("withdrawal_credentials", t.ReWithdrawalCredential, func(s string) interface{} {
+		s = strings.ToLower(s)
+		if !strings.HasPrefix(s, "0x") {
+			s = "0x" + s
+		}
+		return s
+	})
 	return &DummyService{}
+}
+
+// generate random string matching the provided regex
+// accepts a function to apply formatting to the generated string
+func addTagFromRegex(name string, regex *regexp.Regexp, format func(string) interface{}) {
+	_ = faker.AddProvider(name, func(v reflect.Value) (interface{}, error) {
+		gen, err := reggen.NewGenerator(regex.String())
+		if err != nil {
+			return nil, err
+		}
+		gen.SetSeed(source.Int63())
+		s := gen.Generate(10)
+		return format(s), nil
+	})
 }
 
 // generate random decimal.Decimal, result is between 0.001 and 1000 GWei (returned in Wei)
 func randomEthDecimal() decimal.Decimal {
-	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d000000", rand.Int64N(1000000)+1)) //nolint:gosec
+	decimal, _ := decimal.NewFromString(fmt.Sprintf("%d000000", randomIntFromSeed(1000000)))
 	return decimal
 }
 
-var mockLock sync.Mutex = sync.Mutex{}
+func randomIntFromSeed(max int64) int64 {
+	return source.Int63() % max
+}
+
+// generate random timestamp between two dates
+func randomTimestamp(t1, t2 time.Time) int64 {
+	min, max := t1.Unix(), t2.Unix()
+	if max < min {
+		min, max = max, min
+	}
+	return randomIntFromSeed(max-min) + min
+}
+
+var source mathrand.Source
 
 // must pass a pointer to the data
 func populateWithFakeData(ctx context.Context, a interface{}) error {
-	if seed, ok := ctx.Value(t.CtxMockSeedKey).(int64); ok {
-		mockLock.Lock()
-		defer mockLock.Unlock()
-		faker.SetRandomSource(mathrand.NewSource(seed))
+	seed, ok := ctx.Value(t.CtxMockSeedKey).(int64)
+	if !ok {
+		seed = time.Now().UnixNano()
 	}
-
+	source = faker.NewSafeSource(mathrand.NewSource(seed))
+	faker.SetRandomSource(source)
 	return faker.FakeData(a, options.WithRandomMapAndSliceMaxSize(10), options.WithRandomFloatBoundaries(interfaces.RandomFloatBoundary{Start: 0, End: 1}))
 }
 
@@ -87,11 +141,12 @@ func getDummyStruct[T any](ctx context.Context) (*T, error) {
 
 // used for any table data that should be returned with paging
 func getDummyWithPaging[T any](ctx context.Context) ([]T, *t.Paging, error) {
-	r := []T{}
-	p := t.Paging{}
-	_ = populateWithFakeData(ctx, &r)
-	err := populateWithFakeData(ctx, &p)
-	return r, &p, err
+	r := struct {
+		Data   []T
+		Paging t.Paging
+	}{}
+	err := populateWithFakeData(ctx, &r)
+	return r.Data, &r.Paging, err
 }
 
 func (*DummyService) Close() {
