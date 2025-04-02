@@ -142,7 +142,16 @@ type stubStatusReporter struct{}
 
 func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	return func(status constants.StatusType, metadata map[string]string) {
-		// No-op implementation
+		// no-op implementation
+		// only warn if utils.Config is initialized and we're not in development environment
+		if utils.Config != nil && utils.Config.DeploymentType != "development" {
+			log.Warnf("STUB STATUS REPORTER IN USE IN %s ENVIRONMENT! Event: %s, Status: %s, Metadata: %v",
+				utils.Config.DeploymentType,
+				id,
+				status,
+				metadata,
+			)
+		}
 	}
 }
 
