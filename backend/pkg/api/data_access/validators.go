@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/ext"
 	"github.com/doug-martin/goqu/v9"
-	"github.com/doug-martin/goqu/v9/exp"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
@@ -28,10 +29,10 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	var validatorTable *ext.Table
 
 	// active
 	effectiveBalances := make(map[t.VDBValidator]uint64)
-	var validatorExitEpochs []exp.Expression
 	for _, validator := range validators {
 		if len(validatorMapping.ValidatorMetadata) <= int(validator) {
 			return nil, fmt.Errorf("validator index %d not found in validator mapping", validator)
@@ -46,33 +47,41 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 		}
 		// exited & balance withdrawn, need to query latest EB before exit
 		if !validatorMapping.ValidatorMetadata[validator].ExitEpoch.Valid {
-			return nil, fmt.Errorf("validator %d has no exit epoch", validator)
+			log.Warnf("validator %d has no exit epoch", validator)
 		}
-		// goqu can't pass tuples directly
-		epochTs := utils.EpochToTime(uint64(validatorMapping.ValidatorMetadata[validator].ExitEpoch.Int64)).Unix()
-		validatorExitEpochs = append(validatorExitEpochs, goqu.L("(fromUnixTimestamp(?), ?)", epochTs, validator))
+		if validatorTable == nil {
+			// ensure batch request does never go above ch query limit
+			validatorTable, err = ext.NewTable("exited_validators",
+				ext.Column("validator_index", "UInt64"),
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+		if err = validatorTable.Append(validator); err != nil {
+			return nil, err
+		}
+	}
+	if validatorTable == nil {
+		return effectiveBalances, nil
 	}
 
 	// exited
-	if len(validatorExitEpochs) == 0 {
-		return effectiveBalances, nil
-	}
 	ds := goqu.Dialect("postgres").
 		Select(
-			// goqu.SUM(goqu.I("balance_effective_end")).As("balance_effective_end"),
 			goqu.I("validator_index"),
 			goqu.I("balance_effective_end"),
 		).
-		From("validator_dashboard_data_epoch").
+		From("validator_dashboard_effective_balance_lookup").
 		Where(
-			goqu.L("(epoch_timestamp, validator_index)").In(validatorExitEpochs),
+			goqu.L("validator_index").In(goqu.L("SELECT * FROM exited_validators")),
 		)
 
 	type ValidatorEB struct {
 		ValidatorIndex   uint64 `db:"validator_index"`
 		EffectiveBalance uint64 `db:"balance_effective_end"`
 	}
-	ebsBeforeExit, err := runQueryRows[[]ValidatorEB](ctx, d.clickhouseReader, ds)
+	ebsBeforeExit, err := runQueryRows[[]ValidatorEB](clickhouse.Context(ctx, clickhouse.WithExternalTable(validatorTable)), d.clickhouseReader, ds)
 	if err != nil {
 		return nil, err
 	}
