@@ -41,11 +41,12 @@ func Init(full bool) {
 	for _, service := range monitoredServices {
 		service.InitServices()
 	}
+
+	services.InitStatusReport()
 }
 
 func Start() {
 	log.Infof("starting monitoring services")
-	services.InitStatusReport()
 	for _, service := range monitoredServices {
 		service.Start()
 	}
