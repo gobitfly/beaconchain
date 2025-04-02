@@ -41,10 +41,10 @@ var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
+	services.InitStatusReport()
 	if !justV2 {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
-		services.InitStatusReport()
 
 		networkLivenessUpdater := newNetworkLivenessUpdater(ctx, moduleCtx.ConsClient, consDB)
 		go networkLivenessUpdater.Export()
