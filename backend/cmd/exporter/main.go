@@ -186,7 +186,11 @@ func Run() {
 		)
 	}
 
-	go modules.StartAll(context, usedModules, cfg.JustV2)
+	go func() {
+		if err := modules.StartAll(context, usedModules, cfg.JustV2); err != nil {
+			log.Fatal(err, "failed to start modules", 0)
+		}
+	}()
 
 	// Keep the program alive until Ctrl+C is pressed
 	utils.WaitForCtrlC()

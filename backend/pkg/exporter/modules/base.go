@@ -58,7 +58,7 @@ type ModuleContext struct {
 var EventPoolLimit = 16
 
 // Start will start the export of data from rpc into the database
-func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
+func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) error {
 	services.InitStatusReport()
 	if !justV2 {
 		ctx := context.Background()
@@ -106,8 +106,11 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 	// start subscription modules
 	err := startSubscriptionModules(&moduleCtx, modules)
 	if err != nil {
-		log.Fatal(err, "error initializing modules", 0)
+		log.Error(err, "error initializing modules: %v", 0)
+		return err
 	}
+
+	return nil
 }
 
 func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) error {
