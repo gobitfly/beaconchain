@@ -90,7 +90,7 @@ func (h *HandlerService) LegacyPostUserMachineMetrics(w http.ResponseWriter, r *
 		return
 	}
 
-	if contentType := r.Header.Get("Content-Type"); !reJsonContentType.MatchString(contentType) {
+	if contentType := r.Header.Get("Content-Type"); !types.ReJsonContentType.MatchString(contentType) {
 		returnBadRequest(w, r, fmt.Errorf("invalid content type, expected application/json"))
 		return
 	}

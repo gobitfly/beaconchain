@@ -41,7 +41,6 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	internalRouter.Use(handlerService.StoreUserIdBySessionMiddleware)
 
 	if cfg.DeploymentType != "production" {
-		publicRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
 		internalRouter.Use(handlerService.StoreIsMockedFlagMiddleware)
 	}
 

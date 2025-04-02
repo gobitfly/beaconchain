@@ -58,6 +58,7 @@ require (
 	github.com/klauspost/compress v1.17.11
 	github.com/klauspost/pgzip v1.2.6
 	github.com/lib/pq v1.10.9
+	github.com/lucasjones/reggen v0.0.0-20200904144131-37ba4fa293bb
 	github.com/mailgun/mailgun-go/v4 v4.12.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pkg/errors v0.9.1
