@@ -273,15 +273,13 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(
-					rpcClient,
-					slot,
-					false,
+				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterBT(bt),
 					tx,
-				)
+					nil)
+				err = slotExporter.ExportSlot(slot, false)
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -330,15 +328,13 @@ func Run() {
 				log.Fatal(err, "error starting tx", 0)
 			}
 			for slot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch; slot < (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch; slot++ {
-				err = modules.ExportSlot(
-					rpcClient,
-					slot,
-					false,
+				slotExporter := modules.NewExporter(rpcClient,
 					edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
 					edb.NewSlotExporterDB(db.WriterDb),
-					edb.NewSlotExporterBT(db.BigtableClient),
+					edb.NewSlotExporterBT(bt),
 					tx,
-				)
+					nil)
+				err = slotExporter.ExportSlot(slot, false)
 
 				if err != nil {
 					_ = tx.Rollback()
@@ -434,16 +430,13 @@ func Run() {
 
 			log.Infof("saving validators %v-%v", data.Validators[0].Index, data.Validators[len(data.Validators)-1].Index)
 			chainID := utils.Config.Chain.ClConfig.DepositChainID
-			err = modules.ExportValidatorData(
-				data.Validators,
-				0,
-				chainID,
+			slotExporter := modules.NewExporter(rpcClient,
 				edb.NewSlotExporterCache(database.Redis{Client: db.PersistentRedisDbClient}),
-				rpcClient,
 				edb.NewSlotExporterDB(db.WriterDb),
-				edb.NewSlotExporterBT(db.BigtableClient),
+				edb.NewSlotExporterBT(bt),
 				tx,
-			)
+				nil)
+			err = slotExporter.ExportValidatorData(data.Validators, 0, chainID)
 			if err != nil {
 				log.Fatal(err, "error saving validators", 0)
 			}

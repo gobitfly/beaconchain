@@ -59,7 +59,7 @@ type SlotExporterDBRepository interface {
 	PrepareValidatorsUpdate(currentState *types.Validator, newState *types.Validator, tx *sqlx.Tx) (int, string, error)
 	UpdateValidatorsStatus(statusUpdateMap map[string][]uint64, tx *sqlx.Tx) error
 	UpdateValidators(queries string, totalUpdates int, tx *sqlx.Tx) error
-	HasEventsForEpoch(epoch uint64) (bool, error)
+	HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error)
 	TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
 	TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
 	TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, error)
@@ -418,7 +418,6 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 				syncAggBits = b.SyncAggregate.SyncCommitteeBits
 				syncAggSig = b.SyncAggregate.SyncCommitteeSignature
 				syncAggParticipation = b.SyncAggregate.SyncAggregateParticipation
-				// blockLog = blockLog.WithField("syncParticipation", b.SyncAggregate.SyncAggregateParticipation)
 			}
 
 			type exectionPayloadData struct {
@@ -1986,15 +1985,9 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 	return excessBalanceEvents, nil
 }
 
-func (s *SlotExporterDB) HasEventsForEpoch(epoch uint64) (bool, error) {
-	if epoch == 0 {
-		return true, nil
-	}
-
-	firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-	lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
+func (s *SlotExporterDB) HasEventsForEpoch(firstSlot, lastSlot uint64) (bool, error) {
 	var count uint64
-	err := db.ReaderDb.Get(&count, `
+	err := s.WriterDb.Get(&count, `
 		SELECT 
 			COUNT(*) 
 		FROM 
