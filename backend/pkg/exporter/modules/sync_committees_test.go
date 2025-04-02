@@ -99,7 +99,6 @@ func TestSyncCommitteesExport(t *testing.T) {
 				DepositChainID:               1,
 			},
 		},
-		DeploymentType: "development",
 	}
 
 	for _, tt := range tests {

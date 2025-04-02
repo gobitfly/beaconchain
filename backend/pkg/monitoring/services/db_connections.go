@@ -15,7 +15,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/jmoiron/sqlx"
 )
@@ -90,7 +89,7 @@ func (s *ServerDbConnections) checkDBConnections() {
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
-			r := NewStatusReport(entry.ID, utils.Config.DeploymentType, constants.Default, 10*time.Second)
+			r := StatusReporter.NewStatusReport(entry.ID, constants.Default, 10*time.Second)
 			switch edb := entry.DB.(type) {
 			case *sqlx.DB:
 				err := edb.PingContext(ctx)

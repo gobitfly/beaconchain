@@ -45,7 +45,7 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func NewStatusReport(id constants.Event, deploymentType string, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func newStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
@@ -88,7 +88,7 @@ func NewStatusReport(id constants.Event, deploymentType string, timeout time.Dur
 			log.TraceWithFields(log.Fields{
 				"emitter":         id,
 				"event_id":        utils.GetUUID(),
-				"deployment_type": deploymentType,
+				"deployment_type": utils.Config.DeploymentType,
 				"insert_id":       flake,
 				"expires_at":      expires_at,
 				"timeouts_at":     timeouts_at,
@@ -102,16 +102,16 @@ func NewStatusReport(id constants.Event, deploymentType string, timeout time.Dur
 					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
 					utils.GetUUID(),
 					id,
-					deploymentType,
+					utils.Config.DeploymentType,
 					flake,
 					expires_at,
 					timeouts_at,
 					metadata,
 				)
-			} else if deploymentType != "development" {
+			} else if utils.Config.DeploymentType != "development" {
 				log.Error(nil, "clickhouse native writer is nil", 0)
 			}
-			if err != nil && deploymentType != "development" {
+			if err != nil && utils.Config.DeploymentType != "development" {
 				log.Error(err, "error inserting status report", 0)
 			}
 		}()
@@ -132,4 +132,37 @@ func GetRequiredEvents() []constants.Event {
 		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyPubkeyTags)
 	}
 	return requiredEvents
+}
+
+type statusReport interface {
+	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
+}
+
+type stubStatusReporter struct{}
+
+func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return func(status constants.StatusType, metadata map[string]string) {
+		// no-op implementation
+		// only warn if utils.Config is initialized and we're not in development environment
+		if utils.Config != nil && utils.Config.DeploymentType != "development" {
+			log.Warnf("STUB STATUS REPORTER IN USE IN %s ENVIRONMENT! Event: %s, Status: %s, Metadata: %v",
+				utils.Config.DeploymentType,
+				id,
+				status,
+				metadata,
+			)
+		}
+	}
+}
+
+type statusReporter struct{}
+
+func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+	return newStatusReport(id, timeout, checkInterval)
+}
+
+var StatusReporter statusReport = stubStatusReporter{}
+
+func InitStatusReport() {
+	StatusReporter = statusReporter{}
 }

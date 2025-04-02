@@ -35,7 +35,7 @@ func (sc syncCommitteesCountExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, utils.Config.DeploymentType, constants.Default, time.Second*12)
+			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := sc.processSyncCommitteesCount()

@@ -41,6 +41,7 @@ var Client *rpc.Client
 
 // Start will start the export of data from rpc into the database
 func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
+	services.InitStatusReport()
 	if !justV2 {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
@@ -167,7 +168,7 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.NewStatusReport(module.GetMonitoringEventId(), utils.Config.DeploymentType, 5*time.Minute, constants.Default)
+			r := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
 			r(constants.Running, nil)
 			err := f(module)
 			if err != nil {
