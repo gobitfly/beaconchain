@@ -3,7 +3,7 @@ package consapi
 import (
 	"time"
 
-	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics" //nolint:depguard
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
