@@ -124,6 +124,8 @@ func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface)
 	// subscribe to node events and notify modules
 	events := getEvents(context)
 
+	log.Infof("subscribed to node events")
+
 	handleEvents(events, modules)
 
 	return nil

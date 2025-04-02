@@ -86,7 +86,6 @@ func TestStartAll(t *testing.T) {
 		mockConsClient.AssertExpectations(t)
 		mockClient.AssertExpectations(t)
 	})
-
 }
 
 type stubModuleInterface struct{}
