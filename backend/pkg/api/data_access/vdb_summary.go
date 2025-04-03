@@ -345,7 +345,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Reward.El = total.Reward.El.Add(resultEntry.Reward.El)
 
 		// Efficiency
-		if queryEntry.EfficiencyDivisor.Valid {
+		if queryEntry.EfficiencyDivisor.Valid && !queryEntry.EfficiencyDivisor.Decimal.IsZero() {
 			resultEntry.Efficiency = queryEntry.EfficiencyDividend.Decimal.Div(queryEntry.EfficiencyDivisor.Decimal).InexactFloat64() * 100
 		}
 
@@ -786,8 +786,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	ret.Efficiency = totalEfficiencyTotalDividend.Div(totalEfficiencyTotalDivisor).InexactFloat64() * 100
-	ret.AttestationEfficiency = totalEfficiencyAttestationsDividend.Div(totalEfficiencyAttestationsDivisor).InexactFloat64() * 100
+	if !totalEfficiencyTotalDivisor.IsZero() {
+		ret.Efficiency = totalEfficiencyTotalDividend.Div(totalEfficiencyTotalDivisor).InexactFloat64() * 100
+	}
+
+	if !totalEfficiencyAttestationsDivisor.IsZero() {
+		ret.AttestationEfficiency = totalEfficiencyAttestationsDividend.Div(totalEfficiencyAttestationsDivisor).InexactFloat64() * 100
+	}
 
 	rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
 	if err != nil {
