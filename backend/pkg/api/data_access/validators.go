@@ -50,7 +50,6 @@ func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, 
 			log.Warnf("validator %d has no exit epoch", validator)
 		}
 		if validatorTable == nil {
-			// ensure batch request does never go above ch query limit
 			validatorTable, err = ext.NewTable("exited_validators",
 				ext.Column("validator_index", "UInt64"),
 			)
