@@ -204,7 +204,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 
 // precondition: invested amount and rewards are in the same currency
 func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration) float64 {
-	if rewards.IsZero() || cumulativeDivisor.IsZero() {
+	if rewards.IsZero() || cumulativeDivisor.IsZero() || duration.Nanoseconds() == 0 {
 		return 0
 	}
 	annualizationFactor := decimal.NewFromInt(utils.Year.Nanoseconds()).Div(decimal.NewFromInt(duration.Nanoseconds()))
@@ -215,12 +215,18 @@ func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration)
 // converts a cl amount to the main currency
 func (d *DataAccessService) convertClToMain(amount decimal.Decimal) decimal.Decimal {
 	price := decimal.NewFromFloat(price.GetPrice(d.config.Frontend.MainCurrency, d.config.Frontend.ClCurrency))
+	if price.IsZero() {
+		return decimal.Zero
+	}
 	return amount.Div(decimal.NewFromInt(d.config.Frontend.ClCurrencyDivisor)).Div(price)
 }
 
 // converts a el amount to the main currency
 func (d *DataAccessService) convertElToMain(amount decimal.Decimal) decimal.Decimal {
 	price := decimal.NewFromFloat(price.GetPrice(d.config.Frontend.MainCurrency, d.config.Frontend.ElCurrency))
+	if price.IsZero() {
+		return decimal.Zero
+	}
 	return amount.Div(decimal.NewFromInt(d.config.Frontend.ElCurrencyDivisor)).Div(price)
 }
 
@@ -286,7 +292,10 @@ func (d *DataAccessService) calculateValidatorDashboardBalance(ctx context.Conte
 			if protocolModes.RocketPool {
 				// Calculate the balance of the operator
 				fullDeposit := rpValidator.UserDepositBalance.Add(rpValidator.NodeDepositBalance)
-				operatorShare := rpValidator.NodeDepositBalance.Div(fullDeposit)
+				var operatorShare decimal.Decimal
+				if !fullDeposit.IsZero() {
+					operatorShare = rpValidator.NodeDepositBalance.Div(fullDeposit)
+				}
 				invOperatorShare := decimal.NewFromInt(1).Sub(operatorShare)
 
 				base := decimal.Min(decimal.Max(decimal.Zero, validatorBalance.Sub(rpValidator.UserDepositBalance)), rpValidator.NodeDepositBalance)
