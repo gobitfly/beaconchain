@@ -99,7 +99,7 @@ func (service *IndexerService) SyncLive() {
 		reorgDepth, err := service.reorgWatcher.LookForReorg()
 		if err != nil {
 			logger.WithField("error", err).Error("reorg lookup")
-			continue
+			break
 		}
 		if reorgDepth != 0 {
 			indexingMetrics.ReorgBlockTotal(service.stateReader.chainID, reorgDepth)
@@ -110,7 +110,7 @@ func (service *IndexerService) SyncLive() {
 			state, err := service.stateReader.state()
 			if err != nil {
 				logger.WithField("error", err).Error("cannot get state")
-				continue
+				break
 			}
 			if state.node == state.LastProcessed() {
 				// we caught up with blockchain head, we can stop indexing
@@ -129,7 +129,7 @@ func (service *IndexerService) SyncLive() {
 
 			if err := service.indexer.FromHead(state, startBlock, endBlock); err != nil {
 				logger.WithField("error", err).Error("indexing from head")
-				continue
+				break
 			}
 			blockIndexingTime := time.Since(start)
 
