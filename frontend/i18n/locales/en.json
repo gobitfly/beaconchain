@@ -292,10 +292,10 @@
                     "placeholder": "Index, Public key, Deposit or Withdrawal credential, ENS or Graffiti",
                     "with_graffiti": "with…block Graffiti",
                     "withdrawal_credential": "Withdrawal Credential"
-
                 },
                 "sub_title": "Add or remove validators from your dashboard",
-                "title": "Manage"
+                "title": "Manage",
+                "validators_limit_exceeded": "Cannot add validators. The maximum effective balance of the validators exceeds your plan's limit."
             },
             "overview": {
                 "24h_efficiency": "24h Efficiency",
