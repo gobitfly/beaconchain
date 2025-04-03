@@ -226,7 +226,15 @@
                 "title": "Blocks"
             },
             "cl_deposits": {
-                "title": "Consensus Layer"
+                "info_compound_event_deposit": "CL deposit was caused by a switch to compounding event",
+                "info_slot_processed_estimated": "This is an estimation since this deposit is still queued.",
+                "search_placeholder_guest_dashboard": "Index, Slot, Address",
+                "search_placeholder_private_dashboard": "Index, Slot, Address, Group",
+                "title": "Consensus Layer",
+                "type": {
+                    "auto": "Auto",
+                    "manual": "Manual"
+                }
             },
             "col": {
                 "amount": "Amount",
@@ -244,7 +252,10 @@
                 "reward_recipient": "Rewards Recipient",
                 "rewards": "Rewards",
                 "signature": "Signature",
+                "slot_processed": "Slot Processed",
+                "slot_queued": "Slot Queued",
                 "status": "Status",
+                "type": "Type",
                 "validator_index": "Validator Index",
                 "validators": "Validators",
                 "validity": "Validity",
@@ -437,7 +448,10 @@
             },
             "table": {
                 "status_text": {
+                    "completed": "Completed",
                     "invalid": "Invalid",
+                    "queued": "Queued",
+                    "rejected": "Rejected",
                     "valid": "Valid"
                 }
             },
@@ -1134,6 +1148,7 @@
         "last": "Last",
         "of": "of",
         "showing": "Showing {from} to {to} of {total}",
+        "status": "Status",
         "validity": "Validity"
     },
     "time_duration": {

@@ -192,7 +192,6 @@ const dashboardData = useDashboardData()
 const elDepositsQueryParams = ref<TableQueryParams>({
   limit: 5, sort: 'timestamp:desc',
 })
-
 const {
   data: elDepositsData,
   refresh: refreshElDepositsData,
@@ -215,24 +214,55 @@ const elDeposits = computed(() => {
 })
 const elDepositsTotalAmount = computed(() => elDepositsData.value?.[1])
 
+// Consensus Layer Deposits data
+const clDepositsQueryParams = ref<TableQueryParams>({
+  limit: 5, sort: 'timestamp:desc',
+})
+const {
+  data: clDepositsData,
+  refresh: refreshClDepositsData,
+  status: clDepositsDataStatus,
+} = useAsyncData('cl_deposits', () => {
+  return Promise.all([
+    dashboardData.fetchClDeposits(
+      dashboardKey.value,
+      clDepositsQueryParams.value,
+    ),
+    dashboardData.fetchClDpositsTotalAmount(dashboardKey.value),
+  ])
+},
+{
+  immediate: false,
+  watch: [ clDepositsQueryParams ],
+})
+const clDeposits = computed(() => {
+  return clDepositsData.value?.[0]
+})
+const clDepositsTotalAmount = computed(() => clDepositsData.value?.[1])
+
 // tabs
 const route = useRoute()
 
 const activeTab = computed(() => route.hash)
+
+const refreshActiveTab = () => {
+  switch (activeTab.value) {
+    case '#deposits':
+      refreshElDepositsData()
+      refreshClDepositsData()
+      break
+  }
+}
 
 watch(
   activeTab,
   () => {
     refreshActiveTab()
   },
+  {
+    immediate: true,
+  },
 )
-const refreshActiveTab = () => {
-  switch (activeTab.value) {
-    case '#deposits':
-      refreshElDepositsData()
-      break
-  }
-}
 </script>
 
 <template>
@@ -270,9 +300,9 @@ const refreshActiveTab = () => {
         <DashboardValidatorOverview class="overview" />
       </template>
       <DashboardSharedDashboardModal />
-      <div>
-        <DashboardSlotViz />
-      </div>
+
+      <DashboardSlotViz />
+
       <BcTabList
         :tabs
         default-tab="summary"
@@ -281,19 +311,22 @@ const refreshActiveTab = () => {
         panels-class="dashboard-tab-panels"
       >
         <template #tab-panel-deposits>
-          <div class="deposits">
-            <DashboardTableElDeposits
-              v-model:query="elDepositsQueryParams"
-              :el-deposits
-              :el-deposits-total-amount
-              :is-loading="elDepositsDataStatus === 'pending'"
-            />
-            <BcIcon
-              name="arrow-down"
-              class="down_icon"
-            />
-            <DashboardTableClDeposits />
-          </div>
+          <DashboardTableElDeposits
+            v-model:query="elDepositsQueryParams"
+            :el-deposits
+            :el-deposits-total-amount
+            :is-loading="elDepositsDataStatus === 'pending'"
+          />
+          <BcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <DashboardTableClDeposits
+            v-model:query="clDepositsQueryParams"
+            :cl-deposits
+            :cl-deposits-total-amount
+            :is-loading="clDepositsDataStatus === 'pending'"
+          />
         </template>
       </BcTabList>
     </BcPageWrapper>
