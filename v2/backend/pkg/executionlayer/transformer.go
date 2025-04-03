@@ -345,6 +345,9 @@ func transformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock)
 			if !isValidItx(itx) {
 				continue
 			}
+			if itx.GetType() == "delegatecall" {
+				continue
+			}
 
 			indexed := &types.Eth1InternalTransactionIndexed{
 				ParentHash:  tx.GetHash(),
@@ -355,9 +358,6 @@ func transformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock)
 				To:          itx.GetTo(),
 				Value:       itx.GetValue(),
 				Reverted:    reverted,
-			}
-			if itx.GetType() == "delegatecall" {
-				continue
 			}
 			transactions = append(transactions, db2.InternalWithIndexes{
 				Indexed:       indexed,
@@ -717,10 +717,10 @@ func isValidERC1155Log(log *types.Eth1Log) bool {
 
 	// check if first topic matches TransferSingle or TransferBatch topic
 	firstTopic := log.GetTopics()[0]
-	isTransferBulk := bytes.Equal(firstTopic, erc1155.TransferBulkTopic.Bytes())
+	isTransferBatch := bytes.Equal(firstTopic, erc1155.TransferBatchTopic.Bytes())
 	isTransferSingle := bytes.Equal(firstTopic, erc1155.TransferSingleTopic.Bytes())
 
-	return isTransferBulk || isTransferSingle
+	return isTransferBatch || isTransferSingle
 }
 
 func isBlobTx(txType uint32) bool {

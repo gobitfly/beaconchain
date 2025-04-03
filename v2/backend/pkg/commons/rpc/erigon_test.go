@@ -85,9 +85,13 @@ func TestGetInternalTxs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getInternalTxs(tt.traceIndex, tt.traces, tt.txPosition)
+			currentTrace := tt.traceIndex
+			result := getInternalTxs(&currentTrace, tt.traces, tt.txPosition)
 			if len(result) != len(tt.expected) {
 				t.Fatalf("got %v internal transactions, want %v internal transactions", len(result), len(tt.expected))
+			}
+			if currentTrace == tt.traceIndex {
+				t.Errorf("trace index not increased")
 			}
 			for i, itx := range result {
 				if !bytes.Equal(itx.From, tt.expected[i].From) {
