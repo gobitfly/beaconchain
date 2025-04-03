@@ -167,7 +167,7 @@ func (client *ErigonClient) GetBlock(number uint64, traceMode string) (*types.Et
 			LogsBloom:            receipt.Bloom[:],
 			Status:               receipt.Status,
 			Logs:                 getLogsFromReceipts(receipt.Logs),
-			Itx:                  getInternalTxs(traceIndex, traces, txPosition),
+			Itx:                  getInternalTxs(&traceIndex, traces, txPosition),
 			MaxFeePerBlobGas:     getMaxFeePerBlobGas(tx),
 			BlobVersionedHashes:  getBlobVersionedHashes(tx),
 			BlobGasPrice:         getBlobGasPrice(receipt),
@@ -517,10 +517,10 @@ func (client *ErigonClient) getSender(tx *gethtypes.Transaction, blockHash commo
 	return sender.Bytes()
 }
 
-func getInternalTxs(traceIndex int, traces []*Eth1InternalTransactionWithPosition, txPosition int) []*types.Eth1InternalTransaction {
+func getInternalTxs(traceIndex *int, traces []*Eth1InternalTransactionWithPosition, txPosition int) []*types.Eth1InternalTransaction {
 	var internals []*types.Eth1InternalTransaction
-	for ; traceIndex < len(traces) && traces[traceIndex].txPosition == txPosition; traceIndex++ {
-		internals = append(internals, &traces[traceIndex].Eth1InternalTransaction)
+	for ; *traceIndex < len(traces) && traces[*traceIndex].txPosition == txPosition; *traceIndex++ {
+		internals = append(internals, &traces[*traceIndex].Eth1InternalTransaction)
 	}
 	return internals
 }
