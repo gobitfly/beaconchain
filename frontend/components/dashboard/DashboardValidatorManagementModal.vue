@@ -112,10 +112,10 @@ const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupI
       method: 'POST',
     },
     { dashboardKey: dashboardKey.value },
-  )
-
-  loadData()
-  refreshOverview(dashboardKey.value)
+  ).then(() => {
+    loadData()
+    refreshOverview(dashboardKey.value)
+  })
 }
 
 const removeValidators = async (validators?: NumberOrString[]) => {
@@ -337,8 +337,17 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     ...(type === 'validators_by_graffiti' && { graffiti: value.graffiti }),
   },
   selectedGroup.value,
-  )
-  resetInput()
+  ).then(() => {
+    resetInput()
+  }).catch((error) => {
+    if (error.statusCode === 403) {
+      dialog.open(BcPremiumModal, {
+        data: {
+          description: $t('dashboard.validator.management.validators_limit_exceeded'),
+        },
+      })
+    }
+  })
 }
 const inputValidator = ref('')
 </script>
