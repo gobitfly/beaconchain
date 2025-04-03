@@ -1,97 +1,72 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
-import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboard'
+import type {
+  GetValidatorDashboardConsensusLayerDepositsResponse,
+  GetValidatorDashboardTotalConsensusDepositsResponse,
+  VDBConsensusDepositsTableRow,
+} from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardClDepositsStore } from '~/stores/dashboard/useValidatorDashboardClDepositsStore'
+import { useNetworkStore } from '~/stores/useNetworkStore'
 
-const { dashboardKey } = useDashboardKey()
+const {
+  clDeposits,
+  clDepositsTotalAmount,
+} = defineProps<{
+  clDeposits?: GetValidatorDashboardConsensusLayerDepositsResponse,
+  clDepositsTotalAmount?: GetValidatorDashboardTotalConsensusDepositsResponse,
+  isLoading: boolean,
+}>()
+
+const {
+  isGuestDashboard,
+} = useDashboardKey()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(5)
 const { t: $t } = useTranslation()
 
 const {
-  getEpochFromSlot,
   getTimestampFromSlot,
 } = useNetworkStore()
 
-const {
-  deposits,
-  getDeposits,
-  getTotalAmount,
-  isLoadingDeposits,
-  isLoadingTotal,
-  query: lastQuery,
-  totalAmount,
-} = useValidatorDashboardClDepositsStore()
-const {
-  bounce: setQuery,
-  value: query,
-} = useDebounceValue<
-  TableQueryParams | undefined
->(undefined, 500)
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators,
-  overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
+
+const query = defineModel<TableQueryParams>('query')
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
   return {
-    epoch: width.value >= 1000,
-    group: width.value > 1200,
-    publicKey: width.value >= 700,
-    signature: width.value >= 1100,
-    slot: width.value >= 900,
-    withdrawalCredentials: width.value >= 800,
+    group: width.value > 768,
+    publicKey: width.value >= 768,
+    status: width.value >= 768,
+    type: width.value >= 768,
+    validatorIndex: width.value >= 768,
+    withdrawalCredentials: width.value >= 768,
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = { limit: pageSize.value }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-    getTotalAmount(dashboardKey.value)
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  async (q) => {
-    if (q) {
-      await getDeposits(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const tableData = computed(() => {
-  if (!deposits.value?.data?.length) {
+  if (!clDeposits?.data?.length) {
     return
   }
+
   return {
     data: [
-      { amount: totalAmount.value },
-      ...deposits.value.data,
+      {
+        amount: clDepositsTotalAmount?.data.total_amount,
+        isTotalAmountRow: true,
+      },
+      ...clDeposits.data,
     ],
-    paging: deposits.value.paging,
+    paging: clDeposits.paging,
   }
 })
 
@@ -100,22 +75,27 @@ const groupNameLabel = (groupId?: number) => {
 }
 
 const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
+  query.value = setQuerySort(sort, query.value)
 }
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
+const setCursor = (cursor: Cursor) => {
+  query.value = setQueryCursor(cursor, query.value)
 }
-
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
+const setPageSize = (limit: number) => {
+  query.value = setQueryPageSize(limit, query.value)
+}
+const setSearch = (value?: string) => {
+  query.value = {
+    ...query.value,
+    search: value,
+  }
 }
 
 const getRowClass = (row: VDBConsensusDepositsTableRow) => {
   if (row.index === undefined) {
     return 'total-row'
+  }
+  if (row.status === 'queued') {
+    return 'grayed-out-row'
   }
 }
 
@@ -130,177 +110,247 @@ const {
 </script>
 
 <template>
-  <div>
-    <BcTableControl :title="$t('dashboard.validator.cl_deposits.title')">
-      <template #table>
-        <ClientOnly fallback-tag="span">
-          <BcTable
-            :data="tableData"
-            data-key="index"
-            :expandable="!colsVisible.group"
-            class="cl_deposits_table"
-            :cursor
-            :page-size
-            :row-class="getRowClass"
-            :is-row-expandable
-            :is-loading="isLoadingDeposits"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+  <BcTableControl
+    :title="$t('dashboard.validator.cl_deposits.title')"
+    :search-placeholder="$t(
+      isGuestDashboard
+        ? 'dashboard.validator.cl_deposits.search_placeholder_guest_dashboard'
+        : 'dashboard.validator.cl_deposits.search_placeholder_private_dashboard',
+    )
+    "
+    @set-search="setSearch"
+  >
+    <template #table>
+      <ClientOnly fallback-tag="span">
+        <BcTable
+          :data="tableData"
+          data-key="index"
+          expandable
+          table-class="cl-deposits-table"
+          :cursor
+          :page-size
+          :row-class="getRowClass"
+          :is-row-expandable
+          :is-loading
+          @set-cursor="setCursor"
+          @sort="onSort"
+          @set-page-size="setPageSize"
+        >
+          <Column
+            field="timestamp"
+            body-class="age-field"
+            sortable
           >
-            <Column
-              v-if="colsVisible.publicKey"
-              :header="$t('dashboard.validator.col.public_key')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.public_key"
-                  :no-wrap="true"
-                  type="public_key"
+            <template #header>
+              <BcTableAgeHeader />
+            </template>
+            <template #body="slotProps">
+              <BcTableDateTime
+                v-if="!slotProps.data.isTotalAmountRow"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot_processed)"
+              />
+              <span v-else>Σ</span>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.validatorIndex"
+            :header="$t('dashboard.validator.col.validator_index')"
+          >
+            <template #body="slotProps">
+              <BcLink
+                v-if="!slotProps.data.isTotalAmountRow"
+                :to="`/validator/${slotProps.data.index}`"
+                target="_blank"
+                class="link"
+              >
+                {{ slotProps.data.index }}
+              </BcLink>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.group"
+            body-class="group-id"
+            header-class="group-id"
+            :header="$t('dashboard.validator.col.group')"
+          >
+            <template #body="slotProps">
+              <span v-if="!slotProps.data.isTotalAmountRow">
+                {{ groupNameLabel(slotProps.data.group_id) }}
+              </span>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.type"
+            :header="$t('dashboard.validator.col.type')"
+          >
+            <template #body="slotProps">
+              <BcBadge
+                v-if="!slotProps.data.isTotalAmountRow"
+                class="cl-deposits-table__type-badge"
+                color="gray"
+              >
+                {{
+                  slotProps.data.type === 'manual'
+                    ? $t('dashboard.validator.cl_deposits.type.manual')
+                    : $t('dashboard.validator.cl_deposits.type.auto')
+                }}
+              </BcBadge>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.status"
+            :header="$t('table.status')"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="!slotProps.data.isTotalAmountRow"
+                class="status-cell-content"
+              >
+                <DashboardTableClDepositsStatus :status="slotProps.data.status" />
+              </div>
+            </template>
+          </Column>
+          <Column
+            field="amount"
+            :header="$t('table.amount')"
+            sortable
+          >
+            <template #body="slotProps">
+              <BcTooltip
+                fit-content
+              >
+                <BcFormatAmount
+                  :value="slotProps.data.amount"
+                  target-currency="clDisplayCurrency"
+                  has-tooltip
                 />
-                <span v-else>Σ</span>
-              </template>
-            </Column>
-            <Column
-              field="index"
-              :header="$t('common.index')"
-            >
-              <template #body="slotProps">
-                <BcLink
-                  v-if="slotProps.data.index !== undefined"
-                  :to="`/validator/${slotProps.data.index}`"
-                  target="_blank"
-                  class="link"
-                >
-                  {{ slotProps.data.index }}
-                </BcLink>
-                <span v-else-if="!colsVisible.publicKey">Σ</span>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.group"
-              field="group_id"
-              body-class="group-id"
-              header-class="group-id"
-              :header="$t('dashboard.validator.col.group')"
-            >
-              <template #body="slotProps">
-                <span v-if="slotProps.data.index !== undefined">
-                  {{ groupNameLabel(slotProps.data.group_id) }}
-                </span>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.epoch"
-              field="epoch"
-              :header="$t('common.epoch')"
-            >
-              <template #body="slotProps">
-                <BcLink
-                  v-if="slotProps.data.index !== undefined"
-                  :to="`/epoch/${getEpochFromSlot(slotProps.data.slot)}`"
-                  target="_blank"
-                  class="link"
-                >
-                  <BcFormatNumber :value="getEpochFromSlot(slotProps.data.slot)" />
-                </BcLink>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.slot"
-              field="slot"
-              :header="$t('common.slot')"
-            >
-              <template #body="slotProps">
-                <BcLink
-                  v-if="slotProps.data.index !== undefined"
-                  :to="`/slot/${slotProps.data.slot}`"
-                  target="_blank"
-                  class="link"
-                >
-                  <BcFormatNumber :value="slotProps.data.slot" />
-                </BcLink>
-              </template>
-            </Column>
-            <Column
-              field="age"
-              body-class="age-field"
-            >
-              <template #header>
-                <BcTableAgeHeader />
-              </template>
-              <template #body="slotProps">
-                <BcTableDateTime
-                  v-if="slotProps.data.index !== undefined"
-                  :unix-timestamp="getTimestampFromSlot(slotProps.data.epoch)"
-                />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.withdrawalCredentials"
-              field="withdrawal_credential"
-              header-class="withdrawal-credentials"
-              :header="$t('dashboard.validator.col.withdrawal_credential')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.withdrawal_credential"
-                  :no-wrap="true"
-                  type="withdrawal_credentials"
-                />
-              </template>
-            </Column>
-            <Column
-              field="amount"
-              :header="$t('table.amount')"
-            >
-              <template #body="slotProps">
-                <div
-                  v-if="slotProps.data.index === undefined && isLoadingTotal"
-                >
-                  <BcLoadingSpinner
-                    :loading="true"
-                    size="small"
-                  />
-                </div>
-                <BcTooltip
-                  fit-content
+                <template
+                  v-if="displayCurrencyDefault.executionLayer !== selectedCurrencyMain"
+                  #tooltip
                 >
                   <BcFormatAmount
                     :value="slotProps.data.amount"
-                    target-currency="clDisplayCurrency"
-                    :maximum-fraction-digits="0"
+                    has-higher-precision
                   />
-                  <template
-                    v-if="displayCurrencyDefault.consensusLayer !== selectedCurrencyMain"
-                    #tooltip
-                  >
-                    <BcFormatAmount
-                      :value="slotProps.data.amount"
-                    />
-                  </template>
-                </BcTooltip>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.signature"
-              field="signature"
-              :header="$t('dashboard.validator.col.signature')"
-            >
-              <template #body="slotProps">
-                <BcFormatHash
-                  v-if="slotProps.data.index !== undefined"
-                  :hash="slotProps.data.signature"
-                  :no-wrap="true"
+                </template>
+              </BcTooltip>
+            </template>
+          </Column>
+          <Column
+            v-if="!colsVisible.status"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="!slotProps.data.isTotalAmountRow"
+                class="status-cell-content"
+              >
+                <DashboardTableClDepositsStatus
+                  :status="slotProps.data.status"
+                  is-mobile
                 />
-              </template>
-            </Column>
-            <template #expansion="slotProps">
-              <div class="expansion">
-                <div class="row">
-                  <div class="label">
+              </div>
+            </template>
+          </Column>
+          <template #expansion="slotProps">
+            <div class="cl-deposits-table__details">
+              <div class="cl-deposits-table__details-grid">
+                <div
+                  v-if="!colsVisible.validatorIndex"
+                  class="cl-deposits-table__details-row"
+                >
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.validator_index") }}
+                  </div>
+                  <BcLink
+                    :to="`/validator/${slotProps.data.index}`"
+                    target="_blank"
+                    class="link"
+                  >
+                    {{ slotProps.data.index }}
+                  </BcLink>
+                </div>
+                <div
+                  v-if="!colsVisible.group"
+                  class="cl-deposits-table__details-row"
+                >
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.group") }}
+                  </div>
+                  <div class="cl-deposits-table__details-value">
+                    {{ groupNameLabel(slotProps.data.group_id) }}
+                  </div>
+                </div>
+                <div class="cl-deposits-table__details-row">
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.slot_queued") }}
+                  </div>
+                  <BcLink
+                    v-if="slotProps.data.slot_queued !== undefined"
+                    :to="`/slot/${slotProps.data.slot_queued}`"
+                    target="_blank"
+                    class="link"
+                  >
+                    <BcFormatNumber :value="slotProps.data.slot_queued" />
+                  </BcLink>
+                  <span v-else>-</span>
+                </div>
+                <div class="cl-deposits-table__details-row">
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.slot_processed") }}
+                  </div>
+                  <div class="cl-deposits-table__details-value">
+                    <BcLink
+                      :to="`/slot/${slotProps.data.slot_processed}`"
+                      target="_blank"
+                      class="link"
+                    >
+                      <BcFormatNumber :value="slotProps.data.slot_processed" />
+                    </BcLink>
+                    <BcTooltip
+                      v-if="slotProps.data.status === 'queued'"
+                      tooltip-width="175px"
+                      tooltip-text-align="left"
+                      class="detail-value-tooltip"
+                    >
+                      <BcIcon name="circle-info" />
+                      <template #tooltip>
+                        <slot name="tooltip">
+                          {{ $t('dashboard.validator.cl_deposits.info_slot_processed_estimated') }}
+                        </slot>
+                      </template>
+                    </BcTooltip>
+                  </div>
+                </div>
+                <div
+                  v-if="!colsVisible.type"
+                  class="cl-deposits-table__details-row"
+                >
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.type") }}
+                  </div>
+                  <BcBadge
+                    v-if="slotProps.data.index !== undefined"
+                    class="cl-deposits-table__type-badge"
+                    color="gray"
+                  >
+                    {{
+                      slotProps.data.type === 'manual'
+                        ? $t('dashboard.validator.cl_deposits.type.manual')
+                        : $t('dashboard.validator.cl_deposits.type.auto')
+                    }}
+                  </BcBadge>
+                </div>
+                <div
+                  v-if="!colsVisible.status"
+                  class="cl-deposits-table__details-row"
+                >
+                  <div class="cl-deposits-table__details-label">
+                    {{ $t("dashboard.validator.col.status") }}
+                  </div>
+                  <DashboardTableClDepositsStatus :status="slotProps.data.status" />
+                </div>
+                <div class="cl-deposits-table__details-row">
+                  <div class="cl-deposits-table__details-label">
                     {{ $t("dashboard.validator.col.public_key") }}
                   </div>
                   <BcFormatHash
@@ -309,42 +359,8 @@ const {
                     :no-wrap="true"
                   />
                 </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("dashboard.validator.col.group") }}
-                  </div>
-                  <div class="value">
-                    {{ groupNameLabel(slotProps.data.group_id) }}
-                  </div>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("common.epoch") }}
-                  </div>
-                  <BcLink
-                    v-if="slotProps.data.index !== undefined"
-                    :to="`/epoch/${getEpochFromSlot(slotProps.data.slot)}`"
-                    target="_blank"
-                    class="link"
-                  >
-                    <BcFormatNumber :value="getEpochFromSlot(slotProps.data.slot)" />
-                  </BcLink>
-                </div>
-                <div class="row">
-                  <div class="label">
-                    {{ $t("common.slot") }}
-                  </div>
-                  <BcLink
-                    v-if="slotProps.data.index !== undefined"
-                    :to="`/slot/${slotProps.data.slot}`"
-                    target="_blank"
-                    class="link"
-                  >
-                    <BcFormatNumber :value="slotProps.data.slot" />
-                  </BcLink>
-                </div>
-                <div class="row">
-                  <div class="label">
+                <div class="cl-deposits-table__details-row">
+                  <div class="cl-deposits-table__details-label">
                     {{ $t("dashboard.validator.col.withdrawal_credential") }}
                   </div>
                   <BcFormatHash
@@ -353,8 +369,8 @@ const {
                     :no-wrap="true"
                   />
                 </div>
-                <div class="row">
-                  <div class="label">
+                <div class="cl-deposits-table__details-row">
+                  <div class="cl-deposits-table__details-label">
                     {{ $t("dashboard.validator.col.signature") }}
                   </div>
                   <BcFormatHash
@@ -364,21 +380,31 @@ const {
                   />
                 </div>
               </div>
-            </template>
-            <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
-            </template>
-          </BcTable>
-        </ClientOnly>
-      </template>
-    </BcTableControl>
-  </div>
+              <span
+                v-if="slotProps.data.status === 'queued'"
+                class="cl-deposits-table__details-footer-text"
+              >
+                <span>
+                  CL deposit was caused by a switch to compounding event
+                </span>
+                <BcIcon name="flag" />
+              </span>
+            </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
+          </template>
+        </BcTable>
+      </ClientOnly>
+    </template>
+  </BcTableControl>
 </template>
 
 <style lang="scss" scoped>
 @use "~/assets/css/utils.scss";
+@use '~/assets/css/breakpoints' as *;
 
-:deep(.cl_deposits_table) {
+:deep(.cl-deposits-table) {
   > .p-datatable-wrapper {
     min-height: 335px;
   }
@@ -399,6 +425,10 @@ const {
     }
   }
 
+  .grayed-out-row {
+    opacity: 0.5;
+  }
+
   .age-field {
     white-space: nowrap;
   }
@@ -408,28 +438,54 @@ const {
   }
 }
 
-.expansion {
-  color: var(--container-color);
-  background-color: var(--container-background);
-  display: flex;
-  flex-direction: column;
-  gap: var(--padding);
-  padding: var(--padding);
-  font-size: var(--small_text_font_size);
+.cl-deposits-table {
+  &__details {
+    padding: var(--padding-medium);
+    color: var(--container-color);
+    font-size: var(--small_text_font_size);
+    background-color: var(--container-background);
+  }
 
-  .row {
+  &__details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, max-content);
+    gap: var(--padding-medium) calc(var(--padding-large) * 2);
+
+    @media (min-width: $breakpoint-md) {
+      grid-template-columns: repeat(4, max-content);
+      grid-template-rows: repeat(3, auto);
+      grid-auto-flow: column;
+    }
+  }
+
+  &__details-row {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: span 2;
+    column-gap: var(--padding-large);
+    align-items: center;
+  }
+
+  &__details-label {
+    font-weight: var(--standard_text_bold_font_weight);
+  }
+
+  &__details-value {
+    @include utils.truncate-text;
     display: flex;
+    max-width: 140px;
     gap: var(--padding);
+  }
 
-    .label {
-      width: 164px;
-      font-weight: var(--standard_text_bold_font_weight);
-    }
+  &__details-footer-text {
+    display: flex;
+    color: var(--text-color-discreet);
+    gap: var(--padding);
+    padding-top: var(--padding-medium);
+  }
 
-    .value {
-      @include utils.truncate-text;
-      max-width: 140px;
-    }
+  &__type-badge {
+    width: 5rem;
   }
 }
 </style>
