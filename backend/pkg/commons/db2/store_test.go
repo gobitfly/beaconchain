@@ -33,6 +33,11 @@ func TestStoreV1(t *testing.T) {
 				start: 0,
 				end:   1,
 			},
+			{
+				name:  "start and end at genesis ",
+				start: 0,
+				end:   0,
+			},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
