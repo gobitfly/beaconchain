@@ -21,9 +21,9 @@ func InitBigtableSchema() error {
 	tables["beaconchain_validators_history"] = map[string]gcp_bigtable.GCPolicy{
 		VALIDATOR_BALANCES_FAMILY:             nil,
 		VALIDATOR_HIGHEST_ACTIVE_INDEX_FAMILY: nil,
-		ATTESTATIONS_FAMILY:                   nil,
+		ATTESTATIONS_FAMILY:                   gcp_bigtable.MaxAgeGCPolicy(utils.Day * 31),
 		SYNC_COMMITTEES_FAMILY:                nil,
-		INCOME_DETAILS_COLUMN_FAMILY:          nil,
+		INCOME_DETAILS_COLUMN_FAMILY:          gcp_bigtable.MaxAgeGCPolicy(utils.Day * 31),
 		STATS_COLUMN_FAMILY:                   nil,
 	}
 	tables["blocks"] = map[string]gcp_bigtable.GCPolicy{
