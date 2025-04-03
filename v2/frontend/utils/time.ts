@@ -62,7 +62,7 @@ export const getRelativeTime = (unixTimestamp: number, {
   locale?: Locale,
   style?: 'long' | 'short',
 } = {}) => {
-  const seconds = unixTimestamp
+  const seconds = unixTimestamp - (Date.now() / 1000)
   const minutes = (seconds / 60)
   const hours = (minutes / 60)
   const days = (hours / 24)
