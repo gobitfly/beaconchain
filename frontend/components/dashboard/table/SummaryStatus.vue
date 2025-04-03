@@ -94,6 +94,7 @@ const mapped = computed(() => {
   gap: 8px;
 
   .tooltip {
+    display: inline-flex;
     height: fit-content;
 
     svg {
