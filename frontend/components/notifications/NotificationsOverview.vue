@@ -25,7 +25,7 @@ const { user } = useUserStore()
 const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
 const resetHours = computed(
-  () => getRelativeTime(overview.value?.next_email_count_reset_timestamp ?? 0),
+  () => getRelativeTime(overview.value?.next_email_count_reset_timestamp ?? 0, { style: 'long' }),
 )
 
 const tooltipEmail = computed(() => {
