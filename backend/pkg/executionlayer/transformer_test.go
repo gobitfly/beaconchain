@@ -319,7 +319,7 @@ func TestTransformERC1155(t *testing.T) {
 				},
 			},
 		},
-		// TODO add transfer bulk when bug fixed
+		// TODO add transfer Batch when bug fixed
 	}
 
 	for _, tt := range tests {
@@ -1458,10 +1458,10 @@ func TestIsValidERC1155Log(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "valid TransferBulkTopic log",
+			name: "valid TransferBatchTopic log",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					erc1155.TransferBulkTopic.Bytes(),
+					erc1155.TransferBatchTopic.Bytes(),
 					alice,
 					bob,
 					john,
@@ -1493,10 +1493,10 @@ func TestIsValidERC1155Log(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "invalid TransferBulkTopic log with too little topics",
+			name: "invalid TransferBatchTopic log with too little topics",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					erc1155.TransferBulkTopic.Bytes(),
+					erc1155.TransferBatchTopic.Bytes(),
 					alice,
 					bob,
 				},
@@ -1517,10 +1517,10 @@ func TestIsValidERC1155Log(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "invalid TransferBulkTopic log with too many topics",
+			name: "invalid TransferBatchTopic log with too many topics",
 			log: &types.Eth1Log{
 				Topics: [][]byte{
-					erc1155.TransferBulkTopic.Bytes(),
+					erc1155.TransferBatchTopic.Bytes(),
 					alice,
 					bob,
 					john,

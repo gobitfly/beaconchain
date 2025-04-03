@@ -6,5 +6,5 @@ import (
 
 var abi, _ = contracts.ERC1155MetaData.GetAbi()
 
-var TransferBulkTopic = abi.Events["TransferBulk"].ID
+var TransferBatchTopic = abi.Events["TransferBatch"].ID
 var TransferSingleTopic = abi.Events["TransferSingle"].ID

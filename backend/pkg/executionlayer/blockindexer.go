@@ -219,7 +219,7 @@ func (r *reporter) report(total uint64, block *types.Eth1Block, timings *types.G
 		}
 		perc := float64(count) * 100 / float64(total)
 		log.Infof("retrieved & saved block %v (0x%x) in %v (header: %v, receipts: %v, traces: %v, db: %v)", block.Number, block.Hash, time.Since(blockStartTs), timings.Headers, timings.Receipts, timings.Traces, time.Since(dbStart))
-		log.Infof("processed %v blocks in %v (%.1f blocks / sec); sync is %.1f%% complete", block.Number, time.Since(startTs), float64(block.Number)/time.Since(*lastTickTs).Seconds(), perc)
+		log.Infof("processed %v blocks in %v (%.1f blocks / sec); sync is %.1f%% complete", count, time.Since(startTs), float64(count)/time.Since(*lastTickTs).Seconds(), perc)
 
 		*lastTickTs = time.Now()
 	}
