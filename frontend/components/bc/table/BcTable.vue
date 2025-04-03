@@ -118,6 +118,7 @@ const sort = computed(() => {
     :value="data?.data"
     :data-key
     :loading="isLoading"
+    :table-class
   >
     <Column
       v-if="selectionMode"

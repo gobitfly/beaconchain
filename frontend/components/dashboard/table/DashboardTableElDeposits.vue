@@ -114,7 +114,7 @@ const {
           :data="tableData"
           data-key="index"
           expandable
-          class="el_deposits_table"
+          table-class="el_deposits_table"
           :cursor="query?.cursor"
           :page-size="query?.limit"
           :row-class="getRowClass"
