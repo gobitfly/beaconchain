@@ -28,6 +28,7 @@ export type Icon =
   | 'eye'
   | 'file-signature'
   | 'fire'
+  | 'flag'
   | 'gauge-simple-max'
   | 'gear'
   | 'gem'
@@ -132,6 +133,7 @@ const is = computed(() => {
     <LazyBcIconEye v-else-if="name === 'eye'" />
     <LazyBcIconFileSignature v-else-if="name === 'file-signature'" />
     <LazyBcIconFire v-else-if="name === 'fire'" />
+    <LazyBcIconFlag v-else-if="name === 'flag'" />
     <LazyBcIconGaugeSimpleMax v-else-if="name === 'gauge-simple-max'" />
     <LazyBcIconGear v-else-if="name === 'gear'" />
     <LazyBcIconGem v-else-if="name === 'gem'" />
