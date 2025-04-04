@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/erc20"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
+	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/executionlayer/evm"
 )
 
@@ -114,6 +115,10 @@ func (service *IndexerService) SyncLive() {
 		go service.indexer.Balances(state)
 
 		go service.indexer.ENS(state)
+
+		// TODO: remove that, it seems weird to write to a database that the service is running
+		// we have logs, metrics and other indicator for that purpose
+		services.ReportStatus("eth1indexer", "Running", nil)
 	}
 }
 
