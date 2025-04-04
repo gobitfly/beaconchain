@@ -162,6 +162,24 @@ func (_m *ClientInt) GetCommittees(stateID interface{}, epoch *uint64, index *ui
 	return r0, r1
 }
 
+// GetEndpoint provides a mock function with no fields
+func (_m *ClientInt) GetEndpoint() string {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetEndpoint")
+	}
+
+	var r0 string
+	if rf, ok := ret.Get(0).(func() string); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	return r0
+}
+
 // GetEvents provides a mock function with given fields: topics
 func (_m *ClientInt) GetEvents(topics []types.EventTopic) chan *types.EventResponse {
 	ret := _m.Called(topics)

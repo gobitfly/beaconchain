@@ -17,7 +17,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus" //nolint:depguard
 	"golang.org/x/sync/errgroup"
 )
@@ -192,15 +191,9 @@ func GetModuleContext() (ModuleContext, error) {
 	}
 
 	config.ClConfig = &spec.Data
-
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
-	}
-
 	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
 
-	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
+	clClient, err := rpc.NewLighthouseClient(&cl, chainID)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}

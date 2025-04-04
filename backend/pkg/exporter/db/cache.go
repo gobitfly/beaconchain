@@ -23,10 +23,10 @@ type SlotExporterCacheRepository interface {
 }
 
 type SlotExporterCache struct {
-	cache database.RemoteCache
+	cache database.RemoteCacheWithMetrics
 }
 
-func NewSlotExporterCache(cache database.RemoteCache) *SlotExporterCache {
+func NewSlotExporterCache(cache database.RemoteCacheWithMetrics) *SlotExporterCache {
 	return &SlotExporterCache{
 		cache: cache,
 	}

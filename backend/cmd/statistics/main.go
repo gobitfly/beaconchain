@@ -114,12 +114,7 @@ func Run() {
 	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
 	if utils.Config.Indexer.Node.Type == "lighthouse" {
 		cl := consapi.NewClient("http://" + cfg.Indexer.Node.Host + ":" + cfg.Indexer.Node.Port)
-		nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-		if !ok {
-			log.Fatal(nil, "lighthouse client can only be used with real node impl", 0)
-		}
-
-		rpcClient, err = rpc.NewLighthouseClient(nodeImpl, chainID)
+		rpcClient, err = rpc.NewLighthouseClient(&cl, chainID)
 		if err != nil {
 			log.Fatal(err, "new explorer lighthouse client error", 0)
 		}
