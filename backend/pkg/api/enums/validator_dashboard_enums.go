@@ -294,13 +294,13 @@ func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColu
 func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBConsolidationElBlockProcessed:
-		return goqu.C("block_slot")
+		return goqu.C("block_number")
 	default:
 		return nil
 	}
 }
 
-var VDBConsolidationsColumns = struct {
+var VDBConsolidationsElColumns = struct {
 	BlockProcessed VDBConsolidationsElColumn
 }{
 	VDBConsolidationElBlockProcessed,
