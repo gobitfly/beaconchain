@@ -115,7 +115,15 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
-type ConsolidationsCursor struct {
+type ELConsolidationsCursor struct {
+	GenericCursor
+
+	BlockProcessed uint64
+	TxIndex        uint64
+	// ITxIndex      uint64
+}
+
+type CLConsolidationsCursor struct {
 	GenericCursor
 
 	Slot               uint64
