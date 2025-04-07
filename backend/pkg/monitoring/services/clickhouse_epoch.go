@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
@@ -36,30 +35,27 @@ func (s *ServiceClickhouseEpoch) internalProcess() {
 }
 
 func (s *ServiceClickhouseEpoch) runChecks() {
-	r := StatusReporter.NewStatusReport(constants.Event_ClickhouseDashboardEpoch, constants.Default, 30*time.Second)
-	r(constants.Running, nil)
+	statusReport := StatusReporter.NewStatusReport(constants.Event_ClickhouseDashboardEpoch, constants.Default, 30*time.Second)
+	statusReport(constants.Running, nil)
 	if db.ClickHouseReader == nil {
-		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+		statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 		// ignore
 		return
 	}
 	log.Tracef("checking clickhouse epoch")
-	// context with deadline
-	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
-	defer cancel()
-	var t time.Time
-	err := db.ClickHouseReader.GetContext(ctx, &t, "SELECT MAX(t) FROM view_validator_dashboard_data_epoch_max_ts")
+
+	ts, err := s.db.GetVDLatestEpochTs()
 	if err != nil {
-		r(constants.Failure, map[string]string{"error": err.Error()})
+		statusReport(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
 	// check if delta is out of bounds
 	threshold := 1 * time.Hour
-	md := map[string]string{"delta": time.Since(t).String(), "threshold": threshold.String()}
-	if time.Since(t) > threshold {
+	md := map[string]string{"delta": time.Since(ts).String(), "threshold": threshold.String()}
+	if time.Since(ts) > threshold {
 		md["error"] = "delta is over threshold"
-		r(constants.Failure, md)
+		statusReport(constants.Failure, md)
 		return
 	}
-	r(constants.Success, md)
+	statusReport(constants.Success, md)
 }

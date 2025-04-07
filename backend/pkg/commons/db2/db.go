@@ -1,6 +1,8 @@
 package db2
 
 import (
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -42,4 +44,5 @@ type LastBlocksStoreWriter interface {
 type Monitoring interface {
 	SaveNewStatusReport(status StatusReport) error
 	GetEmitters() ([]string, error)
+	GetVDLatestEpochTs() (time.Time, error)
 }

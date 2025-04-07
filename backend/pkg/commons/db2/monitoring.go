@@ -95,3 +95,20 @@ func (m *MonitoringDB) GetEmitters() ([]string, error) {
 
 	return emitters, nil
 }
+
+func (m *MonitoringDB) GetVDLatestEpochTs() (time.Time, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	var ts time.Time
+	err := m.ClickHouseReader.GetContext(
+		ctx,
+		&ts,
+		"SELECT MAX(t) FROM view_validator_dashboard_data_epoch_max_ts",
+	)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return ts, err
+}
