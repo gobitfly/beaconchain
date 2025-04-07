@@ -49,13 +49,20 @@ const data = computed(() => {
       />
     </span>
 
-    <BcFormatPercent
-      v-else
-      class="percent"
+    <BaseFormatPercent
+      v-else-if="props.success"
+      v-slot="{ result, ratio }"
       :base="data.sum"
       :value="props.success"
-      :color-break-point="80"
-      :full-on-empty-base="true"
-    />
+    >
+      <BcColor
+        :color="ratio >= 0.8 ? 'green' : 'red'"
+      >
+        {{ result }}
+      </BcColor>
+    </BaseFormatPercent>
+    <span v-else>
+      -
+    </span>
   </BcTooltip>
 </template>

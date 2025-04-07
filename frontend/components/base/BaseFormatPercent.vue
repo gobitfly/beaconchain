@@ -19,18 +19,24 @@ const ratio = computed(() => {
   assertIsNotZero(base)
   return (Number(value) / Number(base))
 })
+
+const result = computed(() => {
+  return formatPercent(ratio.value, {
+    maximumFractionDigits,
+    minimumFractionDigits,
+  })
+})
 </script>
 
 <template>
-  <BcColor :color>
-    <slot :value>
-      {{ formatPercent(ratio, {
-        maximumFractionDigits,
-        minimumFractionDigits,
-      }) }}
+  <span>
+    <slot
+      :result
+      :ratio
+    >
+      <BcColor :color>
+        {{ result }}
+      </BcColor>
     </slot>
-  </BcColor>
+  </span>
 </template>
-
-<style scoped lang="scss">
-</style>
