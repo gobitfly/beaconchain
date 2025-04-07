@@ -71,7 +71,7 @@ watch(
   groups,
   (list) => {
     // when groups change we reset the selected groups
-    selectedGroups.value = list.map(g => g.id)
+    selectedGroups.value = list.map(g => g.id).slice(0, 4)
   },
   { immediate: true },
 )
