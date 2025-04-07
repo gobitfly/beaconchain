@@ -126,8 +126,9 @@ type ELConsolidationsCursor struct {
 type CLConsolidationsCursor struct {
 	GenericCursor
 
-	Slot               uint64
+	SlotProcessed      uint64
 	ConsolidationIndex uint64
+	Amount             decimal.Decimal
 }
 
 type NotificationSettingsCursor struct {
