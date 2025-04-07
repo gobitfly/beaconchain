@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/pkg/errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -26,7 +27,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/klauspost/compress/zstd"
-	"github.com/lib/pq"
 	rpDAO "github.com/rocket-pool/rocketpool-go/dao"
 	rpDAOTrustedNode "github.com/rocket-pool/rocketpool-go/dao/trustednode"
 	"github.com/rocket-pool/rocketpool-go/minipool"
@@ -121,6 +121,7 @@ type RocketpoolExporter struct {
 	Eth1Client                         *ethclient.Client
 	API                                *rocketpool.RocketPool
 	DB                                 *sqlx.DB
+	Database                           edb.RocketpoolDBRepository
 	UpdateInterval                     time.Duration
 	MinipoolsByAddress                 map[string]*RocketpoolMinipool
 	NodesByAddress                     map[string]*RocketpoolNode
@@ -514,35 +515,6 @@ func (rp *RocketpoolExporter) UpdateDAOProposals() error {
 			return err
 		}
 		rp.DAOProposalsByID[i] = p
-	}
-	return nil
-}
-
-func (rp *RocketpoolExporter) UpdateDAOMembers() error {
-	t0 := time.Now()
-	defer func(t0 time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "updated rocketpool-dao-members")
-	}(t0)
-
-	members, err := rpDAOTrustedNode.GetMembers(rp.API, nil)
-	if err != nil {
-		return err
-	}
-	for _, m := range members {
-		addrHex := m.Address.Hex()
-		if member, exists := rp.DAOMembersByAddress[addrHex]; exists {
-			err = member.Update(rp.API)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-
-		m, err := NewRocketpoolDAOMember(rp.API, m.Address.Bytes())
-		if err != nil {
-			return err
-		}
-		rp.DAOMembersByAddress[addrHex] = m
 	}
 	return nil
 }
@@ -1120,99 +1092,6 @@ func (rp *RocketpoolExporter) SaveDAOProposalsMemberVotes() error {
 	return tx.Commit()
 }
 
-func (rp *RocketpoolExporter) SaveDAOMembers() error {
-	if len(rp.DAOMembersByAddress) == 0 {
-		return nil
-	}
-
-	t0 := time.Now()
-	defer func(t0 time.Time) {
-		log.DebugWithFields(log.Fields{"duration": time.Since(t0)}, "saved rocketpool-dao-members")
-	}(t0)
-
-	data := make([]*RocketpoolDAOMember, len(rp.DAOMembersByAddress))
-	i := 0
-	for _, val := range rp.DAOMembersByAddress {
-		data[i] = val
-		i++
-	}
-
-	tx, err := db.WriterDb.Beginx()
-	if err != nil {
-		return err
-	}
-	defer utils.Rollback(tx)
-
-	nArgs := 8
-	valueStringsArr := make([]string, nArgs)
-	for i := range valueStringsArr {
-		valueStringsArr[i] = "$%d"
-	}
-	valueStringsTpl := "(" + strings.Join(valueStringsArr, ",") + ")"
-	valueStringsArgs := make([]interface{}, nArgs)
-
-	batchSize := 1000
-	for b := 0; b < len(data); b += batchSize {
-		start := b
-		end := b + batchSize
-		if len(data) < end {
-			end = len(data)
-		}
-
-		valueStrings := make([]string, 0, batchSize)
-		valueArgs := make([]interface{}, 0, batchSize*nArgs)
-		addresses := make([][]byte, 0, batchSize)
-		for i, d := range data[start:end] {
-			for j := 0; j < nArgs; j++ {
-				valueStringsArgs[j] = i*nArgs + j + 1
-			}
-			valueStrings = append(valueStrings, fmt.Sprintf(valueStringsTpl, valueStringsArgs...))
-			valueArgs = append(valueArgs, rp.API.RocketStorageContract.Address.Bytes())
-			valueArgs = append(valueArgs, d.Address)
-			valueArgs = append(valueArgs, d.ID)
-			valueArgs = append(valueArgs, d.URL)
-			valueArgs = append(valueArgs, d.JoinedTime)
-			valueArgs = append(valueArgs, d.LastProposalTime)
-			valueArgs = append(valueArgs, d.RPLBondAmount.String())
-			valueArgs = append(valueArgs, d.UnbondedValidatorCount)
-			addresses = append(addresses, d.Address)
-		}
-		stmt := fmt.Sprintf(`
-			INSERT INTO rocketpool_dao_members (
-				rocketpool_storage_address,
-				address,
-				id,
-				url,
-				joined_time,
-				last_proposal_time,
-				rpl_bond_amount,
-				unbonded_validator_count
-			)
-			values %s
-			on conflict (rocketpool_storage_address, address) do update set
-				id = excluded.id,
-				url = excluded.url,
-				joined_time = excluded.joined_time,
-				last_proposal_time = excluded.last_proposal_time,
-				rpl_bond_amount = excluded.rpl_bond_amount,
-				unbonded_validator_count = excluded.unbonded_validator_count
-			`, strings.Join(valueStrings, ","))
-		_, err := tx.Exec(stmt, valueArgs...)
-		if err != nil {
-			return fmt.Errorf("error inserting into rocketpool_dao_members: %w", err)
-		}
-
-		_, err = tx.Exec(`
-			DELETE FROM rocketpool_dao_members
-			WHERE NOT address = ANY($1)`, pq.ByteaArray(addresses))
-		if err != nil {
-			return fmt.Errorf("error deleting from rocketpool_dao_members: %w", err)
-		}
-	}
-
-	return tx.Commit()
-}
-
 func (rp *RocketpoolExporter) TagValidators() error {
 	if len(rp.MinipoolsByAddress) == 0 {
 		return nil
@@ -1772,40 +1651,6 @@ func (r *RocketpoolDAOProposal) Update(rp *rocketpool.RocketPool) error {
 	return nil
 }
 
-type RocketpoolDAOMember struct {
-	Address                []byte    `db:"address"`
-	ID                     string    `db:"id"`
-	URL                    string    `url:"url"`
-	JoinedTime             time.Time `db:"joined_time"`
-	LastProposalTime       time.Time `db:"last_proposal_time"`
-	RPLBondAmount          *big.Int  `db:"rpl_bond_amount"`
-	UnbondedValidatorCount uint64    `db:"unbonded_validator_count"`
-}
-
-func NewRocketpoolDAOMember(rp *rocketpool.RocketPool, addr []byte) (*RocketpoolDAOMember, error) {
-	m := &RocketpoolDAOMember{}
-	m.Address = addr
-	err := m.Update(rp)
-	if err != nil {
-		return m, err
-	}
-	return m, nil
-}
-
-func (r *RocketpoolDAOMember) Update(rp *rocketpool.RocketPool) error {
-	d, err := rpDAOTrustedNode.GetMemberDetails(rp, common.BytesToAddress(r.Address), nil)
-	if err != nil {
-		return err
-	}
-	r.ID = d.ID
-	r.URL = d.Url
-	r.JoinedTime = time.Unix(int64(d.JoinedTime), 0)
-	r.LastProposalTime = time.Unix(int64(d.LastProposalTime), 0)
-	r.RPLBondAmount = d.RPLBondAmount
-	r.UnbondedValidatorCount = d.UnbondedValidatorCount
-	return nil
-}
-
 type MinipoolPerformanceFile struct {
 	Index               uint64                                               `json:"index"`
 	Network             string                                               `json:"network"`
@@ -1974,4 +1819,12 @@ func decompressFile(compressedBytes []byte) ([]byte, error) {
 	}
 
 	return decompressedBytes, nil
+}
+
+func generateSQLParamPlaceholders(numParams int) string {
+	placeholders := make([]string, numParams)
+	for i := range placeholders {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+	return "(" + strings.Join(placeholders, ",") + ")"
 }
