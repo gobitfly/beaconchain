@@ -7,21 +7,20 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
-	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/jmoiron/sqlx"
 )
 
-type MonitoringDB struct {
+type MonitoringClickhouse struct {
 	ClickHouseReader       *sqlx.DB
 	ClickHouseNativeWriter driver.Conn
 }
 
-func NewMonitoringDB() *MonitoringDB {
-	return &MonitoringDB{
-		ClickHouseReader:       db.ClickHouseReader,
-		ClickHouseNativeWriter: db.ClickHouseNativeWriter,
+func NewMonitoringClickhouse(chReader *sqlx.DB, chNativeWriter driver.Conn) *MonitoringClickhouse {
+	return &MonitoringClickhouse{
+		ClickHouseReader:       chReader,
+		ClickHouseNativeWriter: chNativeWriter,
 	}
 }
 
@@ -33,7 +32,7 @@ type StatusReport struct {
 	Metadata   map[string]string
 }
 
-func (m *MonitoringDB) SaveNewStatusReport(status StatusReport) error {
+func (m *MonitoringClickhouse) SaveNewStatusReport(status StatusReport) error {
 	timeoutContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -83,7 +82,7 @@ type Victims struct {
 	Metadata   map[string]string `db:"metadata"`
 }
 
-func (m *MonitoringDB) GetLatestStatusReport() ([]Victims, error) {
+func (m *MonitoringClickhouse) GetLatestStatusReport() ([]Victims, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -147,7 +146,7 @@ func (m *MonitoringDB) GetLatestStatusReport() ([]Victims, error) {
 	return victims, nil
 }
 
-func (m *MonitoringDB) GetEmitters() ([]string, error) {
+func (m *MonitoringClickhouse) GetEmitters() ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -171,7 +170,7 @@ func (m *MonitoringDB) GetEmitters() ([]string, error) {
 	return emitters, nil
 }
 
-func (m *MonitoringDB) GetVDLatestEpochTs() (time.Time, error) {
+func (m *MonitoringClickhouse) GetLatestEpoch() (time.Time, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -185,10 +184,10 @@ func (m *MonitoringDB) GetVDLatestEpochTs() (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	return ts, err
+	return ts, nil
 }
 
-func (m *MonitoringDB) GetVDRollingEpochEnd(rolling string) (uint64, error) {
+func (m *MonitoringClickhouse) GetEpochEnd(rolling string) (uint64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -204,5 +203,5 @@ func (m *MonitoringDB) GetVDRollingEpochEnd(rolling string) (uint64, error) {
 		return 0, err
 	}
 
-	return epochEnd, err
+	return epochEnd, nil
 }

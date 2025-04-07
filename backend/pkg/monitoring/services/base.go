@@ -36,7 +36,7 @@ type ServiceBase struct {
 
 func (s *ServiceBase) InitServices() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
-	s.db = db2.NewMonitoringDB()
+	s.db = db2.NewMonitoringClickhouse(db.ClickHouseReader, db.ClickHouseNativeWriter)
 }
 
 func (s *ServiceBase) Stop() {
@@ -87,8 +87,8 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 			}, "sending status report")
 			var err error
 			if db.ClickHouseNativeWriter != nil {
-				monitoringDB := db2.NewMonitoringDB()
-				err = monitoringDB.SaveNewStatusReport(db2.StatusReport{
+				monitoringCH := db2.NewMonitoringClickhouse(nil, db.ClickHouseNativeWriter)
+				err = monitoringCH.SaveNewStatusReport(db2.StatusReport{
 					ID:         id,
 					Flake:      flake,
 					ExpiresAt:  expires_at,

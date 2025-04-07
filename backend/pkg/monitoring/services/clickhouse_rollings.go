@@ -64,12 +64,12 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			}
 			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
-			tsEpochTable, err := s.db.GetVDLatestEpochTs()
+			tsEpochTable, err := s.db.GetLatestEpoch()
 			if err != nil {
 				statusReport(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
-			epochRollingTable, err := s.db.GetVDRollingEpochEnd(rolling)
+			epochRollingTable, err := s.db.GetEpochEnd(rolling)
 			if err != nil {
 				statusReport(constants.Failure, map[string]string{"error": err.Error()})
 				return

@@ -44,7 +44,7 @@ func (s *ServiceClickhouseEpoch) runChecks() {
 	}
 	log.Tracef("checking clickhouse epoch")
 
-	ts, err := s.db.GetVDLatestEpochTs()
+	ts, err := s.db.GetLatestEpoch()
 	if err != nil {
 		statusReport(constants.Failure, map[string]string{"error": err.Error()})
 		return
