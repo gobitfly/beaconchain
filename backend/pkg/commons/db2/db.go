@@ -45,4 +45,5 @@ type Monitoring interface {
 	SaveNewStatusReport(status StatusReport) error
 	GetEmitters() ([]string, error)
 	GetVDLatestEpochTs() (time.Time, error)
+	GetVDRollingEpochEnd(rolling string) (uint64, error)
 }

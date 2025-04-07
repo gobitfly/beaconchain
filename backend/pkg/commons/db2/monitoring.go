@@ -2,6 +2,7 @@ package db2
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -111,4 +112,23 @@ func (m *MonitoringDB) GetVDLatestEpochTs() (time.Time, error) {
 	}
 
 	return ts, err
+}
+
+func (m *MonitoringDB) GetVDRollingEpochEnd(rolling string) (uint64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	var epochEnd uint64
+	err := m.ClickHouseReader.GetContext(ctx, &epochEnd, fmt.Sprintf(`
+			SELECT
+				max(epoch_end)
+			FROM validator_dashboard_data_rolling_%s`,
+		rolling,
+	),
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return epochEnd, err
 }
