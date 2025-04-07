@@ -13,9 +13,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
+	"github.com/shopspring/decimal"
 )
 
 func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsElColumn], search string, limit uint64) ([]t.VDBConsolidationsElTableRow, *t.Paging, error) {
@@ -263,23 +265,25 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 }
 
 func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBConsolidationsClColumn], search string, limit uint64) ([]t.VDBConsolidationsClTableRow, *t.Paging, error) {
-	// WIP
-	/*var currentCursor t.CLConsolidationsCursor
+	var currentCursor t.CLConsolidationsCursor
 	var err error
 	if cursor != "" {
 		if currentCursor, err = utils.StringToCursor[t.CLConsolidationsCursor](cursor); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse passed cursor as BlocksCursor: %w", err)
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as CLConsolidationsCursor: %w", err)
 		}
 	}
 
 	consolidationsDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_consolidation_requests").As("bcr")).
 		Select(
-			goqu.I("block_slot").As("slot"),
-			goqu.L("block_slot / ?", d.config.ClConfig.SlotsPerEpoch).As("epoch"),
+			goqu.I("block_slot").As("slot_processed"),
+			goqu.I("request_index"),
+			// goqu.I("slot_queued"), // BEDS-1399
 			goqu.I("source_index").As("source"),
 			goqu.I("target_index").As("target"),
 			goqu.L("amount_consolidated::decimal * ?", 1e9).As("amount"),
+			// goqu.I("status"), // BEDS-1399
+			// goqu.I("reject_reason"), // BEDS-1399
 		).
 		InnerJoin(
 			goqu.T("blocks").As("b"),
@@ -289,18 +293,39 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 			),
 		)
 
-	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("block_slot"), Desc: true, Offset: currentCursor.Slot},
-		{Column: goqu.I("request_index"), Desc: true, Offset: currentCursor.ConsolidationIndex},
+	if dashboardId.Validators != nil {
+		consolidationsDs = consolidationsDs.
+			Where(goqu.Or(
+				goqu.L("source_index = ANY(?)", pq.Array(dashboardId.Validators)),
+				goqu.L("target_index = ANY(?)", pq.Array(dashboardId.Validators)),
+			))
+	} else {
+		consolidationsDs = consolidationsDs.
+			InnerJoin(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(goqu.Or(
+					goqu.I("source_index").Eq(goqu.I("uvdv.validator_index")),
+					goqu.I("target_index").Eq(goqu.I("uvdv.validator_index")),
+				)),
+			).
+			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
 	}
+
+	defaultSlotSortDesc := true
+	if colSort.Column == enums.VDBConsolidationsClColumns.SlotProcessed {
+		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
+		defaultSlotSortDesc = colSort.Desc
+	}
+	defaultColumns := []t.SortColumn{
+		{Column: enums.VDBConsolidationsClColumns.SlotProcessed.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
+		{Column: goqu.I("request_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.ConsolidationIndex},
+	}
+
 	var offset any
 	switch colSort.Column {
-	case enums.VDBConsolidationsColumns.Epoch:
-		colSort.Column = enums.VDBConsolidationsColumns.Slot
-		fallthrough
-	case enums.VDBConsolidationsColumns.Slot:
-		offset = currentCursor.Slot
-	case enums.VDBConsolidationsColumns.Index:
+	case enums.VDBConsolidationsClColumns.SlotProcessed:
+		offset = currentCursor.SlotProcessed
+	case enums.VDBConsolidationsClColumns.Amount:
 		offset = currentCursor.ConsolidationIndex
 	}
 
@@ -309,11 +334,108 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 		return nil, nil, err
 	}
 	consolidationsDs = consolidationsDs.
-		Order(order...)
+		Order(order...).
+		Limit(uint(limit + 1))
 	if directions != nil {
 		consolidationsDs = consolidationsDs.Where(directions)
 	}
-	res, err := runQueryRows[[]t.VDBConsolidationsTableRow](ctx, db.ReaderDb, consolidationsDs)
-	return res, &t.Paging{}, err*/
-	return nil, &t.Paging{}, nil
+
+	type dbResult struct {
+		Source        uint64          `db:"source"`
+		Target        uint64          `db:"target"`
+		SlotProcessed uint64          `db:"slot_processed"`
+		Amount        decimal.Decimal `db:"amount"`
+		// SlotQueued  uint64    `db:"slot_queued"` // BEDS-1399
+		// Status      string    `db:"status"` // BEDS-1399
+		// RejectReason string    `db:"reject_reason"` // BEDS-1399
+		ConsolidationIndex uint64 `db:"request_index"` // for cursor only
+	}
+
+	res, err := runQueryRows[[]dbResult](ctx, db.ReaderDb, consolidationsDs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	responseData := make([]t.VDBConsolidationsClTableRow, 0, len(res))
+
+	for _, r := range res {
+		row := t.VDBConsolidationsClTableRow{
+			Source:        r.Source,
+			Target:        r.Target,
+			SlotProcessed: r.SlotProcessed,
+			Amount:        r.Amount,
+			// SlotQueued:   r.SlotQueued, // BEDS-1399
+			// Status:       r.Status, // BEDS-1399
+			// RejectReason: r.RejectReason, // BEDS-1399
+		}
+
+		responseData = append(responseData, row)
+	}
+
+	var paging t.Paging
+	moreDataFlag := len(res) > int(limit)
+	if !moreDataFlag && !currentCursor.IsValid() {
+		// No paging required
+		return responseData, &paging, nil
+	}
+	if moreDataFlag {
+		// Remove the last entry as it is only required for the more data flag
+		responseData = responseData[:len(responseData)-1]
+		res = res[:len(res)-1]
+	}
+
+	if currentCursor.IsReverse() {
+		// Invert query result so response matches requested direction
+		slices.Reverse(responseData)
+	}
+
+	p, err := utils.GetPagingFromData(res, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return responseData, p, nil
+}
+
+//nolint:unused
+func mapRejectReasonDbToApi(dbReason string) string {
+	switch dbReason {
+	case "source_target_pubkey_equal":
+		return "source_equals_target"
+	case "source_pubkey_not_found":
+		return "source_unknown_pubkey"
+	case "target_pubkey_not_found":
+		return "target_unknown_pubkey"
+	case "source_withdrawal_credentials_invalid":
+		return "source_no_execution_withdrawal_credentials"
+	case "source_address_mismatch":
+		return "source_address_mismatch"
+	case "target_withdrawal_credentials_not_compounding":
+		return "target_not_compounding"
+	case "source_not_active":
+		return "source_inactive"
+	case "target_not_active":
+		return "target_inactive"
+	case "source_exiting":
+		return "source_exiting"
+	case "target_exiting":
+		return "target_exiting"
+	case "source_not_active_long_enough":
+		return "source_too_young"
+	case "pending_balance_to_withdraw_not_zero":
+		return "source_pending_withdrawals"
+	case "full_queue":
+		return "full_queue"
+	case "insufficient_consolidation_churn_limit":
+		return "insufficient_consolidation_churn"
+	case "source_slashed":
+		return "source_slashed"
+
+	case "activation_epoch_overflow", "pending_balance_to_withdraw_error", "compute_consolidation_epoch_error":
+		log.Warn("prysm client error")
+		return ""
+	default:
+		log.Warnf("unknown error: %s", dbReason)
+		return ""
+	}
 }
