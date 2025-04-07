@@ -73,6 +73,80 @@ func (m *MonitoringDB) SaveNewStatusReport(status StatusReport) error {
 	return err
 }
 
+type Victims struct {
+	EventID    string            `db:"event_id"`
+	Emitter    string            `db:"emitter"`
+	Status     string            `db:"status"`
+	InsertedAt time.Time         `db:"inserted_at"`
+	ExpiresAt  time.Time         `db:"expires_at"`
+	TimeoutsAt time.Time         `db:"timeouts_at"`
+	Metadata   map[string]string `db:"metadata"`
+}
+
+func (m *MonitoringDB) GetLatestStatusReport() ([]Victims, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	query := `
+		with active_reports as (
+			SELECT
+				event_id,
+				emitter,
+				run_id,
+				inserted_at,
+				insert_id,
+				expires_at,
+				timeouts_at,
+				status,
+				metadata
+			FROM status_reports
+			WHERE expires_at > now() and deployment_type = ? and emitter not in (select distinct emitter from status_reports where event_id = ? and inserted_at > now() - interval 1 days)
+			ORDER BY
+				event_id ASC,
+				emitter ASC,
+				run_id ASC,
+				insert_id DESC
+		), latest_report_per_run as (
+			SELECT
+				event_id,
+				emitter,
+				any(inserted_at) as inserted_at, 
+				any(insert_id) as insert_id, 
+				any(expires_at) as expires_at,
+				any(timeouts_at) as timeouts_at,
+				any(status) AS status,
+				any(metadata) AS metadata
+			FROM
+				active_reports
+			GROUP BY
+				event_id,
+				emitter,
+				run_id
+			order by insert_id desc
+		)
+		SELECT
+			event_id,
+			emitter,
+			status,
+			inserted_at,
+			expires_at,
+			timeouts_at,
+			metadata
+		FROM
+			latest_report_per_run
+		WHERE status = 'running' and timeouts_at < now()
+		ORDER BY event_id ASC, inserted_at DESC
+		`
+
+	var victims []Victims
+	err := m.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
+	if err != nil {
+		return nil, err
+	}
+
+	return victims, nil
+}
+
 func (m *MonitoringDB) GetEmitters() ([]string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
