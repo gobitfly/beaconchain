@@ -42,7 +42,7 @@ func Init(full bool) {
 		service.InitServices()
 	}
 
-	services.InitStatusReport()
+	services.InitStatusReporter(utils.Config.DeploymentType)
 }
 
 func Start() {
@@ -58,7 +58,7 @@ func Stop() {
 		service.Stop()
 	}
 	// this prevents status reports that werent shut down cleanly from triggering alerts
-	services.StatusReporter.NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
+	services.StatusReporter().NewStatusReport(constants.Event_MonitoringCleanShutdown, constants.Default, constants.Default)(constants.Success, nil)
 	if startedClickhouse.Load() {
 		db.ClickHouseNativeWriter.Close()
 	}

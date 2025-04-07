@@ -55,7 +55,7 @@ func (s *ServiceClickhouseRollings) runChecks() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			statusReport := StatusReporter.NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
+			statusReport := StatusReporter().NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
 			statusReport(constants.Running, nil)
 			if db.ClickHouseReader == nil {
 				statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})

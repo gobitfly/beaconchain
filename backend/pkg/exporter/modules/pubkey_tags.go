@@ -35,7 +35,7 @@ func (p *pubkeyTagsUpdater) Update() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
+			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := p.db.UpdatePubkeyTags()

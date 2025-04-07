@@ -51,7 +51,7 @@ func (s syncCommitteesExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
+			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacySyncCommittees, constants.Default, time.Second*12)
 			statusReport(constants.Running, nil)
 
 			err := s.exportSyncCommittees()

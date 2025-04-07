@@ -57,7 +57,7 @@ func (n *networkLivenessUpdater) Export() {
 			log.Info("network liveness export loop cancelled")
 			return
 		default:
-			statusReport := services.StatusReporter.NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
 			statusReport(constants.Running, nil)
 
 			head, err := n.client.GetChainHead()

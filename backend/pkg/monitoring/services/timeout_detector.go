@@ -36,7 +36,7 @@ func (s *ServiceTimeoutDetector) internalProcess() {
 }
 
 func (s *ServiceTimeoutDetector) runChecks() {
-	statusReport := StatusReporter.NewStatusReport(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
+	statusReport := StatusReporter().NewStatusReport(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
 	statusReport(constants.Running, nil)
 	if db.ClickHouseReader == nil {
 		statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})

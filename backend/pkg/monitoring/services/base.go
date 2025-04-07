@@ -47,7 +47,7 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func newStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func newStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration, deploymentType string) func(status constants.StatusType, metadata map[string]string) {
 	runId := uuid.New().String()
 	return func(status constants.StatusType, metadata map[string]string) {
 		// acquire snowflake synchronously
@@ -79,7 +79,7 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 			log.TraceWithFields(log.Fields{
 				"emitter":         id,
 				"event_id":        utils.GetUUID(),
-				"deployment_type": utils.Config.DeploymentType,
+				"deployment_type": deploymentType,
 				"insert_id":       flake,
 				"expires_at":      expires_at,
 				"timeouts_at":     timeouts_at,
@@ -95,10 +95,10 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 					TimeoutsAt: timeouts_at,
 					Metadata:   metadata,
 				})
-			} else if utils.Config.DeploymentType != "development" {
+			} else if deploymentType != "development" {
 				log.Error(nil, "clickhouse native writer is nil", 0)
 			}
-			if err != nil && utils.Config.DeploymentType != "development" {
+			if err != nil && deploymentType != "development" {
 				log.Error(err, "error inserting status report", 0)
 			}
 		}()
@@ -121,19 +121,24 @@ func GetRequiredEvents() []constants.Event {
 	return requiredEvents
 }
 
-type statusReport interface {
-	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
+type StatusReporterFunc func(status constants.StatusType, metadata map[string]string)
+
+type StatusReport interface {
+	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) StatusReporterFunc
 }
 
-type stubStatusReporter struct{}
+type stubStatusReporter struct {
+	initialized    bool
+	deploymentType string
+}
 
-func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
+func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) StatusReporterFunc {
 	return func(status constants.StatusType, metadata map[string]string) {
 		// no-op implementation
-		// only warn if utils.Config is initialized and we're not in development environment
-		if utils.Config != nil && utils.Config.DeploymentType != "development" {
+		// only warn if we're not in development environment
+		if sr.initialized && sr.deploymentType != "development" {
 			log.Warnf("STUB STATUS REPORTER IN USE IN %s ENVIRONMENT! Event: %s, Status: %s, Metadata: %v",
-				utils.Config.DeploymentType,
+				sr.deploymentType,
 				id,
 				status,
 				metadata,
@@ -142,14 +147,29 @@ func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Du
 	}
 }
 
-type statusReporter struct{}
-
-func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return newStatusReport(id, timeout, checkInterval)
+type statusReporter struct {
+	initialized    bool
+	deploymentType string
 }
 
-var StatusReporter statusReport = stubStatusReporter{}
+func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) StatusReporterFunc {
+	if !sr.initialized {
+		log.Warn("status reporter not initialized, using stub implementation")
+		return stubStatusReporter{initialized: false}.NewStatusReport(id, timeout, checkInterval)
+	}
+	return newStatusReport(id, timeout, checkInterval, sr.deploymentType)
+}
 
-func InitStatusReport() {
-	StatusReporter = statusReporter{}
+// default to stub implementation
+var globalStatusReporter StatusReport = stubStatusReporter{initialized: false}
+
+func InitStatusReporter(deploymentType string) {
+	globalStatusReporter = statusReporter{
+		initialized:    true,
+		deploymentType: deploymentType,
+	}
+}
+
+func StatusReporter() StatusReport {
+	return globalStatusReporter
 }
