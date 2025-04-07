@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
 
@@ -969,6 +970,13 @@ type EpochMetadata struct {
 	SuccessfulTransfer *time.Time `ch:"successful_transfer" db:"successful_transfer"`
 }
 
+type BackfillMetadata struct {
+	Epoch              uint64       `ch:"epoch" db:"epoch"`
+	BackfillName       BackfillType `ch:"backfill_name" db:"backfill_name"`
+	BackfillBatchId    *uuid.UUID   `ch:"backfill_batch_id" db:"backfill_batch_id"`
+	SuccessfulBackfill *time.Time   `ch:"successful_backfill" db:"successful_backfill"`
+}
+
 //
 // |-GetIncompleteTransferEpochs
 // | - TransferEpochs
@@ -1048,6 +1056,158 @@ func TransferEpochs(epochs []EpochMetadata) error {
 	return nil
 }
 
+func BackfillRoi(epochs []BackfillMetadata) error {
+	metricPrefix := string("dashboard_data_exporter_backfill_" + BackfillTypeRoi)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
+	}()
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	backfillBatchID := epochs[0].BackfillBatchId
+	for _, e := range epochs {
+		if e.BackfillBatchId == nil || *e.BackfillBatchId != *backfillBatchID {
+			return fmt.Errorf("backfill batch id is not set or not identical for all epochs")
+		}
+		if e.BackfillName != BackfillTypeRoi {
+			return fmt.Errorf("backfill name is not set to %s", BackfillTypeRoi)
+		}
+	}
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
+	})
+
+	// backfill the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    backfillBatchID.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+	}))
+	now := time.Now()
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	for _, e := range epochs {
+		var count int
+		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
+			SELECT count() as count
+			FROM %s
+			WHERE epoch_timestamp = $1
+			SETTINGS use_skip_indexes_if_final = 1
+		`, FinalEpochsTableName), utils.EpochToTime(e.Epoch))
+		if err != nil {
+			return fmt.Errorf("error fetching epoch count: %w", err)
+		}
+		if count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", e.Epoch)
+		}
+	}
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(now).Seconds())
+	now = time.Now()
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
+	// no final needed as its from the final table
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into %s
+		SELECT
+			validator_index,
+			epoch_timestamp as t,
+			roi_dividend,
+			roi_divisor
+		FROM %s
+		where
+			epoch_timestamp in $1
+	`, BackfillRoiSink, FinalEpochsTableName),
+		epoch_timestamp,
+	)
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_insert").Observe(time.Since(now).Seconds())
+	if err != nil {
+		return fmt.Errorf("error backfilling epochs: %w", err)
+	}
+	return nil
+}
+
+func BackfillEBLookup(epochs []BackfillMetadata) error {
+	metricPrefix := string("dashboard_data_exporter_backfill_" + BackfillTypeEBLookup)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
+	}()
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	backfillBatchID := epochs[0].BackfillBatchId
+	for _, e := range epochs {
+		if e.BackfillBatchId == nil || *e.BackfillBatchId != *backfillBatchID {
+			return fmt.Errorf("backfill batch id is not set or not identical for all epochs")
+		}
+		if e.BackfillName != BackfillTypeEBLookup {
+			return fmt.Errorf("backfill name is not set to %s", BackfillTypeEBLookup)
+		}
+	}
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
+	})
+
+	// backfill the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    backfillBatchID.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+	}))
+	now := time.Now()
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	for _, e := range epochs {
+		var count int
+		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
+			SELECT count() as count
+			FROM %s
+			WHERE epoch_timestamp = $1
+			SETTINGS use_skip_indexes_if_final = 1
+		`, FinalEpochsTableName), utils.EpochToTime(e.Epoch))
+		if err != nil {
+			return fmt.Errorf("error fetching epoch count: %w", err)
+		}
+		if count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", e.Epoch)
+		}
+	}
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(now).Seconds())
+	now = time.Now()
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
+	// no final needed as its from the final table
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into %s
+		SELECT
+			validator_index,
+			epoch_timestamp,
+			epoch,
+			balance_effective_end
+		FROM %s
+		where
+			epoch_timestamp in $1 and attestations_scheduled > 0
+	`, EffectiveBalanceLookupTableName, FinalEpochsTableName),
+		epoch_timestamp,
+	)
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_insert").Observe(time.Since(now).Seconds())
+	if err != nil {
+		return fmt.Errorf("error backfilling epochs: %w", err)
+	}
+	return nil
+}
+
 func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
 	var epochs []EpochMetadata
 	err := db.ClickHouseWriter.Select(&epochs,
@@ -1111,6 +1271,21 @@ func GetLatestUnsafeEpoch() (int64, error) {
 		return 0, fmt.Errorf("error fetching latest unsafe epoch: %w", err)
 	}
 	return epoch, nil
+}
+
+func GetBackfillProgress(t BackfillType) (float64, error) {
+	var progress float64
+	err := db.ClickHouseWriter.Get(&progress,
+		fmt.Sprintf(`
+			SELECT count()/max(epoch) as progress
+			FROM %s
+			FINAL
+			WHERE successful_backfill IS NOT NULL AND backfill_name = ?
+		`, ExporterBackfillMetadataTableName), t)
+	if err != nil {
+		return 0, fmt.Errorf("error fetching backfill progress: %w", err)
+	}
+	return progress, nil
 }
 
 // enum for rollings (hourly, daily, weekly, monthly, total)
@@ -1522,6 +1697,29 @@ func GetIncompleteTransferEpochs() ([]EpochMetadata, error) { // no limit becaus
 	return epochs, nil
 }
 
+func GetIncompleteBackfillEpochs(t BackfillType) ([]BackfillMetadata, error) { // no limit because it should never grow too large
+	var epochs []BackfillMetadata
+	err := db.ClickHouseWriter.Select(&epochs,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE 
+				-- data has not been transferred to the final table
+				(successful_backfill IS NULL) AND
+				-- data has been assigned a transfer batch id
+				(backfill_batch_id IS NOT NULL) AND
+				-- data matches our backfill type
+				(backfill_name = ?)
+			ORDER BY epoch DESC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterBackfillMetadataTableName), t)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete transfer epochs: %w", err)
+	}
+	return epochs, nil
+}
+
 func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	var epochs []EpochMetadata
 	err := db.ClickHouseWriter.Select(&epochs,
@@ -1547,6 +1745,37 @@ func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	return epochs, nil
 }
 
+func GetPendingBackfillEpochs(t BackfillType, limit int64) ([]BackfillMetadata, error) {
+	var epochs []BackfillMetadata
+	// max epoch with assigned insert batch id
+	minAssignedEpoch := int64(0)
+	err := db.ClickHouseWriter.Get(&minAssignedEpoch, fmt.Sprintf(`
+		SELECT ifNull(min(toNullable(epoch::Int64)), -1) as min_epoch
+		FROM %s
+		FINAL
+		WHERE (backfill_batch_id IS NOT NULL)
+		SETTINGS select_sequential_consistency = 1
+	`, ExporterBackfillMetadataTableName))
+	if err != nil {
+		return nil, fmt.Errorf("error fetching min assigned epoch: %w", err)
+	}
+	if minAssignedEpoch == -1 {
+		return nil, fmt.Errorf("no epochs found with transfer batch id")
+	}
+	if minAssignedEpoch == 0 {
+		// this means we have assigned epochs till the first one, no more pending epochs
+		return nil, nil
+	}
+	minEpoch := minAssignedEpoch - limit
+	if minEpoch < 0 {
+		minEpoch = 0
+	}
+	for i := minAssignedEpoch - 1; i >= minEpoch; i-- {
+		epochs = append(epochs, BackfillMetadata{Epoch: uint64(i), BackfillName: t})
+	}
+	return epochs, nil
+}
+
 func PushEpochMetadata(metdata []EpochMetadata) error {
 	if len(metdata) == 0 {
 		return nil
@@ -1554,6 +1783,27 @@ func PushEpochMetadata(metdata []EpochMetadata) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	for _, m := range metdata {
+		if err := batch.AppendStruct(&m); err != nil {
+			return fmt.Errorf("error appending struct to batch: %w", err)
+		}
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
+}
+
+func PushBackfillMetadata(metdata []BackfillMetadata) error {
+	if len(metdata) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterBackfillMetadataTableName)
 	if err != nil {
 		return fmt.Errorf("error preparing batch: %w", err)
 	}
@@ -1687,6 +1937,32 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 }
 
 const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
+const ExporterBackfillMetadataTableName = "_exporter_backfill_metadata"
 const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
+const BackfillRoiSink = "_insert_sink_backfill_validator_dashboard_data_roi"
 const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
 const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"
+const EffectiveBalanceLookupTableName = "_final_validator_dashboard_effective_balance_lookup"
+
+type BackfillType string
+
+// implement support for scanning into a BackfillType using sql.Scanner (and the oher way around)
+func (b *BackfillType) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		*b = BackfillType(v)
+	case string:
+		*b = BackfillType(v)
+	default:
+		return fmt.Errorf("unsupported type %T for BackfillType", v)
+	}
+	return nil
+}
+func (b BackfillType) Value() (driver.Value, error) {
+	return string(b), nil
+}
+
+const (
+	BackfillTypeRoi      BackfillType = "roi"
+	BackfillTypeEBLookup BackfillType = "eb_lookup"
+)
