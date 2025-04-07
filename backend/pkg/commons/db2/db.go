@@ -38,3 +38,7 @@ type LastBlocksStoreWriter interface {
 	SetInBlocksTable(chainID string, number uint64) error
 	SetInDataTable(chainID string, number uint64) error
 }
+
+type Monitoring interface {
+	SaveNewStatusReport(status StatusReport) error
+}

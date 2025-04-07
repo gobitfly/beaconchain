@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -31,10 +31,12 @@ type ServiceBase struct {
 	cancel  context.CancelFunc
 	running atomic.Bool
 	wg      sync.WaitGroup
+	db      db2.Monitoring
 }
 
 func (s *ServiceBase) InitServices() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.db = db2.NewMonitoringDB()
 }
 
 func (s *ServiceBase) Stop() {
@@ -66,17 +68,6 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 				metadata["caller"] = fmt.Sprintf("%s %s:%d", callerFunction, callerFile, callerLine)
 			}
 
-			// report status to monitoring
-			timeoutContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			// wrap in clickhouse context so we can set the setting throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert to 0
-			// we have no materialized views on the status_reports table, but it triggers as we need the deduplication setting for the other tables
-			ctx := clickhouse.Context(timeoutContext, clickhouse.WithSettings(
-				clickhouse.Settings{
-					"throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert": 0,
-				},
-			))
-
 			timeouts_at := now.Add(1 * time.Minute)
 			if timeout != constants.Default {
 				timeouts_at = now.Add(timeout)
@@ -96,18 +87,14 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 			}, "sending status report")
 			var err error
 			if db.ClickHouseNativeWriter != nil {
-				err = db.ClickHouseNativeWriter.AsyncInsert(
-					ctx,
-					"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
-					utils.GetUUID(),
-					id,
-					utils.Config.DeploymentType,
-					flake,
-					expires_at,
-					timeouts_at,
-					metadata,
-				)
+				monitoringDB := db2.NewMonitoringDB()
+				err = monitoringDB.SaveNewStatusReport(db2.StatusReport{
+					ID:         id,
+					Flake:      flake,
+					ExpiresAt:  expires_at,
+					TimeoutsAt: timeouts_at,
+					Metadata:   metadata,
+				})
 			} else if utils.Config.DeploymentType != "development" {
 				log.Error(nil, "clickhouse native writer is nil", 0)
 			}
