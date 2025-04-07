@@ -326,8 +326,21 @@ func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColu
 	switch s {
 	case "", "slot_processed", "timestamp":
 		return VDBConsolidationClSlotProcessed
+	case "amount":
+		return VDBConsolidationClAmount
 	default:
 		return VDBConsolidationsClColumn(-1)
+	}
+}
+
+func (c VDBConsolidationsClColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBConsolidationClSlotProcessed:
+		return goqu.C("block_slot")
+	case VDBConsolidationClAmount:
+		return goqu.C("amount_consolidated")
+	default:
+		return nil
 	}
 }
 
