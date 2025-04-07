@@ -71,3 +71,27 @@ func (m *MonitoringDB) SaveNewStatusReport(status StatusReport) error {
 
 	return err
 }
+
+func (m *MonitoringDB) GetEmitters() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	query := `
+		SELECT
+			emitter
+		FROM
+			status_reports
+		WHERE
+			deployment_type = ?
+			AND inserted_at >= now() - interval 5 minutes
+			AND event_id = ?
+		`
+
+	var emitters []string
+	err := m.ClickHouseReader.SelectContext(ctx, &emitters, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
+	if err != nil {
+		return nil, err
+	}
+
+	return emitters, nil
+}

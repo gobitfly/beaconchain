@@ -41,4 +41,5 @@ type LastBlocksStoreWriter interface {
 
 type Monitoring interface {
 	SaveNewStatusReport(status StatusReport) error
+	GetEmitters() ([]string, error)
 }
