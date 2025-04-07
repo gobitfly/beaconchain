@@ -44,15 +44,15 @@ func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
 
 	heavyWeight := utils.Config.DashboardExporter.FetchHeavyInParallel
 	if heavyWeight <= 0 {
-		heavyWeight = 8
+		temp.log.Fatal(errors.New("heavyWeight <= 0"), "heavyWeight <= 0", 0)
 	}
 	mediumWeight := utils.Config.DashboardExporter.FetchMediumInParallel
 	if mediumWeight <= 0 {
-		mediumWeight = 18
+		temp.log.Fatal(errors.New("mediumWeight <= 0"), "mediumWeight <= 0", 0)
 	}
 	lightWeight := utils.Config.DashboardExporter.FetchLightInParallel
 	if lightWeight <= 0 {
-		lightWeight = 128
+		temp.log.Fatal(errors.New("lightWeight <= 0"), "lightWeight <= 0", 0)
 	}
 	// we use multiple semaphores because nodes are usually happy serving multiple light requests at once even when they are busy with heavy ones
 	temp.heavySemaphore = semaphore.NewWeighted(heavyWeight)
@@ -84,6 +84,7 @@ func (d *dashboardData) Init() error {
 	go d.insertTask()      // does all the inserting of the data
 	go d.maintenanceTask() // does all the transferring of the data
 	go d.rollingTask()     // does all the rolling of the data
+	go d.roiBackfillTask() // does all the backfilling of the roi data
 
 	return nil
 }
