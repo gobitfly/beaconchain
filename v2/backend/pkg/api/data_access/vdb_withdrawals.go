@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -301,6 +302,38 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsClColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsClTableRow, *t.Paging, error) {
 	// TODO
 	return nil, nil, nil
+}
+
+//nolint:unused
+func mapWithdrawalRejectReasonDbToApi(dbReason string) string {
+	switch dbReason {
+	case "pending_partial_withdrawals_limit_reached":
+		return "full_queue"
+	case "validator_not_found":
+		return "unknown_pubkey"
+	case "withdrawal_credentials_invalid":
+		return "no_execution_withdrawal_credentials"
+	case "address_mismatch":
+		return "address_mismatch"
+	case "validator_not_active":
+		return "inactive"
+	case "validator_has_submitted_exit":
+		return "exiting"
+	case "validator_not_active_long_enough":
+		return "too_young"
+	case "pending_withdrawals_in_queue":
+		return "pending_withdrawals"
+	case "insufficient_effective_balance":
+		return "insufficient_effective_balance"
+	case "insufficient_excess_balance":
+		return "excess_balance"
+	case "no_compounding_withdrawal_credentials":
+		return "not_compounding"
+
+	default:
+		log.Warnf("unknown error: %s", dbReason)
+		return ""
+	}
 }
 
 // TODO implement changes
