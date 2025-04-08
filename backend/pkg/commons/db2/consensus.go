@@ -252,11 +252,14 @@ func (c *ConsensusDB) SaveBlockTagsAndRelays(tagID string, payload types.BidTrac
 			blocks.slot = $2 and
 			blocks.exec_block_hash = $3
 		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
-		tagID, payload.Slot, payload.Value,
+		tagID,
+		payload.Slot,
 		utils.MustParseHex(payload.BlockHash),
+		payload.Value,
 		utils.MustParseHex(payload.BuilderPubkey),
 		utils.MustParseHex(payload.ProposerPubkey),
-		utils.MustParseHex(payload.ProposerFeeRecipient))
+		utils.MustParseHex(payload.ProposerFeeRecipient),
+	)
 
 	if err != nil {
 		log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": tagID})
