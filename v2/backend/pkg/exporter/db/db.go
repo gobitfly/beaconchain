@@ -1277,10 +1277,10 @@ func GetBackfillProgress(t BackfillType) (float64, error) {
 	var progress float64
 	err := db.ClickHouseWriter.Get(&progress,
 		fmt.Sprintf(`
-			SELECT count()/max(epoch) as progress
-			FROM %s
-			FINAL
-			WHERE successful_backfill IS NOT NULL AND backfill_name = ?
+				SELECT count()/max(epoch) as progress
+				FROM %s
+				FINAL
+				WHERE successful_backfill IS NOT NULL AND backfill_name = ?
 		`, ExporterBackfillMetadataTableName), t)
 	if err != nil {
 		return 0, fmt.Errorf("error fetching backfill progress: %w", err)
@@ -1753,9 +1753,9 @@ func GetPendingBackfillEpochs(t BackfillType, limit int64) ([]BackfillMetadata, 
 		SELECT ifNull(min(toNullable(epoch::Int64)), -1) as min_epoch
 		FROM %s
 		FINAL
-		WHERE (backfill_batch_id IS NOT NULL)
+		WHERE (backfill_batch_id IS NOT NULL) and (backfill_name = ?)
 		SETTINGS select_sequential_consistency = 1
-	`, ExporterBackfillMetadataTableName))
+	`, ExporterBackfillMetadataTableName), t)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching min assigned epoch: %w", err)
 	}
