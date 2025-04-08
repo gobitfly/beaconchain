@@ -1852,21 +1852,24 @@ func ElectraGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
 
 func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, error) {
 	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var deposits []struct {
-		Amount uint64 `db:"amount"`
+		Amount int64  `db:"amount"`
 		Pubkey string `db:"pubkey"`
 	}
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'amount'").As("amount"),
 		goqu.L("data->>'pubkey'").As("pubkey"),
+		// SignatureValid field, assume true if not present
+		goqu.COALESCE(goqu.L("data->>'signature_valid'"), goqu.L("true")).As("signature_valid"),
 	).
 		From("consensus_layer_events").
 		Where(
 			goqu.I("event_name").Eq("DepositProcessedEvent"),
 			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lte(endSlot),
-		)
+			goqu.I("slot").Lt(endSlot),
+		).
+		Order(goqu.I("slot").Asc(), goqu.I("event_index").Asc())
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
@@ -1892,7 +1895,7 @@ func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, erro
 
 func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsolidation, error) {
 	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var consolidations []constypes.ElectraConsolidation
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'amount'").As("amount"),
@@ -1903,7 +1906,7 @@ func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsoli
 		Where(
 			goqu.I("event_name").Eq("ConsolidationProcessedEvent"),
 			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lte(endSlot),
+			goqu.I("slot").Lt(endSlot),
 		)
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
@@ -1918,7 +1921,7 @@ func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsoli
 
 func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExcessBalance, error) {
 	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
-	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 2
+	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var excessBalanceEvents []constypes.ElectraExcessBalance
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'validator_index'").As("validator_index"),
@@ -1928,7 +1931,7 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 		Where(
 			goqu.I("event_name").Eq("RemovedExcessBalanceEvent"),
 			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lte(endSlot),
+			goqu.I("slot").Lt(endSlot),
 		)
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
