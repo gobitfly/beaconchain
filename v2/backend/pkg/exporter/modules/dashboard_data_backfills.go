@@ -85,12 +85,13 @@ func (d *dashboardData) backfillEpochs(t db.BackfillType, epochs []edb.BackfillM
 			//d.log.InfoWithFields("doing backfill batch %s", id)
 			d.log.InfoWithFields(log.Fields{"backfillType": t, "backfillBatchId": id, "epochRange": []uint64{epochs[0].Epoch, epochs[len(epochs)-1].Epoch}}, "doing backfill batch")
 			defer func() {
-				progress, err := db.GetBackfillProgress(t)
+				epochsBackfilled, epochsToBackfill, err := edb.GetBackfillProgress(t)
 				if err != nil {
 					d.log.Error(err, "failed to get backfill progress", 0)
 					return
 				}
-				metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_backfill_%s_progress", t)).Set(float64(progress))
+				metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_backfill_%s_backfilled", t)).Set(float64(epochsBackfilled))
+				metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_backfill_%s_to_backfill", t)).Set(float64(epochsToBackfill))
 			}()
 			switch t {
 			case edb.BackfillTypeRoi:

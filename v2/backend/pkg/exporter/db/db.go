@@ -1273,19 +1273,24 @@ func GetLatestUnsafeEpoch() (int64, error) {
 	return epoch, nil
 }
 
-func GetBackfillProgress(t BackfillType) (float64, error) {
-	var progress float64
-	err := db.ClickHouseWriter.Get(&progress,
+func GetBackfillProgress(t BackfillType) (int64, int64, error) {
+	var res struct {
+		EpochsBackfilled int64 `ch:"epochs_backfilled" db:"epochs_backfilled"`
+		EpochsToBackfill int64 `ch:"epochs_to_backfill" db:"epochs_to_backfill"`
+	}
+	err := db.ClickHouseWriter.Get(&res,
 		fmt.Sprintf(`
-				SELECT count()/max(epoch) as progress
+				SELECT
+					count() AS epochs_backfilled,
+					max(epoch) + 1 AS epochs_to_backfill
 				FROM %s
 				FINAL
 				WHERE successful_backfill IS NOT NULL AND backfill_name = ?
 		`, ExporterBackfillMetadataTableName), t)
 	if err != nil {
-		return 0, fmt.Errorf("error fetching backfill progress: %w", err)
+		return 0, 0, fmt.Errorf("error fetching backfill progress: %w", err)
 	}
-	return progress, nil
+	return res.EpochsBackfilled, res.EpochsToBackfill, nil
 }
 
 // enum for rollings (hourly, daily, weekly, monthly, total)
