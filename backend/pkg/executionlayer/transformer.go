@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -752,6 +753,26 @@ func TransformerFromList(names []string) ([]Transformer, error) {
 }
 
 func getQueueRequestFor(chainID string, block *types.Eth1Block, res *db2.IndexedBlock, address []byte) ([]db2.BridgeQueueRequest, error) {
+	internalRequests, err := getInternalQueueRequestFor(chainID, block, res, address)
+	if err != nil {
+		return nil, err
+	}
+	txRequests, err := getTransactionQueueRequestFor(chainID, block, res, address)
+	if err != nil {
+		return nil, err
+	}
+	requests := append(internalRequests, txRequests...)
+	// sort by transaction index and internal index so the order will reflect the one from the logs
+	sort.Slice(requests, func(i, j int) bool {
+		if requests[i].TxIndex == requests[j].TxIndex {
+			return requests[i].ItxIndex < requests[j].ItxIndex
+		}
+		return requests[i].TxIndex < requests[j].TxIndex
+	})
+	return requests, nil
+}
+
+func getInternalQueueRequestFor(chainID string, block *types.Eth1Block, res *db2.IndexedBlock, address []byte) ([]db2.BridgeQueueRequest, error) {
 	var queueRequests []db2.BridgeQueueRequest
 	if res.Internals == nil {
 		if err := transformITx(chainID, block, res); err != nil {
@@ -773,6 +794,34 @@ func getQueueRequestFor(chainID string, block *types.Eth1Block, res *db2.Indexed
 			BlockNumber:    block.Number,
 			BlockTimestamp: block.Time.AsTime(),
 			From:           block.Transactions[internal.TxIndex].From,
+		})
+	}
+	return queueRequests, nil
+}
+
+func getTransactionQueueRequestFor(chainID string, block *types.Eth1Block, res *db2.IndexedBlock, address []byte) ([]db2.BridgeQueueRequest, error) {
+	var queueRequests []db2.BridgeQueueRequest
+	if res.Transactions == nil {
+		if err := transformTx(chainID, block, res); err != nil {
+			return nil, err
+		}
+	}
+	for index, tx := range res.Transactions {
+		if !bytes.Equal(tx.To, address) {
+			continue
+		}
+		// since it's at top level we only care about success
+		if tx.Status != types.StatusType_SUCCESS {
+			continue
+		}
+		queueRequests = append(queueRequests, db2.BridgeQueueRequest{
+			Fee:            tx.Value,
+			TxHash:         tx.Hash,
+			TxIndex:        index,
+			ItxIndex:       index,
+			BlockNumber:    tx.BlockNumber,
+			BlockTimestamp: tx.Time.AsTime(),
+			From:           tx.From,
 		})
 	}
 	return queueRequests, nil
@@ -854,11 +903,6 @@ func isBlobTx(txType uint32) bool {
 
 // isValidItx filter unwanted internal transactions
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
-	// always process internals going to system contracts
-	if bytes.Equal(itx.To, params.ConsolidationQueueAddress.Bytes()) ||
-		bytes.Equal(itx.To, params.WithdrawalQueueAddress.Bytes()) {
-		return true
-	}
 	// skip top level and empty calls
 	// itx.Path == "0" is a legacy check and should be removed in the future
 	if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) {

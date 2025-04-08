@@ -1326,12 +1326,255 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 		want  []db2.WithdrawalRequest
 	}{
 		{
-			name: "normal request",
+			name: "internal request",
 			block: &types.Eth1Block{
 				Number: uint64(42),
 				Transactions: []*types.Eth1Transaction{
 					{
 						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+						Itx: []*types.Eth1InternalTransaction{
+							{ // one random call that is not a request
+								From:  alice,
+								To:    common.Address{}.Bytes(),
+								Value: big.NewInt(1).Bytes(),
+							},
+							{
+								From:  alice,
+								To:    params.WithdrawalQueueAddress.Bytes(),
+								Value: big.NewInt(1).Bytes(),
+							},
+							{
+								From:  alice,
+								To:    params.WithdrawalQueueAddress.Bytes(),
+								Value: big.NewInt(2).Bytes(),
+							},
+						},
+					},
+				},
+			},
+			want: []db2.WithdrawalRequest{
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    1,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
+					},
+				},
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    2,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(2).Bytes(),
+					},
+				},
+			},
+		},
+		{
+			name: "internal request with one failed",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    params.WithdrawalQueueAddress.Bytes(),
+								Value: big.NewInt(1).Bytes(),
+							},
+							{
+								From:  alice,
+								To:    params.WithdrawalQueueAddress.Bytes(),
+								Value: big.NewInt(2).Bytes(),
+							},
+							{
+								From:     alice,
+								To:       params.WithdrawalQueueAddress.Bytes(),
+								Value:    big.NewInt(1).Bytes(),
+								ErrorMsg: "error",
+							},
+						},
+					},
+				},
+			},
+			want: []db2.WithdrawalRequest{
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    0,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
+					},
+				},
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    1,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(2).Bytes(),
+					},
+				},
+			},
+		},
+		{
+			name: "tx request",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+						To:     params.WithdrawalQueueAddress.Bytes(),
+						Status: 1, // success
+						Value:  big.NewInt(1).Bytes(),
+					},
+				},
+			},
+			want: []db2.WithdrawalRequest{
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    0,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
+					},
+				},
+			},
+		},
+		{
+			name: "tx request with one failed",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+						To:     params.WithdrawalQueueAddress.Bytes(),
+						Status: 1, // success
+						Value:  big.NewInt(1).Bytes(),
+					},
+					{
+						Hash:   []byte("tx hash 2"),
+						To:     params.WithdrawalQueueAddress.Bytes(),
+						Status: 0, // failed
+						Value:  big.NewInt(2).Bytes(),
+					},
+				},
+			},
+			want: []db2.WithdrawalRequest{
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("tx hash"),
+						ItxIndex:    0,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
+					},
+				},
+			},
+		},
+		{
+			name: "tx and internal request",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: params.WithdrawalQueueAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+						To:     params.WithdrawalQueueAddress.Bytes(),
+						Status: 1, // success
+						Value:  big.NewInt(1).Bytes(),
+					},
+					{
+						Hash: []byte("internal"),
 						Logs: []*types.Eth1Log{
 							{
 								Address: params.WithdrawalQueueAddress.Bytes(),
@@ -1358,13 +1601,24 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
 					Amount:          42,
 					BridgeQueueRequest: db2.BridgeQueueRequest{
-						TxHash:         []byte("tx hash"),
-						TxIndex:        0,
-						ItxIndex:       0,
-						BlockNumber:    42,
-						BlockTimestamp: time.Time{},
-						From:           alice,
-						Fee:            big.NewInt(1).Bytes(),
+						TxHash:      []byte("tx"),
+						ItxIndex:    0,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
+					},
+				},
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:      []byte("internal"),
+						TxIndex:     1,
+						ItxIndex:    0,
+						BlockNumber: 42,
+						From:        alice,
+						Fee:         big.NewInt(1).Bytes(),
 					},
 				},
 			},
