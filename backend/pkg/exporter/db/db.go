@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"encoding/base64"
 	"fmt"
 
 	"regexp"
@@ -1853,10 +1852,7 @@ func ElectraGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
 func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, error) {
 	startSlot := (epoch)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
-	var deposits []struct {
-		Amount int64  `db:"amount"`
-		Pubkey string `db:"pubkey"`
-	}
+	var result []constypes.ElectraDeposit
 	q := goqu.Dialect("postgres").Select(
 		goqu.L("data->>'amount'").As("amount"),
 		goqu.L("data->>'pubkey'").As("pubkey"),
@@ -1874,22 +1870,11 @@ func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, erro
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
 	}
-	err = db.ReaderDb.Select(&deposits, sql, args...)
+	err = db.ReaderDb.Select(&result, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
 	}
-	var result []constypes.ElectraDeposit
-	// decode pubkey, is stored in base64
-	for i := range deposits {
-		decodedPubkey, err := base64.StdEncoding.DecodeString(deposits[i].Pubkey)
-		if err != nil {
-			return nil, fmt.Errorf("error decoding pubkey for deposit %v: %w", deposits[i].Pubkey, err)
-		}
-		result = append(result, constypes.ElectraDeposit{
-			Amount: deposits[i].Amount,
-			Pubkey: decodedPubkey,
-		})
-	}
+
 	return result, nil
 }
 
