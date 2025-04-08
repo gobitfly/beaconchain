@@ -55,6 +55,11 @@ const tabs: HashTabs = [
     key: 'withdrawals',
     title: $t('dashboard.validator.tabs.withdrawals'),
   },
+  {
+    icon: 'hand-holding-hand',
+    key: 'consolidations',
+    title: $t('dashboard.validator.tabs.consolidations'),
+  },
 ]
 
 const {
@@ -255,6 +260,28 @@ const clDeposits = computed(() => {
 })
 const clDepositsTotalAmount = computed(() => clDepositsData.value?.[1])
 
+// Consolidations execution layer deposits data
+const elConsolidationsQueryParams = ref<TableQueryParams>({
+  limit: 5, sort: 'block_processed:desc',
+})
+const {
+  data: elConsolidationsData,
+  refresh: refreshElConsolidationsData,
+  status: elConsolidationsDataStatus,
+} = useAsyncData('el_consolidations', () => {
+  return dashboardData.fetchElConsolidations(
+    dashboardKey.value,
+    elConsolidationsQueryParams.value,
+  )
+},
+{
+  immediate: false,
+  watch: [ elConsolidationsQueryParams ],
+})
+const elConsolidations = computed(() => {
+  return elConsolidationsData.value || undefined
+})
+
 // tabs
 const route = useRoute()
 
@@ -262,6 +289,9 @@ const activeTab = computed(() => route.hash)
 
 const refreshActiveTab = () => {
   switch (activeTab.value) {
+    case '#consolidations':
+      refreshElConsolidationsData()
+      break
     case '#deposits':
       refreshElDepositsData()
       refreshClDepositsData()
@@ -341,6 +371,13 @@ watch(
             :cl-deposits
             :cl-deposits-total-amount
             :is-loading="clDepositsDataStatus === 'pending'"
+          />
+        </template>
+        <template #tab-panel-consolidations>
+          <DashboardTableElConsolidations
+            v-model:query="elConsolidationsQueryParams"
+            :el-consolidations
+            :is-loading="elConsolidationsDataStatus === 'pending'"
           />
         </template>
       </BcTabList>

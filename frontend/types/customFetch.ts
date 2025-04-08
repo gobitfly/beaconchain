@@ -6,6 +6,7 @@ export type API_PATH =
   | 'DASHBOARD_CREATE_VALIDATOR'
   | 'DASHBOARD_DELETE_ACCOUNT'
   | 'DASHBOARD_DELETE_VALIDATOR'
+  | 'DASHBOARD_EL_CONSOLIDATIONS'
   | 'DASHBOARD_EL_DEPOSITS'
   | 'DASHBOARD_EL_DEPOSITS_TOTAL'
   | 'DASHBOARD_OVERVIEW'
@@ -117,6 +118,11 @@ export const mapping: Record<API_PATH, MappingData> = {
     method: 'DELETE',
     mock: false,
     path: '/validator-dashboards/{dashboardKey}',
+  },
+  DASHBOARD_EL_CONSOLIDATIONS: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/execution-layer-consolidations`,
+    path: '/validator-dashboards/{dashboard_id}/execution-layer-consolidations',
   },
   DASHBOARD_EL_DEPOSITS: {
     getPath: values =>
