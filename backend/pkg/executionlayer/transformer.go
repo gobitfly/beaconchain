@@ -15,6 +15,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/pkg/commons/chain"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/erc1155"
@@ -658,8 +659,10 @@ func transformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2
 // with input data we could skip the log iteration
 // but this would come with higher storage cost (more data to save in db)
 func transformConsolidationRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	chainIDNumber, _ := new(big.Int).SetString(chainID, 10)
+	consolidationQueue := chain.SystemContractsFor(chainIDNumber).ConsolidationQueueAddress
 	// first iterate over internal transaction to extract the value transferred
-	queueRequests, err := getQueueRequestFor(chainID, block, res, params.ConsolidationQueueAddress.Bytes())
+	queueRequests, err := getQueueRequestFor(chainID, block, res, consolidationQueue.Bytes())
 	if err != nil {
 		return err
 	}
@@ -668,7 +671,7 @@ func transformConsolidationRequests(chainID string, block *types.Eth1Block, res 
 	var requestIndex int
 	for _, tx := range block.GetTransactions() {
 		for _, log := range tx.GetLogs() {
-			if !bytes.Equal(log.Address, params.ConsolidationQueueAddress.Bytes()) {
+			if !bytes.Equal(log.Address, consolidationQueue.Bytes()) {
 				continue
 			}
 			if len(log.Data) < 116 {
@@ -696,8 +699,10 @@ func transformConsolidationRequests(chainID string, block *types.Eth1Block, res 
 }
 
 func transformWithdrawalRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	chainIDNumber, _ := new(big.Int).SetString(chainID, 10)
+	withdrawalQueue := chain.SystemContractsFor(chainIDNumber).WithdrawalQueueAddress
 	// first iterate over internal transaction to extract the value transferred
-	queueRequests, err := getQueueRequestFor(chainID, block, res, params.WithdrawalQueueAddress.Bytes())
+	queueRequests, err := getQueueRequestFor(chainID, block, res, withdrawalQueue.Bytes())
 	if err != nil {
 		return err
 	}
@@ -707,7 +712,7 @@ func transformWithdrawalRequests(chainID string, block *types.Eth1Block, res *db
 	var requestIndex int
 	for _, tx := range block.GetTransactions() {
 		for _, log := range tx.GetLogs() {
-			if !bytes.Equal(log.Address, params.WithdrawalQueueAddress.Bytes()) {
+			if !bytes.Equal(log.Address, withdrawalQueue.Bytes()) {
 				continue
 			}
 			if len(log.Data) < 76 {
