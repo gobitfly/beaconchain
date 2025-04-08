@@ -30,9 +30,11 @@ var duplicateOrderMap map[string]uint64 = make(map[string]uint64)
 
 func CheckMobileSubscriptions() {
 	if !utils.Config.Frontend.VerifyAppSubs {
+		log.Warn("app subscription verification is disabled, skipping verification", 0, nil)
 		return
 	}
 	for {
+		log.Info("starting app subscription verification", 0, nil)
 		duplicateOrderMap = make(map[string]uint64)
 		start := time.Now()
 
