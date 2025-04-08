@@ -1,5 +1,6 @@
 import type {
   GetValidatorDashboardConsensusLayerDepositsResponse,
+  GetValidatorDashboardExecutionLayerConsolidationsResponse,
   GetValidatorDashboardExecutionLayerDepositsResponse,
   GetValidatorDashboardTotalConsensusDepositsResponse,
   GetValidatorDashboardTotalExecutionDepositsResponse,
@@ -60,10 +61,25 @@ export const useDashboardData = () => {
 
     return res
   }
+  async function fetchElConsolidations(
+    dashboardKey: DashboardKey,
+    query?: TableQueryParams,
+  ) {
+    const res
+      = await fetch<GetValidatorDashboardExecutionLayerConsolidationsResponse>(
+        'DASHBOARD_EL_CONSOLIDATIONS',
+        undefined,
+        { dashboardKey },
+        query,
+      )
+
+    return res
+  }
 
   return {
     fetchClDeposits,
     fetchClDpositsTotalAmount,
+    fetchElConsolidations,
     fetchELDeposits,
     fetchELDpositsTotalAmount,
   }

@@ -271,6 +271,14 @@
                 "search_placeholder": "Index, Public Key",
                 "title": "Epoch"
             },
+            "el_consolidations": {
+                "block_processed": "Block Processed",
+                "block_queued": "Block Queued",
+                "info_block_processed_estimated": "This is an estimation since this consolidation is still queued.",
+                "search_placeholder_guest_dashboard": "Index, Slot, Address",
+                "search_placeholder_private_dashboard": "Index, Slot, Address, Group",
+                "title": "Execution Layer"
+            },
             "el_deposits": {
                 "info_valid_with_invalid_signature": "Signature invalid, but will still be accepted due to a prior deposit with a valid signature.",
                 "search_placeholder_guest_dashboard": "Index, Block, Address",
@@ -450,6 +458,7 @@
                 "status_text": {
                     "completed": "Completed",
                     "invalid": "Invalid",
+                    "processed": "Processed",
                     "queued": "Queued",
                     "rejected": "Rejected",
                     "valid": "Valid"
@@ -457,6 +466,7 @@
             },
             "tabs": {
                 "blocks": "Blocks",
+                "consolidations": "Consolidations",
                 "deposits": "Deposits",
                 "heatmap": "Heatmap",
                 "rewards": "Rewards",
@@ -1143,12 +1153,16 @@
     "table": {
         "age": "Age",
         "amount": "Amount",
+        "consolidation_request_fee": "Consolidation Request Fee",
+        "consolidator": "Consolidator",
         "first": "First",
         "from": "From",
         "last": "Last",
         "of": "of",
         "showing": "Showing {from} to {to} of {total}",
+        "source": "Source",
         "status": "Status",
+        "target":"Target",
         "validity": "Validity"
     },
     "time_duration": {
