@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
 	"github.com/gobitfly/beaconchain/internal/th"
@@ -1240,12 +1241,19 @@ func TestTransformConsolidationRequests(t *testing.T) {
 						Hash: []byte("tx hash"),
 						Logs: []*types.Eth1Log{
 							{
-								Address: consolidationContractAddress.Bytes(),
+								Address: params.ConsolidationQueueAddress.Bytes(),
 								Data: bytes.Join([][]byte{
 									source.From.Bytes(),
 									crypto.FromECDSAPub(&source.PrivateKey.PublicKey)[:48],
 									crypto.FromECDSAPub(&target.PrivateKey.PublicKey)[:48],
 								}, []byte{}),
+							},
+						},
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    params.ConsolidationQueueAddress.Bytes(),
+								Value: big.NewInt(1).Bytes(),
 							},
 						},
 					},
@@ -1256,9 +1264,15 @@ func TestTransformConsolidationRequests(t *testing.T) {
 					SourceAddress: source.From.Bytes(),
 					SourcePubKey:  crypto.FromECDSAPub(&source.PrivateKey.PublicKey)[:48],
 					TargetPubKey:  crypto.FromECDSAPub(&target.PrivateKey.PublicKey)[:48],
-					TxHash:        []byte("tx hash"),
-					TxIndex:       0,
-					BlockNumber:   42,
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:         []byte("tx hash"),
+						TxIndex:        0,
+						ItxIndex:       0,
+						BlockNumber:    42,
+						BlockTimestamp: time.Time{},
+						From:           alice,
+						Fee:            big.NewInt(1).Bytes(),
+					},
 				},
 			},
 		},
@@ -1292,6 +1306,12 @@ func TestTransformConsolidationRequests(t *testing.T) {
 				if got, want := res.ConsolidationRequests[i].BlockNumber, indexed.BlockNumber; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
+				if got, want := res.ConsolidationRequests[i].ItxIndex, indexed.ItxIndex; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].Fee, indexed.Fee; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
 			}
 		})
 	}
@@ -1314,12 +1334,19 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						Hash: []byte("tx hash"),
 						Logs: []*types.Eth1Log{
 							{
-								Address: withdrawalContractAddress.Bytes(),
+								Address: params.WithdrawalQueueAddress.Bytes(),
 								Data: bytes.Join([][]byte{
 									source.From.Bytes(),
 									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
 									leftPad(big.NewInt(42).Bytes(), 8),
 								}, []byte{}),
+							},
+						},
+						Itx: []*types.Eth1InternalTransaction{
+							{
+								From:  alice,
+								To:    params.WithdrawalQueueAddress.Bytes(),
+								Value: big.NewInt(1).Bytes(),
 							},
 						},
 					},
@@ -1330,10 +1357,15 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 					SourceAddress:   source.From.Bytes(),
 					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
 					Amount:          42,
-					TxHash:          []byte("tx hash"),
-					TxIndex:         0,
-					BlockNumber:     42,
-					BlockTimestamp:  time.Time{},
+					BridgeQueueRequest: db2.BridgeQueueRequest{
+						TxHash:         []byte("tx hash"),
+						TxIndex:        0,
+						ItxIndex:       0,
+						BlockNumber:    42,
+						BlockTimestamp: time.Time{},
+						From:           alice,
+						Fee:            big.NewInt(1).Bytes(),
+					},
 				},
 			},
 		},
@@ -1365,6 +1397,12 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 					t.Errorf("got %v, want %v", got, want)
 				}
 				if got, want := res.WithdrawalRequests[i].BlockNumber, indexed.BlockNumber; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].ItxIndex, indexed.ItxIndex; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].Fee, indexed.Fee; !bytes.Equal(got, want) {
 					t.Errorf("got %v, want %v", got, want)
 				}
 			}

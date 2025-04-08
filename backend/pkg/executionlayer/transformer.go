@@ -24,11 +24,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
 
-var (
-	consolidationContractAddress = common.HexToAddress("0x00431F263cE400f4455c2dCf564e53007Ca4bbBb")
-	withdrawalContractAddress    = common.HexToAddress("0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA")
-)
-
 // TransformFunc describes a function that will index a specific object from the types.Eth1Block
 // example: transaction, ERC20 transfer, block, ...
 // It will put the indexed result into the res *IndexedBlock param
@@ -658,11 +653,22 @@ func transformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2
 	return nil
 }
 
+// transformConsolidationRequests retrieve db2.ConsolidationRequest from a block.
+// For now, it requires to parse internal and logs because our internal doesn't have input data
+// with input data we could skip the log iteration
+// but this would come with higher storage cost (more data to save in db)
 func transformConsolidationRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	// first iterate over internal transaction to extract the value transferred
+	queueRequests, err := getQueueRequestFor(chainID, block, res, params.ConsolidationQueueAddress.Bytes())
+	if err != nil {
+		return err
+	}
+	// then find the corresponding log associated to the internal
 	var requests []db2.ConsolidationRequest
-	for txIndex, tx := range block.GetTransactions() {
+	var requestIndex int
+	for _, tx := range block.GetTransactions() {
 		for _, log := range tx.GetLogs() {
-			if !bytes.Equal(log.Address, consolidationContractAddress.Bytes()) {
+			if !bytes.Equal(log.Address, params.ConsolidationQueueAddress.Bytes()) {
 				continue
 			}
 			if len(log.Data) < 116 {
@@ -674,14 +680,15 @@ func transformConsolidationRequests(chainID string, block *types.Eth1Block, res 
 			// source_pubkey: Bytes48
 			// target_pubkey: Bytes48
 			requests = append(requests, db2.ConsolidationRequest{
-				SourceAddress:  log.Data[:20],
-				SourcePubKey:   log.Data[20:68],
-				TargetPubKey:   log.Data[68:116],
-				TxHash:         tx.GetHash(),
-				TxIndex:        txIndex,
-				BlockNumber:    block.GetNumber(),
-				BlockTimestamp: block.GetTime().AsTime(),
+				SourceAddress:      log.Data[:20],
+				SourcePubKey:       log.Data[20:68],
+				TargetPubKey:       log.Data[68:116],
+				BridgeQueueRequest: queueRequests[requestIndex],
 			})
+			requestIndex++
+		}
+		if requestIndex == len(block.GetTransactions()) {
+			break
 		}
 	}
 	res.ConsolidationRequests = requests
@@ -689,14 +696,22 @@ func transformConsolidationRequests(chainID string, block *types.Eth1Block, res 
 }
 
 func transformWithdrawalRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	// first iterate over internal transaction to extract the value transferred
+	queueRequests, err := getQueueRequestFor(chainID, block, res, params.WithdrawalQueueAddress.Bytes())
+	if err != nil {
+		return err
+	}
+
+	// then find the corresponding log associated to the internal
 	var requests []db2.WithdrawalRequest
-	for txIndex, tx := range block.GetTransactions() {
+	var requestIndex int
+	for _, tx := range block.GetTransactions() {
 		for _, log := range tx.GetLogs() {
-			if !bytes.Equal(log.Address, withdrawalContractAddress.Bytes()) {
+			if !bytes.Equal(log.Address, params.WithdrawalQueueAddress.Bytes()) {
 				continue
 			}
 			if len(log.Data) < 76 {
-				return fmt.Errorf("unexpected len of withdrawal request log, got %v want atleast %v", len(log.Data), 76)
+				return fmt.Errorf("unexpected len of consolidation request log, got %v want atleast %v", len(log.Data), 116)
 			}
 			// we have found a withdrawal event
 			// now slice out the data
@@ -704,14 +719,15 @@ func transformWithdrawalRequests(chainID string, block *types.Eth1Block, res *db
 			// validator_pubkey: Bytes48
 			// amount: uint64
 			requests = append(requests, db2.WithdrawalRequest{
-				SourceAddress:   log.Data[:20],
-				ValidatorPubKey: log.Data[20:68],
-				Amount:          min(binary.BigEndian.Uint64(log.Data[68:76]), math.MaxInt64),
-				TxHash:          tx.GetHash(),
-				TxIndex:         txIndex,
-				BlockNumber:     block.GetNumber(),
-				BlockTimestamp:  block.GetTime().AsTime(),
+				SourceAddress:      log.Data[:20],
+				ValidatorPubKey:    log.Data[20:68],
+				Amount:             min(binary.BigEndian.Uint64(log.Data[68:76]), math.MaxInt64),
+				BridgeQueueRequest: queueRequests[requestIndex],
 			})
+			requestIndex++
+		}
+		if requestIndex == len(block.GetTransactions()) {
+			break
 		}
 	}
 	res.WithdrawalRequests = requests
@@ -728,6 +744,33 @@ func TransformerFromList(names []string) ([]Transformer, error) {
 		transforms = append(transforms, transform)
 	}
 	return transforms, nil
+}
+
+func getQueueRequestFor(chainID string, block *types.Eth1Block, res *db2.IndexedBlock, address []byte) ([]db2.BridgeQueueRequest, error) {
+	var queueRequests []db2.BridgeQueueRequest
+	if res.Internals == nil {
+		if err := transformITx(chainID, block, res); err != nil {
+			return nil, err
+		}
+	}
+	for index, internal := range res.Internals {
+		if !bytes.Equal(internal.Indexed.To, address) {
+			continue
+		}
+		if internal.Indexed.Reverted {
+			continue
+		}
+		queueRequests = append(queueRequests, db2.BridgeQueueRequest{
+			Fee:            internal.Indexed.Value,
+			TxHash:         block.Transactions[internal.TxIndex].Hash,
+			TxIndex:        internal.TxIndex,
+			ItxIndex:       index,
+			BlockNumber:    block.Number,
+			BlockTimestamp: block.Time.AsTime(),
+			From:           block.Transactions[internal.TxIndex].From,
+		})
+	}
+	return queueRequests, nil
 }
 
 func eth1BlockReward(chainID string, blockNumber uint64, difficulty []byte) *big.Int {
@@ -804,7 +847,13 @@ func isBlobTx(txType uint32) bool {
 	return txType == gethtypes.BlobTxType
 }
 
+// isValidItx filter unwanted internal transactions
 func isValidItx(itx *types.Eth1InternalTransaction) bool {
+	// always process internals going to system contracts
+	if bytes.Equal(itx.To, params.ConsolidationQueueAddress.Bytes()) ||
+		bytes.Equal(itx.To, params.WithdrawalQueueAddress.Bytes()) {
+		return true
+	}
 	// skip top level and empty calls
 	// itx.Path == "0" is a legacy check and should be removed in the future
 	if itx.Path == "[]" || itx.Path == "0" || bytes.Equal(itx.Value, []byte{0x0}) {
@@ -897,10 +946,7 @@ func calculateTxFee(t *types.Eth1Transaction, baseFee []byte) *big.Int {
 	txFee := new(big.Int).Mul(new(big.Int).SetBytes(t.GasPrice), big.NewInt(int64(t.GasUsed)))
 
 	if len(baseFee) > 0 {
-		effectiveGasPrice := new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(baseFee))
-		if effectiveGasPrice.Cmp(new(big.Int).SetBytes(t.MaxFeePerGas)) > 0 {
-			effectiveGasPrice = new(big.Int).SetBytes(t.MaxFeePerGas)
-		}
+		effectiveGasPrice := bigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(baseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
 		proposerGasPricePart := new(big.Int).Sub(effectiveGasPrice, new(big.Int).SetBytes(baseFee))
 
 		if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
@@ -911,6 +957,13 @@ func calculateTxFee(t *types.Eth1Transaction, baseFee []byte) *big.Int {
 		}
 	}
 	return txFee
+}
+
+func bigMin(x, y *big.Int) *big.Int {
+	if x.Cmp(y) > 0 {
+		return y
+	}
+	return x
 }
 
 // calculates the total value of uncle rewards for a block

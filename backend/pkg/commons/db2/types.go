@@ -46,24 +46,28 @@ type IndexedBlock struct {
 	WithdrawalRequests    []WithdrawalRequest
 }
 
-type ConsolidationRequest struct {
-	SourceAddress  []byte
-	SourcePubKey   []byte
-	TargetPubKey   []byte
+type BridgeQueueRequest struct {
 	TxHash         []byte
 	TxIndex        int
+	ItxIndex       int
 	BlockNumber    uint64
 	BlockTimestamp time.Time
+	From           []byte
+	Fee            []byte
+}
+
+type ConsolidationRequest struct {
+	SourceAddress []byte
+	SourcePubKey  []byte
+	TargetPubKey  []byte
+	BridgeQueueRequest
 }
 
 type WithdrawalRequest struct {
 	SourceAddress   []byte
 	ValidatorPubKey []byte
 	Amount          uint64
-	TxHash          []byte
-	TxIndex         int
-	BlockNumber     uint64
-	BlockTimestamp  time.Time
+	BridgeQueueRequest
 }
 
 type TransferWithIndexes struct {
