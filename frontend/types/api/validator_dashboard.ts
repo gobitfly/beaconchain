@@ -261,7 +261,7 @@ export interface VDBWithdrawalsClTableRow {
   amount: string /* decimal.Decimal */;
   type: 'auto' | 'manual';
   status: 'queued' | 'completed' | 'rejected';
-  reject_reason?: 'full_queue' | 'unknown_pubkey' | 'wrong_withdrawal_credentials' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding';
+  reject_reason?: 'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance';
   is_missing_estimate: boolean;
 }
 export type GetValidatorDashboardConsensusLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsClTableRow>;
