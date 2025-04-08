@@ -316,7 +316,6 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 }
 
 func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsClColumn], search string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
-	// TODO: add default sorting
 	var err error
 	var currentCursor t.CLDepositsCursor
 
@@ -333,15 +332,18 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		return nil, nil, err
 	}
 
-	// Custom type for block_index
 	type dbResult struct {
-		GroupId              sql.NullInt64 `db:"group_id"`
-		PublicKey            []byte        `db:"publickey"`
-		Slot                 int64         `db:"block_slot"`
-		SlotIndex            int64         `db:"block_index"`
-		WithdrawalCredential []byte        `db:"withdrawalcredentials"`
-		Amount               int64         `db:"amount"`
-		Signature            []byte        `db:"signature"`
+		GroupId              sql.NullInt64   `db:"group_id"`
+		PublicKey            []byte          `db:"publickey"`
+		SlotProcessed        int64           `db:"block_slot"`
+		SlotIndex            int64           `db:"request_index"`
+		WithdrawalCredential []byte          `db:"withdrawalcredentials"`
+		Amount               decimal.Decimal `db:"amount"`
+		Signature            []byte          `db:"signature"`
+		// SlotQueued           int64           `db:"slot_queued"` // BEDS-1399
+		// Type                 string          `db:"type"`          // BEDS-1399
+		// Status               string          `db:"status"`        // BEDS-1399
+		// RejectReason         sql.NullString  `db:"reject_reason"` // BEDS-1399
 	}
 
 	depositsBridgeDs := goqu.Dialect("postgres").
@@ -349,10 +351,14 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		Select(
 			goqu.I("bd.publickey"),
 			goqu.I("bd.block_slot"),
-			goqu.I("bd.block_index"),
+			goqu.I("bd.block_index").As("request_index"),
 			goqu.I("bd.amount"),
 			goqu.I("bd.signature"),
 			goqu.I("bd.withdrawalcredentials"),
+			// goqu.V(nil), // TODO BEDS-1399
+			// goqu.V("manual").As("type"), // TODO BEDS-1399
+			// goqu.I("status"), // TODO BEDS-1399 (or maybe check some other tables?)
+			// goqu.L("reject_reason"), // TODO BEDS-1399
 		).
 		InnerJoin(
 			goqu.T("blocks").As("b"),
@@ -365,12 +371,16 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	depositRequestsDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_deposit_requests").As("bdr")).
 		Select(
-			goqu.I("bdr.pubkey"),
+			goqu.I("bdr.pubkey").As("publickey"),
 			goqu.I("bdr.block_slot"),
 			goqu.I("bdr.request_index"),
 			goqu.I("bdr.amount"),
 			goqu.I("bdr.signature"),
-			goqu.I("bdr.withdrawal_credentials"),
+			goqu.I("bdr.withdrawal_credentials").As("withdrawalcredentials"),
+			// goqu.I("bdr.slot_queued"), // TODO BEDS-1399
+			// goqu.I("bdr.type"), // TODO BEDS-1399
+			// goqu.I("bdr.status"), // TODO BEDS-1399
+			// goqu.I("bdr.reject_reason"), // TODO BEDS-1399
 		).
 		InnerJoin(
 			goqu.T("blocks").As("b"),
@@ -418,7 +428,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		depositsDs = depositsDs.
 			UnionAll(depositRequestsDs)
 		if currentCursor.IsValid() {
-			postElectra := uint64(currentCursor.Slot)/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			postElectra := uint64(currentCursor.SlotProcessed)/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
 			if postElectra && currentCursor.Reverse {
 				depositsDs = depositRequestsDs
 			} else if !postElectra && !currentCursor.Reverse {
@@ -427,11 +437,21 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		}
 	}
 
-	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("bd.block_slot"), Desc: true, Offset: currentCursor.Slot},
-		{Column: goqu.I("bd.block_index"), Desc: true, Offset: currentCursor.SlotIndex},
+	defaultSlotSortDesc := true
+	if colSort.Column == enums.VDBDepositsClColumns.Slot {
+		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
+		defaultSlotSortDesc = colSort.Desc
 	}
-	order, directions, err := applySortAndPagination(defaultColumns, defaultColumns[0], currentCursor.GenericCursor)
+	defaultColumns := []t.SortColumn{
+		{Column: goqu.I("bd.block_slot"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
+		{Column: goqu.I("bd.request_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotIndex},
+	}
+	var offset any
+	switch colSort.Column {
+	case enums.VDBDepositsClColumns.Amount:
+		offset = currentCursor.Amount
+	}
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -462,21 +482,22 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		responseData[i] = t.VDBConsensusDepositsTableRow{
 			PublicKey: t.PubKey(pubkeys[i]),
 			Index:     indices[i],
-			// Epoch:                utils.EpochOfSlot(uint64(row.Slot)),
-			// Slot:                 uint64(row.Slot),
+			// SlotQueued:           0,                         // TODO BEDS-1399
+			SlotProcessed:        uint64(row.SlotProcessed),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
-			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
+			Amount:               utils.GWeiToWei(row.Amount.BigInt()),
 			Signature:            t.Hash(hexutil.Encode(row.Signature)),
+			// Type:                 row.Type, // TODO
+			// Status:               row.Status, // TODO
 		}
-		if row.GroupId.Valid {
-			if dashboardId.AggregateGroups {
-				responseData[i].GroupId = t.DefaultGroupId
-			} else {
-				responseData[i].GroupId = uint64(row.GroupId.Int64)
-			}
-		} else {
-			responseData[i].GroupId = t.DefaultGroupId
+		responseData[i].GroupId = t.DefaultGroupId
+		if row.GroupId.Valid && !dashboardId.AggregateGroups {
+			responseData[i].GroupId = uint64(row.GroupId.Int64)
 		}
+		// TODO BEDS-1399
+		/*if row.RejectReason.Valid {
+			responseData[i].RejectReason = &row.RejectReason.String
+		}*/
 	}
 	var paging t.Paging
 
