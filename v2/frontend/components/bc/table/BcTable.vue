@@ -230,6 +230,10 @@ const sort = computed(() => {
       border: none;
     }
   }
+
+  :deep(.p-datatable-column-header-content) {
+    text-wrap: balance;
+  }
 }
 
 .toggle {
