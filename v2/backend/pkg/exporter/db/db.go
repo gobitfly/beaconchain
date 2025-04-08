@@ -1857,7 +1857,7 @@ func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, erro
 		goqu.L("data->>'amount'").As("amount"),
 		goqu.L("data->>'pubkey'").As("pubkey"),
 		// SignatureValid field, assume true if not present
-		goqu.COALESCE(goqu.L("data->>'signature_valid'"), goqu.L("true")).As("signature_valid"),
+		goqu.COALESCE(goqu.L("data->>'signature_valid'"), goqu.L("'true'")).As("signature_valid"),
 	).
 		From("consensus_layer_events").
 		Where(
