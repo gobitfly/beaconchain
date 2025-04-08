@@ -33,6 +33,7 @@ export type Icon =
   | 'gear'
   | 'gem'
   | 'globe'
+  | 'hand-holding-hand'
   | 'hashtag'
   | 'magnifying-glass'
   | 'minus'
@@ -138,6 +139,7 @@ const is = computed(() => {
     <LazyBcIconGear v-else-if="name === 'gear'" />
     <LazyBcIconGem v-else-if="name === 'gem'" />
     <LazyBcIconGlobe v-else-if="name === 'globe'" />
+    <LazyBcIconHandHoldingHand v-else-if="name === 'hand-holding-hand'" />
     <LazyBcIconHashtag v-else-if="name === 'hashtag'" />
     <LazyBcIconMagnifyingGlass v-else-if="name === 'magnifying-glass'" />
     <LazyBcIconMinus v-else-if="name === 'minus'" />
