@@ -9,7 +9,7 @@
         "lodash-es": "^4.17.21",
         "pinia": "^3.0.1",
         "pinia-plugin-persistedstate": "^4.2.0",
-        "primevue": "~4.0.4",
+        "primevue": "~4.3.3",
         "qrcode.vue": "^3.6.0",
         "vee-validate": "^4.15.0",
         "vue": "latest",
