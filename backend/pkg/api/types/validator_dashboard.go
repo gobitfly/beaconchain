@@ -301,7 +301,7 @@ type VDBWithdrawalsClTableRow struct {
 	Amount                decimal.Decimal `json:"amount" faker:"eth"`
 	Type                  string          `json:"type" tstype:"'auto' | 'manual'" faker:"oneof: auto, manual"`
 	Status                string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
-	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'wrong_withdrawal_credentials' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding'" faker:"oneof: full_queue, unknown_pubkey, wrong_withdrawal_credentials, inactive, exiting, too_young, pending_withdrawals, not_compounding'"`
+	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance'" faker:"oneof: full_queue, unknown_pubkey, no_execution_withdrawal_credentials, address_mismatch, inactive, exiting, too_young, pending_withdrawals, not_compounding, insufficient_effective_balance, excess_balance"`
 	IsMissingEstimate     bool            `json:"is_missing_estimate"`
 }
 type GetValidatorDashboardConsensusLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsClTableRow]
