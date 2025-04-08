@@ -505,8 +505,8 @@ func (d *dashboardData) processElectraDeposits(data *MultiEpochData, tar *[]type
 			}
 			// now we have a map of pubkey => deposits
 			// loop over the map and process the deposits
-			epochEnd := int64(epoch) - 1
-			epochStart := int64(epoch)
+			epochStart := int64(epoch) - 1
+			epochEnd := int64(epoch)
 			for pubkey, deposits := range deposits {
 				// try to resolve the pubkey => index, if it fails assume all deposits are invalid
 				// the validatorIndices mapping gets populated with the validators of all epochs that are currently being processed.
