@@ -23,7 +23,7 @@
         "@nuxtjs/i18n": "^9.5.2",
         "@nuxtjs/style-resources": "^1.2.2",
         "@playwright/test": "^1.51.1",
-        "@primevue/nuxt-module": "~4.0.4",
+        "@primevue/nuxt-module": "~4.3.3",
         "@rollup/plugin-babel": "^6.0.4",
         "@types/big.js": "^6.2.2",
         "@types/lodash-es": "^4.17.12",
