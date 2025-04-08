@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
@@ -467,6 +468,18 @@ func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]types.VDBDa
 
 	return g.Wait()
 }
+
+/*
+deposit processing:
+this is technically not needed with how the new deposit events work, but since the current hoodi events are already in this state we have to support it for now
+the tldr is that the we get depositProcessedEvent with validsig = false for rejected deposits, but also for accepted deposits after a valid one
+so the logic should be:
+  - check if the validator already existed before the current epochs state transition (basically from where we get balance start)
+  - if it did, accept all deposits as valid
+  - if not, check if the validator exists in the next epochs state transition:
+  - if it does not, reject all deposits as invalid
+  - if it does, process all deposits sequentially, rejecting all the ones with validsig = false that are before the first valid one
+*/
 func (d *dashboardData) processElectraDeposits(data *MultiEpochData, tar *[]types.VDBDataEpochColumns) error {
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
@@ -482,16 +495,60 @@ func (d *dashboardData) processElectraDeposits(data *MultiEpochData, tar *[]type
 				// nothing to do
 				return nil
 			}
+			// group by pubkey, retain order
+			deposits := make(map[string][]constypes.ElectraDeposit)
 			for _, deposit := range data.epochBasedData.electraDeposits[epoch] {
-				// debug log len of pubkey
-				d.log.Tracef("processing electra deposit of pubkey %s (len %d) in epoch %d", deposit.Pubkey, len(deposit.Pubkey), epoch)
-				index, indexExists := data.validatorBasedData.validatorIndices[string(deposit.Pubkey)]
-				if !indexExists {
-					return fmt.Errorf("validator index not found for electra deposit of pubkey %s in epoch %d", deposit.Pubkey, epoch)
+				if _, ok := deposits[string(deposit.Pubkey)]; !ok {
+					deposits[string(deposit.Pubkey)] = make([]constypes.ElectraDeposit, 0)
 				}
-				(*tar)[tI].DepositsAmount[uint64(tO)+index] += int64(deposit.Amount)
-				(*tar)[tI].DepositsCount[uint64(tO)+index]++
-				d.log.Tracef("processed electra deposit of %d GWEI for validator %d in epoch %d", deposit.Amount, index, epoch)
+				deposits[string(deposit.Pubkey)] = append(deposits[string(deposit.Pubkey)], deposit)
+			}
+			// now we have a map of pubkey => deposits
+			// loop over the map and process the deposits
+			epochEnd := int64(epoch) - 1
+			epochStart := int64(epoch)
+			for pubkey, deposits := range deposits {
+				// try to resolve the pubkey => index, if it fails assume all deposits are invalid
+				// the validatorIndices mapping gets populated with the validators of all epochs that are currently being processed.
+				// so if the validator is not in the map, we can assume all deposits we will process are invalid
+				index, indexExists := data.validatorBasedData.validatorIndices[pubkey]
+				if !indexExists {
+					d.log.Tracef("validator %s does not exist in validator indices map, assuming all deposits are invalid", pubkey)
+					continue
+				}
+				// check if the validator exists at the end of the epoch
+				if uint64(len(data.epochBasedData.validatorStates[epochEnd].Data)) <= index {
+					d.log.Tracef("validator %s does not exist at the end of the epoch, assuming all deposits are invalid", pubkey)
+					continue
+				}
+				// check if the validator already existed at the start of the epoch
+				if uint64(len(data.epochBasedData.validatorStates[epochStart].Data)) > index {
+					for _, deposit := range deposits {
+						(*tar)[tI].DepositsAmount[uint64(tO)+index] += deposit.Amount
+						(*tar)[tI].DepositsCount[uint64(tO)+index]++
+						d.log.Tracef("processed electra deposit of %d GWEI for validator %d in epoch %d (assumed valid, validator did exist at start of epoch)", deposit.Amount, index, epoch)
+					}
+					continue
+				}
+				// validator exists at the end of the epoch (but not the start), so at least one of the deposits must be valid
+				sawValid := false
+				for _, deposit := range deposits {
+					if deposit.SignatureValid {
+						sawValid = true
+					}
+					if !sawValid {
+						// no valid deposit
+						d.log.Debugf("processed electra deposit of %d GWEI for validator %d in epoch %d (discarded, no valid deposit yet)", deposit.Amount, index, epoch)
+						continue
+					}
+					// this deposit is valid, so we can process it
+					(*tar)[tI].DepositsAmount[uint64(tO)+index] += deposit.Amount
+					(*tar)[tI].DepositsCount[uint64(tO)+index]++
+					d.log.Tracef("processed electra deposit of %d GWEI for validator %d in epoch %d (at or after first valid deposit)", deposit.Amount, index, epoch)
+				}
+				if !sawValid {
+					return fmt.Errorf("no valid deposits for validator %s in epoch %d despite it transitioning from non-existent to existent", pubkey, epoch)
+				}
 			}
 			return nil
 		})
