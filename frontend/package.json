@@ -25,6 +25,7 @@
         "@playwright/test": "^1.51.1",
         "@primevue/nuxt-module": "~4.0.4",
         "@rollup/plugin-babel": "^6.0.4",
+    "@nuxtjs/tailwindcss": "^6.12.1",
         "@types/big.js": "^6.2.2",
         "@types/lodash-es": "^4.17.12",
         "@vee-validate/yup": "^4.15.0",
@@ -37,7 +38,8 @@
         "postcss": "^8.5.3",
         "sass": "^1.86.2",
         "typescript": "^5.8.2",
-        "vue-tsc": "^2.2.8"
+        "vue-tsc": "^2.2.8",
+    "eslint-plugin-tailwindcss": "^3.17.4"
     },
     "engines": {
         "node": ">=22.0.0"

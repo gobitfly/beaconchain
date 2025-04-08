@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
+    '@nuxtjs/tailwindcss',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
