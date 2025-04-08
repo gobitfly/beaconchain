@@ -30,6 +30,25 @@ func (b *Base64Bytes) UnmarshalText(text []byte) error {
 	return nil
 }
 
+func (b *Base64Bytes) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		decoded, err := base64.StdEncoding.DecodeString(string(v))
+		if err != nil {
+			return errors.Wrap(err, "failed to decode base64")
+		}
+		if len(decoded) == 0 {
+			return fmt.Errorf("base64 decoded string is empty")
+		}
+		*b = Base64Bytes(decoded)
+	case string:
+		return b.UnmarshalText([]byte(v))
+	default:
+		return fmt.Errorf("unsupported type: %T", v)
+	}
+	return nil
+}
+
 type ElectraDeposit struct {
 	Pubkey         Base64Bytes `json:"pubkey" db:"pubkey"`
 	Amount         int64       `json:"amount,string" db:"amount"`
