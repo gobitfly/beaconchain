@@ -5,8 +5,9 @@ import (
 )
 
 type ElectraDeposit struct {
-	Pubkey hexutil.Bytes `json:"pubkey" db:"pubkey"`
-	Amount uint64        `json:"amount,string" db:"amount"`
+	Pubkey         hexutil.Bytes `json:"pubkey" db:"pubkey"`
+	Amount         int64         `json:"amount,string" db:"amount"`
+	SignatureValid bool          `json:"signature_valid" db:"signature_valid"`
 }
 
 type ElectraConsolidation struct {
