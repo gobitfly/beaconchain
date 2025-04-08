@@ -252,7 +252,10 @@ const openValidatorModal = () => {
       />
     </BcTooltip>
     <BcButtonIcon
-      v-if="data?.context"
+      v-if="
+        data?.context
+          && (data.efficiency.status_count.success || data.efficiency.status_count.failed)
+      "
       screenreader-text="dashboard.validator.rewards.open_validator_details"
       class="link popout"
       name="arrow-upright-from-square"
