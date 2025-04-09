@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
@@ -98,34 +99,64 @@ func (service *IndexerService) SyncLive() {
 		reorgDepth, err := service.reorgWatcher.LookForReorg()
 		if err != nil {
 			logger.WithField("error", err).Error("reorg lookup")
-			continue
+			break
 		}
 		if reorgDepth != 0 {
 			indexingMetrics.ReorgBlockTotal(service.stateReader.chainID, reorgDepth)
 			logger.WithField("depth", reorgDepth).Info("reorg detected")
 		}
 
-		state, err := service.stateReader.state()
-		if err != nil {
-			logger.WithField("error", err).Error("cannot get state")
-			continue
+		for {
+			state, err := service.stateReader.state()
+			if err != nil {
+				logger.WithField("error", err).Error("cannot get state")
+				break
+			}
+			if state.node == state.LastProcessed() {
+				// we caught up with blockchain head, we can stop indexing
+				break
+			}
+			indexingMetrics.BlockDifference(state.chainID, state.node-state.LastProcessed())
+			startBlock := max(state.LastProcessed()+1, 0)
+			bulk := min(service.indexer.config.Bulk, state.node-startBlock+1)
+			endBlock := min(startBlock+bulk-1, state.node)
+			start := time.Now()
+
+			logger := logger.WithFields(state.Fields()).WithFields(logrus.Fields{
+				"startBlock": startBlock,
+				"endBlock":   endBlock,
+			})
+
+			if err := service.indexer.FromHead(state, startBlock, endBlock); err != nil {
+				logger.WithField("error", err).Error("indexing from head")
+				break
+			}
+			blockIndexingTime := time.Since(start)
+
+			var balanceTime, ensTime time.Duration
+			g := errgroup.Group{}
+			g.Go(func() error {
+				start := time.Now()
+				service.indexer.Balances(state)
+				balanceTime = time.Since(start)
+				return nil
+			})
+			g.Go(func() error {
+				start := time.Now()
+				service.indexer.ENS(state)
+				ensTime = time.Since(start)
+				return nil
+			})
+			_ = g.Wait()
+			duration := time.Since(start) // save duration to unify log and metric value
+			logger.WithFields(logrus.Fields{
+				"indexingTime":      duration,
+				"blockIndexingTime": blockIndexingTime,
+				"balanceTime":       balanceTime,
+				"ensTime":           ensTime,
+			}).Info("indexing done")
+			indexingMetrics.IndexingTime(state.chainID, duration)
 		}
-		logger.WithFields(state.Fields()).Info("last blocks")
-		indexingMetrics.BlockDifference(state.chainID, state.node-state.LastProcessed())
-
-		if state.node == state.LastProcessed() {
-			continue
-		}
-
-		if err := service.indexer.FromHead(state); err != nil {
-			logger.WithField("error", err).Error("indexing from head")
-			continue
-		}
-
-		go service.indexer.Balances(state)
-
-		go service.indexer.ENS(state)
-
 		// TODO: remove that, it seems weird to write to a database that the service is running
 		// we have logs, metrics and other indicator for that purpose
 		services.ReportStatus("eth1indexer", "Running", nil)
@@ -242,53 +273,22 @@ func NewIndexer(cache db2.CachedBalanceUpdates, blockIndexer *BlockIndexer, bala
 	}
 }
 
-func (service *Indexer) FromHead(state syncState) error {
-	start := time.Now()
-	logger := logger.WithFields(logrus.Fields{
-		"blocksRange": fmt.Sprintf("%d-%d", state.blocks+1, state.node),
-		"dataRange":   fmt.Sprintf("%d-%d", state.data+1, state.node),
-	})
+func (indexer *Indexer) FromHead(state syncState, startBlock, endBlock uint64) error {
 	// clear balance cache
-	defer service.balanceCache.Clear(state.chainID)
-
-	startBlock := max(state.LastProcessed()+1, 0)
-	bulk := min(service.config.Bulk, state.node-startBlock+1)
-
-	for ; startBlock <= state.node; startBlock += bulk {
-		start := time.Now()
-		endBlock := min(startBlock+bulk-1, state.node)
-		logger = logger.WithFields(logrus.Fields{
-			"start": startBlock,
-			"end":   endBlock,
-		})
-		if err := service.indexer.Index(state.chainID, startBlock, endBlock); err != nil {
-			logger.WithFields(logrus.Fields{
-				"error": err,
-			}).Error("error indexing")
-			return err
-		}
-		logger.WithFields(logrus.Fields{
-			"elapsed": time.Since(start),
-		}).Info("indexed blocks")
-	}
-	end := time.Since(start) // save end to unify log and metric value
-	indexingMetrics.IndexingTime(state.chainID, end)
-
-	logger.WithFields(logrus.Fields{
-		"duration": end,
-	}).Info("indexed head")
-	return nil
+	defer indexer.balanceCache.Clear(state.chainID)
+	return indexer.indexer.Index(state.chainID, startBlock, endBlock)
 }
 
-func (service *Indexer) Balances(state syncState) {
-	service.muBalance.Lock()
-	defer service.muBalance.Unlock()
+func (indexer *Indexer) Balances(state syncState) {
+	indexer.muBalance.Lock()
+	defer indexer.muBalance.Unlock()
 
+	globalStart := time.Now()
 	for {
 		logger := logger.WithFields(state.Fields())
 		start := time.Now()
 
-		total, err := service.store.CountBalanceUpdates(state.chainID)
+		total, err := indexer.store.CountBalanceUpdates(state.chainID)
 		if err != nil {
 			logger.WithField("error", err).Error("error while counting balance updates")
 			continue
@@ -296,10 +296,10 @@ func (service *Indexer) Balances(state syncState) {
 		logger = logger.WithField("pending", total)
 		indexingMetrics.PendingBalanceUpdate(state.chainID, total)
 		if total == 0 {
-			logger.Info("finished updating balances")
+			logger.WithField("duration", time.Since(globalStart)).Info("balances updated")
 			return
 		}
-		balances, err := service.balanceUpdater.UpdateBalances(state.chainID, service.config.BalanceUpdaterBatchSize)
+		balances, err := indexer.balanceUpdater.UpdateBalances(state.chainID, indexer.config.BalanceUpdaterBatchSize)
 		if err != nil {
 			logger.WithField("error", err).Error("error while updating balances")
 			return
@@ -312,18 +312,18 @@ func (service *Indexer) Balances(state syncState) {
 	}
 }
 
-func (service *Indexer) ENS(state syncState) {
-	if service.ensImporter == nil {
+func (indexer *Indexer) ENS(state syncState) {
+	if indexer.ensImporter == nil {
 		return
 	}
-	service.muENS.Lock()
-	defer service.muENS.Unlock()
+	indexer.muENS.Lock()
+	defer indexer.muENS.Unlock()
 
 	for {
 		logger := logger.WithFields(state.Fields())
 		start := time.Now()
 
-		total, err := service.store.CountEnsUpdates(state.chainID)
+		total, err := indexer.store.CountEnsUpdates(state.chainID)
 		if err != nil {
 			logger.WithField("error", err).Error("error while counting total ens updates")
 			continue
@@ -331,10 +331,10 @@ func (service *Indexer) ENS(state syncState) {
 		logger = logger.WithField("pending", total)
 		indexingMetrics.PendingENSUpdate(state.chainID, total)
 		if total == 0 {
-			logger.Info("finished importing ens")
+			logger.Info("ens imported")
 			return
 		}
-		res, err := service.ensImporter.Import(state.chainID, service.config.ENSImportBatchSize)
+		res, err := indexer.ensImporter.Import(state.chainID, indexer.config.ENSImportBatchSize)
 		if err != nil {
 			logger.WithField("error", err).Error("error while importing ens")
 			continue
@@ -348,19 +348,19 @@ func (service *Indexer) ENS(state syncState) {
 	}
 }
 
-func (service *Indexer) Range(state syncState, start, end uint64, skipNode, skipData bool) error {
+func (indexer *Indexer) Range(state syncState, start, end uint64, skipNode, skipData bool) error {
 	if !skipNode {
-		if err := service.indexer.IndexNode(state.chainID, start, end); err != nil {
+		if err := indexer.indexer.IndexNode(state.chainID, start, end); err != nil {
 			return fmt.Errorf("error indexing blocks from node: %v", err)
 		}
 	}
 	if !skipData {
-		if err := service.indexer.IndexEvents(state.chainID, start, end); err != nil {
+		if err := indexer.indexer.IndexEvents(state.chainID, start, end); err != nil {
 			return fmt.Errorf("error indexing events from node: %v", err)
 		}
 	}
-	if service.balanceUpdater != nil {
-		service.Balances(state)
+	if indexer.balanceUpdater != nil {
+		indexer.Balances(state)
 	}
 	return nil
 }
