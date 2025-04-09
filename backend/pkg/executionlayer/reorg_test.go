@@ -80,10 +80,14 @@ func TestReorgWatcher(t *testing.T) {
 			client := newFakeClient(tt.nodeBlocks...)
 			store := newStubReorgStore(tt.dbBlocks...)
 			reorg := NewReorgWatcher(client, store, ReorgConfig{tt.depth}, "chainID", tt.lastBlockStore)
-			if err := reorg.LookForReorg(); err != nil {
+			depth, err := reorg.LookForReorg()
+			if err != nil {
 				t.Fatal(err)
 			}
 			if got, want := store.reverted, tt.reverted; !reflect.DeepEqual(got, want) {
+				t.Errorf("got %v, want %v", got, want)
+			}
+			if got, want := depth, uint64(len(tt.reverted)); got != want {
 				t.Errorf("got %v, want %v", got, want)
 			}
 		})
@@ -192,7 +196,7 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	// create block that has the same number as revertedBlock (root+1)
 	backend.Commit()
 
-	if err := reorg.LookForReorg(); err != nil {
+	if _, err := reorg.LookForReorg(); err != nil {
 		t.Fatal(err)
 	}
 

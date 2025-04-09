@@ -31,12 +31,12 @@ type BlockIndexerConfig struct {
 type BlockIndexer struct {
 	store          Store
 	lastBlockStore db2.LastBlocksStore
-	transformers   []TransformFunc
+	transformers   []Transformer
 	client         Client
 	config         BlockIndexerConfig
 }
 
-func NewBlockIndexer(store Store, lastBlockStore db2.LastBlocksStore, config BlockIndexerConfig, client Client, transformers ...TransformFunc) *BlockIndexer {
+func NewBlockIndexer(store Store, lastBlockStore db2.LastBlocksStore, config BlockIndexerConfig, client Client, transformers ...Transformer) *BlockIndexer {
 	return &BlockIndexer{
 		store:          store,
 		lastBlockStore: lastBlockStore,
@@ -170,11 +170,13 @@ func (indexer *BlockIndexer) indexBlock(chainID string, block *types.Eth1Block) 
 		Number:  block.Number,
 		Hash:    block.Hash,
 	}
-	for _, transform := range indexer.transformers {
-		err := transform(chainID, block, &res)
+	for _, transformer := range indexer.transformers {
+		start := time.Now()
+		err := transformer.fn(chainID, block, &res)
 		if err != nil {
-			return fmt.Errorf("error transforming block [%v]", block.Number)
+			return fmt.Errorf("error transforming [%v] block [%v]", transformer.name, block.Number)
 		}
+		indexingMetrics.TransformerProcessingTime(chainID, transformer.name, time.Since(start))
 	}
 	if err := indexer.store.AddIndexedBlock(res); err != nil {
 		return fmt.Errorf("error saving block [%v]: %w", block.Number, err)
