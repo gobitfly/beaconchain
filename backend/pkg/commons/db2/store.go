@@ -313,9 +313,27 @@ func (store StoreV1) GetBlocksRange(chainID string, start, end uint64) ([]*types
 		return nil, fmt.Errorf("invalid block range provided (high: %v, low: %v)", end, start)
 	}
 
-	rows, err := store.blocks.GetRowsRange(blockKey(chainID, start), blockKey(chainID, end))
-	if err != nil {
-		return nil, err
+	var rows []database.Row
+	// we need to index genesis block (number=0) alone because there is an issue with how we generate block key
+	// block 0 has key chainID:1000000000
+	// block 1 has key chainID:999999999
+	// both are not adjacent in database, thus preventing to retrieve the range [0,1]
+	if start == 0 {
+		row, err := store.blocks.GetRow(blockKey(chainID, start))
+		if err != nil {
+			return nil, err
+		}
+		if row != nil {
+			rows = append([]database.Row{*row}, rows...)
+		}
+		start++
+	}
+	if start <= end {
+		rangeRows, err := store.blocks.GetRowsRange(blockKey(chainID, start), blockKey(chainID, end))
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, rangeRows...)
 	}
 	var blocks []*types.Eth1Block
 	for _, row := range rows {
@@ -412,7 +430,7 @@ func (store StoreV1) GetLastBlockInDataTable(chainID string) (uint64, error) {
 		return 0, err
 	}
 	if len(rows) != 1 {
-		return 0, nil
+		return 0, database.ErrNotFound
 	}
 	reversedLastBlockStr := strings.TrimPrefix(rows[0].Key, prefix)
 	reversedLastBlock, ok := new(big.Int).SetString(reversedLastBlockStr, 10)
@@ -430,7 +448,7 @@ func (store StoreV1) GetLastBlockInBlocksTable(chainID string) (uint64, error) {
 		return 0, err
 	}
 	if len(rows) != 1 {
-		return 0, nil
+		return 0, database.ErrNotFound
 	}
 	reversedLastBlockStr := strings.TrimPrefix(rows[0].Key, prefix)
 	reversedLastBlock, ok := new(big.Int).SetString(reversedLastBlockStr, 10)

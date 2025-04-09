@@ -2,6 +2,7 @@ package executionlayer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -161,7 +163,9 @@ func (indexer *BlockIndexer) IndexEvents(chainID string, start, end uint64) erro
 
 	lastBlockInCache, err := indexer.lastBlockStore.GetInDataTable(chainID)
 	if err != nil {
-		return err
+		if !errors.Is(err, database.ErrNotFound) {
+			return err
+		}
 	}
 
 	if end > lastBlockInCache {
