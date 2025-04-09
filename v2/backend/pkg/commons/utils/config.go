@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/sethvargo/go-envconfig"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/sethvargo/go-envconfig"
 
-	//nolint:depguard
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )

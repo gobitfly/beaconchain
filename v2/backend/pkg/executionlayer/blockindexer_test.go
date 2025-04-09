@@ -133,10 +133,12 @@ func TestIndexerWithBigTable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() { _ = bt.Clear() }()
-			store := db2.NewStoreV1FromBigtable(bt, database.NoopCache{})
-			indexer := NewIndexer(
+			store := db2.NewStoreV1FromBigtable(bt, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
+			indexer := NewBlockIndexer(
 				store,
 				db2.NewCachedLastBlocks(&database.MemCache{}, store),
+				DefaultConfig.BlockIndexer,
+				client,
 				tt.transformers...,
 			)
 			if err := tt.action(t); err != nil {
@@ -148,10 +150,10 @@ func TestIndexerWithBigTable(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if err := indexer.IndexNode(fmt.Sprintf("%d", backend.ChainID), client, lastBlock, lastBlock, 1, "geth"); err != nil {
+			if err := indexer.IndexNode(fmt.Sprintf("%d", backend.ChainID), lastBlock, lastBlock); err != nil {
 				t.Fatal(err)
 			}
-			if err := indexer.IndexEvents(fmt.Sprintf("%d", backend.ChainID), lastBlock, lastBlock, 1); err != nil {
+			if err := indexer.IndexEvents(fmt.Sprintf("%d", backend.ChainID), lastBlock, lastBlock); err != nil {
 				t.Fatal(err)
 			}
 

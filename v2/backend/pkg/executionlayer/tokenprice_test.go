@@ -90,13 +90,17 @@ func TestTokenPricer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := db2.NewStoreV1(nil, database.Wrap(metadataBigtable, db2.MetadataTable), nil, nil, database.NoopCache{})
+	store := db2.NewStoreV1(nil, database.Wrap(metadataBigtable, db2.MetadataTable), nil, nil, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
 	backend := th.NewBackend(t)
 
 	tokenAddress, token := backend.DeployERC20(t, "usdt", "usdt", backend.BankAccount.From)
 	multicall := backend.DeployContract(t, common.FromHex(contracts.MulticallMetaData.Bin))
 	supply, _ := token.TotalSupply(nil)
-
+	list := erc20.ERC20TokenList{
+		Tokens: []*erc20.ERC20TokenDetail{
+			{Address: tokenAddress.String()},
+		},
+	}
 	tests := []struct {
 		name   string
 		pricer stubExternalPricer
@@ -127,14 +131,10 @@ func TestTokenPricer(t *testing.T) {
 				store,
 				fmt.Sprintf("%d", backend.ChainID),
 				tt.pricer,
-				erc20.ERC20TokenList{
-					Tokens: []*erc20.ERC20TokenDetail{
-						{Address: tokenAddress.String()},
-					},
-				},
 				evm.NewMulticallBatcher(backend.Client(), multicall, 0),
 			)
-			if err := pricer.UpdateTokens(); err != nil {
+
+			if err := pricer.UpdateTokens(list); err != nil {
 				t.Fatal(err)
 			}
 			price, err := store.TokenPrice(fmt.Sprintf("%d", backend.ChainID), tokenAddress)

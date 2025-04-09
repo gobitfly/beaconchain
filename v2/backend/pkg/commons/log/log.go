@@ -3,13 +3,15 @@ package log
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
-	"github.com/sirupsen/logrus"
 )
 
 // Fatal logs a fatal error with callstack info that skips callerSkip many levels with arbitrarily many additional infos.
@@ -146,3 +148,11 @@ func logErrorInfo(err error, callerSkip int, isWarning bool, additionalInfos ...
 }
 
 type Fields = logrus.Fields
+
+var Logger = logrus.StandardLogger()
+
+var Empty = func() *logrus.Entry {
+	logger := logrus.New()
+	logger.SetOutput(io.Discard)
+	return logrus.NewEntry(logger)
+}()

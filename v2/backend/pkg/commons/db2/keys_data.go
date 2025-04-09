@@ -234,7 +234,7 @@ func ensToItems(chainID string, logs []ENSLog) map[string][]database.Item {
 	items := make(map[string][]database.Item)
 	for _, withdrawal := range logs {
 		keys := keysENS(chainID, withdrawal)
-		for i := 1; i < len(keys); i++ {
+		for i := 0; i < len(keys); i++ {
 			items[keys[i]] = []database.Item{{Family: defaultFamily, Column: keys[i]}}
 		}
 	}
@@ -541,13 +541,13 @@ func keysWithdrawal(chainID string, withdrawal *types.Eth1WithdrawalIndexed) []s
 func keysENS(chainID string, log ENSLog) []string {
 	var keys []string
 	if log.Node != nil {
-		keys = append(keys, fmt.Sprintf("%s:ENS:V:H:%x", chainID, log.Node))
+		keys = append(keys, fmt.Sprintf("%s:ENS:V:H:%x", chainID, *log.Node))
 	}
 	if log.Owner != nil {
-		keys = append(keys, fmt.Sprintf("%s:ENS:V:A:%x", chainID, log.Owner))
+		keys = append(keys, fmt.Sprintf("%s:ENS:V:A:%x", chainID, *log.Owner))
 	}
 	if log.Name != nil {
-		keys = append(keys, fmt.Sprintf("%s:ENS:V:N:%x", chainID, log.Name))
+		keys = append(keys, fmt.Sprintf("%s:ENS:V:N:%s", chainID, *log.Name))
 	}
 	return keys
 }
