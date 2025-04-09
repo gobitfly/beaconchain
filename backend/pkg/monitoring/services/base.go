@@ -58,6 +58,11 @@ var (
 )
 
 func InitStatusReporter(deploymentType string) {
+	if deploymentType == "" {
+		log.Warn("deployment type is empty, defaulting to 'development'")
+		deploymentType = "development"
+	}
+
 	configOnce.Do(func() {
 		config = statusConfig{
 			initialized:    true,
