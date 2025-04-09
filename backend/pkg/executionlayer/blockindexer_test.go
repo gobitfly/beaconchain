@@ -133,7 +133,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			defer func() { _ = bt.Clear() }()
-			store := db2.NewStoreV1FromBigtable(bt, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
+			store := db2.NewStoreV1FromBigtable(bt, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}}, nil)
 			indexer := NewBlockIndexer(
 				store,
 				db2.NewCachedLastBlocks(&database.MemCache{}, store),

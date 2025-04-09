@@ -16,7 +16,7 @@ func TestStoreV1(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer bt.Close()
-	store := NewStoreV1FromBigtable(bt, CachedBalanceUpdates{database.NoopCache{}})
+	store := NewStoreV1FromBigtable(bt, CachedBalanceUpdates{database.NoopCache{}}, nil)
 
 	t.Run("block range", func(t *testing.T) {
 		tests := []struct {

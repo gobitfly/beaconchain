@@ -158,7 +158,7 @@ func Run() {
 	}
 
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}})
+	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}}, db.WriterDb)
 
 	config := executionlayer.DefaultConfig
 

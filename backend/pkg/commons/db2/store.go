@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/exp/maps"
 	"google.golang.org/protobuf/proto"
 
@@ -21,25 +22,28 @@ type StoreV1 struct {
 	updates  database.Database
 	blocks   database.Database
 	cache    CachedBalanceUpdates
+	bridge   BridgeStore
 }
 
-func NewStoreV1(data, metadata, updates, blocks database.Database, cache CachedBalanceUpdates) StoreV1 {
+func NewStoreV1(data, metadata, updates, blocks database.Database, cache CachedBalanceUpdates, bridge BridgeStore) StoreV1 {
 	return StoreV1{
 		data:     data,
 		metadata: metadata,
 		updates:  updates,
 		blocks:   blocks,
 		cache:    cache,
+		bridge:   bridge,
 	}
 }
 
-func NewStoreV1FromBigtable(bigtable *database.BigTable, cache CachedBalanceUpdates) StoreV1 {
+func NewStoreV1FromBigtable(bigtable *database.BigTable, cache CachedBalanceUpdates, db *sqlx.DB) StoreV1 {
 	return StoreV1{
 		data:     database.WrapWithMetrics(bigtable, DataTable),
 		metadata: database.WrapWithMetrics(bigtable, MetadataTable),
 		updates:  database.WrapWithMetrics(bigtable, UpdatesTable),
 		blocks:   database.WrapWithMetrics(bigtable, BlocksTable),
 		cache:    cache,
+		bridge:   NewBridgeStore(db),
 	}
 }
 
@@ -52,6 +56,9 @@ func (store StoreV1) AddIndexedBlock(block IndexedBlock) error {
 		return err
 	}
 	if err := store.addIndexedBlockInMetadata(block); err != nil {
+		return err
+	}
+	if err := store.addIndexedBlockInBridge(block); err != nil {
 		return err
 	}
 	return nil
@@ -187,6 +194,20 @@ func (store StoreV1) addIndexedBlockInMetadata(block IndexedBlock) error {
 	}
 	if err := store.metadata.BulkAdd(items); err != nil {
 		return err
+	}
+	return nil
+}
+
+func (store StoreV1) addIndexedBlockInBridge(block IndexedBlock) error {
+	for _, request := range block.ConsolidationRequests {
+		if err := store.bridge.SetConsolidationRequests(request); err != nil {
+			return err
+		}
+	}
+	for _, request := range block.WithdrawalRequests {
+		if err := store.bridge.SetWithdrawalRequest(request); err != nil {
+			return err
+		}
 	}
 	return nil
 }
