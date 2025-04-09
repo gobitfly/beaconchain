@@ -2,6 +2,7 @@ package db2
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -27,20 +28,42 @@ type Balance struct {
 }
 
 type IndexedBlock struct {
-	ChainID         string
-	Hash            []byte
-	Number          uint64
-	Block           *types.Eth1BlockIndexed
-	Transactions    []*types.Eth1TransactionIndexed
-	Internals       []InternalWithIndexes
-	ERC20Transfer   []TransferWithIndexes
-	ERC1155Transfer []ERC1155TransferWithIndexes
-	ERC721Transfer  []ERC721TransferWithIndexes
-	Blobs           []BlobWithIndex
-	Uncles          []UncleWithIndexes
-	Withdrawals     []*types.Eth1WithdrawalIndexed
-	ENS             []ENSLog
-	Contracts       []ContractUpdateWithAddress
+	ChainID               string
+	Hash                  []byte
+	Number                uint64
+	Block                 *types.Eth1BlockIndexed
+	Transactions          []*types.Eth1TransactionIndexed
+	Internals             []InternalWithIndexes
+	ERC20Transfer         []TransferWithIndexes
+	ERC1155Transfer       []ERC1155TransferWithIndexes
+	ERC721Transfer        []ERC721TransferWithIndexes
+	Blobs                 []BlobWithIndex
+	Uncles                []UncleWithIndexes
+	Withdrawals           []*types.Eth1WithdrawalIndexed
+	ENS                   []ENSLog
+	Contracts             []ContractUpdateWithAddress
+	ConsolidationRequests []ConsolidationRequest
+	WithdrawalRequests    []WithdrawalRequest
+}
+
+type ConsolidationRequest struct {
+	SourceAddress  []byte
+	SourcePubKey   []byte
+	TargetPubKey   []byte
+	TxHash         []byte
+	TxIndex        int
+	BlockNumber    uint64
+	BlockTimestamp time.Time
+}
+
+type WithdrawalRequest struct {
+	SourceAddress   []byte
+	ValidatorPubKey []byte
+	Amount          uint64
+	TxHash          []byte
+	TxIndex         int
+	BlockNumber     uint64
+	BlockTimestamp  time.Time
 }
 
 type TransferWithIndexes struct {

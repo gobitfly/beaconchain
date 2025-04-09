@@ -6,11 +6,14 @@ import (
 	"math/big"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/gobitfly/beaconchain/internal/contracts"
+	"github.com/gobitfly/beaconchain/internal/th"
 	"github.com/gobitfly/beaconchain/pkg/commons/chain"
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/ens"
 	"github.com/gobitfly/beaconchain/pkg/commons/db2"
@@ -1214,6 +1217,155 @@ func TestTransformENS(t *testing.T) {
 					if got, want := *res.ENS[i].Name, *indexed.Name; got != want {
 						t.Errorf("got %v, want %v", got, want)
 					}
+				}
+			}
+		})
+	}
+}
+
+func TestTransformConsolidationRequests(t *testing.T) {
+	source := th.CreateEOA(t)
+	target := th.CreateEOA(t)
+	tests := []struct {
+		name  string
+		block *types.Eth1Block
+		want  []db2.ConsolidationRequest
+	}{
+		{
+			name: "normal request",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: consolidationContractAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&source.PrivateKey.PublicKey)[:48],
+									crypto.FromECDSAPub(&target.PrivateKey.PublicKey)[:48],
+								}, []byte{}),
+							},
+						},
+					},
+				},
+			},
+			want: []db2.ConsolidationRequest{
+				{
+					SourceAddress: source.From.Bytes(),
+					SourcePubKey:  crypto.FromECDSAPub(&source.PrivateKey.PublicKey)[:48],
+					TargetPubKey:  crypto.FromECDSAPub(&target.PrivateKey.PublicKey)[:48],
+					TxHash:        []byte("tx hash"),
+					TxIndex:       0,
+					BlockNumber:   42,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var res db2.IndexedBlock
+			if err := transformConsolidationRequests("", tt.block, &res); err != nil {
+				t.Fatal(err)
+			}
+			if got, want := len(res.ConsolidationRequests), len(tt.want); got != want {
+				t.Fatalf("got %v, want %v", got, want)
+			}
+			for i, indexed := range tt.want {
+				if got, want := res.ConsolidationRequests[i].SourceAddress, indexed.SourceAddress; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].SourcePubKey, indexed.SourcePubKey; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].TargetPubKey, indexed.TargetPubKey; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].TxHash, indexed.TxHash; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].TxIndex, indexed.TxIndex; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.ConsolidationRequests[i].BlockNumber, indexed.BlockNumber; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestTransformWithdrawalRequests(t *testing.T) {
+	source := th.CreateEOA(t)
+	validator := th.CreateEOA(t)
+	tests := []struct {
+		name  string
+		block *types.Eth1Block
+		want  []db2.WithdrawalRequest
+	}{
+		{
+			name: "normal request",
+			block: &types.Eth1Block{
+				Number: uint64(42),
+				Transactions: []*types.Eth1Transaction{
+					{
+						Hash: []byte("tx hash"),
+						Logs: []*types.Eth1Log{
+							{
+								Address: withdrawalContractAddress.Bytes(),
+								Data: bytes.Join([][]byte{
+									source.From.Bytes(),
+									crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+									leftPad(big.NewInt(42).Bytes(), 8),
+								}, []byte{}),
+							},
+						},
+					},
+				},
+			},
+			want: []db2.WithdrawalRequest{
+				{
+					SourceAddress:   source.From.Bytes(),
+					ValidatorPubKey: crypto.FromECDSAPub(&validator.PrivateKey.PublicKey)[:48],
+					Amount:          42,
+					TxHash:          []byte("tx hash"),
+					TxIndex:         0,
+					BlockNumber:     42,
+					BlockTimestamp:  time.Time{},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var res db2.IndexedBlock
+			if err := transformWithdrawalRequests("", tt.block, &res); err != nil {
+				t.Fatal(err)
+			}
+			if got, want := len(res.WithdrawalRequests), len(tt.want); got != want {
+				t.Fatalf("got %v, want %v", got, want)
+			}
+			for i, indexed := range tt.want {
+				if got, want := res.WithdrawalRequests[i].SourceAddress, indexed.SourceAddress; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].ValidatorPubKey, indexed.ValidatorPubKey; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].Amount, indexed.Amount; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].TxHash, indexed.TxHash; !bytes.Equal(got, want) {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].TxIndex, indexed.TxIndex; got != want {
+					t.Errorf("got %v, want %v", got, want)
+				}
+				if got, want := res.WithdrawalRequests[i].BlockNumber, indexed.BlockNumber; got != want {
+					t.Errorf("got %v, want %v", got, want)
 				}
 			}
 		})
