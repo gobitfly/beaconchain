@@ -11,6 +11,8 @@ import (
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 )
 
 var ErrNotFound = fmt.Errorf("not found")
@@ -473,4 +475,70 @@ func bigtableReadOptions(options options, rowRange bigtable.RowRange) []bigtable
 		}
 	}
 	return readOptions
+}
+
+type TableMetric struct {
+	db TableWrapper
+}
+
+func WrapWithMetrics(db *BigTable, table string) TableMetric {
+	return TableMetric{
+		db: Wrap(db, table),
+	}
+}
+
+func (t TableMetric) BulkAdd(itemsByKey map[string][]Item, opts ...Option) error {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "BulkAdd").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.BulkAdd(itemsByKey, opts...)
+}
+
+func (t TableMetric) Read(prefix string, opts ...Option) ([]Row, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "Read").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.Read(prefix, opts...)
+}
+
+func (t TableMetric) GetRow(key string) (*Row, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "GetRow").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.GetRow(key)
+}
+
+func (t TableMetric) GetRowsWithKeys(keys []string) ([]Row, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "GetRowsWithKeys").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.GetRowsWithKeys(keys)
+}
+
+func (t TableMetric) GetRowsRange(high, low string, opts ...Option) ([]Row, error) {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "GetRowsRange").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.GetRowsRange(high, low, opts...)
+}
+
+func (t TableMetric) DeleteRowsWithKeys(keys []string, opts ...Option) error {
+	start := time.Now()
+	defer func(start time.Time) {
+		metrics.BigtableMetric.WithLabelValues(t.db.table, "DeleteRowsWithKeys").Observe(time.Since(start).Seconds())
+	}(start)
+	return t.db.DeleteRowsWithKeys(keys, opts...)
+}
+
+func (t TableMetric) Close() error {
+	return t.db.Close()
+}
+
+func (t TableMetric) Clear() error {
+	return t.db.Clear()
 }
