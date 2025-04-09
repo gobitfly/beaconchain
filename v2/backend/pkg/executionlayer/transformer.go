@@ -2,7 +2,9 @@ package executionlayer
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 
@@ -20,6 +22,11 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/erc721"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
+)
+
+var (
+	consolidationContractAddress = common.HexToAddress("0x00431F263cE400f4455c2dCf564e53007Ca4bbBb")
+	withdrawalContractAddress    = common.HexToAddress("0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA")
 )
 
 // TransformFunc describes a function that will index a specific object from the types.Eth1Block
@@ -77,19 +84,29 @@ var TransformEnsNameRegistered = Transformer{
 	name: "TransformEnsNameRegistered",
 	fn:   transformEnsNameRegistered,
 }
+var TransformConsolidationRequests = Transformer{
+	name: "TransformConsolidationRequests",
+	fn:   transformConsolidationRequests,
+}
+var TransformWithdrawalRequests = Transformer{
+	name: "TransformWithdrawalRequests",
+	fn:   transformWithdrawalRequests,
+}
 
 var Transformers = map[string]Transformer{
-	TransformTx.name:                TransformTx,
-	TransformERC20.name:             TransformERC20,
-	TransformBlock.name:             TransformBlock,
-	TransformBlobTx.name:            TransformBlobTx,
-	TransformContract.name:          TransformContract,
-	TransformItx.name:               TransformItx,
-	TransformERC721.name:            TransformERC721,
-	TransformERC1155.name:           TransformERC1155,
-	TransformUncle.name:             TransformUncle,
-	TransformWithdrawals.name:       TransformWithdrawals,
-	TransformEnsNameRegistered.name: TransformEnsNameRegistered,
+	TransformTx.name:                    TransformTx,
+	TransformERC20.name:                 TransformERC20,
+	TransformBlock.name:                 TransformBlock,
+	TransformBlobTx.name:                TransformBlobTx,
+	TransformContract.name:              TransformContract,
+	TransformItx.name:                   TransformItx,
+	TransformERC721.name:                TransformERC721,
+	TransformERC1155.name:               TransformERC1155,
+	TransformUncle.name:                 TransformUncle,
+	TransformWithdrawals.name:           TransformWithdrawals,
+	TransformEnsNameRegistered.name:     TransformEnsNameRegistered,
+	TransformConsolidationRequests.name: TransformConsolidationRequests,
+	TransformWithdrawalRequests.name:    TransformWithdrawalRequests,
 }
 
 var AllTransformers = maps.Values(Transformers)
@@ -638,6 +655,66 @@ func transformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2
 		}
 	}
 	res.ENS = ensLogs
+	return nil
+}
+
+func transformConsolidationRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var requests []db2.ConsolidationRequest
+	for txIndex, tx := range block.GetTransactions() {
+		for _, log := range tx.GetLogs() {
+			if !bytes.Equal(log.Address, consolidationContractAddress.Bytes()) {
+				continue
+			}
+			if len(log.Data) < 116 {
+				return fmt.Errorf("unexpected len of consolidation request log, got %v want atleast %v", len(log.Data), 116)
+			}
+			// we have found a consolidation event
+			// now slice out the data
+			// source_address: Bytes20
+			// source_pubkey: Bytes48
+			// target_pubkey: Bytes48
+			requests = append(requests, db2.ConsolidationRequest{
+				SourceAddress:  log.Data[:20],
+				SourcePubKey:   log.Data[20:68],
+				TargetPubKey:   log.Data[68:116],
+				TxHash:         tx.GetHash(),
+				TxIndex:        txIndex,
+				BlockNumber:    block.GetNumber(),
+				BlockTimestamp: block.GetTime().AsTime(),
+			})
+		}
+	}
+	res.ConsolidationRequests = requests
+	return nil
+}
+
+func transformWithdrawalRequests(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+	var requests []db2.WithdrawalRequest
+	for txIndex, tx := range block.GetTransactions() {
+		for _, log := range tx.GetLogs() {
+			if !bytes.Equal(log.Address, withdrawalContractAddress.Bytes()) {
+				continue
+			}
+			if len(log.Data) < 76 {
+				return fmt.Errorf("unexpected len of withdrawal request log, got %v want atleast %v", len(log.Data), 76)
+			}
+			// we have found a withdrawal event
+			// now slice out the data
+			// source_address: Bytes20
+			// validator_pubkey: Bytes48
+			// amount: uint64
+			requests = append(requests, db2.WithdrawalRequest{
+				SourceAddress:   log.Data[:20],
+				ValidatorPubKey: log.Data[20:68],
+				Amount:          min(binary.BigEndian.Uint64(log.Data[68:76]), math.MaxInt64),
+				TxHash:          tx.GetHash(),
+				TxIndex:         txIndex,
+				BlockNumber:     block.GetNumber(),
+				BlockTimestamp:  block.GetTime().AsTime(),
+			})
+		}
+	}
+	res.WithdrawalRequests = requests
 	return nil
 }
 

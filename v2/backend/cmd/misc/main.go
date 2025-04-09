@@ -1695,7 +1695,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}})
+	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}}, db.WriterDb)
 	transforms, err := executionlayer.TransformerFromList(transformerList)
 	if err != nil {
 		log.Error(nil, err.Error(), 0)
