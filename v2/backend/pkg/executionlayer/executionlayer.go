@@ -3,6 +3,7 @@ package executionlayer
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -117,7 +118,7 @@ func (service *IndexerService) SyncLive() {
 				break
 			}
 			indexingMetrics.BlockDifference(state.chainID, state.node-state.LastProcessed())
-			startBlock := max(state.LastProcessed()+1, 0)
+			startBlock := state.NextBlock()
 			bulk := min(service.indexer.config.Bulk, state.node-startBlock+1)
 			endBlock := min(startBlock+bulk-1, state.node)
 			start := time.Now()
@@ -198,23 +199,31 @@ func NewStateReader(chainID string, client *ethclient.Client, lastBlockStore db2
 }
 
 func (r StateReader) state() (syncState, error) {
+	var genesis bool
 	lastBlock, err := r.client.BlockNumber(context.Background())
 	if err != nil {
 		return syncState{}, fmt.Errorf("get chain head: %w", err)
 	}
 	lastBlockFromBlocksTable, err := r.lastBlockStore.GetInBlocksTable(r.chainID)
 	if err != nil {
-		return syncState{}, fmt.Errorf("get last block from blocks table: %w", err)
+		if !errors.Is(err, database.ErrNotFound) {
+			return syncState{}, fmt.Errorf("get last block from blocks table: %w", err)
+		}
+		genesis = true
 	}
 	lastBlockFromDataTable, err := r.lastBlockStore.GetInDataTable(r.chainID)
 	if err != nil {
-		return syncState{}, fmt.Errorf("get last block from data table: %w", err)
+		if !errors.Is(err, database.ErrNotFound) {
+			return syncState{}, fmt.Errorf("get last block from data table: %w", err)
+		}
+		genesis = true
 	}
 	return syncState{
 		chainID: r.chainID,
 		node:    lastBlock,
 		blocks:  lastBlockFromBlocksTable,
 		data:    lastBlockFromDataTable,
+		genesis: genesis,
 	}, nil
 }
 
@@ -223,6 +232,8 @@ type syncState struct {
 	node    uint64
 	blocks  uint64
 	data    uint64
+
+	genesis bool
 }
 
 // LastProcessed returns the real last block processed by taking the smallest block between state.data and state.blocks
@@ -230,13 +241,25 @@ func (state syncState) LastProcessed() uint64 {
 	return min(state.data, state.blocks)
 }
 
+func (state syncState) NextBlock() uint64 {
+	lastProcessed := state.LastProcessed()
+	if state.genesis {
+		return lastProcessed
+	}
+	return lastProcessed + 1
+}
+
 func (state syncState) Fields() map[string]interface{} {
-	return map[string]interface{}{
+	fields := map[string]interface{}{
 		"chainID": state.chainID,
 		"node":    state.node,
 		"blocks":  state.blocks,
 		"data":    state.data,
 	}
+	if state.genesis {
+		fields["genesis"] = true
+	}
+	return fields
 }
 
 type IndexerConfig struct {
