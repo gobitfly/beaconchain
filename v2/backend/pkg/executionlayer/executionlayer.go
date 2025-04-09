@@ -95,15 +95,25 @@ func (service *IndexerService) SyncRange(start, end uint64, skipNode, skipData b
 
 func (service *IndexerService) SyncLive() {
 	for ; ; time.Sleep(service.config.BlockFrequency) {
+		reorgDepth, err := service.reorgWatcher.LookForReorg()
+		if err != nil {
+			logger.WithField("error", err).Error("reorg lookup")
+			continue
+		}
+		if reorgDepth != 0 {
+			indexingMetrics.ReorgBlockTotal(service.stateReader.chainID, reorgDepth)
+			logger.WithField("depth", reorgDepth).Info("reorg detected")
+		}
+
 		state, err := service.stateReader.state()
 		if err != nil {
 			logger.WithField("error", err).Error("cannot get state")
 			continue
 		}
 		logger.WithFields(state.Fields()).Info("last blocks")
+		indexingMetrics.BlockDifference(state.chainID, state.node-state.LastProcessed())
 
-		if err := service.reorgWatcher.LookForReorg(); err != nil {
-			logger.WithField("error", err).Error("reorg lookup")
+		if state.node == state.LastProcessed() {
 			continue
 		}
 
@@ -184,6 +194,11 @@ type syncState struct {
 	data    uint64
 }
 
+// LastProcessed returns the real last block processed by taking the smallest block between state.data and state.blocks
+func (state syncState) LastProcessed() uint64 {
+	return min(state.data, state.blocks)
+}
+
 func (state syncState) Fields() map[string]interface{} {
 	return map[string]interface{}{
 		"chainID": state.chainID,
@@ -236,8 +251,7 @@ func (service *Indexer) FromHead(state syncState) error {
 	// clear balance cache
 	defer service.balanceCache.Clear(state.chainID)
 
-	// get the real last block processed by taking the smallest block between state.data and state.blocks
-	startBlock := max(min(state.data, state.blocks)+1, 0)
+	startBlock := max(state.LastProcessed()+1, 0)
 	bulk := min(service.config.Bulk, state.node-startBlock+1)
 
 	for ; startBlock <= state.node; startBlock += bulk {
@@ -257,9 +271,11 @@ func (service *Indexer) FromHead(state syncState) error {
 			"elapsed": time.Since(start),
 		}).Info("indexed blocks")
 	}
+	end := time.Since(start) // save end to unify log and metric value
+	indexingMetrics.IndexingTime(state.chainID, end)
 
 	logger.WithFields(logrus.Fields{
-		"duration": time.Since(start),
+		"duration": end,
 	}).Info("indexed head")
 	return nil
 }
@@ -278,6 +294,7 @@ func (service *Indexer) Balances(state syncState) {
 			continue
 		}
 		logger = logger.WithField("pending", total)
+		indexingMetrics.PendingBalanceUpdate(state.chainID, total)
 		if total == 0 {
 			logger.Info("finished updating balances")
 			return
@@ -312,6 +329,7 @@ func (service *Indexer) ENS(state syncState) {
 			continue
 		}
 		logger = logger.WithField("pending", total)
+		indexingMetrics.PendingENSUpdate(state.chainID, total)
 		if total == 0 {
 			logger.Info("finished importing ens")
 			return

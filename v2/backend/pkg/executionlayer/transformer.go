@@ -28,23 +28,73 @@ import (
 // This way all transform functions have the same signature
 type TransformFunc func(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error
 
-var Transformers = map[string]TransformFunc{
-	"TransformTx":                TransformTx,
-	"TransformERC20":             TransformERC20,
-	"TransformBlock":             TransformBlock,
-	"TransformBlobTx":            TransformBlob,
-	"TransformContract":          TransformContract,
-	"TransformItx":               TransformITx,
-	"TransformERC721":            TransformERC721,
-	"TransformERC1155":           TransformERC1155,
-	"TransformUncle":             TransformUncle,
-	"TransformWithdrawals":       TransformWithdrawal,
-	"TransformEnsNameRegistered": TransformEnsNameRegistered,
+type Transformer struct {
+	name string
+	fn   TransformFunc
+}
+
+var TransformTx = Transformer{
+	name: "TransformTx",
+	fn:   transformTx,
+}
+var TransformERC20 = Transformer{
+	name: "TransformERC20",
+	fn:   transformERC20,
+}
+var TransformBlock = Transformer{
+	name: "TransformBlock",
+	fn:   transformBlock,
+}
+var TransformBlobTx = Transformer{
+	name: "TransformBlobTx",
+	fn:   transformBlob,
+}
+var TransformContract = Transformer{
+	name: "TransformContract",
+	fn:   transformContract,
+}
+var TransformItx = Transformer{
+	name: "TransformItx",
+	fn:   transformITx,
+}
+var TransformERC721 = Transformer{
+	name: "TransformERC721",
+	fn:   transformERC721,
+}
+var TransformERC1155 = Transformer{
+	name: "TransformERC1155",
+	fn:   transformERC1155,
+}
+var TransformUncle = Transformer{
+	name: "TransformUncle",
+	fn:   transformUncle,
+}
+var TransformWithdrawals = Transformer{
+	name: "TransformWithdrawals",
+	fn:   transformWithdrawal,
+}
+var TransformEnsNameRegistered = Transformer{
+	name: "TransformEnsNameRegistered",
+	fn:   transformEnsNameRegistered,
+}
+
+var Transformers = map[string]Transformer{
+	TransformTx.name:                TransformTx,
+	TransformERC20.name:             TransformERC20,
+	TransformBlock.name:             TransformBlock,
+	TransformBlobTx.name:            TransformBlobTx,
+	TransformContract.name:          TransformContract,
+	TransformItx.name:               TransformItx,
+	TransformERC721.name:            TransformERC721,
+	TransformERC1155.name:           TransformERC1155,
+	TransformUncle.name:             TransformUncle,
+	TransformWithdrawals.name:       TransformWithdrawals,
+	TransformEnsNameRegistered.name: TransformEnsNameRegistered,
 }
 
 var AllTransformers = maps.Values(Transformers)
 
-func TransformTx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformTx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var transactions []*types.Eth1TransactionIndexed
 	for _, tx := range block.Transactions {
 		to, isContract := getTxRecipient(tx)
@@ -76,7 +126,7 @@ func TransformTx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) 
 	return nil
 }
 
-func TransformERC20(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformERC20(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC20Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ERC20 create filterer")
@@ -129,7 +179,7 @@ func TransformERC20(chainID string, block *types.Eth1Block, res *db2.IndexedBloc
 	return nil
 }
 
-func TransformBlock(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformBlock(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	idx := types.Eth1BlockIndexed{
 		Hash:       block.GetHash(),
 		ParentHash: block.GetParentHash(),
@@ -206,7 +256,7 @@ func TransformBlock(chainID string, block *types.Eth1Block, res *db2.IndexedBloc
 	return nil
 }
 
-func TransformBlob(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformBlob(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var blobs []db2.BlobWithIndex
 	for i, tx := range block.Transactions {
 		if !isBlobTx(tx.Type) {
@@ -246,7 +296,7 @@ func TransformBlob(chainID string, block *types.Eth1Block, res *db2.IndexedBlock
 	return nil
 }
 
-func TransformContract(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformContract(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var contracts []db2.ContractUpdateWithAddress
 	for i, tx := range block.GetTransactions() {
 		for j, itx := range tx.GetItx() {
@@ -284,7 +334,7 @@ func isReverted(internal *types.Eth1InternalTransaction, revertSource *string) b
 	return reverted
 }
 
-func TransformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var transactions []db2.InternalWithIndexes
 	for i, tx := range block.GetTransactions() {
 		// revertSource keeps track of the source of the revert, all children itx should be marked as reverted
@@ -321,7 +371,7 @@ func TransformITx(chainID string, block *types.Eth1Block, res *db2.IndexedBlock)
 	return nil
 }
 
-func TransformERC1155(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformERC1155(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC1155Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ERC1155 create filterer")
@@ -391,7 +441,7 @@ func TransformERC1155(chainID string, block *types.Eth1Block, res *db2.IndexedBl
 	return nil
 }
 
-func TransformERC721(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformERC721(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	filterer, err := contracts.NewERC721Filterer(common.Address{}, nil)
 	if err != nil {
 		return errors.Wrap(err, "cannot ER721 create filterer")
@@ -444,7 +494,7 @@ func TransformERC721(chainID string, block *types.Eth1Block, res *db2.IndexedBlo
 	return nil
 }
 
-func TransformUncle(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformUncle(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var uncles []db2.UncleWithIndexes
 	for i, uncle := range block.Uncles {
 		reward := calculateUncleReward(block, uncle, chainID)
@@ -470,7 +520,7 @@ func TransformUncle(chainID string, block *types.Eth1Block, res *db2.IndexedBloc
 	return nil
 }
 
-func TransformWithdrawal(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformWithdrawal(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	var withdrawals []*types.Eth1WithdrawalIndexed
 	for _, withdrawal := range block.Withdrawals {
 		withdrawals = append(withdrawals, &types.Eth1WithdrawalIndexed{
@@ -486,7 +536,7 @@ func TransformWithdrawal(chainID string, block *types.Eth1Block, res *db2.Indexe
 	return nil
 }
 
-func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
+func transformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2.IndexedBlock) error {
 	ensContractAddresses := ens.ENSContractFor(chainID)
 	if ensContractAddresses == nil {
 		return nil
@@ -591,8 +641,8 @@ func TransformEnsNameRegistered(chainID string, block *types.Eth1Block, res *db2
 	return nil
 }
 
-func TransformerFromList(names []string) ([]TransformFunc, error) {
-	var transforms []TransformFunc
+func TransformerFromList(names []string) ([]Transformer, error) {
+	var transforms []Transformer
 	for _, name := range names {
 		transform, ok := Transformers[name]
 		if !ok {

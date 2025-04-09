@@ -32,7 +32,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		transformers []TransformFunc
+		transformers []Transformer
 		action       func(*testing.T) error
 		dataKeys     []string
 		updatesKeys  []string
@@ -40,7 +40,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 	}{
 		{
 			name: "transaction",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformTx,
 			},
 			action: func(t *testing.T) error {
@@ -56,7 +56,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		},
 		{
 			name: "block",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformBlock,
 			},
 			action: func(t *testing.T) error {
@@ -71,7 +71,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		},
 		{
 			name: "erc20 transfer",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformERC20,
 			},
 			action: func(t *testing.T) error {
@@ -89,7 +89,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		},
 		{
 			name: "erc721 transfer",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformERC721,
 			},
 			action: func(t *testing.T) error {
@@ -104,7 +104,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		},
 		{
 			name: "erc1155 transfer",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformERC1155,
 			},
 			action: func(t *testing.T) error {
@@ -119,7 +119,7 @@ func TestIndexerWithBigTable(t *testing.T) {
 		},
 		{
 			name: "contract",
-			transformers: []TransformFunc{
+			transformers: []Transformer{
 				TransformContract,
 			},
 			action: func(t *testing.T) error {
