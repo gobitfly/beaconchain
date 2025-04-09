@@ -57,26 +57,26 @@ func (n *networkLivenessUpdater) Export() {
 			log.Info("network liveness export loop cancelled")
 			return
 		default:
-			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
-			statusReport(constants.Running, nil)
+			statusReporter := services.NewStatusReporter(constants.Event_ExporterLegacyNetworkLiveness, constants.Default, slotDuration)
+			statusReporter.Report(constants.Running, nil)
 
 			head, err := n.client.GetChainHead()
 			if err != nil {
 				log.Error(err, "error getting chainhead when exporting network liveness", 0)
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				time.Sleep(slotDuration)
 				continue
 			}
 
 			if prevHeadEpoch == head.HeadEpoch {
-				statusReport(constants.Success, nil)
+				statusReporter.Report(constants.Success, nil)
 				time.Sleep(slotDuration)
 				continue
 			}
 
 			// wait for node to be synced
 			if nodeNotSynced(head.HeadEpoch, epochDuration) {
-				statusReport(constants.Failure, map[string]string{"error": "node not synced"})
+				statusReporter.Report(constants.Failure, map[string]string{"error": "node not synced"})
 				time.Sleep(slotDuration)
 				continue
 			}
@@ -84,7 +84,7 @@ func (n *networkLivenessUpdater) Export() {
 			err = n.db.SaveNetworkLivenessData(head)
 			if err != nil {
 				log.Error(err, "error saving network liveness in db", 0)
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			} else {
 				log.Infof("updated network liveness for epoch %v", head.HeadEpoch)
 				prevHeadEpoch = head.HeadEpoch
@@ -93,10 +93,10 @@ func (n *networkLivenessUpdater) Export() {
 			err = n.updateCache(head)
 			if err != nil {
 				log.Error(err, "error updating cache", 0)
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			}
 
-			statusReport(constants.Success, nil)
+			statusReporter.Report(constants.Success, nil)
 
 			time.Sleep(slotDuration)
 		}

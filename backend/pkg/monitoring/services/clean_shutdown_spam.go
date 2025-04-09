@@ -37,10 +37,10 @@ func (s *CleanShutdownSpamDetector) internalProcess() {
 }
 
 func (s *CleanShutdownSpamDetector) runChecks() {
-	statusReport := StatusReporter().NewStatusReport(constants.Event_MonitoringCleanShutdownSpam, constants.Default, 30*time.Second)
-	statusReport(constants.Running, nil)
+	statusReporter := NewStatusReporter(constants.Event_MonitoringCleanShutdownSpam, constants.Default, 30*time.Second)
+	statusReporter.Report(constants.Running, nil)
 	if db.ClickHouseReader == nil {
-		statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+		statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 		// ignore
 		return
 	}
@@ -48,7 +48,7 @@ func (s *CleanShutdownSpamDetector) runChecks() {
 
 	emitters, err := s.db.GetEmitters()
 	if err != nil {
-		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
 
@@ -60,12 +60,12 @@ func (s *CleanShutdownSpamDetector) runChecks() {
 	if len(emitters) > threshold {
 		payload, err := json.Marshal(emitters)
 		if err != nil {
-			statusReport(constants.Failure, map[string]string{"error": err.Error()})
+			statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			return
 		}
 		md["emitters"] = string(payload)
-		statusReport(constants.Failure, md)
+		statusReporter.Report(constants.Failure, md)
 		return
 	}
-	statusReport(constants.Success, md)
+	statusReporter.Report(constants.Success, md)
 }

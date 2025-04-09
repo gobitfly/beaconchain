@@ -168,15 +168,15 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.StatusReporter().NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
-			r(constants.Running, nil)
+			statusReporter := services.NewStatusReporter(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			statusReporter.Report(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
-			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
+			statusReporter.Report(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}

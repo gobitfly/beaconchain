@@ -55,10 +55,10 @@ func (s *ServiceClickhouseRollings) runChecks() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			statusReport := StatusReporter().NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
-			statusReport(constants.Running, nil)
+			statusReporter := NewStatusReporter(rollings[rolling], constants.Default, 30*time.Second)
+			statusReporter.Report(constants.Running, nil)
 			if db.ClickHouseReader == nil {
-				statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+				statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 				// ignore
 				return
 			}
@@ -66,12 +66,12 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			// context with deadline
 			tsEpochTable, err := s.db.GetLatestEpoch()
 			if err != nil {
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
 			epochRollingTable, err := s.db.GetEpochEnd(rolling)
 			if err != nil {
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
 			// convert to timestamp
@@ -82,10 +82,10 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			md := map[string]string{"delta": delta.String(), "threshold": threshold.String()}
 			if delta > threshold {
 				md["error"] = fmt.Sprintf("delta is over threshold %d", threshold)
-				statusReport(constants.Failure, md)
+				statusReporter.Report(constants.Failure, md)
 				return
 			}
-			statusReport(constants.Success, md)
+			statusReporter.Report(constants.Success, md)
 		}()
 	}
 	wg.Wait()

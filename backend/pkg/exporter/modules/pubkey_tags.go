@@ -35,17 +35,17 @@ func (p *pubkeyTagsUpdater) Update() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
-			statusReport(constants.Running, nil)
+			statusReporter := services.NewStatusReporter(constants.Event_ExporterLegacyPubkeyTags, p.delay, time.Second*12)
+			statusReporter.Report(constants.Running, nil)
 
 			err := p.db.UpdatePubkeyTags()
 			if err != nil {
 				log.Error(err, "error updating validator_tags", 0)
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			}
 
 			log.Infof("Updating Pubkey Tags took %v sec.", time.Since(startTime).Seconds())
-			statusReport(constants.Success, map[string]string{
+			statusReporter.Report(constants.Success, map[string]string{
 				"took":     time.Since(startTime).String(),
 				"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
 			})

@@ -32,15 +32,15 @@ func (s *Services) startSlotVizDataService(wg *sync.WaitGroup) {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.StatusReporter().NewStatusReport(constants.Event_ApiServiceSlotViz, constants.Default, delay)
-		r(constants.Running, nil)
+		statusReporter := services.NewStatusReporter(constants.Event_ApiServiceSlotViz, constants.Default, delay)
+		statusReporter.Report(constants.Running, nil)
 		err := s.updateSlotVizData() // TODO: only update data if something has changed (new head slot or new head epoch)
 		if err != nil {
 			log.Error(err, "error updating slotviz data", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		}
 		log.Infof("=== slotviz data updated in %s", time.Since(startTime))
-		r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
+		statusReporter.Report(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
 		o.Do(func() {
 			wg.Done()
 		})

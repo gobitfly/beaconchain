@@ -36,10 +36,10 @@ func (s *ServiceTimeoutDetector) internalProcess() {
 }
 
 func (s *ServiceTimeoutDetector) runChecks() {
-	statusReport := StatusReporter().NewStatusReport(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
-	statusReport(constants.Running, nil)
+	statusReporter := NewStatusReporter(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
+	statusReporter.Report(constants.Running, nil)
 	if db.ClickHouseReader == nil {
-		statusReport(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+		statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 		// ignore
 		return
 	}
@@ -47,19 +47,19 @@ func (s *ServiceTimeoutDetector) runChecks() {
 
 	victims, err := s.db.GetLatestStatusReport()
 	if err != nil {
-		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
 	if len(victims) == 0 {
-		statusReport(constants.Success, nil)
+		statusReporter.Report(constants.Success, nil)
 		return
 	}
 	payload, err := json.Marshal(victims)
 	if err != nil {
-		statusReport(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
 
 	md := map[string]string{"failing_reports": string(payload), "error": "reports are running for too long"}
-	statusReport(constants.Failure, md)
+	statusReporter.Report(constants.Failure, md)
 }

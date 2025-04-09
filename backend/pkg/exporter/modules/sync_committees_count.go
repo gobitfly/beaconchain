@@ -35,15 +35,15 @@ func (sc syncCommitteesCountExporter) Export() {
 			return
 		default:
 			startTime := time.Now()
-			statusReport := services.StatusReporter().NewStatusReport(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
-			statusReport(constants.Running, nil)
+			statusReporter := services.NewStatusReporter(constants.Event_ExporterLegacySyncCommitteesCount, constants.Default, time.Second*12)
+			statusReporter.Report(constants.Running, nil)
 
 			err := sc.processSyncCommitteesCount()
 			if err != nil {
 				log.Error(err, "error exporting sync_committees_count_per_validator", 0)
-				statusReport(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			} else {
-				statusReport(constants.Success, map[string]string{
+				statusReporter.Report(constants.Success, map[string]string{
 					"took":     time.Since(startTime).String(),
 					"took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()),
 				})

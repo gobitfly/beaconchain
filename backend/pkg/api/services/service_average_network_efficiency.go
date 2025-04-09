@@ -26,16 +26,16 @@ func (s *Services) startEfficiencyDataService(wg *sync.WaitGroup) {
 	for {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SlotsPerEpoch*utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
-		r := services.StatusReporter().NewStatusReport(constants.Event_ApiServiceAvgEfficiency, constants.Default, delay)
-		r(constants.Running, nil)
+		statusReporter := services.NewStatusReporter(constants.Event_ApiServiceAvgEfficiency, constants.Default, delay)
+		statusReporter.Report(constants.Running, nil)
 		err := s.updateEfficiencyData() // TODO: only update data if something has changed (new head epoch)
 		if err != nil {
 			log.Error(err, "error updating average network efficiency data", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== average network efficiency data updated in %s", time.Since(startTime))
-			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
+			statusReporter.Report(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds())})
 			o.Do(func() {
 				wg.Done()
 			})
