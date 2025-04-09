@@ -24,6 +24,10 @@ type ReorgStore interface {
 	RevertBlock(chainID string, number uint64, blockHash []byte) error
 }
 
+type ReorgConfig struct {
+	Depth uint64
+}
+
 type ReorgWatcher struct {
 	client         EthClient
 	store          ReorgStore
@@ -32,11 +36,11 @@ type ReorgWatcher struct {
 	lastBlockStore db2.LastBlocksStoreWriter
 }
 
-func NewReorgWatcher(client EthClient, store ReorgStore, depth uint64, chainID string, lastBlockStore db2.LastBlocksStoreWriter) *ReorgWatcher {
+func NewReorgWatcher(client EthClient, store ReorgStore, config ReorgConfig, chainID string, lastBlockStore db2.LastBlocksStoreWriter) *ReorgWatcher {
 	return &ReorgWatcher{
 		client:         client,
 		store:          store,
-		depth:          depth,
+		depth:          config.Depth,
 		chainID:        chainID,
 		lastBlockStore: lastBlockStore,
 	}
@@ -73,7 +77,6 @@ func (r *ReorgWatcher) LookForReorg() error {
 		}
 
 		if bytes.Equal(nodeBlock.Hash().Bytes(), dbBlock.Hash) {
-			log.Infof("height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)
 			continue
 		}
 		log.Warnf("found incosistency at height %v, node block hash: %x, db block hash: %x", i, nodeBlock.Hash().Bytes(), dbBlock.Hash)

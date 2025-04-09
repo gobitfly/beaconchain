@@ -18,7 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus" //nolint:depguard
+	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 

@@ -56,6 +56,14 @@ type ERC20TokenList struct {
 	} `json:"version"`
 }
 
+func (list ERC20TokenList) Names() []string {
+	var names []string
+	for _, token := range list.Tokens {
+		names = append(names, token.Name)
+	}
+	return names
+}
+
 type ERC20TokenDetail struct {
 	Address  string `json:"address"`
 	Owner    string `json:"-"`

@@ -12,6 +12,7 @@ type Store interface {
 }
 
 type MetadataStore interface {
+	CountBalanceUpdates(chainID string) (int64, error)
 	UpdateBalance(chainID string, balances []Balance) error
 	UpdateToken(chainID string, tokens []*types.ERC20TokenPrice) error
 	TokenPrice(chainID string, token common.Address) (*types.ERC20TokenPrice, error)

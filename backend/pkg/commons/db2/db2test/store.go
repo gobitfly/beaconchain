@@ -16,6 +16,6 @@ func NewStoreAndCachedLastBlocks(t *testing.T) (db2.StoreV1, db2.CachedLastBlock
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := db2.NewStoreV1FromBigtable(db, database.NoopCache{})
+	store := db2.NewStoreV1FromBigtable(db, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
 	return store, db2.NewCachedLastBlocks(&database.MemCache{}, store)
 }

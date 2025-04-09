@@ -125,7 +125,7 @@ func TestENSImporter(t *testing.T) {
 			}
 			updates := newFakeENSUpdateStore([]db2.ENSLog{tt.update})
 			importer := NewENSImporter(updates, store, &tt.ensContracts)
-			if err := importer.Import("idontcare", 100); err != nil {
+			if _, err := importer.Import("idontcare", 100); err != nil {
 				t.Fatal(err)
 			}
 			if len(updates.updates) != 0 {

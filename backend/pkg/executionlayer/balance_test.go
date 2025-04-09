@@ -23,7 +23,7 @@ func TestBalanceUpdater(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	store := db2.NewStoreV1FromBigtable(bt, database.NoopCache{})
+	store := db2.NewStoreV1FromBigtable(bt, db2.CachedBalanceUpdates{RemoteCache: database.NoopCache{}})
 	backend := th.NewBackend(t)
 
 	multicall := backend.DeployContract(t, common.FromHex(contracts.MulticallMetaData.Bin))
@@ -41,9 +41,9 @@ func TestBalanceUpdater(t *testing.T) {
 		Value: expectedBalance,
 	}
 	updates := newStubUpdatesStore([]db2.Pair{expected.Pair})
-	updater := NewBalanceUpdater(fmt.Sprintf("%d", backend.ChainID), updates, store, batcher)
+	updater := NewBalanceUpdater(updates, store, batcher)
 
-	balances, err := updater.UpdateBalances(1)
+	balances, err := updater.UpdateBalances(fmt.Sprintf("%d", backend.ChainID), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestBalanceUpdater(t *testing.T) {
 	if got, want := balances[0].Pair, expected.Pair; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	if got, want := balances[0].Value.String(), expectedBalance.String(); got != want {
+	if got, want := balances[0].Value.String(), expected.Value.String(); got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
 	if len(updates.updates) != 0 {
@@ -125,8 +125,8 @@ func TestBalanceUpdater_UpdateBalancesErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u := NewBalanceUpdater("", tt.store, tt.store, tt.batcher)
-			_, err := u.UpdateBalances(0)
+			u := NewBalanceUpdater(tt.store, tt.store, tt.batcher)
+			_, err := u.UpdateBalances("", 0)
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Fatalf("UpdateBalances() expected an error")

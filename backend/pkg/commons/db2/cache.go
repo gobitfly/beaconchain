@@ -3,10 +3,12 @@ package db2
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
 
 type LastBlockSource interface {
@@ -75,4 +77,24 @@ func (c CachedLastBlocks) GetInBlocksTable(chainID string) (uint64, error) {
 	}
 	lastBlock := new(big.Int).SetBytes(res)
 	return lastBlock.Uint64(), nil
+}
+
+type CachedBalanceUpdates struct {
+	database.RemoteCache
+}
+
+// Add returns true if the key has been added and false if it was already present
+func (c CachedBalanceUpdates) Add(chainID string, address []byte, token []byte) bool {
+	key := fmt.Sprintf("%s:%s:%x:%x", chainID, balanceKey, address, token)
+	if _, err := c.Get(context.Background(), key); err == nil {
+		// already present in cache
+		return true
+	}
+	_ = c.Set(context.Background(), key, []byte{0x1}, utils.Day*2)
+	return false
+}
+
+func (c CachedBalanceUpdates) Clear(chainID string) {
+	prefix := fmt.Sprintf("%s:%s", chainID, balanceKey)
+	_ = c.RemoteCache.Clear(context.Background(), prefix)
 }

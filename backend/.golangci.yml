@@ -133,8 +133,6 @@ linters-settings:
         allow:
           - $gostd
         deny:
-          - pkg: github.com/sirupsen/logrus
-            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
           - pkg: log
             desc: "Do not use an external logging library, use pkg/commons/log/log instead"
           - pkg: log/slog

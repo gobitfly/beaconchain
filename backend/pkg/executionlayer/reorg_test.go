@@ -79,7 +79,7 @@ func TestReorgWatcher(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			client := newFakeClient(tt.nodeBlocks...)
 			store := newStubReorgStore(tt.dbBlocks...)
-			reorg := NewReorgWatcher(client, store, tt.depth, "chainID", tt.lastBlockStore)
+			reorg := NewReorgWatcher(client, store, ReorgConfig{tt.depth}, "chainID", tt.lastBlockStore)
 			if err := reorg.LookForReorg(); err != nil {
 				t.Fatal(err)
 			}
@@ -155,26 +155,29 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	chainID := strconv.Itoa(backend.ChainID)
 
 	store, lastBlockStore := db2test.NewStoreAndCachedLastBlocks(t)
-	indexer := NewIndexer(
-		store,
-		lastBlockStore,
-		AllTransformers...,
-	)
-
-	reorg := NewReorgWatcher(backend.Client(), store, 0, chainID, lastBlockStore)
 
 	client, err := rpc.NewErigonClient(backend.Endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	indexer := NewBlockIndexer(
+		store,
+		lastBlockStore,
+		DefaultConfig.BlockIndexer,
+		client,
+		AllTransformers...,
+	)
+
+	reorg := NewReorgWatcher(backend.Client(), store, ReorgConfig{Depth: 0}, chainID, lastBlockStore)
+
 	// create root block that won't be reverted
 	backend.Commit()
-	root := indexLastBlock(t, backend, client, indexer)
+	root := indexLastBlock(t, backend, indexer)
 
 	// create block (root+1) that will be reverted
 	backend.Commit()
-	ethBlockToReverted := indexLastBlock(t, backend, client, indexer)
+	ethBlockToReverted := indexLastBlock(t, backend, indexer)
 
 	revertedBlock, err := store.GetBlock(chainID, ethBlockToReverted.NumberU64())
 	if err != nil {
@@ -200,7 +203,7 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	}
 
 	// index last block and compare it to the reverted block
-	indexLastBlock(t, backend, client, indexer)
+	indexLastBlock(t, backend, indexer)
 	newBlock, err := store.GetBlock(chainID, ethBlockToReverted.NumberU64())
 	if err != nil {
 		t.Fatal(err)
@@ -210,12 +213,12 @@ func TestReorgWithBackendAndIndexer(t *testing.T) {
 	}
 }
 
-func indexLastBlock(t *testing.T, backend *th.BlockchainBackend, client *rpc.ErigonClient, indexer *Indexer) *gethtypes.Block {
+func indexLastBlock(t *testing.T, backend *th.BlockchainBackend, indexer *BlockIndexer) *gethtypes.Block {
 	lastBlock, err := backend.Client().BlockByNumber(context.Background(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := indexer.Index(strconv.Itoa(backend.ChainID), client, lastBlock.NumberU64(), lastBlock.NumberU64(), 1, "geth"); err != nil {
+	if err := indexer.Index(strconv.Itoa(backend.ChainID), lastBlock.NumberU64(), lastBlock.NumberU64()); err != nil {
 		t.Fatal(err)
 	}
 	return lastBlock

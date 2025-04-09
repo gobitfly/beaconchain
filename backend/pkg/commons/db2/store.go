@@ -20,10 +20,10 @@ type StoreV1 struct {
 	metadata database.Database
 	updates  database.Database
 	blocks   database.Database
-	cache    database.RemoteCache
+	cache    CachedBalanceUpdates
 }
 
-func NewStoreV1(data, metadata, updates, blocks database.Database, cache database.RemoteCache) StoreV1 {
+func NewStoreV1(data, metadata, updates, blocks database.Database, cache CachedBalanceUpdates) StoreV1 {
 	return StoreV1{
 		data:     data,
 		metadata: metadata,
@@ -33,7 +33,7 @@ func NewStoreV1(data, metadata, updates, blocks database.Database, cache databas
 	}
 }
 
-func NewStoreV1FromBigtable(bigtable *database.BigTable, cache database.RemoteCache) StoreV1 {
+func NewStoreV1FromBigtable(bigtable *database.BigTable, cache CachedBalanceUpdates) StoreV1 {
 	return StoreV1{
 		data:     database.Wrap(bigtable, DataTable),
 		metadata: database.Wrap(bigtable, MetadataTable),
@@ -191,6 +191,19 @@ func (store StoreV1) addIndexedBlockInMetadata(block IndexedBlock) error {
 	return nil
 }
 
+func (store StoreV1) CountBalanceUpdates(chainID string) (int64, error) {
+	key := fmt.Sprintf("%s:%s:", chainID, balanceKey)
+	rows, err := store.updates.Read(key, database.WithoutValue(), database.WithLimit(0))
+	if err != nil {
+		return 0, err
+	}
+	var count int
+	for _, row := range rows {
+		count += len(row.Values)
+	}
+	return int64(count), nil
+}
+
 func (store StoreV1) GetPairsToUpdate(chainID string, batchSize int64) ([]Pair, error) {
 	key := fmt.Sprintf("%s:%s", chainID, balanceKey)
 	rows, err := store.updates.GetRowsRange(toSuccessor(key), fmt.Sprintf("%s:", key), database.WithLimit(batchSize))
@@ -300,7 +313,7 @@ func (store StoreV1) GetBlocksRange(chainID string, start, end uint64) ([]*types
 		return nil, fmt.Errorf("invalid block range provided (high: %v, low: %v)", end, start)
 	}
 
-	rows, err := store.blocks.GetRowsRange(blockKey(chainID, end), blockKey(chainID, start))
+	rows, err := store.blocks.GetRowsRange(blockKey(chainID, start), blockKey(chainID, end))
 	if err != nil {
 		return nil, err
 	}
@@ -426,6 +439,15 @@ func (store StoreV1) GetLastBlockInBlocksTable(chainID string) (uint64, error) {
 	}
 	lastBlock := maxExecutionLayerBlockNumber - reversedLastBlock.Uint64()
 	return lastBlock, nil
+}
+
+func (store StoreV1) CountEnsUpdates(chainID string) (int64, error) {
+	key := fmt.Sprintf("%s:ENS:V", chainID)
+	rows, err := store.data.Read(key, database.WithoutValue(), database.WithLimit(0))
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(rows)), nil
 }
 
 func (store StoreV1) GetENSUpdate(chainID string, batchSize int64) ([]ENSLog, error) {

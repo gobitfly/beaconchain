@@ -1663,7 +1663,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		log.Fatal(err, "error connecting to bigtable", 0)
 	}
 	cache := freecache.NewCache(100 * 1024 * 1024) // 100 MB limit
-	store := db2.NewStoreV1FromBigtable(bigtable, database.FreeCache{Cache: cache})
+	store := db2.NewStoreV1FromBigtable(bigtable, db2.CachedBalanceUpdates{RemoteCache: database.FreeCache{Cache: cache}})
 	transforms, err := executionlayer.TransformerFromList(transformerList)
 	if err != nil {
 		log.Error(nil, err.Error(), 0)
@@ -1674,7 +1674,9 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		ReadTimeout: time.Second * 20,
 	})
 	lastBlockStore := db2.NewCachedLastBlocks(database.Redis{Client: redisClient}, store)
-	indexer := executionlayer.NewIndexer(store, lastBlockStore, transforms...)
+	indexer := executionlayer.NewBlockIndexer(store, lastBlockStore, executionlayer.BlockIndexerConfig{
+		Concurrency: concurrency,
+	}, client, transforms...)
 	chainID := strconv.FormatUint(utils.Config.Chain.ClConfig.DepositChainID, 10)
 
 	importENSChanges := false
@@ -1699,7 +1701,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 		toBlock := utilMath.MinU64(to, from+blockCount-1)
 
 		log.Infof("indexing blocks %v to %v in data table ...", from, toBlock)
-		if err := indexer.IndexEvents(chainID, from, to, concurrency); err != nil {
+		if err := indexer.IndexEvents(chainID, from, to); err != nil {
 			log.Error(err, "error indexing from bigtable", 0)
 		}
 		cache.Clear()
@@ -1707,7 +1709,7 @@ func indexOldEth1Blocks(startBlock uint64, endBlock uint64, batchSize uint64, co
 
 	if importENSChanges {
 		importer := executionlayer.NewENSImporter(store, db2.NewENSStore(db.WriterDb), executionlayer.NewEnsContracts(client.GetNativeClient()))
-		if err := importer.Import(chainID, math.MaxInt64); err != nil {
+		if _, err := importer.Import(chainID, math.MaxInt64); err != nil {
 			log.Error(err, "error importing ens from events", 0)
 			return
 		}
