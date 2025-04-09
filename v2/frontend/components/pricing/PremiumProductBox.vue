@@ -334,7 +334,6 @@ const minorFeatures = computed<Feature[]>(() => {
 .box-container {
   box-sizing: border-box;
   width: 293px;
-  height: 100%;
   border: 2px solid var(--container-border-color);
   border-radius: 7px;
   background-color: var(--container-background);
