@@ -299,6 +299,41 @@ var VDBManageValidatorsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard EL Deposits Table
+
+type VDBDepositsElColumn int
+
+var _ EnumFactory[VDBDepositsElColumn] = VDBDepositsElColumn(0)
+
+const (
+	VDBDepositElBlock VDBDepositsElColumn = iota
+	VDBDepositElAmount
+)
+
+func (c VDBDepositsElColumn) Int() int {
+	return int(c)
+}
+
+func (VDBDepositsElColumn) NewFromString(s string) VDBDepositsElColumn {
+	switch s {
+	case "", "block", "timestamp":
+		return VDBDepositElBlock
+	case "amount":
+		return VDBDepositElAmount
+	default:
+		return VDBDepositsElColumn(-1)
+	}
+}
+
+var VDBDepositsElColumns = struct {
+	Block  VDBDepositsElColumn
+	Amount VDBDepositsElColumn
+}{
+	VDBDepositElBlock,
+	VDBDepositElAmount,
+}
+
+// ----------------
 // Validator Dashboard Archived Reasons
 
 type VDBArchivedReason int

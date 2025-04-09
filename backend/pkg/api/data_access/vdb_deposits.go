@@ -11,6 +11,7 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -218,6 +219,10 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	return responseData, p, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardElDeposits_FeaturePectra(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsElColumn], search string, limit uint64) ([]t.VDBExecutionDepositsTableRow_FeaturePectra, *t.Paging, error) {
+	return d.dummy.GetValidatorDashboardElDeposits_FeaturePectra(ctx, dashboardId, cursor, colSort, search, limit)
 }
 
 func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {

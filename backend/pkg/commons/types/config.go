@@ -231,7 +231,8 @@ type Config struct {
 	ApiKeySecret     string   `yaml:"apiKeySecret" env:"API_KEY_SECRET"`
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" env:"CORS_ALLOWED_HOSTS"`
 
-	SkipDataAccessServiceInitWait bool `yaml:"skipDataAccessServiceInitWait" env:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
+	SkipDataAccessServiceInitWait bool     `yaml:"skipDataAccessServiceInitWait" env:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
+	AllowedFeatureFlags           []string `yaml:"allowedFeatureFlags" env:"ALLOWED_FEATURE_FLAGS"`
 }
 
 type Chain struct {

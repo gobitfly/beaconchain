@@ -428,6 +428,10 @@ func (*DummyService) GetValidatorDashboardElDeposits(ctx context.Context, dashbo
 	return getDummyWithPaging[t.VDBExecutionDepositsTableRow](ctx)
 }
 
+func (*DummyService) GetValidatorDashboardElDeposits_FeaturePectra(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBDepositsElColumn], search string, limit uint64) ([]t.VDBExecutionDepositsTableRow_FeaturePectra, *t.Paging, error) {
+	return getDummyWithPaging[t.VDBExecutionDepositsTableRow_FeaturePectra](ctx)
+}
+
 func (*DummyService) GetValidatorDashboardClDeposits(ctx context.Context, dashboardId t.VDBId, cursor string, limit uint64) ([]t.VDBConsensusDepositsTableRow, *t.Paging, error) {
 	return getDummyWithPaging[t.VDBConsensusDepositsTableRow](ctx)
 }

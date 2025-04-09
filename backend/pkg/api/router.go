@@ -3,6 +3,8 @@ package api
 import (
 	"net/http"
 	"regexp"
+	"slices"
+	"strings"
 
 	dataaccess "github.com/gobitfly/beaconchain/pkg/api/data_access"
 	"github.com/gobitfly/beaconchain/pkg/api/docs"
@@ -285,6 +287,14 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 	}
 
 	const allowMocking = true
+	// on prod we only allow feature flags that are in the allowed list
+	// otherwise we allow all feature flags
+	isFeatureAllowedFunc := func(featureFlag string) bool {
+		if cfg.DeploymentType == "production" {
+			return slices.Contains(cfg.AllowedFeatureFlags, featureFlag)
+		}
+		return true
+	}
 	endpoints := []endpoint{
 		{http.MethodGet, "/{dashboard_id}", hs.PublicGetValidatorDashboard, hs.InternalGetValidatorDashboard},
 		{http.MethodPut, "/{dashboard_id}/name", hs.PublicPutValidatorDashboardName, hs.InternalPutValidatorDashboardName},
@@ -309,7 +319,12 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
-		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits, hs.InternalGetValidatorDashboardExecutionLayerDeposits},
+		{http.MethodGet, "/{dashboard_id}/execution-layer-deposits", hs.PublicGetValidatorDashboardExecutionLayerDeposits,
+			featureFlagToggle(isFeatureAllowedFunc, "feature-pectra",
+				hs.InternalGetValidatorDashboardExecutionLayerDeposits,                                       // legacy
+				handlers.Handle(http.StatusOK, hs.GetValidatorDashboardExecutionLayerDeposits, allowMocking), // feature
+			),
+		},
 		{http.MethodGet, "/{dashboard_id}/consensus-layer-deposits", hs.PublicGetValidatorDashboardConsensusLayerDeposits, hs.InternalGetValidatorDashboardConsensusLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-execution-layer-deposits", hs.PublicGetValidatorDashboardTotalExecutionLayerDeposits, hs.InternalGetValidatorDashboardTotalExecutionLayerDeposits},
 		{http.MethodGet, "/{dashboard_id}/total-consensus-layer-deposits", hs.PublicGetValidatorDashboardTotalConsensusLayerDeposits, hs.InternalGetValidatorDashboardTotalConsensusLayerDeposits},
@@ -322,6 +337,17 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/mobile/validators", nil, hs.InternalGetValidatorDashboardMobileValidators},
 	}
 	addEndpointsToRouters(endpoints, publicDashboardRouter, internalDashboardRouter)
+}
+
+func featureFlagToggle(isFeatureAllowedFunc func(string) bool, featureFlag string, legacyHandler, featureHandler func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		isFeatureRequested := strings.Contains(r.URL.Query().Get("feature_flags"), featureFlag)
+		if isFeatureRequested && isFeatureAllowedFunc(featureFlag) {
+			featureHandler(w, r)
+			return
+		}
+		legacyHandler(w, r)
+	}
 }
 
 func addNotificationRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, debug bool) {
