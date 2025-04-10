@@ -85,7 +85,8 @@ const setPageSize = (limit: number) => {
 }
 const setSearch = (value?: string) => {
   query.value = {
-    ...query.value, search: value,
+    ...query.value,
+    search: value,
   }
 }
 
