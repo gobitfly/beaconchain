@@ -221,7 +221,8 @@ const elDepositsTotalAmount = computed(() => elDepositsData.value?.[1])
 
 // Consensus Layer Deposits data
 const clDepositsQueryParams = ref<TableQueryParams>({
-  limit: 5, sort: 'timestamp:desc',
+  limit: 5,
+  sort: 'timestamp:desc',
 })
 const {
   data: clDepositsData,
@@ -267,6 +268,28 @@ const elConsolidations = computed(() => {
   return elConsolidationsData.value || undefined
 })
 
+// Consolidations Layer Consolidations data
+const clConsolidationsQueryParams = ref<TableQueryParams>({
+  limit: 5, sort: 'timestamp:desc',
+})
+const {
+  data: clConsolidationsData,
+  refresh: refreshClConsolidationsData,
+  status: clConsolidationsDataStatus,
+} = useAsyncData('cl_consolidations', () => {
+  return dashboardData.fetchClConsolidations(
+    dashboardKey.value,
+    clConsolidationsQueryParams.value,
+  )
+},
+{
+  immediate: false,
+  watch: [ clConsolidationsQueryParams ],
+})
+const clConsolidations = computed(() => {
+  return clConsolidationsData.value || undefined
+})
+
 // tabs
 const route = useRoute()
 
@@ -276,6 +299,7 @@ const refreshActiveTab = () => {
   switch (activeTab.value) {
     case '#consolidations':
       refreshElConsolidationsData()
+      refreshClConsolidationsData()
       break
     case '#deposits':
       refreshElDepositsData()
@@ -363,6 +387,15 @@ watch(
             v-model:query="elConsolidationsQueryParams"
             :el-consolidations
             :is-loading="elConsolidationsDataStatus === 'pending'"
+          />
+          <BcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <DashboardTableClConsolidations
+            v-model:query="clConsolidationsQueryParams"
+            :cl-consolidations
+            :is-loading="clConsolidationsDataStatus === 'pending'"
           />
         </template>
       </BcTabList>
