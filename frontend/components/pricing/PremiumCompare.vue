@@ -8,7 +8,6 @@ const {
   displayCurrencyDefault,
   formatAmount,
 } = useCurrency()
-const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 
 type CompareRow = {
   className?: string,
@@ -152,14 +151,12 @@ const rows = computed(() => {
     'group',
     'notification',
     undefined,
-    showInDevelopment ? undefined : comingSoon,
   )
   addRow(
     'perc',
     'email_notifications_per_day',
     'first-in-group',
     undefined,
-    !showInDevelopment,
   )
   addRow('perc', 'configure_notifications_via_api')
 
@@ -168,14 +165,12 @@ const rows = computed(() => {
     'validator_group_notifications',
     undefined,
     undefined,
-    !showInDevelopment,
   )
   addRow(
     'perc',
     'webhook_endpoints',
     'last-in-group',
     undefined,
-    !showInDevelopment,
   )
 
   addRow('group', 'mobille_app')
