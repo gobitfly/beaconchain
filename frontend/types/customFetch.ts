@@ -1,5 +1,6 @@
 export type API_PATH =
   | 'AD_CONFIGURATIONs'
+  | 'DASHBOARD_CL_CONSOLIDATIONS'
   | 'DASHBOARD_CL_DEPOSITS'
   | 'DASHBOARD_CL_DEPOSITS_TOTAL'
   | 'DASHBOARD_CREATE_ACCOUNT'
@@ -84,6 +85,11 @@ export const mapping: Record<API_PATH, MappingData> = {
     getPath: values => `/ad-configurations?keys=${values?.keys}`,
     mock: true,
     path: '/ad-configurations?={keys}',
+  },
+  DASHBOARD_CL_CONSOLIDATIONS: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/consensus-layer-consolidations`,
+    path: '/validator-dashboards/{dashboard_id}/consensus-layer-consolidations',
   },
   DASHBOARD_CL_DEPOSITS: {
     getPath: values =>
