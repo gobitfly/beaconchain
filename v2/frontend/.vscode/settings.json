@@ -68,6 +68,7 @@
         "useCustomFetch",
         "useFeatureFlag",
         "useNotificationsOverviewStore",
+        "useSettingsStore",
         "useWindowSize",
         "vscode"
     ],
