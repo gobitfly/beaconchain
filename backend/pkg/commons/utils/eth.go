@@ -242,6 +242,10 @@ func FirstEpochOfSyncPeriod(syncPeriod uint64) uint64 {
 	return syncPeriod * Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod
 }
 
+func AlignedFirstEpochOfSyncPeriod(syncPeriod uint64) uint64 {
+	return max(FirstEpochOfSyncPeriod(syncPeriod), Config.Chain.ClConfig.AltairForkEpoch)
+}
+
 func SlotsPerSyncCommittee() uint64 {
 	return Config.Chain.ClConfig.EpochsPerSyncCommitteePeriod * Config.Chain.ClConfig.SlotsPerEpoch
 }

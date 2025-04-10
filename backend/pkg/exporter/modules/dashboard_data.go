@@ -912,7 +912,7 @@ func (d *dashboardData) fetchSyncCommitteeAssignments(epochStart uint64, epochEn
 			defer func() {
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_fetch_sync_period_based_data_assignments_single").Observe(time.Since(start).Seconds())
 			}()
-			relevantSlot := utils.FirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+			relevantSlot := utils.AlignedFirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 			assignments, err := d.CL.GetSyncCommitteesAssignments(nil, relevantSlot)
 			if err != nil {
 				d.log.Error(err, "can not get sync committee assignments", 0, map[string]interface{}{"syncPeriod": syncPeriod})
@@ -931,7 +931,7 @@ func (d *dashboardData) fetchSyncCommitteeAssignments(epochStart uint64, epochEn
 	for _, s := range snycPeriodStatesToFetch {
 		syncPeriod := s
 		g2.Go(func() error {
-			slot := utils.FirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
+			slot := utils.AlignedFirstEpochOfSyncPeriod(syncPeriod) * utils.Config.Chain.ClConfig.SlotsPerEpoch
 			// acquiring semaphore
 			err := d.heavySemaphore.Acquire(context.Background(), 1)
 			if err != nil {
