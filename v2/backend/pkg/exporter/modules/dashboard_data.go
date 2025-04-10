@@ -103,6 +103,11 @@ func updateSafeEpoch(d *dashboardData) error {
 	}
 	finalized := res.Data.Finalized.Epoch
 	safe := int64(res.Data.Finalized.Epoch) - 2
+	if safe > 0 {
+		epochDuration := utils.Config.Chain.ClConfig.SecondsPerSlot * utils.Config.Chain.ClConfig.SlotsPerEpoch
+		stepSize := max(1, 384/int64(epochDuration)) // try to roughly match mainnet with step size
+		safe = (safe / stepSize) * stepSize          // quantize to step size
+	}
 
 	metrics.State.WithLabelValues("dashboard_data_exporter_latest_safe_epoch").Set(float64(safe))
 	metrics.State.WithLabelValues("dashboard_data_exporter_latest_finalized_epoch").Set(float64(finalized))
