@@ -225,6 +225,30 @@
                 "search_placeholder_public": "Index, Public Key",
                 "title": "Blocks"
             },
+            "cl_consolidations": {
+                "info_slot_processed_estimated": "This is an estimation since this consolidation is still queued.",
+                "reject_reason": {
+                    "full_queue": "The consolidation queue is full.",
+                    "insufficient_consolidation_churn": "Not enough churn capacity available to consolidate.",
+                    "source_address_mismatch": "The source address doesn't match",
+                    "source_equals_target": "Source and target must be different.",
+                    "source_exiting": "The source is currently exiting and cannot be used for consolidation.",
+                    "source_inactive": "The source is inactive and cannot be used for consolidation.",
+                    "source_no_execution_withdrawal_credentials": "The source has no execution withdrawal credentials.",
+                    "source_pending_withdrawals": "The source has pending withdrawals that must be completed before consolidating.",
+                    "source_slashed": "The source has been slashed and cannot be used for consolidation.",
+                    "source_too_young": "The source is too new to be eligible for consolidation.",
+                    "source_unknown_pubkey": "The source public key could not be found.",
+                    "target_exiting": "The target is currently exiting and cannot receive consolidation.",
+                    "target_inactive": "The target is inactive and cannot receive consolidation.",
+                    "target_not_compounding": "The target is not compounding.",
+                    "target_unknown_pubkey": "The target public key could not be found."
+                },
+                "search_placeholder": "Index, Slot, Address",
+                "slot_processed": "Slot Processed",
+                "slot_queued": "Slot Queued",
+                "title": "Consensus Layer"
+            },
             "cl_deposits": {
                 "info_compound_event_deposit": "CL deposit was caused by a switch to compounding event",
                 "info_slot_processed_estimated": "This is an estimation since this deposit is still queued.",
@@ -275,8 +299,8 @@
                 "block_processed": "Block Processed",
                 "block_queued": "Block Queued",
                 "info_block_processed_estimated": "This is an estimation since this consolidation is still queued.",
-                "search_placeholder_guest_dashboard": "Index, Slot, Address",
-                "search_placeholder_private_dashboard": "Index, Slot, Address, Group",
+                "search_placeholder_guest_dashboard": "Index, Block, Address",
+                "search_placeholder_private_dashboard": "Index, Block, Address, Group",
                 "title": "Execution Layer"
             },
             "el_deposits": {
