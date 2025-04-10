@@ -1088,19 +1088,32 @@ func BackfillRoi(epochs []BackfillMetadata) error {
 	now := time.Now()
 	// sanity check, check that there are more than a thousand entries for each epoch
 	const minEpochEntries = 1000
+	var timestamps []time.Time
 	for _, e := range epochs {
-		var count int
-		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
-			SELECT count() as count
-			FROM %s
-			WHERE epoch_timestamp = $1
-			SETTINGS use_skip_indexes_if_final = 1
-		`, FinalEpochsTableName), utils.EpochToTime(e.Epoch))
-		if err != nil {
-			return fmt.Errorf("error fetching epoch count: %w", err)
-		}
-		if count < minEpochEntries {
-			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", e.Epoch)
+		timestamps = append(timestamps, utils.EpochToTime(e.Epoch))
+	}
+	var result []struct {
+		Timestamp time.Time `db:"epoch_timestamp"`
+		Count     int       `db:"count"`
+	}
+	err := db.ClickHouseWriter.Select(&result, fmt.Sprintf(`
+		SELECT
+			epoch_timestamp,
+			count() as count
+		FROM %s
+		WHERE epoch_timestamp in $1
+		GROUP BY epoch_timestamp
+		Settings use_skip_indexes_if_final = 1
+	`, FinalEpochsTableName), timestamps)
+	if err != nil {
+		return fmt.Errorf("error fetching epoch count: %w", err)
+	}
+	if len(result) != len(epochs) {
+		return fmt.Errorf("epoch count mismatch: expected %d, got %d", len(epochs), len(result))
+	}
+	for _, r := range result {
+		if r.Count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", utils.TimeToEpoch(r.Timestamp))
 		}
 	}
 	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(now).Seconds())
@@ -1110,7 +1123,7 @@ func BackfillRoi(epochs []BackfillMetadata) error {
 		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
 	}
 	// no final needed as its from the final table
-	err := db.ClickHouseNativeWriter.Exec(ctx,
+	err = db.ClickHouseNativeWriter.Exec(ctx,
 		fmt.Sprintf(`
 		insert into %s
 		SELECT
@@ -1164,19 +1177,32 @@ func BackfillEBLookup(epochs []BackfillMetadata) error {
 	now := time.Now()
 	// sanity check, check that there are more than a thousand entries for each epoch
 	const minEpochEntries = 1000
+	var timestamps []time.Time
 	for _, e := range epochs {
-		var count int
-		err := db.ClickHouseWriter.Get(&count, fmt.Sprintf(`
-			SELECT count() as count
-			FROM %s
-			WHERE epoch_timestamp = $1
-			SETTINGS use_skip_indexes_if_final = 1
-		`, FinalEpochsTableName), utils.EpochToTime(e.Epoch))
-		if err != nil {
-			return fmt.Errorf("error fetching epoch count: %w", err)
-		}
-		if count < minEpochEntries {
-			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", e.Epoch)
+		timestamps = append(timestamps, utils.EpochToTime(e.Epoch))
+	}
+	var result []struct {
+		Timestamp time.Time `db:"epoch_timestamp"`
+		Count     int       `db:"count"`
+	}
+	err := db.ClickHouseWriter.Select(&result, fmt.Sprintf(`
+		SELECT
+			epoch_timestamp,
+			count() as count
+		FROM %s
+		WHERE epoch_timestamp in $1
+		GROUP BY epoch_timestamp
+		Settings use_skip_indexes_if_final = 1
+	`, FinalEpochsTableName), timestamps)
+	if err != nil {
+		return fmt.Errorf("error fetching epoch count: %w", err)
+	}
+	if len(result) != len(epochs) {
+		return fmt.Errorf("epoch count mismatch: expected %d, got %d", len(epochs), len(result))
+	}
+	for _, r := range result {
+		if r.Count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", utils.TimeToEpoch(r.Timestamp))
 		}
 	}
 	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(now).Seconds())
@@ -1186,7 +1212,7 @@ func BackfillEBLookup(epochs []BackfillMetadata) error {
 		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
 	}
 	// no final needed as its from the final table
-	err := db.ClickHouseNativeWriter.Exec(ctx,
+	err = db.ClickHouseNativeWriter.Exec(ctx,
 		fmt.Sprintf(`
 		insert into %s
 		SELECT
