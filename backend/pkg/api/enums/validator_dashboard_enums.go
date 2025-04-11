@@ -414,7 +414,7 @@ func (VDBDepositsClColumn) NewFromString(s string) VDBDepositsClColumn {
 func (c VDBDepositsClColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBDepositClSlot:
-		return goqu.I("bd.block_slot")
+		return goqu.C("slot_processed")
 	case VDBDepositClAmount:
 		return goqu.C("amount")
 	default:
