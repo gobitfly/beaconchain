@@ -131,6 +131,7 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 	minSlot := calculateMinSlot(lowBound)
 	offset := highBound
 
+outer:
 	for {
 		select {
 		case <-rs.ctx.Done():
@@ -144,7 +145,7 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 
 			if len(payloads) == 0 {
 				log.Error(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
-				break
+				break outer
 			}
 
 			for _, payload := range payloads {
@@ -156,12 +157,12 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 
 			if payloads[len(payloads)-1].Slot < minSlot {
 				// last payload we received is bellow than our calculated min_slot
-				break
+				break outer
 			}
 
 			if len(payloads) < 100 {
 				// if the response is less than 100 payloads, we assume that we have reached the end and break
-				break
+				break outer
 			}
 
 			if payloads[len(payloads)-1].Slot == offset {
@@ -173,6 +174,7 @@ func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowB
 			time.Sleep(time.Second)
 		}
 	}
+	return nil
 }
 
 func calculateMinSlot(lowBound uint64) uint64 {
