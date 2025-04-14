@@ -270,6 +270,17 @@ func (VDBWithdrawalsClColumn) NewFromString(s string) VDBWithdrawalsClColumn {
 	}
 }
 
+func (c VDBWithdrawalsClColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBWithdrawalClSlotProcessed:
+		return goqu.I("slot_processed")
+	case VDBWithdrawalClAmount:
+		return goqu.I("amount")
+	default:
+		return nil
+	}
+}
+
 var VDBWithdrawalsClColumns = struct {
 	SlotProcessed VDBWithdrawalsClColumn
 	Amount        VDBWithdrawalsClColumn

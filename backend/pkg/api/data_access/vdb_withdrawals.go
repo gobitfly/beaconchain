@@ -33,10 +33,10 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 	var paging t.Paging
 
 	// Initialize the cursor
-	var currentCursor t.WithdrawalsElCursor
+	var currentCursor t.ELWithdrawalsCursor
 	var err error
 	if cursor != "" {
-		currentCursor, err = utils.StringToCursor[t.WithdrawalsElCursor](cursor)
+		currentCursor, err = utils.StringToCursor[t.ELWithdrawalsCursor](cursor)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as WithdrawalsElCursor: %w", err)
 		}
@@ -198,7 +198,7 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 		Status             string          `db:"status"` // BEDS-1399
 	}
 
-	queryResult, err := runQueryRows[[]dbResult](ctx, db.AlloyReader, ds)
+	queryResult, err := runQueryRows[[]dbResult](ctx, d.readerDb, ds)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -330,133 +330,348 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 }
 
 func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsClColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsClTableRow, *t.Paging, error) {
-	// TODO
+	var currentCursor t.CLWithdrawalsCursor
+	var err error
+	if cursor != "" {
+		if currentCursor, err = utils.StringToCursor[t.CLWithdrawalsCursor](cursor); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse passed cursor as CLWithdrawalsCursor: %w", err)
+		}
+	}
 
-	/*
+	// filters
+	searchWithdrawalAddress := t.ReEthereumAddress.MatchString(search)
+	searchIndexOrSlot := t.ReInteger.MatchString(search)
+	searchGroup := t.ReName.MatchString(search)
+	searchPublicKey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
 
-			// Get the withdrawals for the validators
-			queryResult := []struct {
-				BlockSlot       uint64 `db:"block_slot"`
-				BlockNumber     uint64 `db:"exec_block_number"`
-				WithdrawalIndex uint64 `db:"withdrawalindex"`
-				ValidatorIndex  uint64 `db:"validatorindex"`
-				Address         []byte `db:"address"`
-				Amount          uint64 `db:"amount"`
-			}{}
+	if search != "" && !searchWithdrawalAddress && !searchIndexOrSlot && !searchGroup && !searchPublicKey {
+		return make([]t.VDBWithdrawalsClTableRow, 0), &t.Paging{}, nil
+	}
 
-			queryParams := []interface{}{}
-			withdrawalsQuery := `
-				SELECT
-				    w.block_slot,
-				    b.exec_block_number,
-					w.withdrawalindex,
-					w.validatorindex,
-					w.address,
-					w.amount
-				FROM
-				    blocks_withdrawals w
-				INNER JOIN blocks b ON w.block_root = b.blockroot AND b.status = '1'
-				`
+	// Get the withdrawals for the validators
+	type dbResult struct {
+		SlotProcessed   sql.NullInt64   `db:"slot_processed"`
+		WithdrawalIndex uint64          `db:"index_processed"`
+		SlotQueued      sql.NullInt64   `db:"slot_queued"`
+		ValidatorIndex  uint64          `db:"validatorindex"`
+		Address         []byte          `db:"address"`
+		Amount          decimal.Decimal `db:"amount"`
+		RejectReason    sql.NullString  `db:"reject_reason"`
+		Status          string          `db:"status"`
+	}
 
-			// Limit the query to relevant validators
-			queryParams = append(queryParams, pq.Array(validators))
-			whereQuery := fmt.Sprintf(`
-				WHERE
-				    validatorindex = ANY ($%d)`, len(queryParams))
+	legacyDs := goqu.Dialect("postgres").
+		From(goqu.T("blocks_withdrawals").As("w")).
+		Select(
+			goqu.I("w.block_slot").As("slot_processed"),
+			goqu.I("w.withdrawalindex").As("index_processed"),
+			goqu.I("w.validatorindex"),
+			goqu.I("w.address"),
+			goqu.I("w.amount"),
+			goqu.V(nil).As("slot_queued"),
+			goqu.V(nil).As("reject_reason"),
+			goqu.V("completed").As("status"),
+		).
+		InnerJoin(
+			goqu.T("blocks").As("b"),
+			goqu.On(
+				goqu.I("w.block_root").Eq(goqu.I("b.blockroot")),
+				goqu.I("b.status").Eq("1"),
+			),
+		)
 
-			// Limit the query using sorting and the cursor
-			orderQuery := ""
-			sortColName := ""
-			sortColCursor := interface{}(nil)
-			switch colSort.Column {
-			case enums.VDBWithdrawalsElColumns.Epoch, enums.VDBWithdrawalsElColumns.Slot:
-			case enums.VDBWithdrawalsElColumns.Index:
-				sortColName = "w.validatorindex"
-				sortColCursor = currentCursor.Index
-			case enums.VDBWithdrawalsElColumns.Recipient:
-				sortColName = "w.address"
-				sortColCursor = currentCursor.Recipient
-			case enums.VDBWithdrawalsElColumns.Amount:
-				sortColName = "w.amount"
-				sortColCursor = currentCursor.Amount
+	requestsDs := goqu.Dialect("postgres").
+		From(goqu.T("blocks_withdrawal_requests").As("wr")).
+		Select(
+			goqu.I("wr.slot_processed"),
+			goqu.I("wr.index_processed"),
+			goqu.I("v.validatorindex"),
+			goqu.I("v.withdrawalcredentials").As("address"), // TODO clarify what to return for rejected? source_address, withdrawal address?
+			goqu.I("wr.amount"),
+			goqu.I("wr.slot_queued"),
+			goqu.I("wr.reject_reason"),
+			goqu.I("wr.status"),
+		).
+		InnerJoin(
+			goqu.T("validators").As("v"),
+			goqu.On(
+				goqu.I("wr.validator_pubkey").Eq(goqu.I("v.pubkey")),
+			),
+		)
+
+	searchesLegacy := []exp.Expression{}
+	searchesRequests := []exp.Expression{}
+	if dashboardId.Validators != nil {
+		legacyDs = legacyDs.Where(
+			goqu.L("w.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
+		)
+
+		requestsDs = requestsDs.Where(
+			goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
+		)
+	} else {
+		legacyDs = legacyDs.
+			SelectAppend(
+				goqu.I("uvdv.group_id"),
+			).
+			InnerJoin(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(
+					goqu.I("w.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+				),
+			).
+			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+
+		requestsDs = requestsDs.
+			SelectAppend(
+				goqu.I("uvdv.group_id"),
+			).
+			InnerJoin(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(
+					goqu.I("w.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+				),
+			).
+			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+
+		if searchGroup {
+			legacyDs = legacyDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("uvdv.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("uvdv.group_id").Eq(goqu.I("uvdg.id")),
+				))
+			requestsDs = requestsDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("uvdv.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("uvdv.group_id").Eq(goqu.I("uvdg.id")),
+				))
+			s := goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1) + "%")
+			searchesLegacy = append(searchesLegacy, s)
+			searchesRequests = append(searchesRequests, s)
+		}
+	}
+
+	if searchWithdrawalAddress {
+		address, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, nil, err
+		}
+		searchesLegacy = append(searchesLegacy, goqu.I("address").Eq(address))
+		searchesRequests = append(searchesRequests, goqu.I("withdrawalcredentials").Eq(address))
+	}
+	if searchPublicKey {
+		pubkey, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, nil, err
+		}
+		legacyDs = legacyDs.
+			InnerJoin(
+				goqu.T("validators").As("v"),
+				goqu.On(
+					goqu.I("v.index").Eq("w.validatorindex"),
+				),
+			)
+		searchesLegacy = append(searchesLegacy, goqu.I("v.pubkey").Eq(pubkey))
+		searchesRequests = append(searchesRequests, goqu.I("v.pubkey").Eq(pubkey))
+	}
+	if searchIndexOrSlot {
+		searchesLegacy = append(searchesLegacy, goqu.I("block_slot").Eq(search), goqu.I("validatorindex").Eq(search))
+		searchesRequests = append(searchesRequests, goqu.I("slot_processed").Eq(search), goqu.I("validatorindex").Eq(search))
+	}
+	if len(searchesLegacy) > 0 {
+		legacyDs = legacyDs.Where(goqu.Or(searchesLegacy...))
+		requestsDs = requestsDs.Where(goqu.Or(searchesRequests...))
+	}
+
+	withdrawalsDs := legacyDs
+	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
+		withdrawalsDs = withdrawalsDs.
+			UnionAll(requestsDs)
+		if currentCursor.IsValid() {
+			postElectra := currentCursor.SlotProcessed/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			if postElectra && currentCursor.Reverse {
+				withdrawalsDs = requestsDs
+			} else if !postElectra && !currentCursor.Reverse {
+				withdrawalsDs = legacyDs
 			}
+		}
+	}
 
-			if colSort.Column == enums.VDBWithdrawalsElColumns.Epoch ||
-				colSort.Column == enums.VDBWithdrawalsElColumns.Slot {
-				if currentCursor.IsValid() {
-					// If we have a valid cursor only check the results before/after it
-					queryParams = append(queryParams, currentCursor.Block, currentCursor.WithdrawalIndex)
-					whereQuery += fmt.Sprintf(" AND (w.block_slot%[1]s$%[2]d OR (w.block_slot=$%[2]d AND w.withdrawalindex%[1]s$%[3]d))",
-						sortSearchDirection, len(queryParams)-1, len(queryParams))
-				}
-				orderQuery = fmt.Sprintf(" ORDER BY w.block_slot %[1]s, w.withdrawalindex %[1]s", sortSearchOrder)
-			} else {
-				if currentCursor.IsValid() {
-					// If we have a valid cursor only check the results before/after it
-					queryParams = append(queryParams, sortColCursor, currentCursor.Block, currentCursor.WithdrawalIndex)
+	defaultSlotSortDesc := true
+	if colSort.Column == enums.VDBWithdrawalsClColumns.SlotProcessed {
+		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
+		defaultSlotSortDesc = colSort.Desc
+	}
+	defaultColumns := []t.SortColumn{
+		{Column: goqu.I("slot_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
+		{Column: goqu.I("index_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.WithdrawalIndex},
+	}
+	var offset any
+	switch colSort.Column {
+	case enums.VDBWithdrawalsClColumns.Amount:
+		offset = currentCursor.Amount
+	}
+	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
+	if err != nil {
+		return nil, nil, err
+	}
 
-					// The additional WHERE requirement is
-					// WHERE sortColName>cursor OR (sortColName=cursor AND (block_slot>cursor OR (block_slot=cursor AND withdrawalindex>cursor)))
-					// with the > flipped if the sort is descending
-					whereQuery += fmt.Sprintf(" AND (%[1]s%[2]s$%[3]d OR (%[1]s=$%[3]d AND (w.block_slot%[2]s$%[4]d OR (w.block_slot=$%[4]d AND w.withdrawalindex%[2]s$%[5]d))))",
-						sortColName, sortSearchDirection, len(queryParams)-2, len(queryParams)-1, len(queryParams))
-				}
-				// The ordering is
-				// ORDER BY sortColName ASC, block_slot ASC, withdrawalindex ASC
-				// with the ASC flipped if the sort is descending
-				orderQuery = fmt.Sprintf(" ORDER BY %[1]s %[2]s, w.block_slot %[2]s, w.withdrawalindex %[2]s",
-					sortColName, sortSearchOrder)
+	withdrawalsDs = withdrawalsDs.
+		Order(order...).
+		Limit(uint(limit + 1))
+	if directions != nil {
+		withdrawalsDs = withdrawalsDs.Where(directions)
+	}
+
+	queryResult, err := runQueryRows[[]dbResult](ctx, d.alloyReader, withdrawalsDs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	responseData := make([]t.VDBWithdrawalsClTableRow, 0, len(queryResult))
+	for _, r := range queryResult {
+		row := t.VDBWithdrawalsClTableRow{
+			Index:  r.ValidatorIndex,
+			Amount: r.Amount.Mul(decimal.NewFromInt(1e9)),
+			Status: r.Status, // BEDS-1399
+		}
+
+		// some data integrity checks TODO add more
+		switch r.Status {
+		case "queued":
+			if r.SlotProcessed.Valid || r.RejectReason.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for queued withdrawal")
 			}
-
-			queryParams = append(queryParams, limit+1)
-			limitQuery := fmt.Sprintf(" LIMIT $%d", len(queryParams))
-
-			withdrawalsQuery += whereQuery + orderQuery + limitQuery
-
-			err = d.readerDb.SelectContext(ctx, &queryResult, withdrawalsQuery, queryParams...)
-			if err != nil {
-				return nil, nil, fmt.Errorf("error getting withdrawals for dashboardId: %d (%d validators): %w", dashboardId.Id, len(validators), err)
+			if !r.SlotQueued.Valid {
+				return nil, nil, fmt.Errorf("slot_queued is not set for queued withdrawal")
 			}
-
-		// Find the next withdrawal if we are currently at the first page
-		// If we have a prev_cursor but not enough data it means the next data is missing
-		if !currentCursor.IsValid() || (currentCursor.IsReverse() && len(responseData) < int(limit)) {
-			nextData, err := d.getNextWithdrawalRow([]uint64{}) // TODO
-			if err != nil {
-				return nil, nil, err
+		case "completed":
+			if !r.SlotQueued.Valid || !r.SlotProcessed.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for completed withdrawal")
 			}
-			if nextData != nil {
-				// Complete the next data TODO
-				// nextData.GroupId = validatorGroupMap[nextData.Index]
-				// TODO integrate label/ens data for "next" row
-				// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
-			} else {
-				// If there is no next data, add a missing estimate row
-				//nextData = &t.VDBWithdrawalsElTableRow{
-				//	IsMissingEstimate: true,
-				//}
+		case "rejected":
+			if r.SlotQueued.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for rejected withdrawal")
 			}
-			responseData = append([]t.VDBWithdrawalsElTableRow{*nextData}, responseData...)
+		default:
+			return nil, nil, fmt.Errorf("unknown withdrawal status: %s", r.Status)
+		}
 
-			// Flag if above limit
-			moreDataFlag = moreDataFlag || len(responseData) > int(limit)
-			if !moreDataFlag && !currentCursor.IsValid() {
-				// No paging required
-				return responseData, &paging, nil
-			}
-
-			// Remove the last entry from data as it is only required for the check
-			if moreDataFlag {
-				responseData = responseData[:len(responseData)-1]
-				queryResult = queryResult[:len(queryResult)-1]
+		if r.SlotProcessed.Valid {
+			slot := uint64(r.SlotProcessed.Int64)
+			row.SlotProcessed = slot
+		} else { //nolint: staticcheck
+			// TODO estimation
+		}
+		if r.SlotQueued.Valid {
+			slot := uint64(r.SlotQueued.Int64)
+			row.SlotQueued = &slot
+		}
+		if r.RejectReason.Valid {
+			str := mapWithdrawalRejectReasonDbToApi(r.RejectReason.String)
+			if str != "" {
+				row.RejectReason = &str // BEDS-1399
 			}
 		}
 
-	*/
-	return nil, nil, nil
+		responseData = append(responseData, row)
+	}
+
+	moreDataFlag := len(responseData) > int(limit)
+
+	// Remove the last entry from data as it is only required for the check
+	if moreDataFlag {
+		responseData = responseData[:len(responseData)-1]
+		queryResult = queryResult[:len(queryResult)-1]
+	}
+
+	if currentCursor.IsReverse() {
+		// Invert query result so response matches requested direction
+		slices.Reverse(responseData)
+	}
+
+	// Find the next withdrawal if we are currently at the first page
+	// If we have a prev_cursor but not enough data it means the next data is missing
+	if !currentCursor.IsValid() || (currentCursor.IsReverse() && len(responseData) < int(limit)) {
+		validatorsDs := goqu.Dialect("postgres").
+			Select("validatorindex").
+			From(goqu.T("validators").As("v"))
+
+		if dashboardId.Validators != nil {
+			validatorsDs = validatorsDs.
+				SelectAppend(
+					goqu.V(t.DefaultGroupId).As("group_id"),
+				).
+				Where(
+					goqu.L("validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
+				)
+		} else {
+			validatorsDs = validatorsDs.
+				SelectAppend(
+					goqu.I("uvdv.group_id"),
+				).
+				InnerJoin(
+					goqu.T("users_val_dashboards_validators").As("uvdv"),
+					goqu.On(
+						goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+					),
+				).
+				Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+		}
+		// TODO add more filters
+		if searchIndexOrSlot {
+			validatorsDs = validatorsDs.Where(
+				goqu.I("v.validatorindex").Eq(search),
+			)
+		}
+		validatorGroups, err := runQueryRows[[]validatorGroup](ctx, d.readerDb, validatorsDs)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		nextData, err := d.getNextWithdrawalRow(validatorGroups)
+		if err != nil {
+			return nil, nil, err
+		}
+		if nextData != nil {
+			// Complete the next data TODO
+			// TODO integrate label/ens data for "next" row
+			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
+		} else {
+			// If there is no next data, add a missing estimate row
+			nextData = &t.VDBWithdrawalsClTableRow{
+				IsMissingEstimate: true,
+			}
+		}
+		responseData = append([]t.VDBWithdrawalsClTableRow{*nextData}, responseData...)
+
+		// Flag if above limit
+		moreDataFlag = moreDataFlag || len(responseData) > int(limit)
+		if !moreDataFlag && !currentCursor.IsValid() {
+			// No paging required
+			return responseData, &t.Paging{}, nil
+		}
+
+		// Remove the last entry from data as it is only required for the check
+		if moreDataFlag {
+			responseData = responseData[:len(responseData)-1]
+			queryResult = queryResult[:len(queryResult)-1]
+		}
+	}
+
+	paging, err := utils.GetPagingFromData(queryResult, currentCursor, moreDataFlag)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get paging: %w", err)
+	}
+
+	return responseData, paging, nil
 }
 
-//nolint:unused
+type validatorGroup struct {
+	ValidatorIndex uint64 `db:"validatorindex"`
+	GroupId        uint64 `db:"group_id"`
+}
+
 func mapWithdrawalRejectReasonDbToApi(dbReason string) string {
 	switch dbReason {
 	case "pending_partial_withdrawals_limit_reached":
@@ -493,9 +708,7 @@ func mapWithdrawalRejectReasonDbToApi(dbReason string) string {
 // 0x00 creds (genesis): never
 // 0x01 creds (capella): if balance > 32 EB
 // 0x02 creds (electra): if balance > 2048 EB
-//
-//nolint:unused
-func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidator) (*t.VDBWithdrawalsClTableRow, error) {
+func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGroup) (*t.VDBWithdrawalsClTableRow, error) {
 	if len(queryValidators) == 0 {
 		return nil, nil
 	}
@@ -516,14 +729,14 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 	// find subscribed validators that are active and have valid withdrawal credentials
 	// order by validator index to ensure that "last withdrawal" cursor handling works
 	sort.Slice(queryValidators, func(i, j int) bool {
-		return queryValidators[i] < queryValidators[j]
+		return queryValidators[i].ValidatorIndex < queryValidators[j].ValidatorIndex
 	})
 
 	latestFinalized := cache.LatestFinalizedEpoch.Get()
 
-	var nextValidator *t.VDBValidator
+	var nextValidator *validatorGroup
 	for _, validator := range queryValidators {
-		metadata := validatorMapping.ValidatorMetadata[validator]
+		metadata := validatorMapping.ValidatorMetadata[validator.ValidatorIndex]
 
 		if !utils.IsValidWithdrawalCredentialsAddress(fmt.Sprintf("%x", metadata.WithdrawalCredentials)) {
 			// Validator cannot withdraw because of invalid withdrawal credentials
@@ -540,9 +753,9 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 
 		withdrawable := metadata.Balance > 0 && metadata.WithdrawableEpoch.Valid && metadata.WithdrawableEpoch.Int64 <= int64(epoch)
 		skimmable := (metadata.EffectiveBalance == utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials) && metadata.Balance > utils.GetMaxEffectiveBalanceByWithdrawalCredentials(metadata.WithdrawalCredentials))
-		latestUpdate := nextValidator == nil || validator > *stats.LatestValidatorWithdrawalIndex
+		latestUpdate := nextValidator == nil || validator.ValidatorIndex > *stats.LatestValidatorWithdrawalIndex
 		if (withdrawable || skimmable) && latestUpdate {
-			distance, err := d.getWithdrawableCountFromCursor(validator, *stats.LatestValidatorWithdrawalIndex)
+			distance, err := d.getWithdrawableCountFromCursor(validator.ValidatorIndex, *stats.LatestValidatorWithdrawalIndex)
 			if err != nil {
 				return nil, err
 			}
@@ -557,7 +770,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 				nextValidator = &nextValidatorInt
 			}
 
-			if nextValidator != nil && *nextValidator > *stats.LatestValidatorWithdrawalIndex {
+			if nextValidator != nil && nextValidator.ValidatorIndex > *stats.LatestValidatorWithdrawalIndex {
 				// the first validator after the cursor has to be the next validator
 				break
 			}
@@ -568,15 +781,15 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 		return nil, nil
 	}
 
-	nextValidatorData := validatorMapping.ValidatorMetadata[*nextValidator]
+	nextValidatorData := validatorMapping.ValidatorMetadata[nextValidator.ValidatorIndex]
 
-	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]t.VDBValidator{*nextValidator})
+	lastWithdrawnEpochs, err := db.GetLastWithdrawalEpoch([]t.VDBValidator{nextValidator.ValidatorIndex})
 	if err != nil {
 		return nil, err
 	}
-	lastWithdrawnEpoch := lastWithdrawnEpochs[*nextValidator]
+	lastWithdrawnEpoch := lastWithdrawnEpochs[nextValidator.ValidatorIndex]
 
-	nextDistance, err := d.getWithdrawableCountFromCursor(*nextValidator, *stats.LatestValidatorWithdrawalIndex)
+	nextDistance, err := d.getWithdrawableCountFromCursor(nextValidator.ValidatorIndex, *stats.LatestValidatorWithdrawalIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +826,8 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []t.VDBValidato
 
 	nextData := &t.VDBWithdrawalsClTableRow{
 		SlotProcessed: nextWithdrawalSlot,
-		Index:         *nextValidator,
+		Index:         nextValidator.ValidatorIndex,
+		GroupId:       nextValidator.GroupId,
 		Recipient: t.Address{
 			Hash:       t.Hash(address.String()),
 			Ens:        ens_name,
