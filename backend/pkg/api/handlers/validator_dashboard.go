@@ -645,3 +645,103 @@ func (h *HandlerService) GetTruncatedGuestValidatorDashboard(ctx context.Context
 	r.Data.Validators = truncatedValidators
 	return r, nil
 }
+
+// GetValidatorDashboardRewardsChart godoc
+//
+//	@Description	Get rewards chart data for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			group_ids		query		string	false	"Provide a comma separated list of group IDs to filter the results by."
+//	@Param			aggregation		query		string	false	"Aggregation type to get data for."	Enums(epoch, hourly, daily, weekly)	Default(hourly)
+//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
+//	@Param			after_ts		query		string	false	"Return data after this timestamp."
+//	@Param			before_ts		query		string	false	"Return data before this timestamp."
+//	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
+func (i *inputGetValidatorDashboardRewardsChart) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
+	i.groupIds = v.checkGroupIdList(params["group_ids"])
+	i.efficiencyType = checkEnum[enums.VDBSummaryChartEfficiencyType](&v, params["efficiency_type"], "efficiency_type")
+	i.aggregation = checkEnum[enums.ChartAggregation](&v, params["aggregation"], "aggregation")
+	afterTsParam := params["after_ts"]
+	beforeTsParam := params["before_ts"]
+	if afterTsParam != "" {
+		afterTs := v.checkUint(afterTsParam, "after_ts")
+		i.afterTs = &afterTs
+	}
+	if beforeTsParam != "" {
+		beforeTs := v.checkUint(beforeTsParam, "before_ts")
+		i.beforeTs = &beforeTs
+	}
+	if i.afterTs != nil && i.beforeTs != nil && *i.afterTs >= *i.beforeTs {
+		v.add("after_ts", "after_ts must be less than before_ts")
+	}
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardRewardsChart struct {
+	dashboardId    interface{}
+	groupIds       []int64
+	efficiencyType enums.VDBSummaryChartEfficiencyType
+	aggregation    enums.ChartAggregation
+	afterTs        *uint64
+	beforeTs       *uint64
+	protocolModes  types.VDBProtocolModes
+}
+
+func (h *HandlerService) GetValidatorDashboardRewardsChart(ctx context.Context, input inputGetValidatorDashboardRewardsChart) (*types.GetValidatorDashboardRewardsChartResponse, error) {
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardId)
+	if err != nil {
+		return nil, err
+	}
+
+	dashboardPerks, err := h.getDashboardPremiumPerks(ctx, *dashboardId)
+	if err != nil {
+		return nil, err
+	}
+	perkSeconds := dashboardPerks.RewardsChartHistorySeconds
+	aggregations := enums.ChartAggregations
+	var chartSeconds uint64
+	switch input.aggregation {
+	case aggregations.Epoch:
+		chartSeconds = perkSeconds.Epoch
+	case aggregations.Hourly:
+		chartSeconds = perkSeconds.Hourly
+	case aggregations.Daily:
+		chartSeconds = perkSeconds.Daily
+	case aggregations.Weekly:
+		chartSeconds = perkSeconds.Weekly
+	}
+	if chartSeconds == 0 {
+		return nil, newForbiddenErr("requested aggregation is not available for dashboard owner's premium subscription")
+	}
+
+	latestExportedTs, err := h.getDataAccessor(ctx).GetLatestExportedChartTs(ctx, input.aggregation)
+	if err != nil {
+		return nil, err
+	}
+
+	afterTs, beforeTs, err := resolveAndValidateTimestamps(
+		input.afterTs,
+		input.beforeTs,
+		chartSeconds,
+		input.aggregation.Duration(h.cfg.ClConfig.SecondsPerSlot*h.cfg.ClConfig.SlotsPerEpoch),
+		latestExportedTs,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := h.getDataAccessor(ctx).GetValidatorDashboardRewardsChart(ctx, *dashboardId, input.groupIds, input.protocolModes, input.aggregation, afterTs, beforeTs)
+	if err != nil {
+		return nil, err
+	}
+
+	response := types.GetValidatorDashboardRewardsChartResponse{
+		Data: *data,
+	}
+	return &response, nil
+}
