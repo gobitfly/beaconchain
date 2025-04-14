@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -30,6 +31,7 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
 	"github.com/jmoiron/sqlx"
 	"github.com/pressly/goose/v3"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -69,6 +71,24 @@ func teardown() {
 			log.Error(err, "error stopping embedded postgres", 0)
 		}
 	}
+}
+
+type User struct {
+	Email    string `db:"email"`
+	Password string
+	ApiKey   string `db:"api_key"`
+	// optional
+	Id             uint   `db:"id" goqu:"omitempty"`
+	UserGroup      string `db:"user_group" goqu:"omitempty"`
+	EmailConfirmed bool   `db:"email_confirmed" goqu:"omitempty"`
+}
+
+var testUsers = []User{
+	{Email: "admin@admin.com", Password: "admin", ApiKey: "admin", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+	// holesky
+	{Id: 122558, Email: "admin2@admin.com", Password: "admin", ApiKey: "admin2", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
+	{Id: 14, Email: "default@admin.com", Password: "default", ApiKey: "default", EmailConfirmed: true},
+	{Id: 113321, Email: "admin3@admin.com", Password: "admin", ApiKey: "admin3", UserGroup: api_types.UserGroupAdmin, EmailConfirmed: true},
 }
 
 func setup() error {
@@ -287,7 +307,7 @@ func TestInternalLoginHandler(t *testing.T) {
 			Decode(&meResponse)
 
 		// check if email is censored
-		assert.Equal(t, meResponse.Data.Email, "a***n@a***n.com", "email should be a***n@a***n.com")
+		assert.Equal(t, "a***n@a***n.com", meResponse.Data.Email, "email should be a***n@a***n.com")
 	})
 
 	t.Run("check if logout works", func(t *testing.T) {
@@ -522,6 +542,8 @@ func TestPublicAndSharedDashboards(t *testing.T) {
 		t.Run(fmt.Sprintf("[%s]: test rewards chart", dashboardId.id), func(t *testing.T) {
 			resp := api_types.GetValidatorDashboardRewardsChartResponse{}
 			e.GET("/api/i/validator-dashboards/{id}/rewards-chart", dashboardId.id).
+				WithQuery("group_ids", "-1").
+				WithQuery("aggregation", "weekly").
 				Expect().Status(http.StatusOK).JSON().Decode(&resp)
 
 			assert.Greater(t, len(resp.Data.Categories), 0, "rewards chart categories should not be empty")
