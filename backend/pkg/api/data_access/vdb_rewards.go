@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
@@ -696,11 +697,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	var err error
 
 	var dataTable exp.LiteralExpression
-	dataColumn := goqu.C("t")
+	timeColumn := goqu.C("t")
 	switch aggregation {
 	case enums.IntervalEpoch:
 		dataTable = goqu.L("validator_dashboard_data_epoch AS e")
-		dataColumn = goqu.C("epoch_timestamp")
+		timeColumn = goqu.C("epoch_timestamp")
 	case enums.IntervalHourly:
 		dataTable = goqu.L("validator_dashboard_data_hourly AS e FINAL")
 	case enums.IntervalDaily:
@@ -724,7 +725,10 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// Build the query that serves as base for both the main and EL rewards queries
 	// CL
 	rewardsDs := goqu.Dialect("postgres").
-		Select(goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_reward, 0)) AS cl_rewards`)).
+		Select(
+			goqu.L(`SUM(COALESCE(e.attestations_reward, 0) + COALESCE(e.blocks_cl_reward, 0) + COALESCE(e.sync_reward, 0)) AS cl_rewards`),
+			timeColumn.As("timestamp"),
+		).
 		From(dataTable).
 		With("validators", goqu.Dialect("postgres").
 			From(goqu.T("users_val_dashboards_validators")).
@@ -741,19 +745,19 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 			),
 		).
 		Where(
-			dataColumn.Between(goqu.Range(
+			timeColumn.Between(goqu.Range(
 				goqu.L("fromUnixTimestamp(?)", afterTs),
 				goqu.L("fromUnixTimestamp(?)", beforeTs))),
 		)
 
 	if aggregation == enums.IntervalEpoch {
 		rewardsDs = rewardsDs.
-			SelectAppend(goqu.L("e.epoch").As("epoch_start")).
-			SelectAppend(goqu.L("e.epoch").As("epoch_end"))
+			SelectAppend(goqu.L("min(e.epoch)").As("epoch_start")).
+			SelectAppend(goqu.L("max(e.epoch)").As("epoch_end"))
 	} else {
 		rewardsDs = rewardsDs.
-			SelectAppend(goqu.L("epoch_start")).
-			SelectAppend(goqu.L("epoch_end"))
+			SelectAppend(goqu.L("min(epoch_start)").As("epoch_start")).
+			SelectAppend(goqu.L("max(epoch_end)").As("epoch_end"))
 	}
 
 	// EL
@@ -767,8 +771,8 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 
 	// grouping, ordering
 	rewardsDs = rewardsDs.
-		GroupBy(goqu.L("epoch_start, epoch_end")).
-		Order(goqu.L("epoch_start").Asc())
+		GroupBy(timeColumn).
+		Order(timeColumn.Asc())
 
 	elDs = elDs.
 		GroupBy(goqu.L("epoch_start, epoch_end")).
@@ -809,10 +813,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	// ------------------------------------------------------------------------------------------------------------------
 	// Build the main query and get the data
 	queryResult := []struct {
-		EpochStart uint64 `db:"epoch_start"`
-		EpochEnd   uint64 `db:"epoch_end"`
-		GroupId    uint64 `db:"result_group_id"`
-		ClRewards  int64  `db:"cl_rewards"`
+		Timestamp  time.Time `db:"timestamp"`
+		EpochStart uint64    `db:"epoch_start"`
+		EpochEnd   uint64    `db:"epoch_end"`
+		GroupId    uint64    `db:"result_group_id"`
+		ClRewards  int64     `db:"cl_rewards"`
 	}{}
 
 	query, args, err := rewardsDs.Prepared(true).ToSQL()
@@ -829,11 +834,29 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		return ret, nil
 	}
 
-	var epochStarts, epochEnds []uint64
-	for _, res := range queryResult {
-		epochStarts = append(epochStarts, res.EpochStart)
-		epochEnds = append(epochEnds, res.EpochEnd)
+	// deduplicate epoch boundaries & make sure they are correct even with newly activated validators
+	type epochBoundaries struct {
+		Start uint64
+		End   uint64
 	}
+	epochBoundariesMap := make(map[time.Time]epochBoundaries)
+	for _, res := range queryResult {
+		curBoundary := epochBoundariesMap[res.Timestamp]
+		if epochBoundariesMap[res.Timestamp].Start == 0 || epochBoundariesMap[res.Timestamp].Start > res.EpochStart {
+			curBoundary.Start = res.EpochStart
+		}
+		if epochBoundariesMap[res.Timestamp].End < res.EpochEnd {
+			curBoundary.End = res.EpochEnd
+		}
+		epochBoundariesMap[res.Timestamp] = curBoundary
+	}
+	var epochStarts, epochEnds []uint64
+	for _, v := range epochBoundariesMap {
+		epochStarts = append(epochStarts, v.Start)
+		epochEnds = append(epochEnds, v.End)
+	}
+	slices.Sort(epochStarts)
+	slices.Sort(epochEnds)
 	elDs = elDs.
 		With("epoch_ranges(epoch_start, epoch_end)", goqu.L("(SELECT * FROM unnest(?::int[], ?::int[]))", pq.Array(epochStarts), pq.Array(epochEnds))).
 		InnerJoin(goqu.L("epoch_ranges"), goqu.On(goqu.L("b.epoch BETWEEN epoch_ranges.epoch_start AND epoch_ranges.epoch_end"))).
