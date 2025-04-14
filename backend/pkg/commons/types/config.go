@@ -212,7 +212,7 @@ type Config struct {
 		RollingsInParallel     int64 `yaml:"rollingsAtOnce" env:"ROLLINGS_AT_ONCE, default=3"`                 // how many rollings to do at once
 		RollingPartsInParallel int64 `yaml:"rollingsInParallel" env:"ROLLINGS_IN_PARALLEL, default=3"`         // how man parts of a single rolling to do at once
 		BackfillAtOnce         int64 `yaml:"backfillAtOnce" env:"BACKFILL_AT_ONCE, default=64"`                // how much data to backfill in a single backfill
-		BackfillInParallel     int64 `yaml:"backfillInParallel" env:"BACKFILL_IN_PARALLEL, default=3"`         // how many backfills to do at once
+		BackfillInParallel     int64 `yaml:"backfillInParallel" env:"BACKFILL_IN_PARALLEL, default=2"`         // how many backfills to do at once
 	} `yaml:"dashboardExporter" env:", prefix=DASHBOARD_EXPORTER_"`
 	Pprof struct {
 		Enabled bool   `yaml:"enabled" env:"ENABLED"`
