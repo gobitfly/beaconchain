@@ -206,8 +206,8 @@ type VDBWithdrawalsElColumn int
 var _ EnumFactory[VDBWithdrawalsElColumn] = VDBWithdrawalsElColumn(0)
 
 const (
-	VDBWithdrawalBlockProcessed VDBWithdrawalsElColumn = iota
-	VDBWithdrawalAmount
+	VDBWithdrawalElBlockQueued VDBWithdrawalsElColumn = iota
+	VDBWithdrawalElAmount
 )
 
 func (c VDBWithdrawalsElColumn) Int() int {
@@ -216,21 +216,32 @@ func (c VDBWithdrawalsElColumn) Int() int {
 
 func (VDBWithdrawalsElColumn) NewFromString(s string) VDBWithdrawalsElColumn {
 	switch s {
-	case "", "block_processed", "timestamp":
-		return VDBWithdrawalBlockProcessed
+	case "", "block_queued", "timestamp":
+		return VDBWithdrawalElBlockQueued
 	case "amount":
-		return VDBWithdrawalAmount
+		return VDBWithdrawalElAmount
 	default:
 		return VDBWithdrawalsElColumn(-1)
 	}
 }
 
-var VDBWithdrawalsColumns = struct {
-	BlockProcessed VDBWithdrawalsElColumn
-	Amount         VDBWithdrawalsElColumn
+func (c VDBWithdrawalsElColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBWithdrawalElBlockQueued:
+		return goqu.I("block_number")
+	case VDBWithdrawalElAmount:
+		return goqu.I("amount")
+	default:
+		return nil
+	}
+}
+
+var VDBWithdrawalsElColumns = struct {
+	BlockQueued VDBWithdrawalsElColumn
+	Amount      VDBWithdrawalsElColumn
 }{
-	VDBWithdrawalBlockProcessed,
-	VDBWithdrawalAmount,
+	VDBWithdrawalElBlockQueued,
+	VDBWithdrawalElAmount,
 }
 
 // ----------------
