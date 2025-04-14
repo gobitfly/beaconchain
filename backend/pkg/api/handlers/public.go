@@ -1235,43 +1235,6 @@ func (h *HandlerService) PublicGetValidatorDashboardGroupRewards(w http.Response
 	returnOk(w, r, response)
 }
 
-// PublicGetValidatorDashboardRewardsChart godoc
-//
-//	@Description	Get rewards chart data for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool``."
-//	@Success		200				{object}	types.GetValidatorDashboardRewardsChartResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/rewards-chart [get]
-func (h *HandlerService) PublicGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
-	var v validationError
-	vars := mux.Vars(r)
-	q := r.URL.Query()
-	dashboardId, err := h.handleDashboardId(r.Context(), vars["dashboard_id"])
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	protocolModes := v.checkProtocolModes(q.Get("modes"))
-	if err := v.AsError(); err != nil {
-		handleErr(w, r, err)
-		return
-	}
-
-	ctx := r.Context()
-	data, err := h.getDataAccessor(ctx).GetValidatorDashboardRewardsChart(ctx, *dashboardId, protocolModes)
-	if err != nil {
-		handleErr(w, r, err)
-		return
-	}
-	response := types.GetValidatorDashboardRewardsChartResponse{
-		Data: *data,
-	}
-	returnOk(w, r, response)
-}
-
 // PublicGetValidatorDashboardDuties godoc
 //
 //	@Description	Get duties information for a specified dashboard
