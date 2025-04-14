@@ -326,6 +326,14 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		}
 	}
 
+	// filters
+	searchIndexOrSlot := t.ReInteger.MatchString(search)
+	searchGroups := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+
+	if search != "" && !searchIndexOrSlot && !searchGroups {
+		return make([]t.VDBConsensusDepositsTableRow, 0), &t.Paging{}, nil
+	}
+
 	// Resolve validator indices to pubkeys
 	byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
 	if err != nil {
@@ -383,6 +391,8 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 			goqu.I("bdr.reject_reason"), // TODO BEDS-1399
 		)
 
+	searchesBridge := []exp.Expression{}
+	searchesRequests := []exp.Expression{}
 	if dashboardId.Validators != nil {
 		depositsBridgeDs = depositsBridgeDs.
 			Where(goqu.L("bd.publickey = ANY(?)", byteaArray))
@@ -414,6 +424,51 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 				),
 			).
 			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
+
+		if searchGroups {
+			depositsBridgeDs = depositsBridgeDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("cbdl.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("cbdl.group_id").Eq(goqu.I("uvdg.id")),
+				))
+
+			depositRequestsDs = depositRequestsDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("cbdrl.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("cbdrl.group_id").Eq(goqu.I("uvdg.id")),
+				))
+
+			s := goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1) + "%")
+			searchesBridge = append(searchesBridge, s)
+			searchesRequests = append(searchesRequests, s)
+		}
+	}
+
+	if searchIndexOrSlot {
+		depositsBridgeDs = depositsBridgeDs.
+			InnerJoin(goqu.T("validators").As("v"), goqu.On(
+				goqu.I("bd.publickey").Eq(goqu.I("v.pubkey")),
+			))
+
+		depositRequestsDs = depositRequestsDs.
+			InnerJoin(goqu.T("validators").As("v"), goqu.On(
+				goqu.I("bdr.pubkey").Eq(goqu.I("v.pubkey")),
+			))
+
+		searchesBridge = append(searchesBridge,
+			goqu.I("bd.block_slot").Eq(search),
+			goqu.I("v.validatorindex").Eq(search),
+		)
+		searchesRequests = append(searchesRequests,
+			goqu.I("bdr.slot_processed").Eq(search),
+			goqu.I("bdr.slot_queued").Eq(search),
+			goqu.I("v.validatorindex").Eq(search),
+		)
+	}
+
+	if len(searchesBridge) > 0 {
+		depositsBridgeDs = depositsBridgeDs.Where(goqu.Or(searchesBridge...))
+		depositRequestsDs = depositRequestsDs.Where(goqu.Or(searchesRequests...))
 	}
 
 	depositsDs := depositsBridgeDs
@@ -634,15 +689,24 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Con
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Context, dashboardId t.VDBId, search string) (*t.VDBTotalConsensusDepositsData, error) {
-	// TODO add filter
 	responseData := t.VDBTotalConsensusDepositsData{
 		TotalAmount: decimal.Zero,
+	}
+
+	// filters
+	searchIndexOrSlot := t.ReInteger.MatchString(search)
+	searchGroups := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+
+	if search != "" && !searchIndexOrSlot && !searchGroups {
+		return &responseData, nil
 	}
 
 	depositsTotalDs := goqu.Dialect("postgres").
 		Select(goqu.L("COALESCE(SUM(amount), 0)").As("amount"))
 	depositRequestsTotalDs := depositsTotalDs
 
+	searchesBridge := []exp.Expression{}
+	searchesRequests := []exp.Expression{}
 	if dashboardId.Validators != nil {
 		// Resolve validator indices to pubkeys
 		byteaArray, err := d.getValidatorPubkeys(dashboardId.Validators)
@@ -661,22 +725,67 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 			)
 		depositRequestsTotalDs = depositRequestsTotalDs.
 			From(goqu.T("blocks_deposit_requests").As("bdr")).
-			Where(goqu.L("pubkey = ANY(?)", byteaArray)).
+			Where(goqu.L("bdr.pubkey = ANY(?)", byteaArray)).
 			InnerJoin(
 				goqu.T("blocks").As("b"),
 				goqu.On(
-					goqu.I("bdr.block_root").Eq(goqu.I("b.blockroot")),
+					goqu.I("bdr.block_queued_root").Eq(goqu.I("b.blockroot")),
 					goqu.L("b.status = '1'"),
 				),
 			)
 	} else {
 		depositsTotalDs = depositsTotalDs.
-			From(goqu.T("cached_blocks_deposits_lookup")).
+			From(goqu.T("cached_blocks_deposits_lookup").As("cbdl")).
 			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
 
 		depositRequestsTotalDs = depositRequestsTotalDs.
-			From(goqu.T("cached_blocks_deposit_requests_lookup")).
+			From(goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl")).
 			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
+
+		if searchGroups {
+			depositsTotalDs = depositsTotalDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("cbdl.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("cbdl.group_id").Eq(goqu.I("uvdg.id")),
+				))
+
+			depositRequestsTotalDs = depositRequestsTotalDs.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("cbdrl.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("cbdrl.group_id").Eq(goqu.I("uvdg.id")),
+				))
+
+			s := goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1) + "%")
+			searchesBridge = append(searchesBridge, s)
+			searchesRequests = append(searchesRequests, s)
+		}
+	}
+
+	if searchIndexOrSlot {
+		depositsTotalDs = depositsTotalDs.
+			InnerJoin(goqu.T("validators").As("v"), goqu.On(
+				goqu.I("bd.publickey").Eq(goqu.I("v.pubkey")),
+			))
+
+		depositRequestsTotalDs = depositRequestsTotalDs.
+			InnerJoin(goqu.T("validators").As("v"), goqu.On(
+				goqu.I("bdr.pubkey").Eq(goqu.I("v.pubkey")),
+			))
+
+		searchesBridge = append(searchesBridge,
+			goqu.I("bd.block_slot").Eq(search),
+			goqu.I("v.validatorindex").Eq(search),
+		)
+		searchesRequests = append(searchesRequests,
+			goqu.I("bdr.slot_processed").Eq(search),
+			goqu.I("bdr.slot_queued").Eq(search),
+			goqu.I("v.validatorindex").Eq(search),
+		)
+	}
+
+	if len(searchesBridge) > 0 {
+		depositsTotalDs = depositsTotalDs.Where(goqu.Or(searchesBridge...))
+		depositRequestsTotalDs = depositRequestsTotalDs.Where(goqu.Or(searchesRequests...))
 	}
 
 	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
@@ -685,19 +794,12 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 			From(depositsTotalDs.UnionAll(depositRequestsTotalDs))
 	}
 
-	query, params, err := depositsTotalDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare SQL query: %w", err)
-	}
-
-	var sum int64
-	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
+	sum, err := runQuery[int64](ctx, db.AlloyReader, depositsTotalDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
 
 	responseData.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
-
 	return &responseData, nil
 }
 
