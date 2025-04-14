@@ -1271,7 +1271,7 @@ func TestTransformConsolidationRequests(t *testing.T) {
 						BlockNumber:    42,
 						BlockTimestamp: time.Time{},
 						From:           alice,
-						Fee:            big.NewInt(1).Bytes(),
+						Fee:            1,
 					},
 				},
 			},
@@ -1309,7 +1309,7 @@ func TestTransformConsolidationRequests(t *testing.T) {
 				if got, want := res.ConsolidationRequests[i].ItxIndex, indexed.ItxIndex; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
-				if got, want := res.ConsolidationRequests[i].Fee, indexed.Fee; !bytes.Equal(got, want) {
+				if got, want := res.ConsolidationRequests[i].Fee, indexed.Fee; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
 			}
@@ -1380,7 +1380,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    1,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 				{
@@ -1392,7 +1392,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    2,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(2).Bytes(),
+						Fee:         2,
 					},
 				},
 			},
@@ -1453,7 +1453,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    0,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 				{
@@ -1465,7 +1465,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    1,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(2).Bytes(),
+						Fee:         2,
 					},
 				},
 			},
@@ -1503,7 +1503,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    0,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 			},
@@ -1547,7 +1547,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    0,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 			},
@@ -1605,7 +1605,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    0,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 				{
@@ -1618,7 +1618,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 						ItxIndex:    0,
 						BlockNumber: 42,
 						From:        alice,
-						Fee:         big.NewInt(1).Bytes(),
+						Fee:         1,
 					},
 				},
 			},
@@ -1656,7 +1656,7 @@ func TestTransformWithdrawalRequests(t *testing.T) {
 				if got, want := res.WithdrawalRequests[i].ItxIndex, indexed.ItxIndex; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
-				if got, want := res.WithdrawalRequests[i].Fee, indexed.Fee; !bytes.Equal(got, want) {
+				if got, want := res.WithdrawalRequests[i].Fee, indexed.Fee; got != want {
 					t.Errorf("got %v, want %v", got, want)
 				}
 			}

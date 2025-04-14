@@ -787,7 +787,7 @@ func getInternalQueueRequestFor(chainID string, block *types.Eth1Block, res *db2
 			continue
 		}
 		queueRequests = append(queueRequests, db2.BridgeQueueRequest{
-			Fee:            internal.Indexed.Value,
+			Fee:            new(big.Int).SetBytes(internal.Indexed.Value).Int64(),
 			TxHash:         block.Transactions[internal.TxIndex].Hash,
 			TxIndex:        internal.TxIndex,
 			ItxIndex:       index,
@@ -815,7 +815,7 @@ func getTransactionQueueRequestFor(chainID string, block *types.Eth1Block, res *
 			continue
 		}
 		queueRequests = append(queueRequests, db2.BridgeQueueRequest{
-			Fee:            tx.Value,
+			Fee:            new(big.Int).SetBytes(tx.Value).Int64(),
 			TxHash:         tx.Hash,
 			TxIndex:        index,
 			ItxIndex:       index,

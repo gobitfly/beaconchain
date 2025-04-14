@@ -53,7 +53,7 @@ type BridgeQueueRequest struct {
 	BlockNumber    uint64
 	BlockTimestamp time.Time
 	From           []byte
-	Fee            []byte
+	Fee            int64
 }
 
 type ConsolidationRequest struct {
