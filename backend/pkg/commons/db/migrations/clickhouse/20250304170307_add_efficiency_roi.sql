@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_hourly
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfMonth(t)
 ORDER BY (toStartOfDay(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_hourly TO _final_validator_dashboard_roi_hourly
@@ -343,7 +343,7 @@ AS SELECT
 FROM _final_validator_dashboard_data_epoch foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2, alter_sync=1;
+    validator_index;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_daily
@@ -356,7 +356,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_daily
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfYear(t)
 ORDER BY (toStartOfMonth(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_daily TO _final_validator_dashboard_roi_daily
@@ -368,7 +368,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_hourly as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2, alter_sync=1;
+    validator_index;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_weekly
@@ -381,7 +381,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_weekly
 ENGINE = AggregatingMergeTree
 PARTITION BY toStartOfInterval(t, INTERVAL 3 YEARS)
 ORDER BY (toStartOfInterval(t, INTERVAL 6 MONTHS), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_weekly TO _final_validator_dashboard_roi_weekly
@@ -393,7 +393,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_daily as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2, alter_sync=1;
+    validator_index;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_monthly
@@ -405,7 +405,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_roi_monthly
 )
 ENGINE = AggregatingMergeTree
 ORDER BY (toStartOfYear(t), validator_index, t)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048 settings mutations_sync=2, alter_sync=1;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_roi_monthly TO _final_validator_dashboard_roi_monthly
@@ -417,7 +417,7 @@ AS SELECT
 FROM _final_validator_dashboard_roi_daily as foo
 GROUP BY
     t,
-    validator_index settings mutations_sync=2, alter_sync=1;
+    validator_index;
 -- +goose StatementEnd
 -- INSERT INTO _final_validator_dashboard_roi_hourly
 -- SELECT
@@ -428,7 +428,7 @@ GROUP BY
 -- FROM _final_validator_dashboard_data_epoch
 -- GROUP BY
 --     t,
---     validator_index settings mutations_sync=2, alter_sync=1;
+--     validator_index;
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_epoch
 AS SELECT
@@ -451,7 +451,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_epoch settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_epoch
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_hourly
@@ -475,7 +475,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_hourly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_daily
@@ -499,7 +499,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_daily FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_weekly
@@ -523,7 +523,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_weekly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_monthly
@@ -547,7 +547,7 @@ AS SELECT
     sync_reward,
     efficiency_dividend,
     efficiency_divisor
-FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_monthly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_1h
@@ -561,7 +561,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward,
-FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_1h FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_24h
@@ -575,7 +575,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_24h FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_7d
@@ -589,7 +589,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_7d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_30d
@@ -603,7 +603,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_30d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_90d
@@ -617,7 +617,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_90d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_total
@@ -631,7 +631,7 @@ AS SELECT
     (((attestations_head_reward_penalties_only + attestations_source_reward_penalties_only) + attestations_target_reward_penalties_only) + attestations_inclusion_reward_penalties_only) + attestations_inactivity_reward_penalties_only AS attestations_reward_penalties_only,
     attestations_reward,
     attestations_ideal_reward
-FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_total FINAL
 -- +goose StatementEnd
 -- +goose Down
 -- +goose StatementBegin
@@ -648,7 +648,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_1h FINAL settings mutations_sync=2, alter_sync=1 
+FROM _final_validator_dashboard_rolling_1h FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_24h
@@ -664,7 +664,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_24h FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_24h FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_7d
@@ -680,7 +680,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_7d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_7d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_30d
@@ -696,7 +696,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_30d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_30d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_90d
@@ -712,7 +712,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_90d FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_90d FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_rolling_total
@@ -728,7 +728,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_rolling_total FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_rolling_total FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_epoch
@@ -744,7 +744,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_epoch settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_epoch
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_hourly
@@ -760,7 +760,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_hourly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_hourly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_daily
@@ -776,7 +776,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_daily FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_daily FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_weekly
@@ -792,7 +792,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_weekly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_weekly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE OR REPLACE VIEW validator_dashboard_data_monthly
@@ -808,7 +808,7 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward,
     sync_reward_rewards_only + sync_reward_penalties_only AS sync_reward
-FROM _final_validator_dashboard_data_monthly FINAL settings mutations_sync=2, alter_sync=1
+FROM _final_validator_dashboard_data_monthly FINAL
 -- +goose StatementEnd
 -- +goose StatementBegin
 DROP VIEW IF EXISTS _mv_final_validator_dashboard_roi_monthly settings mutations_sync=2, alter_sync=1;
