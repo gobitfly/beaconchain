@@ -189,6 +189,12 @@ func (h *HandlerService) handleDashboardId(ctx context.Context, param string) (*
 	return dashboardId, nil
 }
 
+type ChartTimeDashboardLimits struct {
+	MinAllowedTs       uint64
+	LatestExportedTs   uint64
+	MaxAllowedInterval uint64
+}
+
 // getDashboardPremiumPerks gets the premium perks of the dashboard OWNER or if it's a guest dashboard, it returns free tier premium perks
 func (h *HandlerService) getDashboardPremiumPerks(ctx context.Context, id types.VDBId) (*types.PremiumPerks, error) {
 	// for guest dashboards, return free tier perks

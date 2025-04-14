@@ -852,13 +852,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	var queryResults []*t.VDBValidatorSummaryChartRow
 
-	containsGroups := false
 	requestedGroupsMap := make(map[int64]bool)
 	for _, groupId := range groupIds {
 		requestedGroupsMap[groupId] = true
-		if !containsGroups && groupId >= 0 {
-			containsGroups = true
-		}
 	}
 
 	// need default or all groups for anon dashboards and shared dashboards without group sharing

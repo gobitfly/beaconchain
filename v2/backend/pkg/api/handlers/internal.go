@@ -439,10 +439,6 @@ func (h *HandlerService) InternalGetValidatorDashboardGroupRewards(w http.Respon
 	h.PublicGetValidatorDashboardGroupRewards(w, r)
 }
 
-func (h *HandlerService) InternalGetValidatorDashboardRewardsChart(w http.ResponseWriter, r *http.Request) {
-	h.PublicGetValidatorDashboardRewardsChart(w, r)
-}
-
 func (h *HandlerService) InternalGetValidatorDashboardDuties(w http.ResponseWriter, r *http.Request) {
 	h.PublicGetValidatorDashboardDuties(w, r)
 }

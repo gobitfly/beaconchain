@@ -313,7 +313,7 @@ func addValidatorDashboardRoutes(hs *handlers.HandlerService, publicRouter, inte
 		{http.MethodGet, "/{dashboard_id}/summary-chart", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardSummaryChart, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/rewards", hs.PublicGetValidatorDashboardRewards, hs.InternalGetValidatorDashboardRewards},
 		{http.MethodGet, "/{dashboard_id}/groups/{group_id}/rewards/{epoch}", hs.PublicGetValidatorDashboardGroupRewards, hs.InternalGetValidatorDashboardGroupRewards},
-		{http.MethodGet, "/{dashboard_id}/rewards-chart", hs.PublicGetValidatorDashboardRewardsChart, hs.InternalGetValidatorDashboardRewardsChart},
+		{http.MethodGet, "/{dashboard_id}/rewards-chart", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardRewardsChart, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardRewardsChart, allowMocking)},
 		{http.MethodGet, "/{dashboard_id}/duties/{epoch}", hs.PublicGetValidatorDashboardDuties, hs.InternalGetValidatorDashboardDuties},
 		{http.MethodGet, "/{dashboard_id}/blocks", hs.PublicGetValidatorDashboardBlocks, hs.InternalGetValidatorDashboardBlocks},
 		{http.MethodGet, "/{dashboard_id}/execution-layer-withdrawals", handlers.Handle(http.StatusOK, hs.GetValidatorDashboardExecutionLayerWithdrawals, allowMocking), handlers.Handle(http.StatusOK, hs.GetValidatorDashboardExecutionLayerWithdrawals, allowMocking)},
