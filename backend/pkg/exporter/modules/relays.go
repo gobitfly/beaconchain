@@ -22,13 +22,21 @@ type relaysExporter struct {
 	ctx         context.Context
 }
 
-func newRelaysExporter(ctx context.Context, db db2.ConsensusRepository) relaysExporter {
+func NewRelaysExporter(ctx context.Context, db db2.ConsensusRepository) relaysExporter {
 	return relaysExporter{
 		db:          db,
 		relayClient: nodeClient{},
 		delay:       time.Minute,
 		ctx:         ctx,
 	}
+}
+
+func (rs *relaysExporter) GetRelays() ([]types.Relay, error) {
+	relays, err := rs.db.GetRelays()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve relays from db: %w", err)
+	}
+	return relays, nil
 }
 
 func (rs *relaysExporter) MEVBoostRelaysExporter() {
@@ -103,7 +111,7 @@ func (rs *relaysExporter) exportRelayBlocks(r types.Relay) error {
 		log.Error(err, "failed to retrieve last relay block from db, assuming none set", 0, map[string]interface{}{"relay": r.ID})
 	}
 
-	err = rs.retrieveAndInsertPayloadsFromRelay(r, lastUsage.BlockSlot, 0)
+	err = rs.RetrieveAndInsertPayloadsFromRelay(r, lastUsage.BlockSlot, 0)
 	if err != nil {
 		return err
 	}
@@ -118,7 +126,7 @@ func (rs *relaysExporter) exportRelayBlocks(r types.Relay) error {
 		return nil
 	}
 
-	err = rs.retrieveAndInsertPayloadsFromRelay(r, 0, firstUsage.BlockSlot)
+	err = rs.RetrieveAndInsertPayloadsFromRelay(r, 0, firstUsage.BlockSlot)
 	if err != nil {
 		log.Error(err, "failed to retrieve and insert possibly missing payloads", 0, map[string]interface{}{"relay": r.ID})
 		return err
@@ -127,7 +135,7 @@ func (rs *relaysExporter) exportRelayBlocks(r types.Relay) error {
 	return nil
 }
 
-func (rs *relaysExporter) retrieveAndInsertPayloadsFromRelay(r types.Relay, lowBound, highBound uint64) error {
+func (rs *relaysExporter) RetrieveAndInsertPayloadsFromRelay(r types.Relay, lowBound, highBound uint64) error {
 	minSlot := calculateMinSlot(lowBound)
 	offset := highBound
 

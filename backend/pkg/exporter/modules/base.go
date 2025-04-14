@@ -71,7 +71,7 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		}
 
 		if utils.Config.MevBoostRelayExporter.Enabled {
-			relaysExporter := newRelaysExporter(ctx, consDB)
+			relaysExporter := NewRelaysExporter(ctx, consDB)
 			go relaysExporter.MEVBoostRelaysExporter()
 		}
 	}
