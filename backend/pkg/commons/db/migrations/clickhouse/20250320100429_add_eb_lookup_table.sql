@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS _final_validator_dashboard_effective_balance_lookup
 )
 ENGINE = ReplacingMergeTree(epoch_timestamp)
 ORDER BY (validator_index)
-SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048, mutations_sync=2, alter_sync=1;
+SETTINGS index_granularity = 8192, non_replicated_deduplication_window = 2048, replicated_deduplication_window = 2048;
 -- +goose StatementEnd
 -- +goose StatementBegin
 CREATE MATERIALIZED VIEW IF NOT EXISTS _mv_final_validator_dashboard_effective_balance_lookup TO _final_validator_dashboard_effective_balance_lookup
