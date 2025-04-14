@@ -65,7 +65,9 @@ var opts = struct {
 	EndDay              uint64
 	Validator           uint64
 	StartBlock          uint64
+	StartSlot           uint64
 	EndBlock            uint64
+	EndSlot             uint64
 	BatchSize           uint64
 	DataConcurrency     uint64
 	Transformers        string
@@ -114,7 +116,9 @@ func Run() {
 	fs.StringVar(&opts.Family, "family", "", "big table family")
 	fs.StringVar(&opts.Key, "key", "", "big table key")
 	fs.Uint64Var(&opts.StartBlock, "blocks.start", 0, "Block to start indexing")
+	fs.Uint64Var(&opts.StartSlot, "slot.start", 0, "Slot to start indexing")
 	fs.Uint64Var(&opts.EndBlock, "blocks.end", 0, "Block to finish indexing")
+	fs.Uint64Var(&opts.EndSlot, "slot.end", 0, "Slot to finish indexing")
 	fs.Uint64Var(&opts.DataConcurrency, "data.concurrency", 30, "Concurrency to use when indexing data from bigtable")
 	fs.Uint64Var(&opts.BatchSize, "data.batchSize", 1000, "Batch size")
 	fs.StringVar(&opts.Transformers, "transformers", "", "Comma separated list of transformers used by the eth1 indexer")
@@ -484,6 +488,8 @@ func Run() {
 		err = verifyFCMTokens()
 	case "update-highest-active-validatorindex":
 		err = updateHighestActiveValidatorIndex(rpcClient)
+	case "export-relays":
+		err = exportRelays(opts.StartSlot, opts.EndSlot)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -493,6 +499,32 @@ func Run() {
 	} else {
 		log.Infof("command executed successfully")
 	}
+}
+
+func exportRelays(startSlot, endSlot uint64) error {
+	ctx := context.Background()
+	consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
+	rs := modules.NewRelaysExporter(ctx, consDB)
+	relays, err := rs.GetRelays()
+	if err != nil {
+		return fmt.Errorf("failed to retrieve relays from db: %w", err)
+	}
+	var eg errgroup.Group
+	for _, relay := range relays {
+		// RetrieveAndInsertPayloadsFromRelay
+		eg.Go(func() error {
+			err := rs.RetrieveAndInsertPayloadsFromRelay(relay, startSlot, endSlot)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve and insert payloads from relay: %w", err)
+			}
+			return nil
+		})
+	}
+	// Wait for all goroutines to finish
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("error waiting for goroutines: %w", err)
+	}
+	return nil
 }
 
 func updateHighestActiveValidatorIndex(rpcClient *rpc.LighthouseClient) error {
