@@ -32,6 +32,7 @@ type DataAccessor interface {
 	RatelimitRepository
 	HealthzRepository
 	MachineRepository
+	EthpoolRepository
 
 	Close()
 

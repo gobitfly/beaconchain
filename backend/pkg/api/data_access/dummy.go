@@ -880,3 +880,7 @@ func (*DummyService) GetHasUserActiveSubscription(ctx context.Context, userId ui
 func (*DummyService) GetValidatorDashboardValidatorsOfList(ctx context.Context, dashboardId t.VDBIdPrimary, validators []t.VDBValidator) ([]t.VDBValidator, error) {
 	return getDummyData[[]t.VDBValidator](ctx)
 }
+
+func (d *DummyService) GetEthpool(ctx context.Context, day time.Time, validators []t.VDBValidator) ([]t.EthpoolData, error) {
+	return getDummyData[[]t.EthpoolData](ctx)
+}
