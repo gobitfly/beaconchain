@@ -138,10 +138,10 @@ type NotificationNetwork struct {
 type PutUserNotificationSettingsNetworksResponse ApiDataResponse[NotificationNetwork]
 
 type NotificationPairedDevice struct {
-	Id                     uint64  `json:"id"`
-	PairedTimestamp        int64   `json:"paired_timestamp"`
-	Name                   *string `json:"name,omitempty"`
-	IsNotificationsEnabled bool    `json:"is_notifications_enabled"`
+	Id                     uint64 `json:"id"`
+	PairedTimestamp        int64  `json:"paired_timestamp"`
+	Name                   string `json:"name"`
+	IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 }
 type PutUserNotificationSettingsPairedDevicesResponse ApiDataResponse[NotificationPairedDevice]
 

@@ -654,7 +654,7 @@ func (*DummyService) UpdateNotificationSettingsGeneral(ctx context.Context, user
 func (*DummyService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	return nil
 }
-func (*DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name *string, IsNotificationsEnabled bool) error {
+func (*DummyService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	return nil
 }
 func (*DummyService) DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error {

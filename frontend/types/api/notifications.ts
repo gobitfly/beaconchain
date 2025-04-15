@@ -142,7 +142,7 @@ export type PutUserNotificationSettingsNetworksResponse = ApiDataResponse<Notifi
 export interface NotificationPairedDevice {
   id: number /* uint64 */;
   paired_timestamp: number /* int64 */;
-  name?: string;
+  name: string;
   is_notifications_enabled: boolean;
 }
 export type PutUserNotificationSettingsPairedDevicesResponse = ApiDataResponse<NotificationPairedDevice>;

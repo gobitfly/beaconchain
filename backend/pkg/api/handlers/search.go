@@ -89,8 +89,8 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 	var v validationError
 	req := struct {
 		Input    string          `json:"input"`
-		Networks []intOrString   `json:"networks,omitempty"`
-		Types    []searchTypeKey `json:"types,omitempty"`
+		Networks []intOrString   `json:"networks"`
+		Types    []searchTypeKey `json:"types"`
 	}{}
 	if err := v.checkBody(&req, r.Body); err != nil {
 		handleErr(w, r, err)

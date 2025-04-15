@@ -774,7 +774,7 @@ func (h *HandlerService) PublicPostValidatorDashboardPublicIds(w http.ResponseWr
 	var v validationError
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	type request struct {
-		Name          string `json:"name,omitempty"`
+		Name          string `json:"name"`
 		ShareSettings struct {
 			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
@@ -830,7 +830,7 @@ func (h *HandlerService) PublicPutValidatorDashboardPublicId(w http.ResponseWrit
 	vars := mux.Vars(r)
 	dashboardId := v.checkPrimaryDashboardId(mux.Vars(r)["dashboard_id"])
 	type request struct {
-		Name          string `json:"name,omitempty"`
+		Name          string `json:"name"`
 		ShareSettings struct {
 			ShareGroups bool `json:"share_groups"`
 		} `json:"share_settings"`
@@ -2180,8 +2180,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	type request struct {
-		Name                   *string `json:"name,omitempty"`
-		IsNotificationsEnabled bool    `json:"is_notifications_enabled"`
+		Name                   string `json:"name"`
+		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
 	}
 	var req request
 	if err := v.checkBody(&req, r.Body); err != nil {
@@ -2190,13 +2190,7 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 	}
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
-
-	var name *string
-	if req.Name != nil {
-		str := v.checkNameNotEmpty(*req.Name)
-		name = &str
-	}
-
+	name := v.checkNameNotEmpty(req.Name)
 	if err := v.AsError(); err != nil {
 		handleErr(w, r, err)
 		return
@@ -2578,7 +2572,7 @@ func (h *HandlerService) PublicPostUserNotificationsTestWebhook(w http.ResponseW
 	}
 	type request struct {
 		WebhookUrl              string `json:"webhook_url"`
-		IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled,omitempty"`
+		IsWebhookDiscordEnabled bool   `json:"is_webhook_discord_enabled"`
 	}
 	var req request
 	if err := v.checkBody(&req, r.Body); err != nil {

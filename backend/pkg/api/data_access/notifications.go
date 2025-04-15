@@ -50,7 +50,7 @@ type NotificationsRepository interface {
 	UpdateNotificationSettingsGeneral(ctx context.Context, userId uint64, settings t.NotificationSettingsGeneral) error
 	UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error
 	GetPairedDeviceUserId(ctx context.Context, pairedDeviceId uint64) (uint64, error)
-	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name *string, IsNotificationsEnabled bool) error
+	UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error
 	DeleteNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64) error
 	UpdateNotificationSettingsClients(ctx context.Context, userId uint64, clientId uint64, IsSubscribed bool) (*t.NotificationSettingsClient, error)
 	GetNotificationSettingsDashboards(ctx context.Context, userId uint64, cursor string, colSort t.Sort[enums.NotificationSettingsDashboardColumn], search string, limit uint64) ([]t.NotificationSettingsDashboardsTableRow, *t.Paging, error)
@@ -1252,7 +1252,7 @@ func (d *DataAccessService) GetNotificationSettings(ctx context.Context, userId 
 		result.PairedDevices = append(result.PairedDevices, t.NotificationPairedDevice{
 			Id:                     device.DeviceId,
 			PairedTimestamp:        device.CreatedTs.Unix(),
-			Name:                   &device.DeviceName,
+			Name:                   device.DeviceName,
 			IsNotificationsEnabled: device.NotifyEnabled,
 		})
 	}
@@ -1430,17 +1430,13 @@ func (d *DataAccessService) GetPairedDeviceUserId(ctx context.Context, pairedDev
 	return userId, nil
 }
 
-func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name *string, IsNotificationsEnabled bool) error {
-	data := goqu.Record{
-		"notify_enabled": IsNotificationsEnabled,
-	}
-	if name != nil {
-		data["device_name"] = *name
-	}
-
+func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
 	updateDs := goqu.Dialect("postgres").
 		Update("users_devices").
-		Set(data).
+		Set(goqu.Record{
+			"notify_enabled": IsNotificationsEnabled,
+			"device_name":    name,
+		}).
 		Where(goqu.Ex{"id": pairedDeviceId})
 
 	query, args, err := updateDs.Prepared(true).ToSQL()
