@@ -2180,8 +2180,8 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 		return
 	}
 	type request struct {
-		Name                   string `json:"name,omitempty"`
-		IsNotificationsEnabled bool   `json:"is_notifications_enabled"`
+		Name                   *string `json:"name,omitempty"`
+		IsNotificationsEnabled bool    `json:"is_notifications_enabled"`
 	}
 	var req request
 	if err := v.checkBody(&req, r.Body); err != nil {
@@ -2190,7 +2190,13 @@ func (h *HandlerService) PublicPutUserNotificationSettingsPairedDevices(w http.R
 	}
 	// TODO use a better way to validate the paired device id
 	pairedDeviceId := v.checkUint(mux.Vars(r)["paired_device_id"], "paired_device_id")
-	name := v.checkNameNotEmpty(req.Name)
+
+	var name *string
+	if req.Name != nil {
+		str := v.checkNameNotEmpty(*req.Name)
+		name = &str
+	}
+
 	if err := v.AsError(); err != nil {
 		handleErr(w, r, err)
 		return
