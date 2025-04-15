@@ -840,7 +840,6 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGrou
 }
 
 func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalExecutionWithdrawalsData, error) {
-	// TODO
 	result := &t.VDBTotalExecutionWithdrawalsData{
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
@@ -855,64 +854,83 @@ func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.
 		return result, nil
 	}
 
-	queryResult := []struct {
+	withdrawalsDs := goqu.Dialect("postgres").
+		From(goqu.T("eth1_withdrawal_requests").As("w")).
+		Select(
+			goqu.SUM(goqu.I("w.amount")).As("acc_withdrawals_amount"),
+		)
+
+	sum, err := runQuery[int64](ctx, d.readerDb, withdrawalsDs)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("error getting total el withdrawals for validators: %w", err)
+	}
+
+	result.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
+	return result, nil
+}
+
+func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalConsensusWithdrawalsData, error) {
+	result := &t.VDBTotalConsensusWithdrawalsData{
+		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
+	}
+
+	// Analyze the search term
+	validatorSearch, err := d.getValidatorSearch(search)
+	if err != nil {
+		return nil, err
+	}
+	if validatorSearch == nil {
+		// No validators found
+		return result, nil
+	}
+
+	type queryResult struct {
 		ValidatorIndex t.VDBValidator `db:"validator_index"`
 		Epoch          uint64         `db:"epoch_end"`
 		Amount         int64          `db:"acc_withdrawals_amount"`
-	}{}
+	}
 
-	withdrawalsQuery := `
-			WITH validators AS (
-				SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = $1)
+	withdrawalsDs := goqu.Dialect("postgres").
+		From(goqu.L("validator_dashboard_data_rolling_total FINAL")).
+		Select(
+			goqu.I("validator_index"),
+			goqu.SUM(goqu.I("withdrawals_amount")).As("acc_withdrawals_amount"),
+			goqu.MAX(goqu.I("epoch_end")).As("epoch_end"),
+		).
+		GroupBy(goqu.I("validator_index"))
+
+	if dashboardId.Validators != nil {
+		withdrawalsDs = withdrawalsDs.
+			With("validators", goqu.L("SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?)", dashboardId.Id)).
+			InnerJoin(
+				goqu.T("validators").As("v"), goqu.On(
+					goqu.I("validator_dashboard_data_rolling_total.validator_index").Eq(goqu.I("v.validator_index")),
+				),
+			).
+			Where(
+				goqu.I("validator_index").In(goqu.L("SELECT validator_index FROM validators")),
 			)
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			FROM validator_dashboard_data_rolling_total FINAL
-			INNER JOIN validators v ON validator_dashboard_data_rolling_total.validator_index = v.validator_index
-			WHERE validator_index IN (select validator_index FROM validators)
-			GROUP BY validator_index
-		`
-
-	if dashboardId.Validators != nil {
-		withdrawalsQuery = `
-			SELECT
-				validator_index,
-				SUM(withdrawals_amount) AS acc_withdrawals_amount,
-				MAX(epoch_end) AS epoch_end
-			from validator_dashboard_data_rolling_total FINAL
-			where validator_index IN ($1)
-			group by validator_index
-		`
-	}
-
-	dashboardValidators := make([]t.VDBValidator, 0)
-	if dashboardId.Validators != nil {
-		dashboardValidators = dashboardId.Validators
-	}
-
-	if len(dashboardValidators) > 0 {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardValidators)
 	} else {
-		err = d.clickhouseReader.SelectContext(ctx, &queryResult, withdrawalsQuery, dashboardId.Id)
+		withdrawalsDs = withdrawalsDs.
+			Where(goqu.I("validator_index").In(pq.Array(dashboardId.Validators)))
 	}
 
+	res, err := runQueryRows[[]queryResult](ctx, d.clickhouseReader, withdrawalsDs)
 	if err != nil {
-		return nil, fmt.Errorf("error getting total withdrawals for validators: %+v: %w", dashboardId, err)
+		return nil, fmt.Errorf("error getting total cl withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
-	if len(queryResult) == 0 {
+	if len(res) == 0 {
 		// No validators to search for
 		return result, nil
 	}
 
 	var totalAmount int64
 	var validators []t.VDBValidator
-	lastEpoch := queryResult[0].Epoch
+	lastEpoch := res[0].Epoch
 	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
 
-	for _, res := range queryResult {
+	for _, res := range res {
 		// Calculate the total amount of withdrawals
 		totalAmount += res.Amount
 
@@ -920,28 +938,31 @@ func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.
 		validators = append(validators, res.ValidatorIndex)
 	}
 
-	var latestWithdrawalsAmount int64
-	err = d.readerDb.GetContext(ctx, &latestWithdrawalsAmount, `
-		SELECT
-			COALESCE(SUM(w.amount), 0)
-		FROM
-		    blocks_withdrawals w
-		INNER JOIN blocks b ON w.block_slot = b.slot AND w.block_root = b.blockroot AND b.status = '1'
-		WHERE w.block_slot > $1 AND w.validatorindex = ANY ($2)
-		`, lastSlot, validators)
+	latestWithdrawalsDs := goqu.Dialect("postgres").
+		From(goqu.T("blocks_withdrawals").As("w")).
+		Select(
+			goqu.COALESCE(goqu.SUM(goqu.I("w.amount")), 0),
+		).
+		InnerJoin(
+			goqu.T("blocks").As("b"), goqu.On(
+				goqu.I("w.block_slot").Eq(goqu.I("b.slot")),
+				goqu.I("w.block_root").Eq(goqu.I("b.blockroot")),
+				goqu.I("b.status").Eq("1"),
+			),
+		).
+		Where(
+			goqu.I("w.block_slot").Gt(lastSlot),
+			goqu.I("w.validatorindex").In(pq.Array(validators)),
+		)
+
+	latestWithdrawalsAmount, err := runQuery[int64](ctx, d.readerDb, latestWithdrawalsDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("error getting latest withdrawals for validators: %+v: %w", dashboardId, err)
+		return nil, fmt.Errorf("error getting latest cl withdrawals for validators: %+v: %w", dashboardId, err)
 	}
 
 	totalAmount += latestWithdrawalsAmount
 	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
-
 	return result, nil
-}
-
-func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.Context, dashboardId t.VDBId, search string, protocolModes t.VDBProtocolModes) (*t.VDBTotalConsensusWithdrawalsData, error) {
-	// TODO
-	return nil, nil
 }
 
 func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator, error) {
