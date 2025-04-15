@@ -601,3 +601,11 @@ func (intOrString) JSONSchema() *jsonschema.Schema {
 		},
 	}
 }
+
+func JoinValidators(validators []types.VDBValidator, separator string) string {
+	strs := make([]string, len(validators))
+	for i, v := range validators {
+		strs[i] = fmt.Sprintf("%d", v)
+	}
+	return strings.Join(strs, separator)
+}
