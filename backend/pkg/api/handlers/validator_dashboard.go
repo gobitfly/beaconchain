@@ -250,20 +250,6 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 	}, nil
 }
 
-// GetValidatorDashboardExecutionLayerWithdrawals godoc
-//
-//	@Description	Get withdrawals information (EL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor` value of the previous response to navigate to forward, or pass the `paging.prev_cursor` value of the previous response to navigate to backward."
-//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
-//	@Param			search			query		string	false	"Search for Index, Block, Address, Group, Public Key, Transaction Hash."
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
-//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerWithdrawalsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-withdrawals [get]
 func (i *inputGetValidatorDashboardExecutionLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
@@ -294,19 +280,6 @@ func (h *HandlerService) GetValidatorDashboardExecutionLayerWithdrawals(ctx cont
 	return r, nil
 }
 
-// GetValidatorDashboardExecutionLayerConsolidations godoc
-//
-//	@Description	Get consolidations information (EL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(block_processed)
-//	@Param			search			query		string	false	"Search for Index, Block, Address."
-//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerConsolidationsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-consolidations [get]
 func (i *inputGetValidatorDashboardExecutionLayerConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
 	var v validationError
 	i.Paging = v.checkPagingMap(params)
@@ -336,19 +309,6 @@ func (h *HandlerService) GetValidatorDashboardExecutionLayerConsolidations(ctx c
 	return r, nil
 }
 
-// GetValidatorDashboardConsensusLayerConsolidations godoc
-//
-//	@Description	Get consolidations information (CL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
-//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(slot_processed, amount)
-//	@Param			search			query		string	false	"Search for Index, Slot, Address."
-//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerConsolidationsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-consolidations [get]
 func (i *inputGetValidatorDashboardConsensusLayerConsolidations) Validate(params map[string]string, body io.ReadCloser) error {
 	var v validationError
 	i.Paging = v.checkPagingMap(params)
@@ -378,20 +338,6 @@ func (h *HandlerService) GetValidatorDashboardConsensusLayerConsolidations(ctx c
 	return r, nil
 }
 
-// GetValidatorDashboardConsensusLayerWithdrawals godoc
-//
-//	@Description	Get withdrawals information (CL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor` value of the previous response to navigate to forward, or pass the `paging.prev_cursor` value of the previous response to navigate to backward."
-//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
-//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(epoch, slot, index, recipient, amount)
-//	@Param			search			query		string	false	"Search for Index, Slot, Group, Public Key, Recipient."
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
-//	@Success		200				{object}	types.GetValidatorDashboardConsensusLayerWithdrawalsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/consensus-layer-withdrawals [get]
 func (i *inputGetValidatorDashboardConsensusLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
@@ -422,17 +368,6 @@ func (h *HandlerService) GetValidatorDashboardConsensusLayerWithdrawals(ctx cont
 	return r, nil
 }
 
-// GetValidatorDashboardTotalExecutionLayerWithdrawals godoc
-//
-//	@Description	Get total withdrawals information (EL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			search			query		string	false	"Search for Index, Block, Address, Group, Public Key, Transaction Hash."
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
-//	@Success		200				{object}	types.GetValidatorDashboardTotalExecutionWithdrawalsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/total-execution-layer-withdrawals [get]
 func (i *inputGetValidatorDashboardTotalExecutionLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
@@ -462,17 +397,6 @@ func (h *HandlerService) GetValidatorDashboardTotalExecutionLayerWithdrawals(ctx
 	return r, nil
 }
 
-// GetValidatorDashboardTotalConsensusLayerWithdrawals godoc
-//
-//	@Description	Get total withdrawals information (CL) for a specified dashboard
-//	@Tags			Validator Dashboard
-//	@Produce		json
-//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
-//	@Param			search			query		string	false	"Search for Index, Slot, Group, Public Key, Recipient."
-//	@Param			modes			query		string	false	"Provide a comma separated list of protocol modes which should be respected for validator calculations. Possible values are `rocket_pool`."
-//	@Success		200				{object}	types.GetValidatorDashboardTotalConsensusWithdrawalsResponse
-//	@Failure		400				{object}	types.ApiErrorResponse
-//	@Router			/validator-dashboards/{dashboard_id}/total-consensus-layer-withdrawals [get]
 func (i *inputGetValidatorDashboardTotalConsensusLayerWithdrawals) Validate(params map[string]string, _ io.ReadCloser) error {
 	var v validationError
 	i.dashboardId = v.checkDashboardId(params["dashboard_id"])
