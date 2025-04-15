@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -48,17 +49,23 @@ func (d *DataAccessService) GetUserByEmail(ctx context.Context, email string) (u
 func (d *DataAccessService) CreateUser(ctx context.Context, email, password string) (uint64, error) {
 	// (password is already hashed)
 	var userId uint64
-	err := d.userWriter.GetContext(ctx, &userId, `
-    	INSERT INTO users (password, email, register_ts)
-      		VALUES ($1, $2, NOW())
-		RETURNING id`,
-		password, email,
-	)
+
+	ds := goqu.Dialect("postgres").
+		Insert(goqu.T("users")).
+		Cols(goqu.I("password"), goqu.I("email"), goqu.I("register_ts")).
+		Vals(goqu.Vals{password, email, time.Now()}).
+		Returning(goqu.I("id"))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return 0, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = d.userWriter.GetContext(ctx, &userId, query, args...)
 	if err != nil {
 		return 0, err
 	}
 	err = d.AddApiKey(ctx, userId, "")
-
 	return userId, err
 }
 
@@ -72,12 +79,17 @@ func (d *DataAccessService) AddApiKey(ctx context.Context, userId uint64, apiKey
 		}
 	}
 
-	_, err = d.userWriter.ExecContext(ctx, `
-    	INSERT INTO api_keys (api_key, user_id, valid_until, changed_at)
-      		VALUES ($1, $2, to_timestamp('9999-12-31 23:59:59', 'YYYY-MM-DD HH24:MI:SS'), NOW())`,
-		apiKey, userId,
-	)
+	ds := goqu.Dialect("postgres").
+		Insert(goqu.T("api_keys")).
+		Cols(goqu.I("api_key"), goqu.I("user_id"), goqu.I("valid_until"), goqu.I("changed_at")).
+		Vals(goqu.Vals{apiKey, userId, time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC), time.Now()})
 
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return err
+	}
+
+	_, err = d.userWriter.ExecContext(ctx, query, args...)
 	return err
 }
 
