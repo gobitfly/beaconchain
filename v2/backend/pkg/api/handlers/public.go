@@ -259,6 +259,7 @@ func (h *HandlerService) PublicGetValidatorDashboard(w http.ResponseWriter, r *h
 		handleErr(w, r, err)
 		return
 	}
+	data.IsAboveEbLimit = data.Balances.EffectiveLatest.GreaterThan(premiumPerks.EffectiveBalancePerDashboard)
 	data.ChartHistorySeconds = premiumPerks.ChartHistorySeconds
 	data.Name = name
 
