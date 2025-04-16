@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -10,7 +11,9 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/ext"
 	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
@@ -136,4 +139,87 @@ func (d *DataAccessService) GetValidatorsByGraffiti(ctx context.Context, graffit
 		)
 
 	return runQueryRows[[]t.VDBValidator](ctx, d.alloyReader, validatorsDs)
+}
+
+// estimate if possible
+// TODO support estimates for validators without index
+func (d *DataAccessService) getValidatorActivation(ctx context.Context, validator uint64) (uint64, error) {
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return 0, err
+	}
+	if validator >= uint64(len(validatorMapping.ValidatorMetadata)) {
+		return 0, fmt.Errorf("validator index %d not found in validator mapping", validator)
+	}
+	metadata := validatorMapping.ValidatorMetadata[validator]
+	if metadata.ActivationEpoch.Valid {
+		return uint64(metadata.ActivationEpoch.Int64), nil
+	}
+
+	// estimate
+	latestEpoch := cache.LatestFinalizedEpoch.Get()
+	if d.config.ClConfig.ElectraForkEpoch > latestEpoch {
+		if constypes.ValidatorDbStatus(metadata.Status) != constypes.DbPending {
+			// probably not enough deposits yet
+			return 0, fmt.Errorf("validator %d is not pending activation yet", validator)
+		}
+		if !metadata.Queues.ActivationIndex.Valid {
+			return 0, fmt.Errorf("validator %d has no activation index", validator)
+		}
+		queuePosition := uint64(metadata.Queues.ActivationIndex.Int64)
+
+		latestStats := cache.LatestStats.Get()
+		activationChurnRate := uint64(4)
+		if latestStats.ValidatorActivationChurnLimit == nil {
+			log.Warnf("Activation Churn rate not set in config, using 4 as default")
+		} else {
+			activationChurnRate = *latestStats.ValidatorActivationChurnLimit
+		}
+
+		epochsToWait := (queuePosition - 1) / activationChurnRate
+		// calculate dequeue epoch
+		estimatedActivationEpoch := latestEpoch + epochsToWait + 1
+		// add activation offset
+		estimatedActivationEpoch += utils.Config.Chain.ClConfig.MaxSeedLookahead + 1
+
+		return estimatedActivationEpoch, nil
+	}
+
+	// post pectra
+	if constypes.ValidatorDbStatus(metadata.Status) != constypes.DbDeposited {
+		// should not happen since there's no more activation queue after deposits have been processed (see process_registry_updates)
+		return 0, fmt.Errorf("validator %d has no activation epoch", validator)
+	}
+	// determine sum of previous deposit
+	// check if there's a pending deposit which pushes above min activation
+	// return estimate of that from db
+
+	ds := goqu.Dialect("postgres").
+		From(goqu.T("amounts")).
+		With("amounts", goqu.Dialect("postgres").From("pending_deposits_queue").
+			Select(
+				goqu.I("id"),
+				goqu.I("est_clear_epoch"),
+				goqu.SUM(goqu.I("amount")).Over(goqu.W().
+					PartitionBy(goqu.I("validator_index")).
+					OrderBy(goqu.I("id").Asc()),
+				).As("cum_amt"),
+			).
+			Where(
+				goqu.I("validator_index").Eq(validator),
+			).
+			Order(goqu.I("id").Asc()),
+		).
+		Where(goqu.L("amounts.cum_amt + ? >= ?", metadata.Balance, utils.Config.Chain.ClConfig.MinActivationBalance)).
+		Order(goqu.I("id").Asc()).
+		Limit(1)
+
+	clearEpoch, err := runQuery[uint64](ctx, d.alloyReader, ds)
+	if err == sql.ErrNoRows {
+		return 0, fmt.Errorf("validator %d has not enough pending ETH deposits", validator)
+	} else if err != nil {
+		return 0, err
+	}
+
+	return clearEpoch + utils.Config.Chain.ClConfig.MaxSeedLookahead, nil
 }

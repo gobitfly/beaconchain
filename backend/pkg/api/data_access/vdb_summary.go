@@ -1049,15 +1049,6 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 	}
 
 	latestEpoch := cache.LatestFinalizedEpoch.Get()
-	latestStats := cache.LatestStats.Get()
-	var activationChurnRate uint64
-
-	if latestStats.ValidatorActivationChurnLimit == nil {
-		activationChurnRate = 4
-		log.Warnf("Activation Churn rate not set in config using 4 as default")
-	} else {
-		activationChurnRate = *latestStats.ValidatorActivationChurnLimit
-	}
 
 	stats := cache.LatestStats.Get()
 	if stats == nil || stats.LatestValidatorWithdrawalIndex == nil {
@@ -1076,21 +1067,26 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 
 		switch constypes.ValidatorDbStatus(metadata.Status) {
 		case constypes.DbDeposited:
-			result.Deposited = append(result.Deposited, validatorIndex)
+			activationEpoch, err := d.getValidatorActivation(ctx, validatorIndex)
+			if err != nil {
+				log.Infof("could not get validator activation: %v", err)
+				result.Deposited = append(result.Deposited, validatorIndex)
+			} else {
+				validatorInfo := t.IndexTimestamp{
+					Index:     validatorIndex,
+					Timestamp: uint64(utils.EpochToTime(activationEpoch).Unix()),
+				}
+				result.Pending = append(result.Pending, validatorInfo)
+			}
 		case constypes.DbPending:
 			validatorInfo := t.IndexTimestamp{
 				Index: validatorIndex,
 			}
-			if metadata.ActivationEpoch.Valid {
-				validatorInfo.Timestamp = uint64(utils.EpochToTime(uint64(metadata.ActivationEpoch.Int64)).Unix())
-			} else if metadata.Queues.ActivationIndex.Valid {
-				queuePosition := uint64(metadata.Queues.ActivationIndex.Int64)
-				epochsToWait := (queuePosition - 1) / activationChurnRate
-				// calculate dequeue epoch
-				estimatedActivationEpoch := latestEpoch + epochsToWait + 1
-				// add activation offset
-				estimatedActivationEpoch += utils.Config.Chain.ClConfig.MaxSeedLookahead + 1
-				validatorInfo.Timestamp = uint64(utils.EpochToTime(estimatedActivationEpoch).Unix())
+			activationEpoch, err := d.getValidatorActivation(ctx, validatorIndex)
+			if err != nil {
+				log.Warnf("error getting validator activation: %v", err)
+			} else {
+				validatorInfo.Timestamp = uint64(utils.EpochToTime(activationEpoch).Unix())
 			}
 			result.Pending = append(result.Pending, validatorInfo)
 		case constypes.DbActiveOnline:

@@ -744,7 +744,7 @@ type RedisCachedEpochRewards struct {
 	Rewards map[uint64]*eth_rewards_types.ValidatorEpochIncome
 }
 type QueuesMetadata struct {
-	ActivationIndex sql.NullInt64
+	ActivationIndex sql.NullInt64 // not useful post-pectra
 }
 
 type CachedValidator struct {
