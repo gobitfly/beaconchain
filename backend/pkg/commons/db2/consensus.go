@@ -25,7 +25,7 @@ type ConsensusRepository interface {
 	UpdateRelayExportFailureCount(exportFailureCount uint64, tagID, endpoint string) error
 	GetFirstRelayBlock(tagID string) (types.RelayBlock, error)
 	GetLastRelayBlock(tagID string) (types.RelayBlock, error)
-	SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error
+	SaveBlockTagsAndRelays(tagID string, payloads []types.BidTrace) error
 	GetSyncCommitteesCountPerValidator() (uint64, error)
 	GetTotalPeriodSyncCommitteesCountPerValidator() (uint64, error)
 	GetCountSoFarSyncCommitteesCountPerValidator(period uint64) (float64, error)
@@ -211,29 +211,101 @@ func (c *ConsensusDB) GetLastRelayBlock(tagID string) (types.RelayBlock, error) 
 	return block, err
 }
 
-func (c *ConsensusDB) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
+func (c *ConsensusDB) SaveBlockTagsAndRelays(tagID string, payloads []types.BidTrace) error {
 	tx, err := c.WriterDb.Beginx()
 	if err != nil {
 		return err
 	}
 	defer utils.Rollback(tx)
 
-	// first insert the tag into the blocks_tags table
-	_, err = tx.Exec(`
-	INSERT INTO blocks_tags
-	SELECT blocks.slot, blocks.blockroot, $1
-	FROM blocks
-	WHERE blocks.slot = $2 AND blocks.exec_block_hash = $3
-	ON CONFLICT DO NOTHING`, tagID, payload.Slot,
-		utils.MustParseHex(payload.BlockHash))
-
-	if err != nil {
-		log.Error(fmt.Errorf("failed to insert payload into blocks_tags table"), "", 0, map[string]interface{}{"relay": tagID})
-		return err
+	var slots []uint64
+	var block_hashes [][]byte
+	for _, payload := range payloads {
+		slots = append(slots, payload.Slot)
+		block_hashes = append(block_hashes, utils.MustParseHex(payload.BlockHash))
 	}
 
-	// save relays
-	_, err = tx.Exec(`
+	// retrieve blocks.blockroot using slot and blockhash
+	var blockroots []struct {
+		BlockRoot     []byte `db:"blockroot"`
+		Slot          uint64 `db:"slot"`
+		ExecBlockHash []byte `db:"exec_block_hash"`
+	}
+
+	query, args, err := sqlx.In(`
+		SELECT blockroot, slot, exec_block_hash
+		FROM blocks
+		WHERE exec_block_hash IN (?) and slot IN (?)`, block_hashes, slots)
+	if err != nil {
+		return fmt.Errorf("failed to build query: %w", err)
+	}
+
+	query = tx.Rebind(query)
+	// execute the query
+	err = tx.Select(&blockroots, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve blockroots: %w", err)
+	}
+
+	if len(blockroots) == 0 {
+		return fmt.Errorf("no blockroots found for the given slot and blockhash")
+	}
+
+	// create exec_block_hash => blockroot map
+	blockrootMap := make(map[string][]byte)
+	for _, blockroot := range blockroots {
+		// return error if blockroot appears more than once
+		s := fmt.Sprintf("0x%x", blockroot.ExecBlockHash)
+		if _, ok := blockrootMap[s]; ok {
+			return fmt.Errorf("blockroot appears more than once for the same blockhash")
+		}
+		blockrootMap[s] = blockroot.BlockRoot
+	}
+
+	type InsertData struct {
+		BlockSlot        uint64          `db:"block_slot"`
+		BlockRoot        []byte          `db:"block_root"`
+		ExecBlockHash    []byte          `db:"exec_block_hash"`
+		Value            types.WeiString `db:"value"`
+		BuilderPubkey    []byte          `db:"builder_pubkey"`
+		ProposerPubkey   []byte          `db:"proposer_pubkey"`
+		ProposerFeeRecip []byte          `db:"proposer_fee_recipient"`
+		TagID            string          `db:"tag_id"`
+	}
+	var insertData []InsertData
+	for _, payload := range payloads {
+		blockroot, ok := blockrootMap[payload.BlockHash]
+		if !ok {
+			log.WarnWithFields(log.Fields{
+				"slot":       payload.Slot,
+				"block_hash": fmt.Sprintf("%x", payload.BlockHash),
+				"tag_id":     tagID,
+			}, "no blockroot found for the given slot and blockhash. ignoring because might be orphaned block we never saw")
+			continue
+		}
+		insertData = append(insertData, InsertData{
+			BlockSlot:        payload.Slot,
+			BlockRoot:        blockroot,
+			ExecBlockHash:    utils.MustParseHex(payload.BlockHash),
+			Value:            payload.Value,
+			BuilderPubkey:    utils.MustParseHex(payload.BuilderPubkey),
+			ProposerPubkey:   utils.MustParseHex(payload.ProposerPubkey),
+			ProposerFeeRecip: utils.MustParseHex(payload.ProposerFeeRecipient),
+			TagID:            tagID,
+		})
+	}
+
+	stmtBlocksTags := `
+	INSERT INTO blocks_tags (slot, blockroot, tag_id)
+	VALUES (:block_slot, :block_root, :tag_id)
+	ON CONFLICT DO NOTHING`
+	// save blocks_tags
+	_, err = tx.NamedExec(stmtBlocksTags, insertData)
+	if err != nil {
+		return fmt.Errorf("failed to insert payload into blocks_tags table: %w", err)
+	}
+
+	stmtRelays := `
 		INSERT INTO relays_blocks
 		(
 			tag_id,
@@ -245,25 +317,11 @@ func (c *ConsensusDB) SaveBlockTagsAndRelays(tagID string, payload types.BidTrac
 			proposer_pubkey,
 			proposer_fee_recipient
 		)
-		SELECT
-			$1,	blocks.slot, blocks.blockroot, blocks.exec_block_hash, $4, $5, $6, $7
-		FROM blocks
-		WHERE
-			blocks.slot = $2 and
-			blocks.exec_block_hash = $3
-		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`,
-		tagID,
-		payload.Slot,
-		utils.MustParseHex(payload.BlockHash),
-		payload.Value,
-		utils.MustParseHex(payload.BuilderPubkey),
-		utils.MustParseHex(payload.ProposerPubkey),
-		utils.MustParseHex(payload.ProposerFeeRecipient),
-	)
-
+		VALUES (:tag_id, :block_slot, :block_root, :exec_block_hash, :value, :builder_pubkey, :proposer_pubkey, :proposer_fee_recipient)
+		ON CONFLICT (block_slot, block_root, tag_id) DO NOTHING`
+	_, err = tx.NamedExec(stmtRelays, insertData)
 	if err != nil {
-		log.Error(fmt.Errorf("failed to insert payload into relays_blocks table"), "", 0, map[string]interface{}{"relay": tagID})
-		return err
+		return fmt.Errorf("failed to insert payload into relays_blocks table: %w", err)
 	}
 
 	return tx.Commit()

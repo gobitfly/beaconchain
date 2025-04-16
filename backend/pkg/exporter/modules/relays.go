@@ -146,7 +146,9 @@ outer:
 			log.Info("fetch delivered payloads loop cancelled")
 			return nil
 		default:
+			log.Debugf("fetching delivered payloads for relay %v with offset %v", r.ID, offset)
 			payloads, err := rs.relayClient.fetchDeliveredPayloads(r.Endpoint, r.ID, offset)
+			log.Debugf("fetched %v payloads for relay %v with offset %v", len(payloads), r.ID, offset)
 			if err != nil {
 				return fmt.Errorf("error calling fetchDeliveredPayloads with offset: %v for relay: %v: %w", offset, r.ID, err)
 			}
@@ -156,11 +158,10 @@ outer:
 				break outer
 			}
 
-			for _, payload := range payloads {
-				err := rs.db.SaveBlockTagsAndRelays(r.ID, payload)
-				if err != nil {
-					return err
-				}
+			err = rs.db.SaveBlockTagsAndRelays(r.ID, payloads)
+			if err != nil {
+				log.Error(err, "failed to save payloads to db", 0, map[string]interface{}{"relay": r.ID})
+				return fmt.Errorf("failed to save payloads to db: %w", err)
 			}
 
 			if payloads[len(payloads)-1].Slot < minSlot {

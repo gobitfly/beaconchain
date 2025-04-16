@@ -117,7 +117,7 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 			exporter.relayClient = new(mockRelayClient)
 			mockConsDBClient.On("GetRelays").Return(tt.mockRelays, nil)
 			mockConsDBClient.On("GetLastRelayBlock", tt.mockRelays[0].ID).Return(tt.mockLastRelayBlock, nil)
-			mockConsDBClient.On("SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload[0]).Return(nil)
+			mockConsDBClient.On("SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload).Return(nil)
 			mockConsDBClient.On("GetFirstRelayBlock", tt.mockRelays[0].ID).Return(tt.mockFirstRelayBlock, nil)
 			mockConsDBClient.On("UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint).Return(nil)
 
@@ -125,7 +125,7 @@ func TestMEVBoostRelaysExporter(t *testing.T) {
 
 			mockConsDBClient.AssertCalled(t, "GetRelays")
 			mockConsDBClient.AssertCalled(t, "GetLastRelayBlock", tt.mockRelays[0].ID)
-			mockConsDBClient.AssertCalled(t, "SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload[0])
+			mockConsDBClient.AssertCalled(t, "SaveBlockTagsAndRelays", tt.mockRelays[0].ID, payload)
 			mockConsDBClient.AssertCalled(t, "GetFirstRelayBlock", tt.mockRelays[0].ID)
 			mockConsDBClient.AssertCalled(t, "UpdateRelay", tt.mockRelays[0].ID, tt.mockRelays[0].Endpoint)
 		})

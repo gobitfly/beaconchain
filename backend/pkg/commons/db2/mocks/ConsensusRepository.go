@@ -371,16 +371,16 @@ func (_m *ConsensusRepository) SaveBlockDeposits(validatorIndex uint64, pubkey [
 }
 
 // SaveBlockTagsAndRelays provides a mock function with given fields: tagID, payload
-func (_m *ConsensusRepository) SaveBlockTagsAndRelays(tagID string, payload types.BidTrace) error {
-	ret := _m.Called(tagID, payload)
+func (_m *ConsensusRepository) SaveBlockTagsAndRelays(tagID string, payloads []types.BidTrace) error {
+	ret := _m.Called(tagID, payloads)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SaveBlockTagsAndRelays")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(string, types.BidTrace) error); ok {
-		r0 = rf(tagID, payload)
+	if rf, ok := ret.Get(0).(func(string, []types.BidTrace) error); ok {
+		r0 = rf(tagID, payloads)
 	} else {
 		r0 = ret.Error(0)
 	}
