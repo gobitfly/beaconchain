@@ -442,3 +442,7 @@ func Min(a, b uint64) uint64 {
 	}
 	return b
 }
+
+func DBEncodeToHex(data []byte) string {
+	return fmt.Sprintf("\\x%x", data)
+}

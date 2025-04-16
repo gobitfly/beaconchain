@@ -26,6 +26,7 @@ const (
 	Event_ExporterModuleELDepositsExporter  Event         = "exporter_module_el_deposits_exporter"
 	Event_ExporterModuleSlotExporter        Event         = "exporter_module_slot_exporter"
 	Event_ExporterModuleDashboardData       Event         = "exporter_module_dashboard_data"
+	Event_ExporterModulePendingDepositQueue Event         = "exporter_module_pending_deposit_queue"
 	Event_MonitoringCleanShutdown           Event         = "clean_shutdown"
 	Event_MonitoringCleanShutdownSpam       Event         = "monitoring_clean_shutdown_spam"
 	Event_MonitoringTimeouts                Event         = "monitoring_timeouts"

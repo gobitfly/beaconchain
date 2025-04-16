@@ -509,6 +509,12 @@ func setCLConfig(cfg *types.Config) error {
 			MaxBlsToExecutionChange:                 uint64(jr.Data.MaxBlsToExecutionChanges),
 			MaxEffectiveBalanceElectra:              uint64(jr.Data.MaxEffectiveBalanceElectra),
 			MinPerEpochChurnLimitElectra:            uint64(jr.Data.MinPerEpochChurnLimitElectra),
+			MaxPerEpochActivationExitChurnLimit:     uint64(jr.Data.MaxPerEpochActivationExitChurnLimit),
+			BlobSidecarSubnetCountElectra:           uint64(jr.Data.BlobSidecarSubnetCountElectra),
+			MaxBlobsPerBlockElectra:                 uint64(jr.Data.MaxBlobsPerBlockElectra),
+			MaxRequestBlobSidecarsElectra:           uint64(jr.Data.MaxRequestBlobSidecarsElectra),
+			MinActivationBalance:                    uint64(jr.Data.MinActivationBalance),
+			MaxPendingDepositsPerEpoch:              uint64(jr.Data.MaxPendingDepositsPerEpoch),
 		}
 
 		cfg.Chain.ClConfig = chainCfg
