@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -35,6 +36,7 @@ type ConsensusRepository interface {
 	SaveSyncCommitteeData(data []types.SyncCommittee) error
 	GetSyncCommitteesPeriods() ([]uint64, error)
 	UpdatePubkeyTags() error
+	SavePendingDepositsQueue(pendingDeposits []types.PendingDeposit) error
 }
 
 type ConsensusDB struct {
@@ -386,4 +388,14 @@ func (c *ConsensusDB) UpdatePubkeyTags() error {
 	}
 
 	return tx.Commit()
+}
+
+func (c *ConsensusDB) SavePendingDepositsQueue(pendingDeposits []types.PendingDeposit) error {
+	dat := make([][]interface{}, len(pendingDeposits))
+	for i, r := range pendingDeposits {
+		dat[i] = []interface{}{r.ID, r.ValidatorIndex, utils.DBEncodeToHex(r.Pubkey), utils.DBEncodeToHex(r.WithdrawalCredentials), r.Amount, utils.DBEncodeToHex(r.Signature), r.Slot, r.QueuedBalanceAhead, r.EstClearEpoch}
+	}
+
+	err := db.ClearAndCopyToTable(c.WriterDb, "pending_deposits_queue", []string{"id", "validator_index", "pubkey", "withdrawal_credentials", "amount", "signature", "slot", "queued_balance_ahead", "est_clear_epoch"}, dat)
+	return err
 }

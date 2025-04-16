@@ -74,6 +74,9 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 			relaysExporter := NewRelaysExporter(ctx, consDB)
 			go relaysExporter.MEVBoostRelaysExporter()
 		}
+
+		queueExporter := newPendingQueueExporter(ctx, moduleCtx.ConsClient, consDB)
+		go queueExporter.Export()
 	}
 	// wait until the beacon-node is available
 	for {
