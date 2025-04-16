@@ -94,7 +94,6 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Router, cfg *types.Config) {
 	addValidatorDashboardRoutes(hs, publicRouter, internalRouter, cfg)
 	addNotificationRoutes(hs, publicRouter, internalRouter, cfg.Frontend.Debug)
-
 	allowMocking := true
 	endpoints := []endpoint{
 		{http.MethodGet, "/healthz", hs.PublicGetHealthz, nil},

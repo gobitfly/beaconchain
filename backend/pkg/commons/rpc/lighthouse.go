@@ -1176,3 +1176,7 @@ type ExecutionPayload struct {
 func (lc *LighthouseClient) GetStandardBeaconState(stateID any) (*constypes.StandardBeaconStateResponse, error) {
 	return lc.cl.GetState(stateID)
 }
+
+func (lc *LighthouseClient) GetPendingDeposits(state any) (*constypes.StandardBeaconPendingDepositsResponse, error) {
+	return lc.cl.GetPendingDeposits(state)
+}

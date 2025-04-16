@@ -22,6 +22,7 @@ type Client interface {
 	GetNewBlockChan() chan *types.Block
 	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
 	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+	GetPendingDeposits(stateID any) (*constypes.StandardBeaconPendingDepositsResponse, error)
 }
 
 type Eth1Client interface {
