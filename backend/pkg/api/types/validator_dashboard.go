@@ -30,6 +30,7 @@ type VDBOverviewData struct {
 	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
 	Balances            ValidatorBalances                          `json:"balances"`
+	IsAboveEbLimit      bool                                       `json:"is_above_effective_balance_limit"` // refers to owner; relevant for shared dashboards
 }
 
 type GetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
