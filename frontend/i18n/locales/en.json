@@ -204,8 +204,8 @@
             "text": "Create your own dashboard to get the most out of beaconcha.in"
         },
         "subsciprion_limit_reached": {
-            "_link": "Upgrade your subscription or get an add-on.",
-            "template": "This dashboard exceeds your maximum stake limit, so you can't add more validators. {_link}"
+            "_link": "Learn more about our subscription plans and dashboard addon-ons on our pricing page.",
+            "template": "This dashboard exceeds the stake limit so no more validators can be added. {_link}"
         },
         "subsciprion_limit_reached_title": "Maximum stake exceeded",
         "table": {
