@@ -11,7 +11,6 @@ import type { HashTabs } from '~/types/hashTabs'
 
 const {
   isLoggedIn,
-  premium_perks,
 } = useUserStore()
 const showInDevelopment = Boolean(useRuntimeConfig().public.showInDevelopment)
 const { t: $t } = useTranslation()
@@ -89,23 +88,9 @@ const {
 
 const {
   getProducts,
-  premiumProducts,
 } = useProductsStore()
 
 await useAsyncData('get_products', () => getProducts())
-
-const hasReachedLimit = computed(() => {
-  const latestEffectiveBalance = overview.value?.balances.effective_latest
-  const freeProduct = premiumProducts.value['Free']
-  const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
-  const effectiveBalancePerDashboard = premium_perks.value?.effective_balance_per_dashboard
-    || effectiveBalanceLimitFreeProduct
-
-  if (!latestEffectiveBalance || !effectiveBalancePerDashboard) {
-    return false
-  }
-  return isGreaterEquals(latestEffectiveBalance, effectiveBalancePerDashboard)
-})
 
 await useAsyncData('user_dashboards', () => refreshDashboards(), { watch: [ isLoggedIn ] })
 
@@ -220,7 +205,7 @@ watch(
     <BcPageWrapper>
       <template #banner>
         <BcNotificationBanner
-          v-if="hasReachedLimit"
+          v-if=" overview?.is_above_effective_balance_limit"
           :title="$t('dashboard.subsciprion_limit_reached_title')"
         >
           <BcTranslation
