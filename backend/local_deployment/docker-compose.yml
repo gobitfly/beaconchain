@@ -36,7 +36,7 @@ services:
       - LOG_LEVEL=debug
   eth1indexer:
     <<: *default-service
-    command: go run ./cmd eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
+    command: go run ./cmd eth1indexer -config /app/backend/local_deployment/config.yml -concurrency 1 -blocks.tracemode 'geth'
     environment:
       - METRICS_ENABLED=true
       - METRICS_ADDRESS=127.0.0.1:9006

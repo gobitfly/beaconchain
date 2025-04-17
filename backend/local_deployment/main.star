@@ -1,7 +1,7 @@
 input_parser = import_module("github.com/ethpandaops/ethereum-package/src/package_io/input_parser.star")
 eth_network_module = import_module("github.com/ethpandaops/ethereum-package/main.star")
 tx_fuzz = import_module("github.com/ethpandaops/ethereum-package/src/tx_fuzz/tx_fuzz.star")
-spamoor_blob = import_module("github.com/ethpandaops/ethereum-package/src/spamoor_blob/spamoor_blob.star")
+spamoor = import_module("github.com/ethpandaops/ethereum-package/src/spamoor/spamoor.star")
 genesis_constants = import_module("github.com/ethpandaops/ethereum-package/src/prelaunch_data_generator/genesis_constants/genesis_constants.star")
 shared_utils = import_module("github.com/ethpandaops/ethereum-package/src/shared_utils/shared_utils.star")
 
