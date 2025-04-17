@@ -10,6 +10,8 @@ export type API_PATH =
   | 'DASHBOARD_EL_CONSOLIDATIONS'
   | 'DASHBOARD_EL_DEPOSITS'
   | 'DASHBOARD_EL_DEPOSITS_TOTAL'
+  | 'DASHBOARD_EL_WITHDRAWALS'
+  | 'DASHBOARD_EL_WITHDRAWALS_TOTAL'
   | 'DASHBOARD_OVERVIEW'
   | 'DASHBOARD_RENAME_ACCOUNT'
   | 'DASHBOARD_RENAME_VALIDATOR'
@@ -141,6 +143,16 @@ export const mapping: Record<API_PATH, MappingData> = {
       `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-deposits`,
     mock: false,
     path: '/validator-dashboards/{dashboard_id}/total-execution-layer-deposits',
+  },
+  DASHBOARD_EL_WITHDRAWALS: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/execution-layer-withdrawals`,
+    path: '/validator-dashboards/{dashboard_id}/execution-layer-withdrawals',
+  },
+  DASHBOARD_EL_WITHDRAWALS_TOTAL: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-execution-layer-withdrawals`,
+    path: '/validator-dashboards/{dashboard_id}/total-execution-layer-withdrawals',
   },
   DASHBOARD_OVERVIEW: {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}`,
