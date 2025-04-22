@@ -62,7 +62,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		TxHash                []byte        `db:"tx_hash"`
 		WithdrawalCredentials []byte        `db:"withdrawal_credentials"`
 		Amount                int64         `db:"amount"`
-		Valid                 string        `db:"valid_signature"`
+		IsValid               bool          `db:"valid_signature"`
 	}
 
 	depositsDs := goqu.Dialect("postgres").
@@ -78,24 +78,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			goqu.I("ed.withdrawal_credentials"),
 			goqu.I("ed.amount"),
 			goqu.I("ed.block_ts"),
-			goqu.Case().
-				When(goqu.I("ed.valid_signature").Eq(true), "valid").
-				When(goqu.Func("EXISTS", goqu.
-					From(goqu.T("eth1_deposits").As("ed2")).
-					Select("valid_signature").
-					Where(
-						goqu.I("valid_signature").Eq(true),
-						goqu.I("ed2.publickey").Eq(goqu.I("ed.publickey")),
-						goqu.Or(
-							goqu.I("ed2.block_number").Lt(goqu.I("ed.block_number")),
-							goqu.And(
-								goqu.I("ed2.block_number").Eq(goqu.I("ed.block_number")),
-								goqu.I("ed2.log_index").Lt(goqu.I("ed.log_index")),
-							),
-						),
-					)), "invalid_skipped").
-				Else("invalid").
-				As("valid_signature"),
+			goqu.I("ed.valid_signature"),
 		).
 		InnerJoin(
 			goqu.T("validators").As("v"),
@@ -183,9 +166,14 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		depositsDs = depositsDs.Where(goqu.Or(searches...))
 	}
 
+	defaultSlotSortDesc := true
+	if colSort.Column == enums.VDBDepositsElColumns.Block {
+		defaultSlotSortDesc = colSort.Desc
+	}
+
 	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("ed.block_number"), Desc: true, Offset: currentCursor.BlockNumber},
-		{Column: goqu.I("ed.log_index"), Desc: true, Offset: currentCursor.LogIndex},
+		{Column: goqu.I("ed.block_number"), Desc: defaultSlotSortDesc, Offset: currentCursor.BlockNumber},
+		{Column: goqu.I("ed.log_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.LogIndex},
 	}
 	var offset any
 	switch colSort.Column {
@@ -226,8 +214,12 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
-			Validity:             row.Valid,
+			Validity:             "valid",
 			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
+		}
+		if !row.IsValid {
+			// can never be "invalid" because v2 dashboards only contain validators with an index (= there was at least one valid deposit before)
+			responseData[i].Validity = "invalid_skipped"
 		}
 		addressMapping[hexutil.Encode(row.From)] = nil
 		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
