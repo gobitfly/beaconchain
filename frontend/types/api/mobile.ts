@@ -35,7 +35,6 @@ export interface MobileValidatorDashboardValidatorsTableRow {
   group_id: number /* uint64 */;
   balance: string /* decimal.Decimal */;
   status: 'slashed' | 'exited' | 'deposited' | 'pending' | 'slashing_offline' | 'slashing_online' | 'exiting_offline' | 'exiting_online' | 'active_offline' | 'active_online';
-  queue_position?: number /* uint64 */;
   withdrawal_credential: Hash;
   /**
    * additional mobile fields
