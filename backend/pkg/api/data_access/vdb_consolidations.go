@@ -33,10 +33,10 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 
 	// filters
-	searchSenderOrConsolidator := t.ReEthereumAddress.MatchString(search)
-	searchIndexOrBlock := t.ReInteger.MatchString(search)
+	isValidSearchSenderOrConsolidator := t.ReEthereumAddress.MatchString(search)
+	isValidSearchIndexOrBlock := t.ReInteger.MatchString(search)
 
-	if search != "" && !searchSenderOrConsolidator && !searchIndexOrBlock {
+	if isInvalidSearch(search, isValidSearchSenderOrConsolidator, isValidSearchIndexOrBlock) {
 		return make([]t.VDBConsolidationsElTableRow, 0), &t.Paging{}, nil
 	}
 
@@ -104,7 +104,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 
 	searches := []exp.Expression{}
-	if searchSenderOrConsolidator {
+	if isValidSearchSenderOrConsolidator {
 		address, err := hexutil.Decode(search)
 		if err != nil {
 			return nil, nil, err
@@ -114,7 +114,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			// goqu.I("el_cr.from_address").Eq(address), // BEDS-1405
 		)
 	}
-	if searchIndexOrBlock {
+	if isValidSearchIndexOrBlock {
 		searches = append(
 			searches, goqu.I("el_cr.block_number").Eq(search),
 			goqu.I("vs.validatorindex").Eq(search),
@@ -291,6 +291,12 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 		}
 	}
 
+	// filters
+	isValidSearchIndexOrSlot := t.ReInteger.MatchString(search)
+	if isInvalidSearch(search, isValidSearchIndexOrSlot) {
+		return make([]t.VDBConsolidationsClTableRow, 0), &t.Paging{}, nil
+	}
+
 	consolidationsDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_consolidation_requests").As("bcr")).
 		Select(
@@ -320,6 +326,20 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 				)),
 			).
 			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+	}
+
+	searches := []exp.Expression{}
+	if isValidSearchIndexOrSlot {
+		searches = append(searches,
+			goqu.I("slot_queued").Eq(search),
+			goqu.I("slot_processed").Eq(search),
+			goqu.I("source_index").Eq(search),
+			goqu.I("target_index").Eq(search),
+		)
+	}
+
+	if len(searches) > 0 {
+		consolidationsDs = consolidationsDs.Where(goqu.Or(searches...))
 	}
 
 	defaultSlotSortDesc := true
@@ -411,7 +431,7 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 			row.Amount = &r.Amount.Decimal
 		}
 		if r.RejectReason.Valid {
-			str := mapRejectReasonDbToApi(r.RejectReason.String)
+			str := mapConsolidationRejectReasonDbToApi(r.RejectReason.String)
 			if str != "" {
 				row.RejectReason = &str // BEDS-1399
 			}
@@ -445,7 +465,7 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	return responseData, p, nil
 }
 
-func mapRejectReasonDbToApi(dbReason string) string {
+func mapConsolidationRejectReasonDbToApi(dbReason string) string {
 	switch dbReason {
 	case "source_target_pubkey_equal":
 		return "source_equals_target"

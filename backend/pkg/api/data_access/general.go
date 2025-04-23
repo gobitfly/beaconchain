@@ -173,3 +173,15 @@ func runQuery[T any](ctx context.Context, db *sqlx.DB, ds *goqu.SelectDataset) (
 
 	return result, nil
 }
+
+func isInvalidSearch(search string, checks ...bool) bool {
+	if search == "" {
+		return false
+	}
+	for _, check := range checks {
+		if check {
+			return false
+		}
+	}
+	return true
+}
