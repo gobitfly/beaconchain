@@ -607,11 +607,6 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 			WithdrawalCredential: t.Hash(hexutil.Encode(metadata.WithdrawalCredentials)),
 		}
 
-		if constypes.ValidatorDbStatus(metadata.Status) == constypes.DbPending && metadata.Queues.ActivationIndex.Valid {
-			activationIndex := uint64(metadata.Queues.ActivationIndex.Int64)
-			row.QueuePosition = &activationIndex
-		}
-
 		if search == "" {
 			data = append(data, row)
 		} else {
