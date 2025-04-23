@@ -244,6 +244,21 @@ type VDBExecutionDepositsTableRow struct {
 }
 type GetValidatorDashboardExecutionLayerDepositsResponse ApiPagingResponse[VDBExecutionDepositsTableRow]
 
+type VDBExecutionDepositsTableRow_FeaturePectra struct {
+	PublicKey            PubKey          `json:"public_key" faker:"pubkey"`
+	Index                *uint64         `json:"index,omitempty"`
+	GroupId              uint64          `json:"group_id"`
+	Block                uint64          `json:"block"`
+	Timestamp            int64           `json:"timestamp" faker:"past_timestamp"`
+	From                 Address         `json:"-"` // TODO enable again
+	Depositor            Address         `json:"depositor"`
+	TxHash               Hash            `json:"tx_hash" faker:"tx_hash"`
+	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`
+	Amount               decimal.Decimal `json:"amount" faker:"eth"`
+	Validity             string          `json:"validity" tstype:"'valid' | 'invalid' | 'invalid_skipped'" faker:"oneof: valid, invalid, invalid_skipped"`
+}
+type GetValidatorDashboardExecutionLayerDepositsResponse_FeaturePectra ApiPagingResponse[VDBExecutionDepositsTableRow_FeaturePectra]
+
 type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key"`
 	Index                uint64          `json:"index"`

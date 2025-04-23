@@ -210,6 +210,19 @@ export interface VDBExecutionDepositsTableRow {
   valid: boolean;
 }
 export type GetValidatorDashboardExecutionLayerDepositsResponse = ApiPagingResponse<VDBExecutionDepositsTableRow>;
+export interface VDBExecutionDepositsTableRow_FeaturePectra {
+  public_key: PubKey;
+  index?: number /* uint64 */;
+  group_id: number /* uint64 */;
+  block: number /* uint64 */;
+  timestamp: number /* int64 */;
+  depositor: Address;
+  tx_hash: Hash;
+  withdrawal_credential: Hash;
+  amount: string /* decimal.Decimal */;
+  validity: 'valid' | 'invalid' | 'invalid_skipped';
+}
+export type GetValidatorDashboardExecutionLayerDepositsResponse_FeaturePectra = ApiPagingResponse<VDBExecutionDepositsTableRow_FeaturePectra>;
 export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
   index: number /* uint64 */;

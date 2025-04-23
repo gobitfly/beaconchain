@@ -249,3 +249,46 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 		Data: *data,
 	}, nil
 }
+
+// GetValidatorDashboardExecutionLayerDeposits godoc
+//
+//	@Description	Get execution layer deposits information for a specified dashboard
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			dashboard_id	path		string	true	"The ID of the dashboard."
+//	@Param			cursor			query		string	false	"Return data for the given cursor value. Pass the `paging.next_cursor`` value of the previous response to navigate to forward, or pass the `paging.prev_cursor`` value of the previous response to navigate to backward."
+//	@Param			limit			query		string	false	"The maximum number of results that may be returned."
+//	@Param			sort			query		string	false	"The field you want to sort by. Append with `:desc` for descending order."	Enums(block, amount)
+//	@Param			search			query		string	false	"Search for Index, Block, Address, Group."
+//	@Success		200				{object}	types.GetValidatorDashboardExecutionLayerDepositsResponse
+//	@Failure		400				{object}	types.ApiErrorResponse
+//	@Router			/validator-dashboards/{dashboard_id}/execution-layer-deposits [get]
+func (i *inputGetValidatorDashboardExecutionLayerDeposits) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.Paging = v.checkPagingMap(params)
+	i.sort = *checkSort[enums.VDBDepositsElColumn](&v, params["sort"])
+	i.dashboardIdParam = v.checkDashboardId(params["dashboard_id"])
+	return v.AsError()
+}
+
+type inputGetValidatorDashboardExecutionLayerDeposits struct {
+	Paging
+	sort             types.Sort[enums.VDBDepositsElColumn]
+	dashboardIdParam interface{}
+}
+
+func (h *HandlerService) GetValidatorDashboardExecutionLayerDeposits(ctx context.Context, input inputGetValidatorDashboardExecutionLayerDeposits) (types.GetValidatorDashboardExecutionLayerDepositsResponse_FeaturePectra, error) {
+	var r types.GetValidatorDashboardExecutionLayerDepositsResponse_FeaturePectra
+	dashboardId, err := h.getDashboardId(ctx, input.dashboardIdParam)
+	if err != nil {
+		return r, err
+	}
+
+	data, paging, err := h.getDataAccessor(ctx).GetValidatorDashboardElDeposits_FeaturePectra(ctx, *dashboardId, input.cursor, input.sort, input.search, input.limit)
+	if err != nil {
+		return r, err
+	}
+	r.Data = data
+	r.Paging = *paging
+	return r, nil
+}
