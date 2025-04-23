@@ -478,7 +478,6 @@ const inputValidator = ref('')
               <template #body="slotProps">
                 <ValidatorTableStatus
                   :status="slotProps.data.status"
-                  :position="slotProps.data.queue_position"
                   :hide-label="size.expandable"
                 />
               </template>
@@ -562,7 +561,6 @@ const inputValidator = ref('')
                   </div>
                   <ValidatorTableStatus
                     :status="slotProps.data.status"
-                    :position="slotProps.data.queue_position"
                   />
                 </div>
                 <div class="info">
