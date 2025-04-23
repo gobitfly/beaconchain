@@ -425,7 +425,6 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 			GroupId:               row.GroupId,
 			Balance:               row.Balance,
 			Status:                row.Status,
-			QueuePosition:         row.QueuePosition,
 			WithdrawalCredential:  row.WithdrawalCredential,
 			IsInSyncCommittee:     currentSyncCommitteeValidators[row.Index],
 			IsInNextSyncCommittee: upcomingSyncCommitteeValidators[row.Index],
