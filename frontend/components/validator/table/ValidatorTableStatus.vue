@@ -4,7 +4,6 @@ import type { ValidatorStatus } from '~/types/validator'
 
 interface Props {
   hideLabel?: boolean,
-  position?: number,
   status: ValidatorStatus,
 }
 const props = defineProps<Props>()
@@ -27,7 +26,6 @@ const iconColor = computed(() => {
       class="status"
     >
       {{ $t(`validator_state.${status}`) }}
-      <span v-if="position"> #<BcFormatNumber :value="position" /></span>
     </span>
   </div>
 </template>
