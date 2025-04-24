@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   DashboardCreationController, DashboardTableBlocks, DashboardTableEmpty, DashboardTableRewards, DashboardTableSummary,
-  DashboardTableWithdrawals,
 } from '#components'
 import type { GuestDashboard } from '~/types/dashboard'
 import {
@@ -50,7 +49,6 @@ const tabs: HashTabs = [
     title: $t('dashboard.validator.tabs.deposits'),
   },
   {
-    component: DashboardTableWithdrawals,
     icon: 'money-bill',
     key: 'withdrawals',
     title: $t('dashboard.validator.tabs.withdrawals'),
@@ -261,7 +259,7 @@ const clDeposits = computed(() => {
 })
 const clDepositsTotalAmount = computed(() => clDepositsData.value?.[1])
 
-// Execution  Layer Withdrawals data
+// Execution Layer Withdrawals data
 const elWithdrawalsQueryParams = ref<TableQueryParams>({
   limit: 5,
   sort: 'timestamp:desc',
@@ -287,6 +285,33 @@ const elWithdrawals = computed(() => {
   return elWithdrawalsData.value?.[0]
 })
 const elWithdrawalsTotalAmount = computed(() => elWithdrawalsData.value?.[1])
+
+// Consensus Layer Withdrawals data
+const clWithdrawalsQueryParams = ref<TableQueryParams>({
+  limit: 5,
+  sort: 'timestamp:desc',
+})
+const {
+  data: clWithdrawalsData,
+  refresh: refreshClWithdrawalsData,
+  status: clWithdrawalsDataStatus,
+} = useAsyncData('cl_withdrawals', () => {
+  return Promise.all([
+    dashboardData.fetchClWithdrawals(
+      dashboardKey.value,
+      clWithdrawalsQueryParams.value,
+    ),
+    dashboardData.fetchClWithdrawalsTotalAmount(dashboardKey.value),
+  ])
+},
+{
+  immediate: false,
+  watch: [ clWithdrawalsQueryParams ],
+})
+const clWithdrawals = computed(() => {
+  return clWithdrawalsData.value?.[0]
+})
+const clWithdrawalsTotalAmount = computed(() => clWithdrawalsData.value?.[1])
 
 // Execution Layer Consolidations data
 const elConsolidationsQueryParams = ref<TableQueryParams>({
@@ -349,6 +374,7 @@ const refreshActiveTab = () => {
       break
     case '#withdrawals':
       refreshElWithdrawalsData()
+      refreshClWithdrawalsData()
       break
   }
 }
@@ -433,6 +459,16 @@ watch(
             :el-withdrawals
             :el-withdrawals-total-amount
             :is-loading="elWithdrawalsDataStatus === 'pending'"
+          />
+          <BcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <DashboardTableClWithdrawals
+            v-model:query="clWithdrawalsQueryParams"
+            :cl-withdrawals
+            :cl-withdrawals-total-amount
+            :is-loading="clWithdrawalsDataStatus === 'pending'"
           />
         </template>
         <template #tab-panel-consolidations>

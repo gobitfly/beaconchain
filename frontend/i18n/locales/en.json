@@ -260,6 +260,30 @@
                     "manual": "Manual"
                 }
             },
+            "cl_withdrawals": {
+                "info_auto_queued": "Only shows the next automatic withdrawal estimate. Be aware that manual withdrawals use a different queue.",
+                "info_slot_processed_estimated": "This is an estimation since this withdrawal is still queued.",
+                "reject_reason": {
+                    "address_mismatch": "Request must originate from the validator’s configured withdrawal address.",
+                    "excess_balance": "Validator has no excess balance available for withdrawal.",
+                    "exiting": "The validator was exiting when this request was processed.",
+                    "full_queue": "The withdrawal queue was full when this request was processed.",
+                    "inactive": "The validator was inactive when this request was processed.",
+                    "insufficient_effective_balance": "Effective balance is below the withdrawal threshold.",
+                    "no_execution_withdrawal_credentials": "Validator has unsupported withdrawal credentials.\nUpdate withdrawal credentials to 0x01- or 0x02-prefixed.",
+                    "not_compounding": "Validator is not compounding.\nUpdate withdrawal credentials to 0x02-prefixed to enable compounding.",
+                    "pending_withdrawals": "Wait for current withdrawals to process before starting another.",
+                    "too_young": "Validator is too new to withdraw.",
+                    "unknown_pubkey": "The specified validator public key does not exist."
+                },
+                "search_placeholder_guest_dashboard": "Index, Slot, Public Key",
+                "search_placeholder_private_dashboard": "Index, Group, Slot, Public Key",
+                "title": "Consensus Layer",
+                "type": {
+                    "auto": "Auto",
+                    "manual": "Manual"
+                }
+            },
             "col": {
                 "amount": "Amount",
                 "balance": "Balance",
