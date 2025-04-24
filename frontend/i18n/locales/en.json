@@ -262,6 +262,8 @@
             "col": {
                 "amount": "Amount",
                 "balance": "Balance",
+                "block_processed": "Block Processed",
+                "block_queued": "Block Queued",
                 "cl_rewards": "Cl Rewards",
                 "depositor": "Depositor",
                 "duty": "Duty",
@@ -282,7 +284,8 @@
                 "validator_index": "Validator Index",
                 "validators": "Validators",
                 "validity": "Validity",
-                "withdrawal_credential": "Withdrawal Credential"
+                "withdrawal_credential": "Withdrawal Credential",
+                "withdrawer": "Withdrawer"
             },
             "duties": {
                 "col": {
@@ -306,6 +309,13 @@
                 "info_valid_with_invalid_signature": "Signature invalid, but will still be accepted due to a prior deposit with a valid signature.",
                 "search_placeholder_guest_dashboard": "Index, Block, Address",
                 "search_placeholder_private_dashboard": "Index, Block, Address, Group",
+                "title": "Execution Layer"
+            },
+            "el_withdrawals": {
+                "info_amount_estimated": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn.",
+                "info_block_processed_estimated": "This is an estimation since this consolidation is still queued.",
+                "search_placeholder_guest_dashboard": "Index, Block, Public Key",
+                "search_placeholder_private_dashboard": "Index, Block, Group, Public Key",
                 "title": "Execution Layer"
             },
             "group_management": {
@@ -494,7 +504,7 @@
                 "heatmap": "Heatmap",
                 "rewards": "Rewards",
                 "summary": "Summary",
-                "withdrawals": "CL Withdrawals"
+                "withdrawals": "Withdrawals"
             },
             "tooltip": {
                 "attestation_efficiency": {
@@ -1186,7 +1196,8 @@
         "source": "Source",
         "status": "Status",
         "target":"Target",
-        "validity": "Validity"
+        "validity": "Validity",
+        "withdrawal_request_fee": "Withdrawal Request Fee"
     },
     "time_duration": {
         "days": "{amount} day | {amount} days",
