@@ -1,10 +1,12 @@
 import type {
   GetValidatorDashboardConsensusLayerConsolidationsResponse,
   GetValidatorDashboardConsensusLayerDepositsResponse,
+  GetValidatorDashboardConsensusLayerWithdrawalsResponse,
   GetValidatorDashboardExecutionLayerConsolidationsResponse,
   GetValidatorDashboardExecutionLayerDepositsResponse,
   GetValidatorDashboardExecutionLayerWithdrawalsResponse,
   GetValidatorDashboardTotalConsensusDepositsResponse,
+  GetValidatorDashboardTotalConsensusWithdrawalsResponse,
   GetValidatorDashboardTotalExecutionDepositsResponse,
   GetValidatorDashboardTotalExecutionWithdrawalsResponse,
 } from '~/types/api/validator_dashboard'
@@ -121,10 +123,40 @@ export const useDashboardData = () => {
     return res
   }
 
+  async function fetchClWithdrawals(
+    dashboardKey: DashboardKey,
+    query?: TableQueryParams,
+  ) {
+    const res
+      = await fetch<GetValidatorDashboardConsensusLayerWithdrawalsResponse>(
+        'DASHBOARD_CL_WITHDRAWALS',
+        undefined,
+        { dashboardKey },
+        query,
+      )
+
+    return res
+  }
+
+  async function fetchClWithdrawalsTotalAmount(
+    dashboardKey: DashboardKey,
+  ) {
+    const res
+      = await fetch<GetValidatorDashboardTotalConsensusWithdrawalsResponse>(
+        'DASHBOARD_CL_WITHDRAWALS_TOTAL',
+        undefined,
+        { dashboardKey },
+      )
+
+    return res
+  }
+
   return {
     fetchClConsolidations,
     fetchClDeposits,
     fetchClDpositsTotalAmount,
+    fetchClWithdrawals,
+    fetchClWithdrawalsTotalAmount,
     fetchElConsolidations,
     fetchELDeposits,
     fetchELDpositsTotalAmount,
