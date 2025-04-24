@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/db2/raw"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 
@@ -13,6 +14,18 @@ import (
 )
 
 func InitBigtableSchema() error {
+	err := InitBigtableSchemaIndexed()
+	if err != nil {
+		return err
+	}
+	err = InitBigtableSchemaRaw()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InitBigtableSchemaIndexed() error {
 	tables := make(map[string]map[string]gcp_bigtable.GCPolicy)
 
 	tables["beaconchain_validators"] = map[string]gcp_bigtable.GCPolicy{
@@ -64,6 +77,73 @@ func InitBigtableSchema() error {
 	}
 
 	admin, err := gcp_bigtable.NewAdminClient(ctx, utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
+	if err != nil {
+		return err
+	}
+
+	existingTables, err := admin.Tables(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(existingTables) > 0 {
+		return fmt.Errorf("aborting bigtable schema init as tables are already present")
+	}
+
+	for name, definition := range tables {
+		err := admin.CreateTable(ctx, name)
+		if err != nil {
+			return err
+		}
+
+		for columnFamily, gcPolicy := range definition {
+			err := admin.CreateColumnFamily(ctx, name, columnFamily)
+			if err != nil {
+				return err
+			}
+
+			if gcPolicy != nil {
+				err := admin.SetGCPolicy(ctx, name, columnFamily, gcPolicy)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func InitBigtableSchemaRaw() error {
+	tables := make(map[string]map[string]gcp_bigtable.GCPolicy)
+
+	// these are the families in current production-bigtable: b, v, r, a, s, t, u - not sure why some are missing in the raw-go-module
+	tables["blocks-raw"] = map[string]gcp_bigtable.GCPolicy{
+		raw.BT_COLUMNFAMILY_BLOCK:    nil,
+		"v":                          nil,
+		raw.BT_COLUMNFAMILY_RECEIPTS: nil,
+		"a":                          nil,
+		"s":                          nil,
+		raw.BT_COLUMNFAMILY_TRACES:   nil,
+		raw.BT_COLUMNFAMILY_UNCLES:   nil,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*600)
+	defer cancel()
+
+	if utils.Config.RawBigtable.Emulator {
+		if utils.Config.RawBigtable.EmulatorHost == "" {
+			utils.Config.RawBigtable.EmulatorHost = "127.0.0.1"
+		}
+		log.Infof("using emulated local bigtable environment, setting BIGTABLE_EMULATOR_HOST env variable to %s:%d", utils.Config.RawBigtable.EmulatorHost, utils.Config.RawBigtable.EmulatorPort)
+		err := os.Setenv("BIGTABLE_EMULATOR_HOST", fmt.Sprintf("%s:%d", utils.Config.RawBigtable.EmulatorHost, utils.Config.RawBigtable.EmulatorPort))
+
+		if err != nil {
+			log.Fatal(err, "unable to set bigtable emulator environment variable", 0)
+		}
+	}
+
+	admin, err := gcp_bigtable.NewAdminClient(ctx, utils.Config.RawBigtable.Project, utils.Config.RawBigtable.Instance)
 	if err != nil {
 		return err
 	}
