@@ -3,6 +3,8 @@ export type API_PATH =
   | 'DASHBOARD_CL_CONSOLIDATIONS'
   | 'DASHBOARD_CL_DEPOSITS'
   | 'DASHBOARD_CL_DEPOSITS_TOTAL'
+  | 'DASHBOARD_CL_WITHDRAWALS'
+  | 'DASHBOARD_CL_WITHDRAWALS_TOTAL'
   | 'DASHBOARD_CREATE_ACCOUNT'
   | 'DASHBOARD_CREATE_VALIDATOR'
   | 'DASHBOARD_DELETE_ACCOUNT'
@@ -104,6 +106,16 @@ export const mapping: Record<API_PATH, MappingData> = {
       `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-deposits`,
     mock: false,
     path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-deposits',
+  },
+  DASHBOARD_CL_WITHDRAWALS: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/consensus-layer-withdrawals`,
+    path: '/validator-dashboards/{dashboard_id}/consensus-layer-withdrawals',
+  },
+  DASHBOARD_CL_WITHDRAWALS_TOTAL: {
+    getPath: values =>
+      `/validator-dashboards/${values?.dashboardKey}/total-consensus-layer-withdrawals`,
+    path: '/validator-dashboards/{dashboard_id}/total-consensus-layer-withdrawals',
   },
   DASHBOARD_CREATE_ACCOUNT: {
     method: 'POST',
