@@ -246,6 +246,33 @@ const clDeposits = computed(() => {
 })
 const clDepositsTotalAmount = computed(() => clDepositsData.value?.[1])
 
+// Execution  Layer Withdrawals data
+const elWithdrawalsQueryParams = ref<TableQueryParams>({
+  limit: 5,
+  sort: 'timestamp:desc',
+})
+const {
+  data: elWithdrawalsData,
+  refresh: refreshElWithdrawalsData,
+  status: elWithdrawalsDataStatus,
+} = useAsyncData('el_withdrawals', () => {
+  return Promise.all([
+    dashboardData.fetchElWithdrawals(
+      dashboardKey.value,
+      elWithdrawalsQueryParams.value,
+    ),
+    dashboardData.fetchElWithdrawalsTotalAmount(dashboardKey.value),
+  ])
+},
+{
+  immediate: false,
+  watch: [ elWithdrawalsQueryParams ],
+})
+const elWithdrawals = computed(() => {
+  return elWithdrawalsData.value?.[0]
+})
+const elWithdrawalsTotalAmount = computed(() => elWithdrawalsData.value?.[1])
+
 // Execution Layer Consolidations data
 const elConsolidationsQueryParams = ref<TableQueryParams>({
   limit: 5, sort: 'block_processed:desc',
@@ -268,7 +295,7 @@ const elConsolidations = computed(() => {
   return elConsolidationsData.value || undefined
 })
 
-// Consolidations Layer Consolidations data
+// Consensus Layer Consolidations data
 const clConsolidationsQueryParams = ref<TableQueryParams>({
   limit: 5, sort: 'timestamp:desc',
 })
@@ -304,6 +331,9 @@ const refreshActiveTab = () => {
     case '#deposits':
       refreshElDepositsData()
       refreshClDepositsData()
+      break
+    case '#withdrawals':
+      refreshElWithdrawalsData()
       break
   }
 }
@@ -380,6 +410,14 @@ watch(
             :cl-deposits
             :cl-deposits-total-amount
             :is-loading="clDepositsDataStatus === 'pending'"
+          />
+        </template>
+        <template #tab-panel-withdrawals>
+          <DashboardTableElWithdrawals
+            v-model:query="elWithdrawalsQueryParams"
+            :el-withdrawals
+            :el-withdrawals-total-amount
+            :is-loading="elWithdrawalsDataStatus === 'pending'"
           />
         </template>
         <template #tab-panel-consolidations>

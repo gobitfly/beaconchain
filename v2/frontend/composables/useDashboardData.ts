@@ -3,8 +3,10 @@ import type {
   GetValidatorDashboardConsensusLayerDepositsResponse,
   GetValidatorDashboardExecutionLayerConsolidationsResponse,
   GetValidatorDashboardExecutionLayerDepositsResponse,
+  GetValidatorDashboardExecutionLayerWithdrawalsResponse,
   GetValidatorDashboardTotalConsensusDepositsResponse,
   GetValidatorDashboardTotalExecutionDepositsResponse,
+  GetValidatorDashboardTotalExecutionWithdrawalsResponse,
 } from '~/types/api/validator_dashboard'
 import type { DashboardKey } from '~/types/dashboard'
 import type { TableQueryParams } from '~/types/datatable'
@@ -91,6 +93,34 @@ export const useDashboardData = () => {
     return res
   }
 
+  async function fetchElWithdrawals(
+    dashboardKey: DashboardKey,
+    query?: TableQueryParams,
+  ) {
+    const res
+      = await fetch<GetValidatorDashboardExecutionLayerWithdrawalsResponse>(
+        'DASHBOARD_EL_WITHDRAWALS',
+        undefined,
+        { dashboardKey },
+        query,
+      )
+
+    return res
+  }
+
+  async function fetchElWithdrawalsTotalAmount(
+    dashboardKey: DashboardKey,
+  ) {
+    const res
+      = await fetch<GetValidatorDashboardTotalExecutionWithdrawalsResponse>(
+        'DASHBOARD_EL_WITHDRAWALS_TOTAL',
+        undefined,
+        { dashboardKey },
+      )
+
+    return res
+  }
+
   return {
     fetchClConsolidations,
     fetchClDeposits,
@@ -98,5 +128,7 @@ export const useDashboardData = () => {
     fetchElConsolidations,
     fetchELDeposits,
     fetchELDpositsTotalAmount,
+    fetchElWithdrawals,
+    fetchElWithdrawalsTotalAmount,
   }
 }
