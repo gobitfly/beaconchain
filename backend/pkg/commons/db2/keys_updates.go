@@ -2,6 +2,7 @@ package db2
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db2/database"
 )
@@ -13,11 +14,13 @@ const (
 func blockKeysMutation(chainID string, blockNumber uint64, blockHash []byte, keys string) map[string][]database.Item {
 	items := make(map[string][]database.Item)
 	key := fmt.Sprintf("%s:BLOCK:%s:%x", chainID, reversedPaddedBlockNumber(blockNumber), blockHash)
+	ts := time.Now().Unix()
 	items[key] = []database.Item{
 		{
-			Family: updatesBlockFamily,
-			Column: blockKeysColumn,
-			Data:   []byte(keys),
+			Family:    updatesBlockFamily,
+			Column:    blockKeysColumn,
+			Data:      []byte(keys),
+			Timestamp: &ts,
 		},
 	}
 	return items
