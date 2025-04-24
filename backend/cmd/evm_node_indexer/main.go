@@ -203,7 +203,7 @@ func Run() {
 	}
 
 	log.Info("init BT...")
-	bt, err := database.NewBigTable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, nil, option.WithGRPCConnectionPool(1))
+	bt, err := database.NewBigTable(utils.Config.RawBigtable.Project, utils.Config.RawBigtable.Instance, nil, option.WithGRPCConnectionPool(1))
 	if err != nil {
 		log.Fatal(err, "creating new client for Bigtable", 0) // fatal, no point to continue without BT
 	}
