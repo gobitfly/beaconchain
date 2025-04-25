@@ -120,7 +120,7 @@ type ELConsolidationsCursor struct {
 
 	BlockProcessed uint64
 	TxIndex        uint64
-	// ITxIndex      uint64
+	ITxIndex       uint64
 }
 
 type CLConsolidationsCursor struct {
