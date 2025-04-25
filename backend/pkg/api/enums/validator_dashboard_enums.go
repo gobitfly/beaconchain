@@ -249,6 +249,76 @@ var VDBWithdrawalsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard EL Deposits Table
+
+type VDBDepositsElColumn int
+
+var _ EnumFactory[VDBDepositsElColumn] = VDBDepositsElColumn(0)
+
+const (
+	VDBDepositElBlock VDBDepositsElColumn = iota
+	VDBDepositElAmount
+)
+
+func (c VDBDepositsElColumn) Int() int {
+	return int(c)
+}
+
+func (VDBDepositsElColumn) NewFromString(s string) VDBDepositsElColumn {
+	switch s {
+	case "", "block", "timestamp":
+		return VDBDepositElBlock
+	case "amount":
+		return VDBDepositElAmount
+	default:
+		return VDBDepositsElColumn(-1)
+	}
+}
+
+var VDBDepositsElColumns = struct {
+	Block  VDBDepositsElColumn
+	Amount VDBDepositsElColumn
+}{
+	VDBDepositElBlock,
+	VDBDepositElAmount,
+}
+
+// ----------------
+// Validator Dashboard CL Deposits Table
+
+type VDBDepositsClColumn int
+
+var _ EnumFactory[VDBDepositsClColumn] = VDBDepositsClColumn(0)
+
+const (
+	VDBDepositClSlot VDBDepositsClColumn = iota
+	VDBDepositClAmount
+)
+
+func (c VDBDepositsClColumn) Int() int {
+	return int(c)
+}
+
+func (VDBDepositsClColumn) NewFromString(s string) VDBDepositsClColumn {
+	switch s {
+	case "", "slot", "timestamp":
+		return VDBDepositClSlot
+	case "amount":
+		return VDBDepositClAmount
+	default:
+		return VDBDepositsClColumn(-1)
+	}
+}
+
+var VDBDepositsClColumns = struct {
+	Slot   VDBDepositsClColumn
+	Amount VDBDepositsClColumn
+}{
+	VDBDepositClSlot,
+	VDBDepositClAmount,
+}
+
+// ----------------
 // Validator Dashboard Manage Validators Table
 
 type VDBManageValidatorsColumn int
