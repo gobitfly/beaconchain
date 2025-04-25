@@ -14,13 +14,10 @@ import (
 )
 
 func InitBigtableSchema() error {
-	err := InitBigtableSchemaIndexed()
-	if err != nil {
-		return err
-	}
-	err = InitBigtableSchemaRaw()
-	if err != nil {
-		return err
+	errIndexed := InitBigtableSchemaIndexed()
+	errRaw := InitBigtableSchemaRaw()
+	if errIndexed != nil || errRaw != nil {
+		return fmt.Errorf("failed to initialize bigtable schema: indexedErr: %w, rawErr: %v", errIndexed, errRaw)
 	}
 	return nil
 }
