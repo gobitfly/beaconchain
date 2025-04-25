@@ -249,6 +249,78 @@ var VDBWithdrawalsColumns = struct {
 }
 
 // ----------------
+// Validator Dashboard EL Consolidations Table
+
+type VDBConsolidationsElColumn int
+
+var _ EnumFactory[VDBConsolidationsElColumn] = VDBConsolidationsElColumn(0)
+
+const (
+	VDBConsolidationElBlockProcessed VDBConsolidationsElColumn = iota
+)
+
+func (c VDBConsolidationsElColumn) Int() int {
+	return int(c)
+}
+
+func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColumn {
+	switch s {
+	case "", "block_processed", "timestamp":
+		return VDBConsolidationElBlockProcessed
+	default:
+		return VDBConsolidationsElColumn(-1)
+	}
+}
+
+func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBConsolidationElBlockProcessed:
+		return goqu.C("block_slot")
+	default:
+		return nil
+	}
+}
+
+var VDBConsolidationsColumns = struct {
+	BlockProcessed VDBConsolidationsElColumn
+}{
+	VDBConsolidationElBlockProcessed,
+}
+
+// ----------------
+// Validator Dashboard CL Consolidations Table
+
+type VDBConsolidationsClColumn int
+
+var _ EnumFactory[VDBConsolidationsClColumn] = VDBConsolidationsClColumn(0)
+
+const (
+	VDBConsolidationClSlotProcessed VDBConsolidationsClColumn = iota
+	VDBConsolidationClAmount
+)
+
+func (c VDBConsolidationsClColumn) Int() int {
+	return int(c)
+}
+
+func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColumn {
+	switch s {
+	case "", "slot_processed", "timestamp":
+		return VDBConsolidationClSlotProcessed
+	default:
+		return VDBConsolidationsClColumn(-1)
+	}
+}
+
+var VDBConsolidationsClColumns = struct {
+	SlotProcessed VDBConsolidationsClColumn
+	Amount        VDBConsolidationsClColumn
+}{
+	VDBConsolidationClSlotProcessed,
+	VDBConsolidationClAmount,
+}
+
+// ----------------
 // Validator Dashboard Manage Validators Table
 
 type VDBManageValidatorsColumn int
