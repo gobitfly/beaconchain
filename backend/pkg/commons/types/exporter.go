@@ -732,6 +732,9 @@ type ValidatorStatsTableDbRow struct {
 	MEVPerformance7d   decimal.Decimal `db:"-"`
 	MEVPerformance31d  decimal.Decimal `db:"-"`
 	MEVPerformance365d decimal.Decimal `db:"-"`
+
+	IncomingConsolidationAmount int64
+	OutgoingConsolidationAmount int64
 }
 
 type RedisCachedEpochAssignments struct {
