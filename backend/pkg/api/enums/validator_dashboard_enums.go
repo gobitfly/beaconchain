@@ -294,7 +294,7 @@ func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColu
 func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBConsolidationElBlockProcessed:
-		return goqu.C("block_number")
+		return goqu.I("el_cr.block_number")
 	default:
 		return nil
 	}
@@ -336,7 +336,7 @@ func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColu
 func (c VDBConsolidationsClColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBConsolidationClSlotProcessed:
-		return goqu.C("block_slot")
+		return goqu.C("slot_processed")
 	case VDBConsolidationClAmount:
 		return goqu.C("amount_consolidated")
 	default:
