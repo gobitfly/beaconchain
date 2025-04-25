@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/big"
 	"slices"
 	"time"
 
@@ -46,15 +47,19 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			goqu.I("vt.validatorindex").As("target_index"),
 			goqu.I("el_cr.block_number").As("block_queued"),
 			goqu.I("el_cr.block_ts").As("block_queued_ts"),
-			// goqu.I("el_cr.block_processed"),
-			// goqu.I("el_cr.block_processed_ts"),
-			// goqu.L("COALESCE(el_cr.log_index, 0) AS log_index"), // BEDS-1405
-			// goqu.L("el_cr.from_address"), // BEDS-1405
+			goqu.I("b.exec_block_number").As("block_processed"), // BEDS-1399
+			goqu.I("b.exec_timestamp").As("block_processed_ts"), // BEDS-1399
+			goqu.I("el_cr.itx_index"),                           // BEDS-1405
+			goqu.I("el_cr.from_address"),                        // BEDS-1405
 			goqu.I("el_cr.tx_index"),
 			goqu.I("el_cr.source_address").As("consolidator"),
 			goqu.I("el_cr.tx_hash"),
-			// goqu.I("el_cr.fee"), // BEDS-1405,
-			// goqu.Case().As("status"), // BEDS-1399
+			goqu.I("el_cr.fee"), // BEDS-1405,
+			goqu.Case().When( // BEDS-1399
+				goqu.I("b.exec_block_number").Neq(nil), "processed",
+			).Else(
+				goqu.V("queued"),
+			).As("status"), // BEDS-1399
 		).
 		InnerJoin(
 			goqu.T("validators").As("vs"),
@@ -63,16 +68,22 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		InnerJoin(
 			goqu.T("validators").As("vt"),
 			goqu.On(goqu.I("el_cr.target_pubkey").Eq(goqu.I("vt.pubkey"))),
-		)
+		).
 		// depends on BEDS-1399
 		// need to match EL events to correct CL events
 		// might needs some complex logic like "newest CL event after EL event which doesn't also match a previous EL event"
-		/*LeftJoin(
+		LeftJoin(
 			goqu.T("blocks_consolidation_requests").As("cl_cr"),
 			goqu.On(
-				?
+				goqu.I("el_cr.id").Eq(goqu.I("cl_cr.id")),
 			),
-		)*/
+		).
+		LeftJoin(
+			goqu.T("blocks").As("b"),
+			goqu.On(
+				goqu.I("b.blockroot").Eq(goqu.I("cl_cr.block_queued_root")),
+			),
+		)
 
 	if dashboardId.Validators != nil {
 		ds = ds.
@@ -114,9 +125,15 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		ds = ds.Where(goqu.Or(searches...))
 	}
 
+	defaultSlotSortDesc := true
+	if colSort.Column == enums.VDBConsolidationsElColumns.BlockProcessed {
+		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
+		defaultSlotSortDesc = colSort.Desc
+	}
 	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("el_cr.block_number"), Desc: true, Offset: currentCursor.BlockProcessed},
-		{Column: goqu.I("el_cr.tx_index"), Desc: true, Offset: currentCursor.TxIndex}, // should be log/itx_index; BEDS-1405
+		{Column: goqu.I("el_cr.block_number"), Desc: defaultSlotSortDesc, Offset: currentCursor.BlockProcessed},
+		{Column: goqu.I("el_cr.tx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.TxIndex},   // should be log/itx_index; BEDS-1405
+		{Column: goqu.I("el_cr.itx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.ITxIndex}, // should be log/itx_index; BEDS-1405
 	}
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	if err != nil {
@@ -131,19 +148,19 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 
 	type elDbResult struct {
-		SourceIndex     uint64    `db:"source_index"`
-		TargetIndex     uint64    `db:"target_index"`
-		BlockQueued     uint64    `db:"block_queued"`
-		BlockQueuedTime time.Time `db:"block_queued_ts"`
-		TxIndex         uint64    `db:"tx_index"` // for cursor only
-		// ITxIndex          uint64         `db:"itx_index"` 		  // for cursor only // BEDS-1405
+		SourceIndex        uint64        `db:"source_index"`
+		TargetIndex        uint64        `db:"target_index"`
+		BlockQueued        uint64        `db:"block_queued"`
+		BlockQueuedTime    time.Time     `db:"block_queued_ts"`
+		TxIndex            uint64        `db:"tx_index"`           // for cursor only
+		ITxIndex           uint64        `db:"itx_index"`          // for cursor only // BEDS-1405
 		BlockProcessed     sql.NullInt64 `db:"block_processed"`    // need CL queued events from BEDS-1399
-		BlockProcessedTime sql.NullTime  `db:"block_processed_ts"` // need CL queued events from BEDS-1399
-		// From              []byte         `db:"from_address"` 	  // BEDS-1405 (might get from BT for now)
-		Consolidator []byte `db:"consolidator"`
-		TxHash       []byte `db:"tx_hash"`
-		// Fee               decimal.Decimal   `db:"fee"` 			  // BEDS-1405
-		// Status            string   `db:"status"` 			      // BEDS-1399
+		BlockProcessedTime sql.NullInt64 `db:"block_processed_ts"` // need CL queued events from BEDS-1399
+		From               []byte        `db:"from_address"`       // BEDS-1405 (might get from BT for now)
+		Consolidator       []byte        `db:"consolidator"`
+		TxHash             []byte        `db:"tx_hash"`
+		Fee                []byte        `db:"fee"`    // BEDS-1405 // TODO change to number
+		Status             string        `db:"status"` // BEDS-1399
 	}
 	dbRes, err := runQueryRows[[]elDbResult](ctx, d.readerDb, ds)
 	if err != nil {
@@ -177,7 +194,6 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			TimestampQueued: res.BlockQueuedTime.Unix(),
 			// Status:             res.Status, // BEDS-1399
 			TxHash: t.Hash(hexutil.Encode(res.TxHash)),
-			// Fee:               res.Fee, // BEDS-1405
 		}
 		row.Consolidator = prepareAddressRequest(&consolidatorContractStatusRequests, res.Consolidator, &res)
 		// BEDS-1405
@@ -186,10 +202,12 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			row.From = prepareAddressRequest(&fromContractStatusRequests, res.From, &res)
 		}*/
 
+		row.Fee = decimal.NewFromBigInt(new(big.Int).SetBytes(res.Fee), 0)
+
 		if res.BlockProcessedTime.Valid { // BEDS-1399
 			row.Status = "processed"
 			row.BlockProcessed = uint64(res.BlockProcessed.Int64)
-			row.TimestampProcessed = res.BlockProcessedTime.Time.Unix()
+			row.TimestampProcessed = res.BlockProcessedTime.Int64
 		} else {
 			row.Status = "queued"
 			// TODO implement estimate
@@ -276,21 +294,14 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	consolidationsDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_consolidation_requests").As("bcr")).
 		Select(
-			goqu.I("block_slot").As("slot_processed"),
-			goqu.I("request_index"),
-			// goqu.I("slot_queued"), // BEDS-1399
+			goqu.I("slot_processed"),
+			goqu.I("index_processed"),
+			goqu.I("slot_queued"), // BEDS-1399
 			goqu.I("source_index").As("source"),
 			goqu.I("target_index").As("target"),
 			goqu.L("amount_consolidated::decimal * ?", 1e9).As("amount"),
-			// goqu.I("status"), // BEDS-1399
-			// goqu.I("reject_reason"), // BEDS-1399
-		).
-		InnerJoin(
-			goqu.T("blocks").As("b"),
-			goqu.On(
-				goqu.I("bcr.block_root").Eq(goqu.I("b.blockroot")),
-				goqu.L("b.status = '1'"),
-			),
+			goqu.I("status"),        // BEDS-1399
+			goqu.I("reject_reason"), // BEDS-1399
 		)
 
 	if dashboardId.Validators != nil {
@@ -318,7 +329,7 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	}
 	defaultColumns := []t.SortColumn{
 		{Column: enums.VDBConsolidationsClColumns.SlotProcessed.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
-		{Column: goqu.I("request_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.ConsolidationIndex},
+		{Column: goqu.I("index_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.ConsolidationIndex},
 	}
 
 	var offset any
@@ -341,17 +352,17 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	}
 
 	type dbResult struct {
-		Source        uint64          `db:"source"`
-		Target        uint64          `db:"target"`
-		SlotProcessed uint64          `db:"slot_processed"`
-		Amount        decimal.Decimal `db:"amount"`
-		// SlotQueued  uint64    `db:"slot_queued"` // BEDS-1399
-		// Status      string    `db:"status"` // BEDS-1399
-		// RejectReason string    `db:"reject_reason"` // BEDS-1399
-		ConsolidationIndex uint64 `db:"request_index"` // for cursor only
+		Source             uint64              `db:"source"`
+		Target             uint64              `db:"target"`
+		SlotProcessed      sql.NullInt64       `db:"slot_processed"`
+		ConsolidationIndex sql.NullInt64       `db:"index_processed"` // for cursor only
+		SlotQueued         sql.NullInt64       `db:"slot_queued"`     // BEDS-1399
+		Status             string              `db:"status"`          // BEDS-1399
+		RejectReason       sql.NullString      `db:"reject_reason"`   // BEDS-1399
+		Amount             decimal.NullDecimal `db:"amount"`
 	}
 
-	res, err := runQueryRows[[]dbResult](ctx, db.ReaderDb, consolidationsDs)
+	res, err := runQueryRows[[]dbResult](ctx, d.readerDb, consolidationsDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -360,13 +371,50 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 
 	for _, r := range res {
 		row := t.VDBConsolidationsClTableRow{
-			Source:        r.Source,
-			Target:        r.Target,
-			SlotProcessed: r.SlotProcessed,
-			Amount:        r.Amount,
-			// SlotQueued:   r.SlotQueued, // BEDS-1399
-			// Status:       r.Status, // BEDS-1399
-			// RejectReason: r.RejectReason, // BEDS-1399
+			Source: r.Source,
+			Target: r.Target,
+			Status: r.Status, // BEDS-1399
+		}
+
+		// some data integrity checks TODO add more
+		switch r.Status {
+		case "queued":
+			if r.SlotProcessed.Valid || r.Amount.Valid || r.RejectReason.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for queued consolidation")
+			}
+			if !r.SlotQueued.Valid {
+				return nil, nil, fmt.Errorf("slot_queued is not set for queued consolidation")
+			}
+		case "completed":
+			if !r.SlotQueued.Valid || !r.SlotProcessed.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for completed consolidation")
+			}
+		case "rejected":
+			if r.SlotQueued.Valid {
+				return nil, nil, fmt.Errorf("unexpected field(s) set for rejected consolidation")
+			}
+		default:
+			return nil, nil, fmt.Errorf("unknown consolidation status: %s", r.Status)
+		}
+
+		if r.SlotProcessed.Valid {
+			slot := uint64(r.SlotProcessed.Int64)
+			row.SlotProcessed = slot
+		} else { //nolint: staticcheck
+			// TODO estimation
+		}
+		if r.SlotQueued.Valid {
+			slot := uint64(r.SlotQueued.Int64)
+			row.SlotQueued = &slot
+		}
+		if r.Amount.Valid {
+			row.Amount = &r.Amount.Decimal
+		}
+		if r.RejectReason.Valid {
+			str := mapRejectReasonDbToApi(r.RejectReason.String)
+			if str != "" {
+				row.RejectReason = &str // BEDS-1399
+			}
 		}
 
 		responseData = append(responseData, row)
@@ -397,7 +445,6 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	return responseData, p, nil
 }
 
-//nolint:unused
 func mapRejectReasonDbToApi(dbReason string) string {
 	switch dbReason {
 	case "source_target_pubkey_equal":
@@ -435,7 +482,7 @@ func mapRejectReasonDbToApi(dbReason string) string {
 		log.Warn("prysm client error")
 		return ""
 	default:
-		log.Warnf("unknown error: %s", dbReason)
+		log.Warnf("unknown consolidation reject reason: '%s'", dbReason)
 		return ""
 	}
 }
