@@ -47,19 +47,19 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			goqu.I("vt.validatorindex").As("target_index"),
 			goqu.I("el_cr.block_number").As("block_queued"),
 			goqu.I("el_cr.block_ts").As("block_queued_ts"),
-			goqu.I("b.exec_block_number").As("block_processed"), // BEDS-1399
-			goqu.I("b.exec_timestamp").As("block_processed_ts"), // BEDS-1399
-			goqu.I("el_cr.itx_index"),                           // BEDS-1405
-			goqu.I("el_cr.from_address"),                        // BEDS-1405
+			goqu.I("b.exec_block_number").As("block_processed"),
+			goqu.I("b.exec_timestamp").As("block_processed_ts"),
+			goqu.I("el_cr.itx_index"),
+			goqu.I("el_cr.from_address"),
 			goqu.I("el_cr.tx_index"),
 			goqu.I("el_cr.source_address").As("consolidator"),
 			goqu.I("el_cr.tx_hash"),
-			goqu.I("el_cr.fee"), // BEDS-1405,
-			goqu.Case().When( // BEDS-1399
+			goqu.I("el_cr.fee"),
+			goqu.Case().When(
 				goqu.I("b.exec_block_number").Neq(nil), "processed",
 			).Else(
 				goqu.V("queued"),
-			).As("status"), // BEDS-1399
+			).As("status"),
 		).
 		InnerJoin(
 			goqu.T("validators").As("vs"),
@@ -69,11 +69,8 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			goqu.T("validators").As("vt"),
 			goqu.On(goqu.I("el_cr.target_pubkey").Eq(goqu.I("vt.pubkey"))),
 		).
-		// depends on BEDS-1399
-		// need to match EL events to correct CL events
-		// might needs some complex logic like "newest CL event after EL event which doesn't also match a previous EL event"
 		LeftJoin(
-			goqu.T("blocks_consolidation_requests").As("cl_cr"),
+			goqu.T("blocks_consolidation_requests_v2").As("cl_cr"),
 			goqu.On(
 				goqu.I("el_cr.id").Eq(goqu.I("cl_cr.id")),
 			),
@@ -159,8 +156,8 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		From               []byte        `db:"from_address"`       // BEDS-1405 (might get from BT for now)
 		Consolidator       []byte        `db:"consolidator"`
 		TxHash             []byte        `db:"tx_hash"`
-		Fee                []byte        `db:"fee"`    // BEDS-1405 // TODO change to number
-		Status             string        `db:"status"` // BEDS-1399
+		Fee                []byte        `db:"fee"` // BEDS-1405 // TODO change to number
+		Status             string        `db:"status"`
 	}
 	dbRes, err := runQueryRows[[]elDbResult](ctx, d.readerDb, ds)
 	if err != nil {
@@ -298,31 +295,42 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	}
 
 	consolidationsDs := goqu.Dialect("postgres").
-		From(goqu.T("blocks_consolidation_requests").As("bcr")).
+		From(goqu.T("blocks_consolidation_requests_v2").As("bcr")).
 		Select(
 			goqu.I("slot_processed"),
-			goqu.I("index_processed"),
-			goqu.I("slot_queued"), // BEDS-1399
-			goqu.I("source_index").As("source"),
-			goqu.I("target_index").As("target"),
-			goqu.L("amount_consolidated::decimal * ?", 1e9).As("amount"),
-			goqu.I("status"),        // BEDS-1399
-			goqu.I("reject_reason"), // BEDS-1399
+			goqu.I("slot_queued"),
+			goqu.I("vs.validatorindex").As("source"),
+			goqu.I("vt.validatorindex").As("target"),
+			goqu.L("amount_consolidated::decimal").As("amount"),
+			goqu.I("bcr.status"),
+			goqu.I("bcr.reject_reason"),
+			goqu.I("bcr.id"),
+			// cursor
+			enums.VDBConsolidationsClColumns.Slot.ToExpr().As("slot"),
+			goqu.COALESCE(goqu.I("index_queued"), goqu.I("index_processed")).As("index"),
+		).
+		InnerJoin(
+			goqu.T("validators").As("vs"),
+			goqu.On(goqu.I("bcr.source_pubkey").Eq(goqu.I("vs.pubkey"))),
+		).
+		InnerJoin(
+			goqu.T("validators").As("vt"),
+			goqu.On(goqu.I("bcr.target_pubkey").Eq(goqu.I("vt.pubkey"))),
 		)
 
 	if dashboardId.Validators != nil {
 		consolidationsDs = consolidationsDs.
 			Where(goqu.Or(
-				goqu.L("source_index = ANY(?)", pq.Array(dashboardId.Validators)),
-				goqu.L("target_index = ANY(?)", pq.Array(dashboardId.Validators)),
+				goqu.L("vs.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
+				goqu.L("vt.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
 			))
 	} else {
 		consolidationsDs = consolidationsDs.
 			InnerJoin(
 				goqu.T("users_val_dashboards_validators").As("uvdv"),
 				goqu.On(goqu.Or(
-					goqu.I("source_index").Eq(goqu.I("uvdv.validator_index")),
-					goqu.I("target_index").Eq(goqu.I("uvdv.validator_index")),
+					goqu.I("vs.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+					goqu.I("vt.validatorindex").Eq(goqu.I("uvdv.validator_index")),
 				)),
 			).
 			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
@@ -333,8 +341,8 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 		searches = append(searches,
 			goqu.I("slot_queued").Eq(search),
 			goqu.I("slot_processed").Eq(search),
-			goqu.I("source_index").Eq(search),
-			goqu.I("target_index").Eq(search),
+			goqu.I("vs.validatorindex").Eq(search),
+			goqu.I("vt.validatorindex").Eq(search),
 		)
 	}
 
@@ -343,21 +351,21 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	}
 
 	defaultSlotSortDesc := true
-	if colSort.Column == enums.VDBConsolidationsClColumns.SlotProcessed {
+	if colSort.Column == enums.VDBConsolidationsClColumns.Slot {
 		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
 		defaultSlotSortDesc = colSort.Desc
 	}
 	defaultColumns := []t.SortColumn{
-		{Column: enums.VDBConsolidationsClColumns.SlotProcessed.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
-		{Column: goqu.I("index_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.ConsolidationIndex},
+		{Column: enums.VDBConsolidationsClColumns.Slot.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.Slot},
+		{Column: goqu.COALESCE(goqu.I("index_queued"), goqu.I("index_processed")), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotIndex},
 	}
 
 	var offset any
 	switch colSort.Column {
-	case enums.VDBConsolidationsClColumns.SlotProcessed:
-		offset = currentCursor.SlotProcessed
+	case enums.VDBConsolidationsClColumns.Slot:
+		offset = currentCursor.Slot
 	case enums.VDBConsolidationsClColumns.Amount:
-		offset = currentCursor.ConsolidationIndex
+		offset = currentCursor.SlotIndex
 	}
 
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
@@ -372,14 +380,16 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	}
 
 	type dbResult struct {
-		Source             uint64              `db:"source"`
-		Target             uint64              `db:"target"`
-		SlotProcessed      sql.NullInt64       `db:"slot_processed"`
-		ConsolidationIndex sql.NullInt64       `db:"index_processed"` // for cursor only
-		SlotQueued         sql.NullInt64       `db:"slot_queued"`     // BEDS-1399
-		Status             string              `db:"status"`          // BEDS-1399
-		RejectReason       sql.NullString      `db:"reject_reason"`   // BEDS-1399
-		Amount             decimal.NullDecimal `db:"amount"`
+		Source        uint64           `db:"source"`
+		Target        uint64           `db:"target"`
+		SlotProcessed sql.NullInt64    `db:"slot_processed"`
+		SlotQueued    sql.NullInt64    `db:"slot_queued"`
+		Status        string           `db:"status"`
+		RejectReason  sql.NullString   `db:"reject_reason"`
+		Amount        *decimal.Decimal `db:"amount"`
+		Id            uint64           `db:"id"`
+		Slot          uint64           `db:"slot"`
+		SlotIndex     uint64           `db:"index"`
 	}
 
 	res, err := runQueryRows[[]dbResult](ctx, d.readerDb, consolidationsDs)
@@ -393,13 +403,14 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 		row := t.VDBConsolidationsClTableRow{
 			Source: r.Source,
 			Target: r.Target,
-			Status: r.Status, // BEDS-1399
+			Status: r.Status,
+			Id:     r.Id,
 		}
 
 		// some data integrity checks TODO add more
 		switch r.Status {
 		case "queued":
-			if r.SlotProcessed.Valid || r.Amount.Valid || r.RejectReason.Valid {
+			if r.SlotProcessed.Valid || r.Amount != nil || r.RejectReason.Valid {
 				return nil, nil, fmt.Errorf("unexpected field(s) set for queued consolidation")
 			}
 			if !r.SlotQueued.Valid {
@@ -419,7 +430,7 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 
 		if r.SlotProcessed.Valid {
 			slot := uint64(r.SlotProcessed.Int64)
-			row.SlotProcessed = slot
+			row.SlotProcessed = &slot
 		} else { //nolint: staticcheck
 			// TODO estimation
 		}
@@ -427,8 +438,9 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 			slot := uint64(r.SlotQueued.Int64)
 			row.SlotQueued = &slot
 		}
-		if r.Amount.Valid {
-			row.Amount = &r.Amount.Decimal
+		if r.Amount != nil {
+			amt := r.Amount.Mul(decimal.NewFromUint64(1e9))
+			row.Amount = &amt
 		}
 		if r.RejectReason.Valid {
 			str := mapConsolidationRejectReasonDbToApi(r.RejectReason.String)

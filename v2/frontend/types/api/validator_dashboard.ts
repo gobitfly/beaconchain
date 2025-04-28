@@ -295,10 +295,11 @@ export interface VDBConsolidationsClTableRow {
   source: number /* uint64 */;
   target: number /* uint64 */;
   slot_queued?: number /* uint64 */;
-  slot_processed: number /* uint64 */;
+  slot_processed?: number /* uint64 */;
   status: 'queued' | 'completed' | 'rejected';
   reject_reason?: 'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_no_execution_withdrawal_credentials' | 'source_address_mismatch' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals' | 'source_slashed';
   amount?: string /* decimal.Decimal */;
+  id: number /* uint64 */;
 }
 export type GetValidatorDashboardConsensusLayerConsolidationsResponse = ApiPagingResponse<VDBConsolidationsClTableRow>;
 /**

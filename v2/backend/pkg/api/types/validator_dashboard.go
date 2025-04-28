@@ -339,10 +339,11 @@ type VDBConsolidationsClTableRow struct {
 	Source        uint64           `json:"source"`
 	Target        uint64           `json:"target"`
 	SlotQueued    *uint64          `json:"slot_queued,omitempty"`
-	SlotProcessed uint64           `json:"slot_processed"`
+	SlotProcessed *uint64          `json:"slot_processed,omitempty"`
 	Status        string           `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason  *string          `json:"reject_reason,omitempty" tstype:"'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_no_execution_withdrawal_credentials' | 'source_address_mismatch' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals' | 'source_slashed'" faker:"oneof: source_equals_target, full_queue, insufficient_consolidation_churn, source_unknown_pubkey, target_unknown_pubkey, source_no_execution_withdrawal_credentials, source_address_mismatch, target_not_compounding, source_inactive, target_inactive, source_exiting, target_exiting, source_too_young, source_pending_withdrawals, source_slashed"`
 	Amount        *decimal.Decimal `json:"amount,omitempty" faker:"eth"`
+	Id            uint64           `json:"id"`
 }
 type GetValidatorDashboardConsensusLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsClTableRow]
 
