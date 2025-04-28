@@ -359,7 +359,7 @@ func setELConfig(cfg *types.Config) error {
 	return nil
 }
 
-var MaxForkEpoch = uint64(18446744073709551615)
+var MaxForkEpoch = uint64(18446744073709551615) // placeholder for unset / inactive fork. Can't be 0 to not confuse with genesis
 
 func setCLConfig(cfg *types.Config) error {
 	var err error

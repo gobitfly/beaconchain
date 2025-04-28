@@ -75,14 +75,16 @@ func (c GenericCursor) IsReverse() bool {
 
 type CLDepositsCursor struct {
 	GenericCursor
-	Slot      int64
+	Slot      uint64
 	SlotIndex int64
+	Amount    decimal.Decimal
 }
 
 type ELDepositsCursor struct {
 	GenericCursor
 	BlockNumber int64
 	LogIndex    int64
+	Amount      int64
 }
 
 type ValidatorsCursor struct {
