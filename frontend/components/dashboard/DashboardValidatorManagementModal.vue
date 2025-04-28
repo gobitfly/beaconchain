@@ -277,7 +277,9 @@ const effectiveBalanceLimitPerDashboard = computed(() => {
   const freeProduct = premiumProducts.value['Free']
   const effectiveBalanceLimitFreeProduct = freeProduct?.premium_perks.effective_balance_per_dashboard
 
-  return premium_perks.value?.effective_balance_per_dashboard ?? effectiveBalanceLimitFreeProduct
+  return isGuestDashboard.value
+    ? effectiveBalanceLimitFreeProduct
+    : premium_perks.value?.effective_balance_per_dashboard
 })
 
 const hasReachedLimit = computed(() => {
