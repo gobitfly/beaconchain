@@ -743,7 +743,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 
 	depositsTotalDs := goqu.Dialect("postgres").
 		Select(goqu.L("COALESCE(SUM(amount), 0)").As("amount"))
-	depositRequestsTotalDs := depositsTotalDs
+	depositRequestsTotalDs := depositsTotalDs.
+		From(goqu.T("blocks_deposit_requests_v2").As("bdr"))
 
 	searchesBridge := []exp.Expression{}
 	searchesRequests := []exp.Expression{}
@@ -764,7 +765,6 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 				),
 			)
 		depositRequestsTotalDs = depositRequestsTotalDs.
-			From(goqu.T("blocks_deposit_requests").As("bdr")).
 			Where(goqu.L("bdr.pubkey = ANY(?)", byteaArray)).
 			InnerJoin(
 				goqu.T("blocks").As("b"),
@@ -774,13 +774,16 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 				),
 			)
 	} else {
+		// TODO apply searchIndexOrSlot here
 		depositsTotalDs = depositsTotalDs.
 			From(goqu.T("cached_blocks_deposits_lookup").As("cbdl")).
-			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
+			Where(goqu.I("cbdl.dashboard_id").Eq(dashboardId.Id))
 
 		depositRequestsTotalDs = depositRequestsTotalDs.
-			From(goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl")).
-			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
+			InnerJoin(goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl"), goqu.On(
+				goqu.I("cbdrl.id").Eq(goqu.I("bdr.id")),
+			)).
+			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
 
 		if searchGroups {
 			depositsTotalDs = depositsTotalDs.
@@ -802,20 +805,11 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 	}
 
 	if searchIndexOrSlot {
-		depositsTotalDs = depositsTotalDs.
-			InnerJoin(goqu.T("validators").As("v"), goqu.On(
-				goqu.I("bd.publickey").Eq(goqu.I("v.pubkey")),
-			))
-
 		depositRequestsTotalDs = depositRequestsTotalDs.
 			InnerJoin(goqu.T("validators").As("v"), goqu.On(
 				goqu.I("bdr.pubkey").Eq(goqu.I("v.pubkey")),
 			))
 
-		searchesBridge = append(searchesBridge,
-			goqu.I("bd.block_slot").Eq(search),
-			goqu.I("v.validatorindex").Eq(search),
-		)
 		searchesRequests = append(searchesRequests,
 			goqu.I("bdr.slot_processed").Eq(search),
 			goqu.I("bdr.slot_queued").Eq(search),
