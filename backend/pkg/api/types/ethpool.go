@@ -22,7 +22,7 @@ import "time"
 type EthpoolData struct {
 	Pubkey               string    `json:"pubkey"`
 	Day                  time.Time `json:"day"`
-	Reward               uint64    `json:"reward"`
+	Reward               int64     `json:"reward"`
 	ProposedBlocks       uint64    `json:"proposed_blocks"`
 	MissedBlocks         uint64    `json:"missed_blocks"`
 	AttestationsExecuted uint64    `json:"attestations_executed"`
