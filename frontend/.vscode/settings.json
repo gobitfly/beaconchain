@@ -6,6 +6,7 @@
         "BcHeaderMegaMenu",
         "BcInputUnit",
         "BcLink",
+        "BcNotificationBanner",
         "BcPageWrapper",
         "BcPremiumModal",
         "BcTableAgeHeader",
