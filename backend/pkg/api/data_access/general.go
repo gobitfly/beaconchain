@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
@@ -60,7 +61,7 @@ func applySortAndPagination(defaultColumns []types.SortColumn, primary types.Sor
 	queryOrderColumns = append(queryOrderColumns, primary)
 	// secondary sorts according to default
 	for _, column := range defaultColumns {
-		if column.Column == primary.Column {
+		if reflect.DeepEqual(column.Column, primary.Column) {
 			if primary.Offset == nil {
 				queryOrderColumns[0].Offset = column.Offset
 			}

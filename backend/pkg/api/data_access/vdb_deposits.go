@@ -331,15 +331,17 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	type dbResult struct {
 		GroupId              sql.NullInt64   `db:"group_id"`
 		PublicKey            []byte          `db:"publickey"`
-		SlotProcessed        int64           `db:"slot_processed"`
-		IndexProcessed       int64           `db:"index_processed"`
+		SlotProcessed        sql.NullInt64   `db:"slot_processed"`
 		WithdrawalCredential []byte          `db:"withdrawalcredentials"`
 		Amount               decimal.Decimal `db:"amount"`
 		Signature            []byte          `db:"signature"`
-		SlotQueued           int64           `db:"slot_queued"`   // BEDS-1399
-		Type                 string          `db:"type"`          // BEDS-1399
-		Status               string          `db:"status"`        // BEDS-1399
-		RejectReason         sql.NullString  `db:"reject_reason"` // BEDS-1399
+		SlotQueued           sql.NullInt64   `db:"slot_queued"` // bridge deposits (pre-pectra) aren't queued
+		Type                 string          `db:"type"`
+		Status               string          `db:"status"`
+		RejectReason         sql.NullString  `db:"reject_reason"`
+		// cursor
+		Slot      uint64 `db:"slot"`
+		SlotIndex int64  `db:"index"`
 	}
 
 	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
@@ -347,10 +349,10 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
 		hasPostPectraRows = true
 		if currentCursor.IsValid() {
-			postElectra := uint64(currentCursor.SlotProcessed)/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
-			if postElectra && currentCursor.Reverse {
+			postElectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			if postElectra && !currentCursor.Reverse {
 				hasPrePectraRows, hasPostPectraRows = false, true
-			} else if !postElectra && !currentCursor.Reverse {
+			} else if !postElectra && currentCursor.Reverse {
 				hasPrePectraRows, hasPostPectraRows = true, false
 			}
 		}
@@ -375,8 +377,8 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		defaultSlotSortDesc = colSort.Desc
 	}
 	defaultColumns := []t.SortColumn{
-		{Column: enums.VDBDepositsClColumns.Slot.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
-		{Column: goqu.I("index_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotIndex},
+		{Column: enums.VDBDepositsClColumns.Slot.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.Slot},
+		{Column: goqu.I("index"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotIndex},
 	}
 	var offset any
 	switch colSort.Column {
@@ -414,21 +416,35 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		responseData[i] = t.VDBConsensusDepositsTableRow{
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Index:                indices[i],
-			SlotProcessed:        uint64(row.SlotProcessed),
-			SlotQueued:           uint64(row.SlotQueued),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
 			Amount:               utils.GWeiToWei(row.Amount.BigInt()),
 			Signature:            t.Hash(hexutil.Encode(row.Signature)),
-			Type:                 row.Type,   // TODO
-			Status:               row.Status, // TODO
+			Status:               row.Status,
+			Slot:                 row.Slot,
+			SlotIndex:            row.SlotIndex,
 		}
 		responseData[i].GroupId = t.DefaultGroupId
 		if row.GroupId.Valid && !dashboardId.AggregateGroups {
 			responseData[i].GroupId = uint64(row.GroupId.Int64)
 		}
-		// TODO BEDS-1399
+		switch row.Type {
+		case "account", "genesis":
+			responseData[i].Type = "manual"
+		case "system_access":
+			responseData[i].Type = "auto"
+		default:
+			return nil, nil, fmt.Errorf("unknown deposit type %s", row.Type)
+		}
 		if row.RejectReason.Valid {
 			responseData[i].RejectReason = &row.RejectReason.String
+		}
+		if row.SlotProcessed.Valid {
+			responseData[i].SlotProcessed = uint64(row.SlotProcessed.Int64)
+		} else { //nolint:staticcheck
+			// TODO estimate
+		}
+		if row.SlotQueued.Valid {
+			responseData[i].SlotQueued = uint64(row.SlotQueued.Int64)
 		}
 	}
 	var paging t.Paging
@@ -466,14 +482,16 @@ func getDepositsBridgeDs(dashboardId t.VDBId, search string, isValidSearchGroups
 		Select(
 			goqu.I("bd.publickey"),
 			goqu.I("bd.block_slot").As("slot_processed"),
-			goqu.I("bd.block_index").As("index_processed"),
 			goqu.I("bd.amount"),
 			goqu.I("bd.signature"),
 			goqu.I("bd.withdrawalcredentials"),
-			goqu.V(nil).As("slot_queued"),    // TODO BEDS-1399
-			goqu.V("manual").As("type"),      // TODO BEDS-1399
+			goqu.Cast(goqu.V(nil), "DECIMAL").As("slot_queued"),
+			goqu.V("account").As("type"),
 			goqu.V("completed").As("status"), // TODO BEDS-1399 (or maybe check some other tables?)
-			goqu.V(nil).As("reject_reason"),  // TODO BEDS-1399
+			goqu.V(nil).As("reject_reason"),
+			// cursor
+			goqu.I("bd.block_slot").As("slot"),
+			goqu.I("bd.block_index").As("index"),
 		).
 		InnerJoin(
 			goqu.T("blocks").As("b"),
@@ -535,18 +553,20 @@ func getDepositsBridgeDs(dashboardId t.VDBId, search string, isValidSearchGroups
 func getDepositRequestsDs(dashboardId t.VDBId, search string, isValidSearchGroups, isValidSearchIndexOrSlot bool, pubkeys pq.ByteaArray) *goqu.SelectDataset {
 	searches := []exp.Expression{}
 	depositRequestsDs := goqu.Dialect("postgres").
-		From(goqu.T("blocks_deposit_requests").As("bdr")).
+		From(goqu.T("blocks_deposit_requests_v2").As("bdr")).
 		Select(
 			goqu.I("bdr.pubkey").As("publickey"),
 			goqu.I("bdr.slot_processed"),
-			goqu.I("bdr.index_processed"),
 			goqu.I("bdr.amount"),
 			goqu.I("bdr.signature"),
 			goqu.I("bdr.withdrawal_credentials").As("withdrawalcredentials"),
-			goqu.I("bdr.slot_queued"),   // TODO BEDS-1399
-			goqu.I("bdr.type"),          // TODO BEDS-1399
-			goqu.I("bdr.status"),        // TODO BEDS-1399
-			goqu.I("bdr.reject_reason"), // TODO BEDS-1399
+			goqu.I("bdr.slot_queued"),
+			goqu.I("bdr.type"),
+			goqu.I("bdr.status"),
+			goqu.I("bdr.reject_reason"),
+			// cursor
+			enums.VDBDepositsClColumns.Slot.ToExpr().As("slot"),
+			goqu.COALESCE(goqu.I("index_queued"), goqu.I("index_processed")).As("index"),
 		)
 
 	if dashboardId.Validators != nil {
@@ -559,10 +579,7 @@ func getDepositRequestsDs(dashboardId t.VDBId, search string, isValidSearchGroup
 			).
 			InnerJoin(
 				goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl"),
-				goqu.On(
-					goqu.I("bdr.slot_processed").Eq(goqu.I("cbdrl.block_slot")),
-					goqu.I("bdr.index_processed").Eq(goqu.I("cbdrl.request_index")),
-				),
+				goqu.On(goqu.I("bdr.id").Eq(goqu.I("cbdrl.id"))),
 			).
 			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
 
@@ -726,7 +743,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 
 	depositsTotalDs := goqu.Dialect("postgres").
 		Select(goqu.L("COALESCE(SUM(amount), 0)").As("amount"))
-	depositRequestsTotalDs := depositsTotalDs
+	depositRequestsTotalDs := depositsTotalDs.
+		From(goqu.T("blocks_deposit_requests_v2").As("bdr"))
 
 	searchesBridge := []exp.Expression{}
 	searchesRequests := []exp.Expression{}
@@ -747,7 +765,6 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 				),
 			)
 		depositRequestsTotalDs = depositRequestsTotalDs.
-			From(goqu.T("blocks_deposit_requests").As("bdr")).
 			Where(goqu.L("bdr.pubkey = ANY(?)", byteaArray)).
 			InnerJoin(
 				goqu.T("blocks").As("b"),
@@ -757,13 +774,16 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 				),
 			)
 	} else {
+		// TODO apply searchIndexOrSlot here
 		depositsTotalDs = depositsTotalDs.
 			From(goqu.T("cached_blocks_deposits_lookup").As("cbdl")).
-			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
+			Where(goqu.I("cbdl.dashboard_id").Eq(dashboardId.Id))
 
 		depositRequestsTotalDs = depositRequestsTotalDs.
-			From(goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl")).
-			Where(goqu.I("dashboard_id").Eq(dashboardId.Id))
+			InnerJoin(goqu.T("cached_blocks_deposit_requests_lookup").As("cbdrl"), goqu.On(
+				goqu.I("cbdrl.id").Eq(goqu.I("bdr.id")),
+			)).
+			Where(goqu.I("cbdrl.dashboard_id").Eq(dashboardId.Id))
 
 		if searchGroups {
 			depositsTotalDs = depositsTotalDs.
@@ -785,20 +805,11 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 	}
 
 	if searchIndexOrSlot {
-		depositsTotalDs = depositsTotalDs.
-			InnerJoin(goqu.T("validators").As("v"), goqu.On(
-				goqu.I("bd.publickey").Eq(goqu.I("v.pubkey")),
-			))
-
 		depositRequestsTotalDs = depositRequestsTotalDs.
 			InnerJoin(goqu.T("validators").As("v"), goqu.On(
 				goqu.I("bdr.pubkey").Eq(goqu.I("v.pubkey")),
 			))
 
-		searchesBridge = append(searchesBridge,
-			goqu.I("bd.block_slot").Eq(search),
-			goqu.I("v.validatorindex").Eq(search),
-		)
 		searchesRequests = append(searchesRequests,
 			goqu.I("bdr.slot_processed").Eq(search),
 			goqu.I("bdr.slot_queued").Eq(search),

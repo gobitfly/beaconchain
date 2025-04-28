@@ -165,6 +165,7 @@ type OrderableSortable interface {
 	exp.Orderable
 	exp.Comparable
 	exp.Isable
+	exp.Aliaseable
 }
 
 func (c VDBBlocksColumn) ToExpr() OrderableSortable {
@@ -414,7 +415,7 @@ func (VDBDepositsClColumn) NewFromString(s string) VDBDepositsClColumn {
 func (c VDBDepositsClColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBDepositClSlot:
-		return goqu.C("slot_processed")
+		return goqu.COALESCE(goqu.I("slot_queued"), goqu.I("slot_processed"))
 	case VDBDepositClAmount:
 		return goqu.C("amount")
 	default:
