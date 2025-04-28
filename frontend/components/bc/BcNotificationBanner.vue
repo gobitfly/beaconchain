@@ -24,7 +24,7 @@ defineProps<{
 <style scoped lang="scss">
 .bc-notification-banner {
   background-color: var(--primary-orange);
-  width: 100%;
+  width: var(--content-width);
   padding: var(--padding) var(--padding-medium);
   color: var(--text-color-inverted);
 
