@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var epochsPerBatch uint64 = 0
+var epochsPerBatch uint64 = 128
 var slotsPerBatch int = 128 // 4 epochs worth
 
 // the fork plays down as follows:
@@ -225,6 +225,9 @@ func (c *consensusLayerEventsIndexer) IndexEvents() (bool, error) {
 		&cl_transformers.WithdrawalRejectedPreQueueEventTransformer{},
 		&cl_transformers.WithdrawalProcessedEventTransformer{},
 		&cl_transformers.WithdrawalRejectedPostQueueEventTransformer{},
+		//&cl_transformers.RemovedExcessBalanceEventTransformer{},
+		//&cl_transformers.ExitRequestProcessedEventTransformer{},
+		&cl_transformers.SwitchToCompoundingEventTransformer{},
 	}
 	// the processing boils down to the following basically:
 	// chunk the filters into chunks. for each chunk, fetch all possible events from the db using the filters,

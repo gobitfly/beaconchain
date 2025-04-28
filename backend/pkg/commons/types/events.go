@@ -220,6 +220,19 @@ type WithdrawalRequestDBRow struct {
 	Amount          uint64             `db:"amount"`
 }
 
+type SwitchToCompoundingRequestDBRow struct {
+	Id               int64  `db:"id"`
+	ExecutionLayerID *int64 `db:"eth1_id"`
+
+	SlotProcessed      *int64 `db:"slot_processed"`
+	IndexProcessed     *int64 `db:"index_processed"`
+	BlockProcessedRoot []byte `db:"block_processed_root"`
+
+	Status          GenericEventStatus `db:"status"`
+	RejectReason    *string            `db:"reject_reason"`
+	ValidatorPubkey []byte             `db:"validator_pubkey"`
+}
+
 type EpochBlockRoots struct {
 	Epoch uint64
 	// between n*slotsPerEpoch and (n+1)*slotsPerEpoch-1. missed slots are not included
