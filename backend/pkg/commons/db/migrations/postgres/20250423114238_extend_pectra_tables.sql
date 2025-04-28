@@ -4,7 +4,7 @@
 ALTER TABLE eth1_consolidation_requests ADD COLUMN IF NOT EXISTS id SERIAL UNIQUE;
 ALTER TABLE eth1_withdrawal_requests ADD COLUMN IF NOT EXISTS id SERIAL UNIQUE;
 
-CREATE TABLE IF NOT EXISTS blocks_deposit_requests (
+CREATE TABLE IF NOT EXISTS blocks_deposit_requests_v2 (
 	id SERIAL PRIMARY KEY,                                      -- would ideally match eth1_id if possible ?
 	eth1_id bytea REFERENCES eth1_deposits(merkletree_index),   -- if available (= type is genesis or system_excess)
 	-- null if never queued bcus rejected
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS blocks_deposit_requests (
 
 
 
-CREATE TABLE IF NOT EXISTS blocks_consolidation_requests (
+CREATE TABLE IF NOT EXISTS blocks_consolidation_requests_v2 (
 	id SERIAL PRIMARY KEY,
 	eth1_id integer REFERENCES eth1_consolidation_requests(id), -- nullable to enable async eth1 event matching
 	-- null if never queued bcus rejected
@@ -46,13 +46,13 @@ CREATE TABLE IF NOT EXISTS blocks_consolidation_requests (
 	reject_reason text,                                         -- ~15
 	
 	amount_consolidated int8 NULL,
-	source_index int4 NOT NULL,
-	target_index int4 NOT NULL
+	source_pubkey bytea NOT NULL,
+	target_pubkey bytea NOT NULL
 );
 
 
 
-CREATE TABLE IF NOT EXISTS blocks_withdrawal_requests (
+CREATE TABLE IF NOT EXISTS blocks_withdrawal_requests_v2 (
 	id SERIAL PRIMARY KEY,
 	eth1_id integer REFERENCES eth1_withdrawal_requests(id),    -- nullable to enable async eth1 event matching
 	-- null if never queued bcus rejected
@@ -68,11 +68,11 @@ CREATE TABLE IF NOT EXISTS blocks_withdrawal_requests (
 	reject_reason text,                                         -- ~15
 
 	validator_pubkey bytea NOT NULL,
-	amount int8 NOT NULL
+	amount decimal NOT NULL
 );
 
 
-CREATE TABLE IF NOT EXISTS blocks_switch_to_compounding_requests (
+CREATE TABLE IF NOT EXISTS blocks_switch_to_compounding_requests_v2 (
 	id SERIAL PRIMARY KEY,
 	eth1_id integer REFERENCES eth1_consolidation_requests(id),      -- no genesis hardcoding here, should always have an eth1 event
 	-- never null because handled pre queue
