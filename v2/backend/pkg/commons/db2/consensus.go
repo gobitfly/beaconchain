@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 type ConsensusRepository interface {
@@ -37,6 +39,11 @@ type ConsensusRepository interface {
 	GetSyncCommitteesPeriods() ([]uint64, error)
 	UpdatePubkeyTags() error
 	SavePendingDepositsQueue(pendingDeposits []types.PendingDeposit) error
+	GetLastIndexedConsensusLayerEventsEpoch() (int64, error)
+	GetConsensusLayerEventsOfType(slot uint64, eventName types.ConsensusLayerEventName) ([]types.ConsensusLayerEvent, error)
+	GetWriterTx() (*sqlx.Tx, error)
+	GetConsensusLayerEventsForFilters(filters []types.ConsensusLayerEventFilter) ([]types.ConsensusLayerEvent, error)
+	UpdateConsensusLayerExporterMetadata(*sqlx.Tx, []types.EpochBlockRoots) error
 }
 
 type ConsensusDB struct {
@@ -398,4 +405,80 @@ func (c *ConsensusDB) SavePendingDepositsQueue(pendingDeposits []types.PendingDe
 
 	err := db.ClearAndCopyToTable(c.WriterDb, "pending_deposits_queue", []string{"id", "validator_index", "pubkey", "withdrawal_credentials", "amount", "signature", "slot", "queued_balance_ahead", "est_clear_epoch"}, dat)
 	return err
+}
+
+func (c *ConsensusDB) GetLastIndexedConsensusLayerEventsEpoch() (count int64, err error) {
+	err = c.WriterDb.Get(&count, "SELECT COALESCE(MAX(epoch), -1) FROM consensus_layer_events_indexer_metadata")
+	return count, err
+}
+
+func (c *ConsensusDB) UpdateConsensusLayerExporterMetadata(tx *sqlx.Tx, data []types.EpochBlockRoots) error {
+	rows := make([]struct {
+		Epoch     uint64 `db:"epoch"`
+		BlockRoot []byte `db:"transition_block_hash"`
+	}, len(data))
+	for i, d := range data {
+		rows[i].Epoch = d.Epoch
+		rows[i].BlockRoot = d.EpochBlockRoot
+	}
+	_, err := tx.NamedExec(
+		`INSERT INTO consensus_layer_events_indexer_metadata (epoch, transition_block_hash)
+		VALUES (:epoch, :transition_block_hash)`,
+		rows,
+	)
+	if err != nil {
+		return errors.Wrap(err, "error inserting into consensus_layer_events_indexer_metadata")
+	}
+	return nil
+}
+
+func (c *ConsensusDB) GetConsensusLayerEventsOfType(slot uint64, eventName types.ConsensusLayerEventName) ([]types.ConsensusLayerEvent, error) {
+	var events []types.ConsensusLayerEvent
+	err := c.WriterDb.Select(&events, "SELECT event_name, id, block_root, slot, event_index, data FROM consensus_layer_events WHERE slot = $1 AND event_name = $2 and version = $3", slot, eventName, types.ConsensusLayerEventVersion)
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+func (c *ConsensusDB) GetWriterTx() (*sqlx.Tx, error) {
+	tx, err := c.WriterDb.Beginx()
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
+func (c *ConsensusDB) GetConsensusLayerEventsForFilters(filters []types.ConsensusLayerEventFilter) ([]types.ConsensusLayerEvent, error) {
+	var events []types.ConsensusLayerEvent
+	if len(filters) == 0 {
+		return events, nil
+	}
+
+	var orConditions []goqu.Expression
+	for _, filter := range filters {
+		orConditions = append(orConditions, goqu.Ex{
+			"slot":       filter.Slot,
+			"block_root": filter.BlockRoot,
+		})
+	}
+
+	ds := goqu.Dialect("postgres").From("consensus_layer_events").
+		Select("event_name", "id", "block_root", "slot", "event_index", "data").
+		Where(goqu.And(
+			goqu.Ex{"version": types.ConsensusLayerEventVersion},
+			goqu.Or(orConditions...),
+		))
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error preparing query: %w", err)
+	}
+
+	err = c.WriterDb.Select(&events, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err)
+	}
+
+	return events, nil
 }

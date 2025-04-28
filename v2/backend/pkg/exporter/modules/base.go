@@ -57,6 +57,11 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 
 		syncCommitteesCountExporter := newSyncCommitteesCountExporter(ctx, consDB)
 		go syncCommitteesCountExporter.Export()
+		consensusLayerEventsIndexer := newConsensusLayerEventsIndexer(ctx, moduleCtx.CL, consDB, &consensusLayerEventsConfig{
+			SlotsPerEpoch:    utils.Config.ClConfig.SlotsPerEpoch,
+			ElectraForkEpoch: utils.Config.ClConfig.ElectraForkEpoch,
+		})
+		go consensusLayerEventsIndexer.Index()
 
 		if utils.Config.SSVExporter.Enabled {
 			go ssvExporter()
