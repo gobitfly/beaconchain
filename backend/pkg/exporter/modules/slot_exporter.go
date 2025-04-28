@@ -697,21 +697,17 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 						SELECT
 							uvdv.dashboard_id,
 							uvdv.group_id,
-							bdr.block_slot,
-							bdr.request_index,
-							bdr.amount
+							bdr.id
 						FROM
-							blocks_deposit_requests bdr
+							blocks_deposit_requests_v2 bdr
 							INNER JOIN validators v ON bdr.pubkey = v.pubkey
 							INNER JOIN users_val_dashboards_validators uvdv ON v.validatorindex = uvdv.validator_index
-							INNER JOIN blocks b ON bdr.block_root = b.blockroot and b.status = '1'
 						ORDER BY
 							uvdv.dashboard_id DESC,
-							bdr.block_slot DESC,
-							bdr.request_index DESC;
+							bdr.slot_processed DESC,
+							bdr.index_processed DESC;
 						`, "cached_blocks_deposit_requests_lookup",
-						[]string{"dashboard_id", "block_slot", "request_index"},
-						[]string{"dashboard_id", "amount"})
+						[]string{"dashboard_id", "id"})
 					if err != nil {
 						return fmt.Errorf("error updating cached view of consensus deposit requests: %w", err)
 					}

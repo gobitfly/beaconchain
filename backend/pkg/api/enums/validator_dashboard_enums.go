@@ -379,6 +379,17 @@ func (VDBDepositsElColumn) NewFromString(s string) VDBDepositsElColumn {
 	}
 }
 
+func (c VDBDepositsElColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBDepositElBlock:
+		return goqu.I("ed.block_number")
+	case VDBDepositElAmount:
+		return goqu.I("ed.amount")
+	default:
+		return nil
+	}
+}
+
 var VDBDepositsElColumns = struct {
 	Block  VDBDepositsElColumn
 	Amount VDBDepositsElColumn
@@ -411,6 +422,17 @@ func (VDBDepositsClColumn) NewFromString(s string) VDBDepositsClColumn {
 		return VDBDepositClAmount
 	default:
 		return VDBDepositsClColumn(-1)
+	}
+}
+
+func (c VDBDepositsClColumn) ToExpr() OrderableSortable {
+	switch c {
+	case VDBDepositClSlot:
+		return goqu.COALESCE(goqu.I("slot_queued"), goqu.I("slot_processed"))
+	case VDBDepositClAmount:
+		return goqu.C("amount")
+	default:
+		return nil
 	}
 }
 
