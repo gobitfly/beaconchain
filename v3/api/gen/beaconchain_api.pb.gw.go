@@ -40,6 +40,7 @@ func request_BeaconchainApiService_CreateValidatorDashboard_0(ctx context.Contex
 		protoReq CreateValidatorDashboardRequest
 		metadata runtime.ServerMetadata
 	)
+	io.Copy(io.Discard, req.Body)
 	msg, err := client.CreateValidatorDashboard(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 }
@@ -59,6 +60,7 @@ func request_BeaconchainApiService_GetValidatorDashboard_0(ctx context.Context, 
 		metadata runtime.ServerMetadata
 		err      error
 	)
+	io.Copy(io.Discard, req.Body)
 	val, ok := pathParams["dashboardId"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dashboardId")
@@ -96,6 +98,7 @@ func request_BeaconchainApiService_ListValidatorDashboards_0(ctx context.Context
 		protoReq ListValidatorDashboardsRequest
 		metadata runtime.ServerMetadata
 	)
+	io.Copy(io.Discard, req.Body)
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
@@ -127,6 +130,7 @@ func request_BeaconchainApiService_DeleteValidatorDashboard_0(ctx context.Contex
 		metadata runtime.ServerMetadata
 		err      error
 	)
+	io.Copy(io.Discard, req.Body)
 	val, ok := pathParams["dashboardId"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "dashboardId")

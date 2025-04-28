@@ -17,7 +17,7 @@ import (
 )
 
 type ApiService struct {
-	model.UnimplementedBeaconchainApiServiceServer
+	model.UnimplementedBeaconchainApiV1ServiceServer
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
 }
@@ -68,7 +68,7 @@ func Run(
 
 	s := grpc.NewServer() // Unsecured
 	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
-	model.RegisterBeaconchainApiServiceServer(s, apiService)
+	model.RegisterBeaconchainApiV1ServiceServer(s, apiService)
 
 	go s.Serve(lis)
 	log.Infof("gRPC server listening at %v", lis.Addr())

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"flag"
+
 	"github.com/gobitfly/beaconchain-api/internal/log"
 	"github.com/spf13/viper"
 )
@@ -55,8 +57,15 @@ type ServiceConfig struct {
 // 1. Chain Config, used to define the "Specification" of each chain
 // 3. Service Config, which is used to define the parameters that the service itself runs with.
 
-func LoadServiceConfig(env Environment) *ServiceConfig {
-	log.Info("Got this far")
+func LoadServiceConfig() *ServiceConfig {
+
+	// using standard library "flag" package
+	env := flag.String("environment", "Development", "Name of the environment")
+	flag.Parse()
+
+	log.Infof("Found flag environment: %s", *env)
+
+	log.Info("Got this far: " + *env)
 	// "configs/service/default.yaml"
 	viper.AddConfigPath("configs/service")    // Typical "Run from cmd-line path"
 	viper.AddConfigPath("../configs/service") // Typical "Run debug from vs-code path"
@@ -70,7 +79,7 @@ func LoadServiceConfig(env Environment) *ServiceConfig {
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
-	viper.SetConfigName(string(env))
+	viper.SetConfigName(string(*env))
 	err = viper.MergeInConfig()
 	if err != nil {
 		log.Fatalf("Error reading %s config: %v", env, err)

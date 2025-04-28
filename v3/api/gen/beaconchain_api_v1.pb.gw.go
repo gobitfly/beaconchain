@@ -41,6 +41,7 @@ func request_BeaconchainApiV1Service_ExecutionBlock_0(ctx context.Context, marsh
 		metadata runtime.ServerMetadata
 		err      error
 	)
+	io.Copy(io.Discard, req.Body)
 	val, ok := pathParams["blockNumber"]
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "blockNumber")

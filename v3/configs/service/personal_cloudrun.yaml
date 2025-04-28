@@ -1,17 +1,19 @@
 # Anything placed here will override `service/default.yaml`
 # Below settings are for a "default" empty psql database. You shouldn't put any real credentials here. 
 # Instead, override these with Environment variables to keep things secure.
+#
+#
 readerAdminDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "localhost"
+  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
   port: "5432"
   password: "postgres"
   useSSL: false
 writerAdminDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "localhost"
+  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
   port: "5432"
   password: "postgres"
   useSSL: false
@@ -19,14 +21,14 @@ writerAdminDatabase:
 readerChainDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "localhost"
+  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
   port: "5432"
   password: "postgres"
   useSSL: false
 writerChainDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "localhost"
+  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
   port: "5432"
   password: "postgres"
   useSSL: false

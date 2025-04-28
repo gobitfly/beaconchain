@@ -48,7 +48,8 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 			}
 			extraParams += "&connection_open_strategy=in_order"
 		}*/
-	db := sqlx.MustConnect(databaseType.getDriverName(), createDbConnectionString(databaseType, *dbConfig, extraParams))
+	//db := sqlx.MustConnect(databaseType.getDriverName(), createDbConnectionString(databaseType, *dbConfig, extraParams))
+	db := sqlx.MustConnect(databaseType.getDriverName(), createSqlAuthProxyConnectionString(databaseType, *dbConfig))
 
 	if dbConfig.MaxOpenConns == 0 {
 		dbConfig.MaxOpenConns = 50
@@ -73,6 +74,11 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 
 func createDbConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig, extraParams []string) string {
 	return fmt.Sprintf("%s://%s:%s@%s/%s?%s", string(databaseType), dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.DbName, strings.Join(extraParams, "&"))
+}
+
+// TODO: Connect via IAM Auth
+func createSqlAuthProxyConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig) string {
+	return fmt.Sprintf("host=%s user=%s password=%s port=%s database=%s", dbConfig.Host, dbConfig.Username, dbConfig.Password, dbConfig.Port, dbConfig.DbName)
 }
 
 func (databaseType DatabaseType) getSSLParam(shouldUseSSL bool) string {

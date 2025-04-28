@@ -20,5 +20,9 @@ lint:
 	buf lint
 run:
 	chmod +x bin/beaconchain-api-service
-	bin/beaconchain-api-service
+	bin/beaconchain-api-service $(ARGS)
+cr-deploy-staging:
+	gcloud run deploy --source . --project staging-456307 --network mono-vpc --region us-central1 --add-cloudsql-instances=staging-456307:us-central1:hoodi-d7ab6b26,staging-456307:us-central1:users-024879cd --args="--environment","staging"
+cr-deploy-personal:
+	gcloud run deploy --source . --project michael-test-454110 --network mono-vpc --region us-central1 --add-cloudsql-instances=staging-456307:us-central1:hoodi-d7ab6b26,staging-456307:us-central1:users-024879cd --args="--environment","cloud_run"
 

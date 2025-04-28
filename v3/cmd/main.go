@@ -1,17 +1,20 @@
 package main
 
 import (
-	"github.com/gobitfly/beaconchain-api/internal/app/management_api"
+	app "github.com/gobitfly/beaconchain-api/internal/app/v1_api"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	"github.com/gobitfly/beaconchain-api/internal/dataaccess/db"
-	"github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
+	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
 )
 
 /**
  * Initializes and kicks off the service.
  */
 func main() {
-	serviceConfig := config.LoadServiceConfig(config.Development)
+	//flag.String("environment", "development", "The environment (and thus the config set) for which the service should be run (development, staging, production)")
+
+	//serviceConfig := config.LoadServiceConfig(config.Development)
+	serviceConfig := config.LoadServiceConfig()
 
 	// Initializes dependencies which are required for the service to operate
 	roConnectionAdminDb := db.InitDB(&serviceConfig.ReaderAdminDatabase, db.Postgres)
