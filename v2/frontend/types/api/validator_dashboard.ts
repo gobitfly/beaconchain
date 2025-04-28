@@ -214,7 +214,7 @@ export interface VDBConsensusDepositsTableRow {
   public_key: PubKey;
   index: number /* uint64 */;
   group_id: number /* uint64 */;
-  slot_queued: number /* uint64 */;
+  slot_queued?: number /* uint64 */;
   slot_processed: number /* uint64 */;
   withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
@@ -222,6 +222,11 @@ export interface VDBConsensusDepositsTableRow {
   type: 'manual' | 'auto';
   status: 'queued' | 'completed' | 'rejected';
   reject_reason?: 'invalid_signature';
+  /**
+   * unique
+   */
+  slot: number /* uint64 */;
+  slot_index: number /* int64 */;
 }
 export type GetValidatorDashboardConsensusLayerDepositsResponse = ApiPagingResponse<VDBConsensusDepositsTableRow>;
 export interface VDBTotalExecutionDepositsData {

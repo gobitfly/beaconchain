@@ -249,7 +249,7 @@ type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key" faker:"pubkey"`
 	Index                uint64          `json:"index"`
 	GroupId              uint64          `json:"group_id"`
-	SlotQueued           uint64          `json:"slot_queued"`
+	SlotQueued           uint64          `json:"slot_queued,omitempty"`
 	SlotProcessed        uint64          `json:"slot_processed"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`
 	Amount               decimal.Decimal `json:"amount" faker:"eth"`
@@ -257,6 +257,9 @@ type VDBConsensusDepositsTableRow struct {
 	Type                 string          `json:"type" tstype:"'manual' | 'auto'" faker:"oneof: manual, auto"`
 	Status               string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason         *string         `json:"reject_reason,omitempty" tstype:"'invalid_signature'" faker:"oneof: invalid_signature"`
+	// unique
+	Slot      uint64 `json:"slot"`
+	SlotIndex int64  `json:"slot_index"`
 }
 type GetValidatorDashboardConsensusLayerDepositsResponse ApiPagingResponse[VDBConsensusDepositsTableRow]
 
