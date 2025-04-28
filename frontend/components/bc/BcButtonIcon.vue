@@ -54,6 +54,10 @@ const { variant = 'plain' } = defineProps<{
     outline: var(--outline-width) solid var(--blue-500);
     outline-offset: var(--outline-offset);
   }
+
+  &.link {
+    color: var(--link-color);
+  }
 }
 
 .bc-button-icon--flat {
