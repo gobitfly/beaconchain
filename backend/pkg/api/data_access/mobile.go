@@ -288,7 +288,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
 				Select(
-					goqu.L("COALESCE(SUM(efficiency_dividend::decimal) / NULLIF(SUM(efficiency_divisor::decimal), 0), 0)").As("efficiency"),
+					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
 				).
 				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
