@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS blocks_switch_to_compounding_requests_v2 (
 	status text NOT NULL,                                            -- queued, completed, rejected
 	reject_reason text,                                              -- ~10
 
-	validator_index int4 NOT NULL
+	validator_pubkey bytea NOT NULL
 );
 
 -- +goose StatementEnd
