@@ -34,7 +34,7 @@ func (d *DataAccessService) GetEthpool(ctx context.Context, day time.Time, valid
 	type Data struct {
 		ValidatorIndex        uint64    `db:"validator_index"`
 		T                     time.Time `db:"t"`
-		Reward                uint64    `db:"reward"`
+		Reward                int64     `db:"reward"`
 		ProposedBlocks        uint64    `db:"blocks_proposed"`
 		ScheduledBlocks       uint64    `db:"blocks_scheduled"`
 		AttestationsExecuted  uint64    `db:"attestations_observed"`
