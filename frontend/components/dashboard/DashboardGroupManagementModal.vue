@@ -6,10 +6,7 @@ import {
 } from '#components'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type {
-  Cursor, SortOrder,
-} from '~/types/datatable'
-import { getSortOrder } from '~/utils/table'
+import type { Cursor } from '~/types/datatable'
 
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()

@@ -34,10 +34,12 @@ export default withNuxt({
       'error',
       {
         ExportDeclaration: {
+          consistent: true,
           minProperties: 2,
           multiline: true,
         },
         ImportDeclaration: {
+          consistent: true,
           minProperties: 2,
           multiline: true,
         },

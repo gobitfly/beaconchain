@@ -1,31 +1,28 @@
 <script setup lang="ts">
 import type { Paging } from '~/types/api/common'
-import type { Cursor } from '~/types/datatable'
+// import type { Cursor } from '~/types/datatable'
 
 interface Props {
-  cursor: Cursor,
+  // cursor: Cursor,
   pageSize: number,
   paging?: Paging,
-  stepperOnly?: boolean,
 }
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void,
+  (e: 'setCursor', value: string | undefined): void,
   (e: 'setPageSize', value: number): void,
 }>()
 
-const pageSizes = [
+const limits = [
   5,
   10,
   25,
   50,
   100,
-]
+] as const
 
-const currentOffset = computed<number>(() =>
-  typeof props.cursor === 'number' ? props.cursor : 0,
-)
+const currentOffset = ref(0)
 
 const data = computed(() => {
   if (!props.paging) {
@@ -58,54 +55,54 @@ const data = computed(() => {
   }
 })
 
-const next = () => {
-  emit(
-    'setCursor',
-    Math.min(
-      currentOffset.value + props.pageSize,
-      ((data.value.lastPage ?? 1) - 1) * props.pageSize,
-    ),
-  )
-}
+// const next = () => {
+//   emit(
+//     'setCursor',
+//     Math.min(
+//       currentOffset.value + props.pageSize,
+//       ((data.value.lastPage ?? 1) - 1) * props.pageSize,
+//     ),
+//   )
+// }
 
-const prev = () => {
-  emit('setCursor', Math.max(0, currentOffset.value - props.pageSize))
-}
+// const prev = () => {
+//   emit('setCursor', Math.max(0, currentOffset.value - props.pageSize))
+// }
 
 const first = () => {
   emit('setCursor', undefined)
 }
 
-const last = () => {
-  emit('setCursor', (data.value.lastPage! - 1) * props.pageSize)
-}
+// const last = () => {
+//   emit('setCursor', (data.value.lastPage! - 1) * props.pageSize)
+// }
 
 const setPageSize = (size: number) => {
-  if (data.value.mode === 'offset') {
-    // in case we increase the page size we must adjust the offset
-    const off = currentOffset.value % size
-    if (off > 0) {
-      emit('setCursor', currentOffset.value - off)
-    }
-  }
+  // if (data.value.mode === 'offset') {
+  //   // in case we increase the page size we must adjust the offset
+  //   const off = currentOffset.value % size
+  //   if (off > 0) {
+  //     emit('setCursor', currentOffset.value - off)
+  //   }
+  // }
   emit('setPageSize', size)
 }
 
-// in case the totalCount decreased
-watch(
-  () => data.value.lastPage && data.value.lastPage < data.value.page,
-  (match) => {
-    if (data.value.lastPage !== undefined && match) {
-      last()
-    }
-  },
-)
+// // in case the totalCount decreased
+// watch(
+//   () => data.value.lastPage && data.value.lastPage < data.value.page,
+//   (match) => {
+//     if (data.value.lastPage !== undefined && match) {
+//       last()
+//     }
+//   },
+// )
 </script>
 
 <template>
   <div class="bc-pageinator">
     <div class="pager">
-      <template v-if="data.mode === 'offset'">
+      <!-- <template v-if="data.mode === 'offset'">
         <div
           class="item button"
           :disabled="!currentOffset"
@@ -143,46 +140,43 @@ watch(
         >
           {{ $t("table.last") }}
         </div>
-      </template>
-      <template v-else-if="data.mode === 'cursor'">
-        <div
-          class="item button"
-          :disabled="!data.prev_cursor"
-          @click="first"
-        >
-          {{ $t("table.first") }}
-        </div>
-        <div
-          class="item button"
-          :disabled="!data.prev_cursor"
-          @click="emit('setCursor', data.prev_cursor)"
-        >
-          <BcIcon
-            name="chevron-left"
-            class="toggle"
-          />
-        </div>
-        <div
-          class="item button"
-          :disabled="!data.next_cursor"
-          @click="emit('setCursor', data.next_cursor)"
-        >
-          <BcIcon
-            name="chevron-right"
-            class="toggle"
-          />
-        </div>
-      </template>
+      </template> -->
+      <div
+        class="item button"
+        :disabled="!data.prev_cursor"
+        @click="first"
+      >
+        {{ $t("table.first") }}
+      </div>
+      <div
+        class="item button"
+        :disabled="!data.prev_cursor"
+        @click="emit('setCursor', data.prev_cursor)"
+      >
+        <BcIcon
+          name="chevron-left"
+          class="toggle"
+        />
+      </div>
+      <div
+        class="item button"
+        :disabled="!data.next_cursor"
+        @click="emit('setCursor', data.next_cursor)"
+      >
+        <BcIcon
+          name="chevron-right"
+          class="toggle"
+        />
+      </div>
       <Select
-        v-if="props.pageSize && !stepperOnly"
+        v-if="props.pageSize"
         :model-value="props.pageSize"
-        :options="pageSizes"
+        :options="[...limits]"
         class="table small"
         @change="(event) => setPageSize(event.value)"
       />
     </div>
     <div
-      v-if="!stepperOnly"
       class="left-info"
     >
       <slot name="bc-table-footer-left">
