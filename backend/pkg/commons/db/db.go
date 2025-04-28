@@ -2603,8 +2603,8 @@ func TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.T
 				event_index AS request_index,
 				decode((data->>'address'), 'base64') AS address,
 				(data->>'index')::int AS validator_index
-			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-	`, firstSlot, lastSlot)
+			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 AND version = $3 ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot, types.ConsensusLayerEventVersion)
 	if err != nil {
 		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
 	}
@@ -2621,14 +2621,23 @@ func TransformConsolidationRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (in
 	res, err := tx.Exec(`
 	INSERT INTO blocks_consolidation_requests (block_slot, block_root, request_index, source_index, target_index, amount_consolidated)
 		SELECT
-				slot AS slot,
-				block_root AS block_root,
-				event_index AS request_index,
-				(data->>'source_index')::int AS source_index,
-				(data->>'target_index')::int AS target_index,
-				(data->>'amount')::bigint AS amount_consolidated
-			FROM consensus_layer_events WHERE event_name = 'ConsolidationProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-	`, firstSlot, lastSlot)
+			cle.slot					AS block_slot,
+			cle.block_root				AS block_root,
+			cle.event_index				AS request_index,
+			src.validatorindex			AS source_index,
+			tgt.validatorindex			AS target_index,
+			(data->>'amount')::bigint 	AS amount_consolidated
+		FROM consensus_layer_events cle
+		JOIN validators AS src
+			ON src.pubkey = decode(cle.data ->> 'source_pubkey', 'base64')
+		JOIN validators AS tgt
+			ON tgt.pubkey = decode(cle.data ->> 'target_pubkey', 'base64')
+		WHERE
+			event_name = 'ConsolidationProcessedEvent' AND
+			slot >= $1 AND slot <= $2 AND
+			version = $3
+		ON CONFLICT DO NOTHING;
+	`, firstSlot, lastSlot, types.ConsensusLayerEventVersion)
 	if err != nil {
 		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
 	}
@@ -2652,8 +2661,8 @@ func TransformDepositRequests(firstSlot, lastSlot uint64, tx *sqlx.Tx) (int64, e
 				decode((data->>'withdrawal_credentials'), 'base64')::bytea AS withdrawal_credentials,
 				(data->>'amount')::bigint AS amount,
 				decode((data->>'signature'), 'base64')::bytea AS signature
-		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-`, firstSlot, lastSlot)
+		FROM consensus_layer_events WHERE event_name = 'DepositProcessedEvent' AND slot >= $1 AND slot <= $2 AND version = $3 ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot, types.ConsensusLayerEventVersion)
 	if err != nil {
 		return 0, fmt.Errorf("error transforming deposit requests: %w", err)
 	}
@@ -2671,14 +2680,17 @@ func TransformRemovedExcessBalanceEvents(firstSlot, lastSlot uint64, tx *sqlx.Tx
 	res, err := tx.Exec(`
 	INSERT INTO blocks_withdrawals (block_slot, block_root, withdrawalindex, validatorindex, address, amount)
 		SELECT
-				slot AS block_slot,
-				block_root AS block_root,
-				-20000 + event_index AS withdrawalindex,
-				(data->>'validator_index')::int AS validatorindex,
-				''::bytea as address,
-				(data->>'amount')::bigint AS amount
-		FROM consensus_layer_events WHERE event_name = 'RemovedExcessBalanceEvent' AND slot >= $1 AND slot <= $2 ON CONFLICT DO NOTHING;
-`, firstSlot, lastSlot)
+			cle.slot 						AS block_slot,
+			cle.block_root 					AS block_root,
+			-20000 + cle.event_index 		AS withdrawalindex,
+			(vali.validatorindex)::int 		AS validatorindex,
+			''::bytea 						as address,
+			(cle.data->>'amount')::bigint 	AS amount
+		FROM consensus_layer_events cle
+		JOIN validators AS vali
+			ON vali.pubkey = decode(cle.data ->> 'pubkey', 'base64')
+		WHERE event_name = 'RemovedExcessBalance' AND slot >= $1 AND slot <= $2 AND version = $3 ON CONFLICT DO NOTHING;
+`, firstSlot, lastSlot, types.ConsensusLayerEventVersion)
 	if err != nil {
 		return 0, fmt.Errorf("error transforming excess balance requests: %w", err)
 	}
