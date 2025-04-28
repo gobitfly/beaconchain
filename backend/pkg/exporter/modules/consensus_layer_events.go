@@ -159,9 +159,9 @@ func (c *consensusLayerEventsIndexer) IndexEvents() (bool, error) {
 	startEpoch := uint64(max(minForkEpoch, uint64(lastIndexedEpoch+1)))
 	endEpoch := uint64(max(c.config.ElectraForkEpoch, finalized))
 
-	if endEpoch-startEpoch > epochsPerBatch {
-		log.Warnf("end epoch %d is greater than start epoch %d + epochs per batch %d", endEpoch, startEpoch, epochsPerBatch)
-		endEpoch = startEpoch + epochsPerBatch
+	if endEpoch-startEpoch > (epochsPerBatch - 1) {
+		log.Warnf("end epoch %d is greater than start epoch %d + epochs %d", endEpoch, startEpoch, epochsPerBatch-1)
+		endEpoch = startEpoch + epochsPerBatch - 1
 		didPartialRun = true
 	}
 	// check that the epoch before startEpoch has been exported. we wont run transformer against this epoch, but we need to know that it exists
