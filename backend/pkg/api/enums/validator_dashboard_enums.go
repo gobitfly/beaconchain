@@ -165,6 +165,7 @@ type OrderableSortable interface {
 	exp.Orderable
 	exp.Comparable
 	exp.Isable
+	exp.Aliaseable
 }
 
 func (c VDBBlocksColumn) ToExpr() OrderableSortable {
@@ -314,7 +315,7 @@ type VDBConsolidationsClColumn int
 var _ EnumFactory[VDBConsolidationsClColumn] = VDBConsolidationsClColumn(0)
 
 const (
-	VDBConsolidationClSlotProcessed VDBConsolidationsClColumn = iota
+	VDBConsolidationClSlot VDBConsolidationsClColumn = iota
 	VDBConsolidationClAmount
 )
 
@@ -324,8 +325,8 @@ func (c VDBConsolidationsClColumn) Int() int {
 
 func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColumn {
 	switch s {
-	case "", "slot_processed", "timestamp":
-		return VDBConsolidationClSlotProcessed
+	case "", "slot", "timestamp":
+		return VDBConsolidationClSlot
 	case "amount":
 		return VDBConsolidationClAmount
 	default:
@@ -335,8 +336,8 @@ func (VDBConsolidationsClColumn) NewFromString(s string) VDBConsolidationsClColu
 
 func (c VDBConsolidationsClColumn) ToExpr() OrderableSortable {
 	switch c {
-	case VDBConsolidationClSlotProcessed:
-		return goqu.C("slot_processed")
+	case VDBConsolidationClSlot:
+		return goqu.COALESCE(goqu.I("slot_queued"), goqu.I("slot_processed"))
 	case VDBConsolidationClAmount:
 		return goqu.C("amount_consolidated")
 	default:
@@ -345,10 +346,10 @@ func (c VDBConsolidationsClColumn) ToExpr() OrderableSortable {
 }
 
 var VDBConsolidationsClColumns = struct {
-	SlotProcessed VDBConsolidationsClColumn
-	Amount        VDBConsolidationsClColumn
+	Slot   VDBConsolidationsClColumn
+	Amount VDBConsolidationsClColumn
 }{
-	VDBConsolidationClSlotProcessed,
+	VDBConsolidationClSlot,
 	VDBConsolidationClAmount,
 }
 
