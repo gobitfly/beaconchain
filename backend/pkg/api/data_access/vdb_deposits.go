@@ -107,7 +107,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		return nil, nil, fmt.Errorf("failed to prepare SQL query: %w", err)
 	}
 
-	err = db.AlloyReader.SelectContext(ctx, &data, query, params...)
+	err = db.ReaderDb.SelectContext(ctx, &data, query, params...)
 
 	if err != nil {
 		return nil, nil, err
@@ -442,7 +442,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalElDeposits(ctx context.Con
 	}
 
 	var sum int64
-	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
+	err = db.ReaderDb.GetContext(ctx, &sum, query, params...)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -512,7 +512,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClDeposits(ctx context.Con
 	}
 
 	var sum int64
-	err = db.AlloyReader.GetContext(ctx, &sum, query, params...)
+	err = db.ReaderDb.GetContext(ctx, &sum, query, params...)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}

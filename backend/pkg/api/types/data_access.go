@@ -115,11 +115,20 @@ type WithdrawalsCursor struct {
 	Amount          uint64
 }
 
-type ConsolidationsCursor struct {
+type ELConsolidationsCursor struct {
 	GenericCursor
 
-	Slot               uint64
-	ConsolidationIndex uint64
+	BlockProcessed uint64
+	TxIndex        uint64
+	ITxIndex       uint64
+}
+
+type CLConsolidationsCursor struct {
+	GenericCursor
+
+	Slot      uint64
+	SlotIndex uint64
+	Amount    *decimal.Decimal
 }
 
 type NotificationSettingsCursor struct {
