@@ -44,7 +44,7 @@ a {
 
 .link {
   cursor: pointer;
-  color: var(--link-color) !important;
+  color: var(--link-color);
   &:hover:not([disabled]) {
     opacity: 0.8;
   }
