@@ -281,6 +281,8 @@ type GetValidatorDashboardTotalConsensusDepositsResponse ApiDataResponse[VDBTota
 type VDBWithdrawalsElTableRow struct {
 	BlockQueued        uint64          `json:"block_queued"`
 	TimestampQueued    int64           `json:"timestamp_queued" faker:"past_timestamp"`
+	TxIndexQueued      uint64          `json:"tx_index_queued"`
+	ITxIndexQueued     uint64          `json:"itx_index_queued"`
 	BlockProcessed     uint64          `json:"block_processed"`
 	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
 	Index              uint64          `json:"index"`
@@ -334,6 +336,8 @@ type VDBConsolidationsElTableRow struct {
 	Target             uint64          `json:"target"`
 	BlockQueued        uint64          `json:"block_queued,omitempty"`
 	TimestampQueued    int64           `json:"timestamp_queued,omitempty" faker:"past_timestamp"`
+	TxIndexQueued      uint64          `json:"tx_index_queued"`
+	ITxIndexQueued     uint64          `json:"itx_index_queued"`
 	BlockProcessed     uint64          `json:"block_processed"`
 	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
 	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`

@@ -245,6 +245,8 @@ export type GetValidatorDashboardTotalConsensusDepositsResponse = ApiDataRespons
 export interface VDBWithdrawalsElTableRow {
   block_queued: number /* uint64 */;
   timestamp_queued: number /* int64 */;
+  tx_index_queued: number /* uint64 */;
+  itx_index_queued: number /* uint64 */;
   block_processed: number /* uint64 */;
   timestamp_processed: number /* int64 */;
   index: number /* uint64 */;
@@ -294,6 +296,8 @@ export interface VDBConsolidationsElTableRow {
   target: number /* uint64 */;
   block_queued?: number /* uint64 */;
   timestamp_queued?: number /* int64 */;
+  tx_index_queued: number /* uint64 */;
+  itx_index_queued: number /* uint64 */;
   block_processed: number /* uint64 */;
   timestamp_processed: number /* int64 */;
   status: 'queued' | 'processed';
