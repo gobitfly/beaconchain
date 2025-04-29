@@ -369,20 +369,21 @@ func saveBlocks(blocks map[uint64]map[string]*types.Block, tx *sqlx.Tx, forceSlo
 					return fmt.Errorf("error executing stmtAttestations for block %v: %w", b.Slot, err)
 				}
 			}
+			if utils.EpochOfSlot(b.Slot) < utils.Config.ClConfig.ElectraForkEpoch {
+				for i, d := range b.Deposits {
+					err := utils.VerifyDepositSignature(&phase0.DepositData{
+						PublicKey:             phase0.BLSPubKey(d.PublicKey),
+						WithdrawalCredentials: d.WithdrawalCredentials,
+						Amount:                phase0.Gwei(d.Amount),
+						Signature:             phase0.BLSSignature(d.Signature),
+					}, domain)
 
-			for i, d := range b.Deposits {
-				err := utils.VerifyDepositSignature(&phase0.DepositData{
-					PublicKey:             phase0.BLSPubKey(d.PublicKey),
-					WithdrawalCredentials: d.WithdrawalCredentials,
-					Amount:                phase0.Gwei(d.Amount),
-					Signature:             phase0.BLSSignature(d.Signature),
-				}, domain)
+					signatureValid := err == nil
 
-				signatureValid := err == nil
-
-				_, err = stmtDeposits.Exec(b.Slot, i, b.BlockRoot, nil, d.PublicKey, d.WithdrawalCredentials, d.Amount, d.Signature, signatureValid)
-				if err != nil {
-					return fmt.Errorf("error executing stmtDeposits for block %v index %v: %w", b.Slot, i, err)
+					_, err = stmtDeposits.Exec(b.Slot, i, b.BlockRoot, nil, d.PublicKey, d.WithdrawalCredentials, d.Amount, d.Signature, signatureValid)
+					if err != nil {
+						return fmt.Errorf("error executing stmtDeposits for block %v index %v: %w", b.Slot, i, err)
+					}
 				}
 			}
 
