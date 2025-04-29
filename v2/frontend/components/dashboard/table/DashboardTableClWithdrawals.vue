@@ -57,6 +57,8 @@ const tableData = computed(() => {
       {
         amount: clWithdrawalsTotalAmount?.data.total_amount,
         isTotalAmountRow: true,
+        slot: -1, // used for identifier
+        slot_index: -1, // used for identifier
       },
       ...clWithdrawals.data,
     ],
@@ -85,10 +87,10 @@ const getGroupName = (groupId: number) => {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="tableData"
+          :data="addIdentifier(tableData, 'slot', 'slot_index')"
           expandable
           table-class="dashboard-table-cl-withdrawals"
-          data-key="public_key"
+          data-key="identifier"
           :selected-sort="query?.sort"
           :row-class="(row: VDBWithdrawalsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           :is-row-expandable="(row: VDBWithdrawalsElTableRow) => row.index !== undefined"

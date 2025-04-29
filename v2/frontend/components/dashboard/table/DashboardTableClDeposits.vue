@@ -54,6 +54,8 @@ const tableData = computed(() => {
       {
         amount: clDepositsTotalAmount?.data.total_amount,
         isTotalAmountRow: true,
+        slot: -1, // used for identifier
+        slot_index: -1, // used for identifier
       },
       ...clDeposits.data,
     ],
@@ -115,7 +117,7 @@ const {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="tableData"
+          :data="addIdentifier(tableData, 'slot', 'slot_index')"
           data-key="identifier"
           expandable
           table-class="dashboard-table-cl-deposits"
