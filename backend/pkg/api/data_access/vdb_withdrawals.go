@@ -350,25 +350,32 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 
 	// Get the withdrawals for the validators
 	type dbResult struct {
-		SlotProcessed   sql.NullInt64   `db:"slot_processed"`
-		WithdrawalIndex uint64          `db:"index_processed"`
-		SlotQueued      sql.NullInt64   `db:"slot_queued"`
-		ValidatorIndex  uint64          `db:"validatorindex"`
-		Address         []byte          `db:"address"`
-		Amount          decimal.Decimal `db:"amount"`
-		RejectReason    sql.NullString  `db:"reject_reason"`
-		Status          string          `db:"status"`
+		GroupId               sql.NullInt64   `db:"group_id"`
+		SlotProcessed         sql.NullInt64   `db:"slot_processed"`
+		SlotQueued            sql.NullInt64   `db:"slot_queued"`
+		ValidatorIndex        uint64          `db:"validatorindex"`
+		Pubkey                []byte          `db:"pubkey"`
+		Recipient             []byte          `db:"recipient"`
+		WithdrawalCredentials []byte          `db:"withdrawal_credentials"`
+		Amount                decimal.Decimal `db:"amount"`
+		RejectReason          sql.NullString  `db:"reject_reason"`
+		Status                string          `db:"status"`
+		Type                  string          `db:"type"`
+		// cursor
+		Slot      uint64 `db:"slot"`
+		SlotIndex uint64 `db:"index"`
 	}
 
 	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
 	hasPrePectraRows, hasPostPectraRows := true, false
 	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
 		hasPostPectraRows = true
-		if currentCursor.IsValid() {
-			postElectra := currentCursor.SlotProcessed/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
-			if postElectra && currentCursor.Reverse {
+		if currentCursor.IsValid() && colSort.Column == enums.VDBWithdrawalsClColumns.Slot {
+			postElectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+			lookBack := colSort.Desc != currentCursor.Reverse
+			if postElectra && !lookBack {
 				hasPrePectraRows, hasPostPectraRows = false, true
-			} else if !postElectra && !currentCursor.Reverse {
+			} else if !postElectra && lookBack {
 				hasPrePectraRows, hasPostPectraRows = true, false
 			}
 		}
@@ -394,32 +401,33 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	}
 
 	defaultSlotSortDesc := true
-	if colSort.Column == enums.VDBWithdrawalsClColumns.SlotProcessed {
+	if colSort.Column == enums.VDBWithdrawalsClColumns.Slot {
 		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
 		defaultSlotSortDesc = colSort.Desc
 	}
 	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("slot_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotProcessed},
-		{Column: goqu.I("index_processed"), Desc: defaultSlotSortDesc, Offset: currentCursor.WithdrawalIndex},
+		{Column: enums.VDBWithdrawalsClColumns.Slot.ToExpr(), Desc: defaultSlotSortDesc, Offset: currentCursor.Slot},
+		{Column: goqu.I("index"), Desc: defaultSlotSortDesc, Offset: currentCursor.SlotIndex},
 	}
 	var offset any
 	switch colSort.Column {
 	case enums.VDBWithdrawalsClColumns.Amount:
 		offset = currentCursor.Amount
 	}
+	// TODO optimize by splitting into filter + sort and applying filter to subqueries
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	withdrawalsDs = withdrawalsDs.
+	withdrawalsDs = goqu.Dialect("postgres").From(withdrawalsDs.As("bw")).
 		Order(order...).
 		Limit(uint(limit + 1))
 	if directions != nil {
 		withdrawalsDs = withdrawalsDs.Where(directions)
 	}
 
-	queryResult, err := runQueryRows[[]dbResult](ctx, d.alloyReader, withdrawalsDs)
+	queryResult, err := runQueryRows[[]dbResult](ctx, d.readerDb, withdrawalsDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -427,11 +435,20 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	responseData := make([]t.VDBWithdrawalsClTableRow, 0, len(queryResult))
 	for _, r := range queryResult {
 		row := t.VDBWithdrawalsClTableRow{
-			Index:  r.ValidatorIndex,
-			Amount: r.Amount.Mul(decimal.NewFromInt(1e9)),
-			Status: r.Status, // BEDS-1399
+			Index:                 r.ValidatorIndex,
+			Amount:                r.Amount.Mul(decimal.NewFromInt(1e9)),
+			Status:                r.Status,
+			Type:                  r.Type,
+			Slot:                  r.Slot,
+			SlotIndex:             r.SlotIndex,
+			WithdrawalCredentials: t.Hash(hexutil.Encode(r.WithdrawalCredentials)),
+			PublicKey:             t.PubKey(hexutil.Encode(r.Pubkey)),
 		}
 
+		row.GroupId = t.DefaultGroupId
+		if r.GroupId.Valid && !dashboardId.AggregateGroups {
+			row.GroupId = uint64(r.GroupId.Int64)
+		}
 		// some data integrity checks TODO add more
 		switch r.Status {
 		case "queued":
@@ -442,7 +459,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 				return nil, nil, fmt.Errorf("slot_queued is not set for queued withdrawal")
 			}
 		case "completed":
-			if !r.SlotQueued.Valid || !r.SlotProcessed.Valid {
+			if !r.SlotQueued.Valid && !r.SlotProcessed.Valid {
 				return nil, nil, fmt.Errorf("unexpected field(s) set for completed withdrawal")
 			}
 		case "rejected":
@@ -468,6 +485,10 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 			if str != "" {
 				row.RejectReason = &str // BEDS-1399
 			}
+		}
+		if r.Recipient != nil {
+			// TODO add ens + contract info
+			row.Recipient = &t.Address{Hash: t.Hash(hexutil.Encode(r.Recipient))}
 		}
 
 		responseData = append(responseData, row)
@@ -569,19 +590,30 @@ func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWit
 		From(goqu.T("blocks_withdrawals").As("w")).
 		Select(
 			goqu.I("w.block_slot").As("slot_processed"),
-			goqu.I("w.withdrawalindex").As("index_processed"),
 			goqu.I("w.validatorindex"),
-			goqu.I("w.address"),
+			goqu.I("v.pubkey"),
+			goqu.I("w.address").As("recipient"),
+			goqu.I("v.withdrawalcredentials").As("withdrawal_credentials"),
 			goqu.I("w.amount"),
-			goqu.V(nil).As("slot_queued"),
+			goqu.Cast(goqu.V(nil), "DECIMAL").As("slot_queued"),
 			goqu.V(nil).As("reject_reason"),
 			goqu.V("completed").As("status"),
+			goqu.V("auto").As("type"),
+			// cursor
+			goqu.I("w.block_slot").As("slot"),
+			goqu.I("w.withdrawalindex").As("index"),
 		).
 		InnerJoin(
 			goqu.T("blocks").As("b"),
 			goqu.On(
 				goqu.I("w.block_root").Eq(goqu.I("b.blockroot")),
 				goqu.I("b.status").Eq("1"),
+			),
+		).
+		InnerJoin(
+			goqu.T("validators").As("v"),
+			goqu.On(
+				goqu.I("w.validatorindex").Eq(goqu.I("v.validatorindex")),
 			),
 		)
 
@@ -648,16 +680,21 @@ func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWit
 func getWithdrawalRequestsDs(dashboardId t.VDBId, search string, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey bool) (*goqu.SelectDataset, error) {
 	var searches []exp.Expression
 	withdrawalRequestsDs := goqu.Dialect("postgres").
-		From(goqu.T("blocks_withdrawal_requests").As("wr")).
+		From(goqu.T("blocks_withdrawal_requests_v2").As("wr")).
 		Select(
 			goqu.I("wr.slot_processed"),
-			goqu.I("wr.index_processed"),
 			goqu.I("v.validatorindex"),
-			goqu.I("v.withdrawalcredentials").As("address"), // TODO clarify what to return for rejected? source_address, withdrawal address?
+			goqu.I("v.pubkey"),
+			goqu.L("substring(withdrawalcredentials from 13 for 20)").As("recipient"),
+			goqu.I("v.withdrawalcredentials").As("withdrawal_credentials"),
 			goqu.I("wr.amount"),
 			goqu.I("wr.slot_queued"),
 			goqu.I("wr.reject_reason"),
 			goqu.I("wr.status"),
+			goqu.V("manual").As("type"),
+			// cursor
+			enums.VDBWithdrawalsClColumns.Slot.ToExpr().As("slot"),
+			goqu.COALESCE(goqu.I("index_queued"), goqu.I("index_processed")).As("index"),
 		).
 		InnerJoin(
 			goqu.T("validators").As("v"),
@@ -678,7 +715,7 @@ func getWithdrawalRequestsDs(dashboardId t.VDBId, search string, isValidSearchWi
 			InnerJoin(
 				goqu.T("users_val_dashboards_validators").As("uvdv"),
 				goqu.On(
-					goqu.I("w.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+					goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
 				),
 			).
 			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
@@ -879,7 +916,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGrou
 		SlotProcessed: nextWithdrawalSlot,
 		Index:         nextValidator.ValidatorIndex,
 		GroupId:       nextValidator.GroupId,
-		Recipient: t.Address{
+		Recipient: &t.Address{
 			Hash:       t.Hash(address.String()),
 			Ens:        ens_name,
 			IsContract: contractStatus[0] == types.CONTRACT_CREATION || contractStatus[0] == types.CONTRACT_PRESENT,
@@ -950,9 +987,9 @@ func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.
 		).
 		GroupBy(goqu.I("validator_index"))
 
-	if dashboardId.Validators != nil {
+	if dashboardId.Validators == nil {
 		withdrawalsDs = withdrawalsDs.
-			With("validators", goqu.L("SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?)", dashboardId.Id)).
+			With("validators", goqu.L("(SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?))", dashboardId.Id)).
 			InnerJoin(
 				goqu.T("validators").As("v"), goqu.On(
 					goqu.I("validator_dashboard_data_rolling_total.validator_index").Eq(goqu.I("v.validator_index")),
@@ -1003,7 +1040,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.
 		).
 		Where(
 			goqu.I("w.block_slot").Gt(lastSlot),
-			goqu.I("w.validatorindex").In(pq.Array(validators)),
+			goqu.L("w.validatorindex = ANY(?)", pq.Array(validators)),
 		)
 
 	latestWithdrawalsAmount, err := runQuery[int64](ctx, d.readerDb, latestWithdrawalsDs)

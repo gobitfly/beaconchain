@@ -117,9 +117,9 @@ type ELWithdrawalsCursor struct {
 type CLWithdrawalsCursor struct {
 	GenericCursor
 
-	SlotProcessed   uint64
-	WithdrawalIndex uint64
-	Amount          decimal.Decimal
+	Slot      uint64
+	SlotIndex uint64
+	Amount    decimal.Decimal
 }
 
 type ConsolidationsCursor struct {

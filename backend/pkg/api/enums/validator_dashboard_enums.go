@@ -165,6 +165,7 @@ type OrderableSortable interface {
 	exp.Orderable
 	exp.Comparable
 	exp.Isable
+	exp.Aliaseable
 }
 
 func (c VDBBlocksColumn) ToExpr() OrderableSortable {
@@ -261,7 +262,7 @@ func (c VDBWithdrawalsClColumn) Int() int {
 
 func (VDBWithdrawalsClColumn) NewFromString(s string) VDBWithdrawalsClColumn {
 	switch s {
-	case "", "slot_processed", "timestamp":
+	case "", "slot", "timestamp":
 		return VDBWithdrawalClSlotProcessed
 	case "amount":
 		return VDBWithdrawalClAmount
@@ -273,7 +274,7 @@ func (VDBWithdrawalsClColumn) NewFromString(s string) VDBWithdrawalsClColumn {
 func (c VDBWithdrawalsClColumn) ToExpr() OrderableSortable {
 	switch c {
 	case VDBWithdrawalClSlotProcessed:
-		return goqu.I("slot_processed")
+		return goqu.COALESCE(goqu.I("slot_queued"), goqu.I("slot_processed"))
 	case VDBWithdrawalClAmount:
 		return goqu.I("amount")
 	default:
@@ -282,8 +283,8 @@ func (c VDBWithdrawalsClColumn) ToExpr() OrderableSortable {
 }
 
 var VDBWithdrawalsClColumns = struct {
-	SlotProcessed VDBWithdrawalsClColumn
-	Amount        VDBWithdrawalsClColumn
+	Slot   VDBWithdrawalsClColumn
+	Amount VDBWithdrawalsClColumn
 }{
 	VDBWithdrawalClSlotProcessed,
 	VDBWithdrawalClAmount,
