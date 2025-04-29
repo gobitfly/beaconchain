@@ -113,7 +113,7 @@ const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupI
     },
     { dashboardKey: dashboardKey.value },
   ).then(() => {
-    loadData()
+    loadData(dashboardKey.value)
     refreshOverview(dashboardKey.value)
   })
 }
@@ -137,7 +137,7 @@ const removeValidators = async (validators?: NumberOrString[]) => {
     { dashboardKey: dashboardKey.value },
   )
 
-  loadData()
+  loadData(dashboardKey.value)
   refreshOverview(dashboardKey.value)
 }
 
@@ -186,13 +186,13 @@ watch(selectedGroup, (value) => {
   })
 })
 
-const loadData = async () => {
-  if (dashboardKey.value) {
+const loadData = async (dashboardKey: string) => {
+  if (dashboardKey) {
     const testQ = JSON.stringify(query.value)
     const result = await fetch<GetValidatorDashboardValidatorsResponse>(
       'DASHBOARD_VALIDATOR_MANAGEMENT',
       undefined,
-      { dashboardKey: dashboardKey.value },
+      { dashboardKey },
       query.value,
     )
 
@@ -212,13 +212,12 @@ const loadData = async () => {
 
 watch(
   () => [
-    dashboardKey.value,
     visible.value,
     query.value,
   ],
   () => {
     if (visible.value) {
-      loadData()
+      loadData(dashboardKey.value)
     }
   },
   { immediate: true },
@@ -297,7 +296,7 @@ const handleInvalidSubmit = () => {
 const resetInput = () => {
   inputValidator.value = ''
 }
-const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefined) => {
+const handleSubmit = async (item: InternalPostSearchResponse['data'][number] | undefined) => {
   if (!item) return
   const {
     type,
@@ -315,21 +314,49 @@ const handleSubmit = (item: InternalPostSearchResponse['data'][number] | undefin
     return
   }
   if (isGuestDashboard.value) {
+    let hasError = false
+    const currentValidators = decodeBase64Url(dashboardKey.value).split(',')
     if (item.type === 'validator') {
-      addEntities([ `${item.value.index}` ])
-      resetInput()
+      const newValidators = [
+        ...currentValidators,
+        item.value.index,
+      ]
+      await loadData(encodeBase64Url(newValidators.join(',')))
+        .then(() => addEntities([ `${item.value.index}` ]))
+        .then(() => resetInput())
+        .catch((error) => {
+          hasError = true
+          if (error.statusCode === 400) {
+            dialog.open(BcPremiumModal, {
+              data: {
+                description: $t('dashboard.validator.management.validators_limit_exceeded'),
+              },
+            })
+          }
+        })
       return
     }
     if (item.type === 'validator_list') {
-      addEntities(
-        item.value.validators
-          .map(validator => `${validator}`),
-      )
-      resetInput()
-      return
+      const validatorList = item.value.validators.map(validator => `${validator}`)
+      const newValidators = [
+        ...currentValidators,
+        ...validatorList,
+      ]
+      await loadData(encodeBase64Url(newValidators.join(',')))
+        .then(() => addEntities(validatorList))
+        .then(() => resetInput())
+        .catch((error) => {
+          hasError = true
+          if (error.statusCode === 400) {
+            dialog.open(BcPremiumModal, {
+              data: {
+                description: $t('dashboard.validator.management.validators_limit_exceeded'),
+              },
+            })
+          }
+        })
     }
-    handleInvalidSubmit()
-    return
+    if (hasError) return
   }
   changeGroup({
     ...(type === 'validator' && { validators: [ value.index ] }),
