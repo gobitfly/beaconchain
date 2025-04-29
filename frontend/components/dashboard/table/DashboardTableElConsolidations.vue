@@ -57,7 +57,7 @@ const setSearch = (value?: string) => {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="elConsolidations"
+          :data="addIdentifier(elConsolidations, 'block_queued', 'tx_index_queued', 'itx_index_queued')"
           expandable
           :row-class="(row: VDBConsolidationsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           data-key="identifier"

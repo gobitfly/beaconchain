@@ -55,7 +55,10 @@ const tableData = computed(() => {
     data: [
       {
         amount: elWithdrawalsTotalAmount?.data.total_amount,
+        block_queued: -1, // used for identifier
         isTotalAmountRow: true,
+        itx_index_queued: -1, // used for identifier
+        tx_index_queued: -1, // used for identifier
       },
       ...elWithdrawals.data,
     ],
@@ -84,10 +87,10 @@ const getGroupName = (groupId: number) => {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="tableData"
+          :data="addIdentifier(tableData, 'block_queued', 'tx_index_queued', 'itx_index_queued')"
           expandable
           table-class="dashboard-table-el-withdrawals"
-          data-key="timestamp_queued"
+          data-key="identifier"
           :selected-sort="query?.sort"
           :row-class="(row: VDBWithdrawalsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           :is-row-expandable="(row: VDBWithdrawalsElTableRow) => row.index !== undefined"
