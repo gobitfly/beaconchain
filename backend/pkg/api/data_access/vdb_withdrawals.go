@@ -944,9 +944,23 @@ func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.
 
 	withdrawalsDs := goqu.Dialect("postgres").
 		From(goqu.T("eth1_withdrawal_requests").As("w")).
+		InnerJoin(goqu.T("validators").As("v"), goqu.On(
+			goqu.I("w.validator_pubkey").Eq(goqu.I("v.pubkey")),
+		)).
 		Select(
-			goqu.SUM(goqu.I("w.amount")).As("acc_withdrawals_amount"),
+			goqu.COALESCE(goqu.SUM(goqu.I("w.amount")), goqu.V(0)).As("acc_withdrawals_amount"),
 		)
+
+	if dashboardId.Validators == nil {
+		withdrawalsDs = withdrawalsDs.
+			InnerJoin(goqu.T("users_val_dashboards_validators").As("uvdv"), goqu.On(
+				goqu.I("uvdv.validator_index").Eq(goqu.I("v.validatorindex")),
+			)).
+			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+	} else {
+		withdrawalsDs = withdrawalsDs.
+			Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
+	}
 
 	sum, err := runQuery[int64](ctx, d.readerDb, withdrawalsDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
