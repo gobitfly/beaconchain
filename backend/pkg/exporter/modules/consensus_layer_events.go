@@ -156,8 +156,8 @@ func (c *consensusLayerEventsIndexer) IndexEvents() (bool, error) {
 	}
 	// start & end epoch are both inclusive
 	minForkEpoch := uint64(max(0, int64(c.config.ElectraForkEpoch)-1))
-	startEpoch := uint64(max(minForkEpoch, uint64(lastIndexedEpoch+1)))
-	endEpoch := uint64(max(c.config.ElectraForkEpoch, finalized))
+	startEpoch := max(minForkEpoch, uint64(lastIndexedEpoch+1))
+	endEpoch := max(c.config.ElectraForkEpoch, finalized)
 
 	if endEpoch-startEpoch > (epochsPerBatch - 1) {
 		log.Warnf("end epoch %d is greater than start epoch %d + epochs %d", endEpoch, startEpoch, epochsPerBatch-1)
