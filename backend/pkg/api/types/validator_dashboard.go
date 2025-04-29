@@ -293,19 +293,21 @@ type VDBWithdrawalsElTableRow struct {
 type GetValidatorDashboardExecutionLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsElTableRow]
 
 type VDBWithdrawalsClTableRow struct {
-	SlotQueued            *uint64         `json:"slot_queued"` // does not exist pre-pectra
+	SlotQueued            *uint64         `json:"slot_queued,omitempty"` // does not exist pre-pectra
 	SlotProcessed         uint64          `json:"slot_processed"`
 	Index                 uint64          `json:"index"`
 	PublicKey             PubKey          `json:"public_key" faker:"pubkey"`
 	WithdrawalCredentials Hash            `json:"withdrawal_credentials"`
-	Signature             Hash            `json:"signature"`
 	GroupId               uint64          `json:"group_id"`
-	Recipient             Address         `json:"recipient"`
+	Recipient             *Address        `json:"recipient,omitempty"`
 	Amount                decimal.Decimal `json:"amount" faker:"eth"`
 	Type                  string          `json:"type" tstype:"'auto' | 'manual'" faker:"oneof: auto, manual"`
 	Status                string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance'" faker:"oneof: full_queue, unknown_pubkey, no_execution_withdrawal_credentials, address_mismatch, inactive, exiting, too_young, pending_withdrawals, not_compounding, insufficient_effective_balance, excess_balance"`
 	IsMissingEstimate     bool            `json:"is_missing_estimate"`
+	// unique
+	Slot      uint64 `json:"slot"`
+	SlotIndex uint64 `json:"slot_index"`
 }
 type GetValidatorDashboardConsensusLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsClTableRow]
 

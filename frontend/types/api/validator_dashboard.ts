@@ -260,14 +260,18 @@ export interface VDBWithdrawalsClTableRow {
   index: number /* uint64 */;
   public_key: PubKey;
   withdrawal_credentials: Hash;
-  signature: Hash;
   group_id: number /* uint64 */;
-  recipient: Address;
+  recipient?: Address;
   amount: string /* decimal.Decimal */;
   type: 'auto' | 'manual';
   status: 'queued' | 'completed' | 'rejected';
   reject_reason?: 'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance';
   is_missing_estimate: boolean;
+  /**
+   * unique
+   */
+  slot: number /* uint64 */;
+  slot_index: number /* uint64 */;
 }
 export type GetValidatorDashboardConsensusLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsClTableRow>;
 export interface VDBTotalExecutionWithdrawalsData {
