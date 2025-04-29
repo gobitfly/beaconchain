@@ -23,7 +23,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-var epochsPerBatch uint64 = 1
+var epochsPerBatch uint64 = 128
 var slotsPerBatch int = 128 // 4 epochs worth
 
 // the fork plays down as follows:
