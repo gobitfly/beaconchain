@@ -64,7 +64,7 @@ export function useDashboardKeyProvider(
       return
     }
     if (Array.isArray(route.params.id)) {
-      setDashboardKey(toBase64Url(route.params.id.join(',')))
+      setDashboardKey(encodeBase64Url(route.params.id.join(',')))
     }
     else {
       setDashboardKey(route.params.id)
@@ -85,12 +85,12 @@ export function useDashboardKeyProvider(
     if (!isGuestDashboard.value || !dashboardKey.value) {
       return []
     }
-    return fromBase64Url(dashboardKey.value)?.split(',') ?? []
+    return decodeBase64Url(dashboardKey.value)?.split(',') ?? []
   })
 
   const updateEntities = (list: string[]) => {
     const filtered = list.filter(s => !!s).join(',')
-    const key = toBase64Url(filtered)
+    const key = encodeBase64Url(filtered)
     setDashboardKey(key)
   }
 

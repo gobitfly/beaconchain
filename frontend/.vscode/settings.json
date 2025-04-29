@@ -44,6 +44,7 @@
         "PricingPremiumCompare",
         "a11y",
         "app",
+        "base64url.ts",
         "checkout",
         "ci",
         "color-mode",
