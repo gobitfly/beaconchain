@@ -232,6 +232,8 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			Index:           res.Index,
 			BlockQueued:     res.BlockQueued,
 			TimestampQueued: res.BlockQueuedTime.Unix(),
+			TxIndexQueued:   res.TxIndex,
+			ITxIndexQueued:  res.ITxIndex,
 			// Status:             res.Status, // BEDS-1399
 			TxHash: t.Hash(hexutil.Encode(res.TxHash)),
 			Amount: res.Amount,

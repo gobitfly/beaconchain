@@ -188,6 +188,8 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			Source:          res.SourceIndex,
 			Target:          res.TargetIndex,
 			BlockQueued:     res.BlockQueued,
+			TxIndexQueued:   res.TxIndex,
+			ITxIndexQueued:  res.ITxIndex,
 			TimestampQueued: res.BlockQueuedTime.Unix(),
 			// Status:             res.Status, // BEDS-1399
 			TxHash: t.Hash(hexutil.Encode(res.TxHash)),
