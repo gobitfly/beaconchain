@@ -86,6 +86,35 @@ CREATE TABLE IF NOT EXISTS blocks_switch_to_compounding_requests_v2 (
 	validator_pubkey bytea NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS blocks_exit_requests (
+	id SERIAL PRIMARY KEY,
+	eth1_id integer REFERENCES eth1_withdrawal_requests(id),      -- no genesis hardcoding here, should always have an eth1 event
+	-- never null because handled pre queue
+	slot_processed int4 NOT NULL,                                    -- really an epoch property, but it points to the slot containing the transition
+	index_processed int4 NOT NULL,                                   -- max PENDING_CONSOLIDATIONS_LIMIT (262,144)
+	block_processed_root bytea NOT NULL,
+
+	status text NOT NULL,                                            -- queued, completed, rejected
+	reject_reason text,                                              -- ~10
+
+	validator_pubkey bytea NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS blocks_removed_excess_balance_events (
+	id SERIAL PRIMARY KEY,
+	eth1_id integer REFERENCES eth1_withdrawal_requests(id),         -- no genesis hardcoding here, should always have an eth1 event
+	-- never null because handled pre queue
+	slot_processed int4 NOT NULL,                                    -- really an epoch property, but it points to the slot containing the transition
+	index_processed int4 NOT NULL,                                   -- max PENDING_CONSOLIDATIONS_LIMIT (262,144)
+	block_processed_root bytea NOT NULL,
+
+	status text NOT NULL,                                            -- queued, completed, rejected
+	reject_reason text,                                              -- ~10
+
+	validator_pubkey bytea NOT NULL,
+	amount decimal NOT NULL
+);
+
 -- +goose StatementEnd
 
 -- +goose Down
