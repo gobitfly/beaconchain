@@ -41,7 +41,7 @@ export default function ({
           .slice(0, 20)
           .join(',')
         if (list.length) {
-          const hash = toBase64Url(list)
+          const hash = encodeBase64Url(list)
           return navigateTo(`/dashboard/${hash}`)
         }
       }
