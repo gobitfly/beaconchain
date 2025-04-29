@@ -53,12 +53,11 @@ const setSearch = (value?: string) => {
           expandable
           :row-class="(row: VDBConsolidationsClTableRow) =>
             row.status === 'queued' ? 'dashboard-table-cl-consolidations__row--grayed-out' : ''"
-          data-key="source"
+          data-key="id"
           :selected-sort="query?.sort"
           :cursor="query?.cursor"
           :page-size="query?.limit"
-          table-class="
-          dashboard-table-cl-consolidations"
+          table-class="dashboard-table-cl-consolidations"
           @set-cursor="setCursor"
           @sort="onSort"
           @set-page-size="setPageSize"
