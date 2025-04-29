@@ -234,6 +234,7 @@ type VDBExecutionDepositsTableRow struct {
 	Index                *uint64         `json:"index,omitempty"`
 	GroupId              uint64          `json:"group_id"`
 	Block                uint64          `json:"block"`
+	BlockIndex           uint64          `json:"block_index"` // unique
 	Timestamp            int64           `json:"timestamp" faker:"past_timestamp"`
 	From                 Address         `json:"-"` // TODO enable again
 	Depositor            Address         `json:"depositor"`

@@ -210,6 +210,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		responseData[i] = t.VDBExecutionDepositsTableRow{
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Block:                uint64(row.BlockNumber),
+			BlockIndex:           uint64(row.LogIndex),
 			Timestamp:            row.Timestamp.Unix(),
 			TxHash:               t.Hash(hexutil.Encode(row.TxHash)),
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
