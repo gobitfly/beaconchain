@@ -202,6 +202,7 @@ export interface VDBExecutionDepositsTableRow {
   index?: number /* uint64 */;
   group_id: number /* uint64 */;
   block: number /* uint64 */;
+  block_index: number /* uint64 */; // unique
   timestamp: number /* int64 */;
   depositor: Address;
   tx_hash: Hash;
