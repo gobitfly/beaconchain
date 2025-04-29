@@ -364,10 +364,10 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 
 	var offset any
 	switch colSort.Column {
-	case enums.VDBConsolidationsClColumns.Slot:
-		offset = currentCursor.Slot
 	case enums.VDBConsolidationsClColumns.Amount:
-		offset = currentCursor.SlotIndex
+		if currentCursor.Amount != nil {
+			offset = currentCursor.Amount
+		}
 	}
 
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc, Offset: offset}, currentCursor.GenericCursor)
@@ -469,6 +469,7 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
+		slices.Reverse(res)
 	}
 
 	p, err := utils.GetPagingFromData(res, currentCursor, moreDataFlag)
