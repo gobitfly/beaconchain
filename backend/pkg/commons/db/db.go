@@ -2598,12 +2598,15 @@ func TransformSwitchToCompoundingRequests(firstSlot, lastSlot uint64, tx *sqlx.T
 	res, err := tx.Exec(`
 	INSERT INTO blocks_switch_to_compounding_requests (block_slot, block_root, request_index, address, validator_index)
 		SELECT
-				slot AS slot,
-				block_root AS block_root,
-				event_index AS request_index,
-				decode((data->>'address'), 'base64') AS address,
-				(data->>'index')::int AS validator_index
-			FROM consensus_layer_events WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 AND version = $3 ON CONFLICT DO NOTHING;
+			cle.slot AS slot,
+			cle.block_root AS block_root,
+			cle.event_index AS request_index,
+			decode((cle.data->>'address'), 'base64') AS address,
+			vali.validatorindex AS validator_index
+		FROM consensus_layer_events cle
+		JOIN validators AS vali
+			ON vali.pubkey = decode(cle.data ->> 'pubkey', 'base64')
+		WHERE event_name = 'SwitchToCompoundingEvent' AND slot >= $1 AND slot <= $2 AND version = $3 ON CONFLICT DO NOTHING;
 	`, firstSlot, lastSlot, types.ConsensusLayerEventVersion)
 	if err != nil {
 		return 0, fmt.Errorf("error transforming consolidation requests: %w", err)
