@@ -1,67 +1,127 @@
-export type API_PATH =
-  | 'AD_CONFIGURATIONs'
-  | 'DASHBOARD_CL_DEPOSITS'
-  | 'DASHBOARD_CL_DEPOSITS_TOTAL'
-  | 'DASHBOARD_CREATE_ACCOUNT'
-  | 'DASHBOARD_CREATE_VALIDATOR'
-  | 'DASHBOARD_DELETE_ACCOUNT'
-  | 'DASHBOARD_DELETE_VALIDATOR'
-  | 'DASHBOARD_EL_DEPOSITS'
-  | 'DASHBOARD_EL_DEPOSITS_TOTAL'
-  | 'DASHBOARD_OVERVIEW'
-  | 'DASHBOARD_RENAME_ACCOUNT'
-  | 'DASHBOARD_RENAME_VALIDATOR'
-  | 'DASHBOARD_SLOTVIZ'
-  | 'DASHBOARD_SUMMARY'
-  | 'DASHBOARD_SUMMARY_CHART'
-  | 'DASHBOARD_SUMMARY_DETAILS'
-  | 'DASHBOARD_VALIDATOR_BLOCKS'
-  | 'DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID'
-  | 'DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID'
-  | 'DASHBOARD_VALIDATOR_EPOCH_DUTY'
-  | 'DASHBOARD_VALIDATOR_GROUP_MODIFY'
-  | 'DASHBOARD_VALIDATOR_GROUPS'
-  | 'DASHBOARD_VALIDATOR_INDICES'
-  | 'DASHBOARD_VALIDATOR_MANAGEMENT'
-  | 'DASHBOARD_VALIDATOR_MANAGEMENT_DELETE'
-  | 'DASHBOARD_VALIDATOR_REWARDS'
-  | 'DASHBOARD_VALIDATOR_REWARDS_CHART'
-  | 'DASHBOARD_VALIDATOR_REWARDS_DETAILS'
-  | 'DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS'
-  | 'DASHBOARD_VALIDATOR_WITHDRAWALS'
-  | 'GET_NOTIFICATIONS_SETTINGS_DASHBOARD'
-  | 'LATEST_STATE'
-  | 'LOGIN'
-  | 'LOGOUT'
-  | 'NOTIFICATIONS_CLIENTS'
-  | 'NOTIFICATIONS_DASHBOARDS'
-  | 'NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT'
-  | 'NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR'
-  | 'NOTIFICATIONS_MACHINE'
-  | 'NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION'
-  | 'NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION'
-  | 'NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION'
-  | 'NOTIFICATIONS_MANAGEMENT_GENERAL'
-  | 'NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION'
-  | 'NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE'
-  | 'NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION'
-  | 'NOTIFICATIONS_MANAGEMENT_SAVE'
-  | 'NOTIFICATIONS_NETWORK'
-  | 'NOTIFICATIONS_OVERVIEW'
-  | 'NOTIFICATIONS_TEST_EMAIL'
-  | 'NOTIFICATIONS_TEST_PUSH'
-  | 'NOTIFICATIONS_TEST_WEBHOOK'
-  | 'PRODUCT_SUMMARY'
-  | 'REGISTER'
-  | 'SAVE_VALIDATOR_DASHBOARDS_SETTINGS'
-  | 'SEARCH'
-  | 'STRIPE_CHECKOUT_SESSION'
-  | 'STRIPE_CUSTOMER_PORTAL'
-  | 'USER'
-  | 'USER_CHANGE_EMAIL'
-  | 'USER_CHANGE_PASSWORD'
-  | 'USER_DASHBOARDS'
-  | 'USER_DELETE'
+import type {
+  AdConfiguration,
+} from './adConfiguration'
+import type {
+  GetUserDashboardsResponse,
+} from './api/dashboard'
+import type {
+  InternalGetLatestStateResponse,
+} from './api/latest_state'
+import type {
+  GetUserNotificationClientsResponse,
+  GetUserNotificationDashboardsResponse,
+  GetUserNotificationMachinesResponse,
+  GetUserNotificationNetworksResponse,
+  GetUserNotificationSettingsDashboardsResponse,
+  GetUserNotificationSettingsResponse,
+  GetUserNotificationsResponse,
+  GetUserNotificationsValidatorDashboardResponse,
+  PutUserNotificationSettingsAccountDashboardResponse,
+  PutUserNotificationSettingsGeneralResponse,
+  PutUserNotificationSettingsNetworksResponse,
+  PutUserNotificationSettingsPairedDevicesResponse,
+  PutUserNotificationSettingsValidatorDashboardResponse,
+
+} from './api/notifications'
+import type {
+  InternalPostSearchResponse,
+} from './api/search'
+import type {
+  GetValidatorDashboardSlotVizResponse,
+} from './api/slot_viz'
+import type {
+  InternalGetProductSummaryResponse,
+  InternalGetUserInfoResponse,
+  StripeCreateCheckoutSession,
+  StripeCustomerPortal,
+} from './api/user'
+import type {
+  GetValidatorDashboardBlocksResponse,
+  GetValidatorDashboardConsensusLayerDepositsResponse,
+  GetValidatorDashboardDutiesResponse,
+  GetValidatorDashboardExecutionLayerDepositsResponse,
+  GetValidatorDashboardGroupRewardsResponse,
+  GetValidatorDashboardGroupSummaryResponse,
+  GetValidatorDashboardResponse,
+  GetValidatorDashboardRewardsChartResponse,
+  GetValidatorDashboardRewardsResponse,
+  GetValidatorDashboardSummaryChartResponse,
+  GetValidatorDashboardSummaryResponse,
+  GetValidatorDashboardSummaryValidatorsResponse,
+  GetValidatorDashboardTotalConsensusDepositsResponse,
+  GetValidatorDashboardTotalExecutionDepositsResponse,
+  GetValidatorDashboardTotalWithdrawalsResponse,
+  GetValidatorDashboardValidatorsResponse,
+  GetValidatorDashboardWithdrawalsResponse,
+  VDBPostReturnData,
+} from './api/validator_dashboard'
+
+export type API_PATH = keyof API_PATH_RESPONSE
+
+export type API_PATH_RESPONSE = {
+  AD_CONFIGURATIONs: AdConfiguration,
+  DASHBOARD_CL_DEPOSITS: GetValidatorDashboardConsensusLayerDepositsResponse,
+  DASHBOARD_CL_DEPOSITS_TOTAL: GetValidatorDashboardTotalConsensusDepositsResponse,
+  DASHBOARD_CREATE_ACCOUNT: { data: VDBPostReturnData },
+  DASHBOARD_CREATE_VALIDATOR: { data: VDBPostReturnData },
+  DASHBOARD_DELETE_ACCOUNT: unknown,
+  DASHBOARD_DELETE_VALIDATOR: unknown,
+  DASHBOARD_EL_DEPOSITS: GetValidatorDashboardExecutionLayerDepositsResponse,
+  DASHBOARD_EL_DEPOSITS_TOTAL: GetValidatorDashboardTotalExecutionDepositsResponse,
+  DASHBOARD_OVERVIEW: GetValidatorDashboardResponse,
+  DASHBOARD_RENAME_ACCOUNT: unknown,
+  DASHBOARD_RENAME_VALIDATOR: unknown,
+  DASHBOARD_SLOTVIZ: GetValidatorDashboardSlotVizResponse,
+  DASHBOARD_SUMMARY: GetValidatorDashboardSummaryResponse,
+  DASHBOARD_SUMMARY_CHART: GetValidatorDashboardSummaryChartResponse,
+  DASHBOARD_SUMMARY_DETAILS: GetValidatorDashboardGroupSummaryResponse,
+  DASHBOARD_VALIDATOR_BLOCKS: GetValidatorDashboardBlocksResponse,
+  DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID: unknown,
+  DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID: unknown,
+  DASHBOARD_VALIDATOR_EPOCH_DUTY: GetValidatorDashboardDutiesResponse,
+  DASHBOARD_VALIDATOR_GROUP_MODIFY: unknown,
+  DASHBOARD_VALIDATOR_GROUPS: unknown,
+  DASHBOARD_VALIDATOR_INDICES: GetValidatorDashboardSummaryValidatorsResponse,
+  DASHBOARD_VALIDATOR_MANAGEMENT: GetValidatorDashboardValidatorsResponse,
+  DASHBOARD_VALIDATOR_MANAGEMENT_DELETE: () => void,
+  DASHBOARD_VALIDATOR_REWARDS: GetValidatorDashboardRewardsResponse,
+  DASHBOARD_VALIDATOR_REWARDS_CHART: GetValidatorDashboardRewardsChartResponse,
+  DASHBOARD_VALIDATOR_REWARDS_DETAILS: GetValidatorDashboardGroupRewardsResponse,
+  DASHBOARD_VALIDATOR_TOTAL_WITHDRAWALS: GetValidatorDashboardTotalWithdrawalsResponse,
+  DASHBOARD_VALIDATOR_WITHDRAWALS: GetValidatorDashboardWithdrawalsResponse,
+  GET_NOTIFICATIONS_SETTINGS_DASHBOARD: GetUserNotificationSettingsDashboardsResponse,
+  LATEST_STATE: InternalGetLatestStateResponse,
+  LOGIN: unknown,
+  LOGOUT: unknown,
+  NOTIFICATIONS_CLIENTS: GetUserNotificationClientsResponse,
+  NOTIFICATIONS_DASHBOARDS: GetUserNotificationDashboardsResponse,
+  NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR: GetUserNotificationsValidatorDashboardResponse,
+  NOTIFICATIONS_MACHINE: GetUserNotificationMachinesResponse,
+  NOTIFICATIONS_MANAGEMENT_CLIENTS_SET_NOTIFICATION: PutUserNotificationSettingsNetworksResponse,
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_ACCOUNT_SET_NOTIFICATION: PutUserNotificationSettingsAccountDashboardResponse,
+  NOTIFICATIONS_MANAGEMENT_DASHBOARD_VALIDATOR_SET_NOTIFICATION: PutUserNotificationSettingsValidatorDashboardResponse,
+  NOTIFICATIONS_MANAGEMENT_GENERAL: GetUserNotificationSettingsResponse,
+  NOTIFICATIONS_MANAGEMENT_NETWORK_SET_NOTIFICATION: PutUserNotificationSettingsNetworksResponse,
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_DELETE: unknown,
+  NOTIFICATIONS_MANAGEMENT_PAIRED_DEVICES_SET_NOTIFICATION: PutUserNotificationSettingsPairedDevicesResponse,
+  NOTIFICATIONS_MANAGEMENT_SAVE: PutUserNotificationSettingsGeneralResponse,
+  NOTIFICATIONS_NETWORK: GetUserNotificationNetworksResponse,
+  NOTIFICATIONS_OVERVIEW: GetUserNotificationsResponse,
+  NOTIFICATIONS_TEST_EMAIL: unknown,
+  NOTIFICATIONS_TEST_PUSH: unknown,
+  NOTIFICATIONS_TEST_WEBHOOK: unknown,
+  PRODUCT_SUMMARY: InternalGetProductSummaryResponse,
+  REGISTER: unknown,
+  SAVE_VALIDATOR_DASHBOARDS_SETTINGS: PutUserNotificationSettingsValidatorDashboardResponse,
+  SEARCH: InternalPostSearchResponse,
+  STRIPE_CHECKOUT_SESSION: StripeCreateCheckoutSession,
+  STRIPE_CUSTOMER_PORTAL: StripeCustomerPortal,
+  USER: InternalGetUserInfoResponse,
+  USER_CHANGE_EMAIL: unknown,
+  USER_CHANGE_PASSWORD: unknown,
+  USER_DASHBOARDS: GetUserDashboardsResponse,
+  USER_DELETE: unknown,
+}
 
 export type PathValues = Record<string, boolean | number | string>
 
@@ -72,6 +132,7 @@ type MappingData = {
   mock?: boolean,
   mockFunction?: MockFunction,
   path: string,
+  retunType?: any,
 }
 
 interface MockFunction {
@@ -207,7 +268,7 @@ export const mapping: Record<API_PATH, MappingData> = {
     getPath: values => `/validator-dashboards/${values?.dashboardKey}/groups`,
     method: 'POST',
     mock: false,
-    path: 'validator-dashboards/{dashboard_id}/groups',
+    path: ' ',
   },
   DASHBOARD_VALIDATOR_INDICES: {
     getPath: values =>
@@ -262,8 +323,6 @@ export const mapping: Record<API_PATH, MappingData> = {
     path: '/users/me/notifications/settings/dashboards',
   },
   LATEST_STATE: {
-    mock: false,
-    mockFunction: mockLatestState,
     path: '/latest-state',
   },
   LOGIN: {
@@ -282,12 +341,6 @@ export const mapping: Record<API_PATH, MappingData> = {
   },
   NOTIFICATIONS_DASHBOARDS: {
     path: '/users/me/notifications/dashboards',
-  },
-  NOTIFICATIONS_DASHBOARDS_DETAILS_ACCOUNT: {
-    getPath: pathValues =>
-      `/users/me/notifications/account-dashboards/${pathValues?.dashboard_id}`
-      + `/groups/${pathValues?.group_id}/epochs/${pathValues?.epoch}`,
-    path: '/users/me/notifications/account-dashboards/{dashboard_id}/groups/{group_id}/epochs/{epoch}',
   },
   NOTIFICATIONS_DASHBOARDS_DETAILS_VALIDATOR: {
     getPath: pathValues =>

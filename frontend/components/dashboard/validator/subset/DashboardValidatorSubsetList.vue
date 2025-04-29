@@ -166,7 +166,6 @@ function createDutyLinksData(
         :cursor
         :page-size="VALIDATORS_PER_PAGE"
         :paging
-        :stepper-only="true"
         @set-cursor="(c: Cursor) => (cursor = c)"
       />
     </div>

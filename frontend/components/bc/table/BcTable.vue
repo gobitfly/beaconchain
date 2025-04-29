@@ -1,27 +1,22 @@
 <script setup lang="ts">
+import type { DataTableSortEvent } from 'primevue/datatable'
 import type { ApiPagingResponse } from '~/types/api/common'
-import type { Cursor } from '~/types/datatable'
 
-interface Props {
+const props = defineProps<{
   addSpacer?: boolean,
-  cursor?: Cursor,
+  // cursor?: Cursor,
   data?: ApiPagingResponse<any>,
   dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
+  hasSelectionMode?: boolean,
   hidePager?: boolean,
   isRowExpandable?: (item: any) => boolean,
+  // limit?: number,
   loading?: boolean,
   pageSize?: number,
-  selectedSort?: string,
-  selectionMode?: 'multiple' | 'single',
   tableClass?: string,
-}
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void,
-  (e: 'setPageSize', value: number): void,
 }>()
+const query = defineModel<Query>('query')
 
 const expandedRows = ref<Record<any, boolean>>({})
 
@@ -70,14 +65,23 @@ const toggleItem = (item: any) => {
   expandedRows.value = { ...expandedRows.value }
 }
 
-const setCursor = (value: Cursor) => {
+const setCursor = (value: string | undefined) => {
+  if (!query.value) return
   toggleAll(true)
-  emit('setCursor', value)
+  query.value.cursor = value
 }
 
-const setPageSize = (value: number) => {
+const setLimit = (value: number) => {
+  if (!query.value) return
   toggleAll(true)
-  emit('setPageSize', value)
+  query.value.limit = value
+}
+const onSort = (event: DataTableSortEvent) => {
+  if (!query.value) return
+  toggleAll(true)
+  const order = event.sortOrder === -1 ? 'asc' : 'desc'
+  const { sortField } = event
+  query.value.sort = `${sortField}:${order}` as const
 }
 
 watch(
@@ -94,17 +98,6 @@ watch(
     toggleAll(true)
   },
 )
-
-const sort = computed(() => {
-  if (!props.selectedSort?.includes(':')) {
-    return
-  }
-  const split = props.selectedSort?.split(':')
-  return {
-    field: split[0],
-    order: split[1] === 'asc' ? -1 : 1,
-  }
-})
 </script>
 
 <template>
@@ -113,15 +106,14 @@ const sort = computed(() => {
     class="bc-table"
     sort-mode="single"
     lazy
-    :sort-field="sort?.field"
-    :sort-order="sort?.order"
     :value="data?.data"
     :data-key
     :loading
+    @sort="onSort"
   >
     <Column
-      v-if="selectionMode"
-      :selection-mode
+      v-if="hasSelectionMode"
+      selection-mode="multiple"
       class="selection"
     />
     <Column
@@ -190,12 +182,11 @@ const sort = computed(() => {
     </template>
     <template #footer>
       <BcTablePager
-        v-if="!hidePager && data?.paging"
-        :page-size="pageSize ?? 0"
+        v-if="!hidePager && data?.paging && query?.limit"
+        :page-size="query.limit"
         :paging="data?.paging"
-        :cursor
         @set-cursor="setCursor"
-        @set-page-size="setPageSize"
+        @set-page-size="setLimit"
       >
         <template #bc-table-footer-left>
           <slot name="bc-table-footer-left" />
@@ -217,10 +208,6 @@ const sort = computed(() => {
     width: 32px;
   }
 
-  :deep(.selection) {
-    width: 20px;
-  }
-
   :deep(.p-datatable-emptymessage) {
     height: 140px;
     background: transparent;
@@ -229,6 +216,13 @@ const sort = computed(() => {
       border: none;
     }
   }
+}
+
+.bc-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: var(--padding-medium);
 }
 
 .toggle {
