@@ -107,14 +107,21 @@ type ValidatorDutiesCursor struct {
 	Reward decimal.Decimal
 }
 
-type WithdrawalsCursor struct {
+type ELWithdrawalsCursor struct {
 	GenericCursor
 
-	Slot            uint64
-	WithdrawalIndex uint64
-	Index           uint64
-	Recipient       []byte
-	Amount          uint64
+	BlockQueued uint64
+	TxIndex     uint64
+	ITxIndex    uint64
+	Amount      decimal.Decimal
+}
+
+type CLWithdrawalsCursor struct {
+	GenericCursor
+
+	Slot      uint64
+	SlotIndex uint64
+	Amount    decimal.Decimal
 }
 
 type ELConsolidationsCursor struct {
