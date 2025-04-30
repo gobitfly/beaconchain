@@ -11,10 +11,10 @@ import (
 	"encoding/json"
 )
 
-type LegacyRemovedExcessBalanceEventTransformer struct{}
+type LegacyConsolidationProcessedEventTransformer struct{}
 
-func (d *LegacyRemovedExcessBalanceEventTransformer) Transform(tx *sqlx.Tx, events []types.ConsensusLayerEvent) (int, error) {
-	eventName := types.RemovedExcessBalanceEventName
+func (d *LegacyConsolidationProcessedEventTransformer) Transform(tx *sqlx.Tx, events []types.ConsensusLayerEvent) (int, error) {
+	eventName := types.ConsolidationProcessedEventName
 	// filter events for the relevant type
 	events, err := FilterEventsByTypeAndSort(events, eventName)
 	if err != nil {
@@ -24,7 +24,7 @@ func (d *LegacyRemovedExcessBalanceEventTransformer) Transform(tx *sqlx.Tx, even
 		return 0, nil
 	}
 	// convert raw data from events into actual structs
-	data := make([]types.RemovedExcessBalance, len(events))
+	data := make([]types.ConsolidationProcessedEvent, len(events))
 	for i, event := range events {
 		// unmarshal from data field to DepositQueuedEvent using json
 		err = json.Unmarshal(event.RawData, &data[i])
@@ -49,26 +49,28 @@ func (d *LegacyRemovedExcessBalanceEventTransformer) Transform(tx *sqlx.Tx, even
 		})
 	}
 
-	ds := goqu.Dialect("postgres").Insert("blocks_withdrawals").
-		Cols(
-			"block_slot",
-			"block_root",
-			"withdrawalindex",
-			"validatorindex",
-			"address",
-			"amount").
+	ds := goqu.Dialect("postgres").Insert("blocks_consolidation_requests").Cols(
+		"block_slot",
+		"block_root",
+		"request_index",
+		"source_index",
+		"target_index",
+		"amount_consolidated").
 		FromQuery(
-			goqu.From("consensus_layer_events").As("cle").
+			goqu.From(goqu.T("consensus_layer_events").As("cle")).
 				Select(
-					"cle.slot AS block_slot",
-					"cle.block_root",
-					goqu.L("-20000 + cle.event_index AS withdrawalindex"),
-					goqu.L("vali.validatorindex::int AS validatorindex"),
-					goqu.L("''::bytea AS address"),
-					goqu.L("(cle.data->>'amount')::bigint AS amount"),
+					goqu.L("cle.slot").As("block_slot"),
+					goqu.L("cle.block_root").As("block_root"),
+					goqu.L("cle.event_index").As("request_index"),
+					goqu.L("src.validatorindex").As("source_index"),
+					goqu.L("tgt.validatorindex").As("target_index"),
+					goqu.L("(cle.data->>'amount')::bigint").As("amount_consolidated"),
 				).
-				Join(goqu.T("validators").As("vali"), goqu.On(goqu.Ex{
-					"vali.pubkey": goqu.L(`decode(cle.data ->> 'pubkey', 'base64')`),
+				Join(goqu.T("validators").As("src"), goqu.On(goqu.Ex{
+					"src.pubkey": goqu.L(`dgecode(cle.data ->> 'source_pubkey', 'base64')`),
+				})).
+				Join(goqu.T("validators").As("tgt"), goqu.On(goqu.Ex{
+					"tgt.pubkey": goqu.L(`decode(cle.data ->> 'target_pubkey', 'base64')`),
 				})).
 				Where(goqu.And(
 					goqu.Ex{"event_name": eventName},
