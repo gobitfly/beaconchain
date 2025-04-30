@@ -139,7 +139,7 @@ outer:
 				index_processed = temp.index_processed,
 				block_processed_root = temp.block_processed_root,
 				status = temp.status,
-				amount_consolidated = temp.amount_consolidated
+				amount = temp.amount
 			FROM tmp_update_table temp
 			WHERE blocks_withdrawal_requests_v2.id = temp.id
 		`)
