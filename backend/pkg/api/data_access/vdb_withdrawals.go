@@ -401,7 +401,16 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		if withdrawalsDs == nil {
 			withdrawalsDs = requestsDs
 		} else {
-			withdrawalsDs = withdrawalsDs.UnionAll(requestsDs)
+			// priority merge to filter out duplicated processed entries in both tables; keep all (manual) requests + unmatched skimmings
+			withdrawalsDs = goqu.Dialect("postgres").From(goqu.T("request")).
+				With("bridge", withdrawalsDs).
+				With("request", requestsDs).
+				UnionAll(goqu.Dialect("postgres").From(goqu.T("bridge")).
+					Select(goqu.L("bridge.*")).
+					LeftJoin(goqu.T("request"), goqu.Using(goqu.C("slot"), goqu.C("index"))).
+					Where(
+						goqu.I("request.slot").Eq(nil),
+					))
 		}
 	}
 
