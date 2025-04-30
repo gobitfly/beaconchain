@@ -59,20 +59,20 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			goqu.I("v.validatorindex").As("index"),
 			goqu.I("el_wr.block_number").As("block_queued"),
 			goqu.I("el_wr.block_ts").As("block_queued_ts"),
-			goqu.I("b.exec_block_number").As("block_processed"), // BEDS-1399
-			goqu.I("b.exec_timestamp").As("block_processed_ts"), // BEDS-1399
-			goqu.I("el_wr.itx_index"),                           // BEDS-1405
-			goqu.I("el_wr.from_address"),                        // BEDS-1405
+			goqu.I("b.exec_block_number").As("block_processed"),
+			goqu.I("b.exec_timestamp").As("block_processed_ts"),
+			goqu.I("el_wr.itx_index"),
+			goqu.I("el_wr.from_address"),
 			goqu.I("el_wr.tx_index"),
 			goqu.I("el_wr.source_address").As("withdrawer"),
 			goqu.I("el_wr.tx_hash"),
-			goqu.I("el_wr.fee"),    // BEDS-1405,
-			goqu.I("el_wr.amount"), // BEDS-1405,
-			goqu.Case().When( // BEDS-1399
+			goqu.I("el_wr.fee"),
+			goqu.I("el_wr.amount"),
+			goqu.Case().When(
 				goqu.I("b.exec_block_number").Neq(nil), "processed",
 			).Else(
 				goqu.V("queued"),
-			).As("status"), // BEDS-1399
+			).As("status"),
 		).
 		InnerJoin(
 			goqu.T("validators").As("v"),
@@ -82,9 +82,9 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 		// need to match EL events to correct CL events
 		// might needs some complex logic like "newest CL event after EL event which doesn't also match a previous EL event"
 		LeftJoin(
-			goqu.T("blocks_withdrawal_requests").As("cl_wr"),
+			goqu.T("blocks_withdrawal_requests_v2").As("cl_wr"),
 			goqu.On(
-				goqu.I("el_wr.id").Eq(goqu.I("cl_wr.id")),
+				goqu.I("el_wr.id").Eq(goqu.I("cl_wr.eth1_id")),
 			),
 		).
 		LeftJoin(
@@ -92,6 +92,9 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			goqu.On(
 				goqu.I("b.blockroot").Eq(goqu.I("cl_wr.block_queued_root")),
 			),
+		).
+		Where(
+			goqu.I("el_wr.amount").Neq(goqu.V(0)), // filter out exit requests
 		)
 
 	searches := []exp.Expression{}
@@ -194,8 +197,8 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 		Withdrawer         []byte          `db:"withdrawer"`
 		TxHash             []byte          `db:"tx_hash"`
 		Amount             decimal.Decimal `db:"amount"`
-		Fee                []byte          `db:"fee"`    // BEDS-1405 // TODO change to number
-		Status             string          `db:"status"` // BEDS-1399
+		Fee                uint64          `db:"fee"`
+		Status             string          `db:"status"`
 	}
 
 	queryResult, err := runQueryRows[[]dbResult](ctx, d.readerDb, ds)
@@ -234,9 +237,8 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			TimestampQueued: res.BlockQueuedTime.Unix(),
 			TxIndexQueued:   res.TxIndex,
 			ITxIndexQueued:  res.ITxIndex,
-			// Status:             res.Status, // BEDS-1399
-			TxHash: t.Hash(hexutil.Encode(res.TxHash)),
-			Amount: res.Amount,
+			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
+			Amount:          res.Amount,
 		}
 		if res.GroupId.Valid && !dashboardId.AggregateGroups {
 			row.GroupId = uint64(res.GroupId.Int64)
@@ -250,7 +252,7 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			row.From = prepareAddressRequest(&fromContractStatusRequests, res.From, &res)
 		}*/
 
-		row.Fee = decimal.NewFromBigInt(new(big.Int).SetBytes(res.Fee), 0)
+		row.Fee = decimal.NewFromUint64(res.Fee)
 
 		if res.BlockProcessedTime.Valid { // BEDS-1399
 			row.Status = "processed"
@@ -321,6 +323,7 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 	// Reverse the data if the cursor is reversed to correct it to the requested direction
 	if currentCursor.IsReverse() {
 		slices.Reverse(responseData)
+		slices.Reverse(queryResult)
 	}
 
 	p, err := utils.GetPagingFromData(queryResult, currentCursor, moreDataFlag)
@@ -507,6 +510,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
+		slices.Reverse(queryResult)
 	}
 
 	// Find the next withdrawal if we are currently at the first page
