@@ -127,9 +127,9 @@ type CLWithdrawalsCursor struct {
 type ELConsolidationsCursor struct {
 	GenericCursor
 
-	BlockProcessed sql.NullInt64
-	TxIndex        uint64
-	ITxIndex       uint64
+	BlockQueued uint64
+	TxIndex     uint64
+	ITxIndex    uint64
 }
 
 type CLConsolidationsCursor struct {
