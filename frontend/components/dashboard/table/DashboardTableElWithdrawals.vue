@@ -28,6 +28,26 @@ const isMobile = computed(() => {
   return width.value < 768
 })
 
+const elWithdrawalsWithIdentifiers = computed(() =>
+  addIdentifier(elWithdrawals, 'block_queued', 'tx_index_queued', 'itx_index_queued'),
+)
+const tableData = computed(() => {
+  if (!elWithdrawalsWithIdentifiers.value?.data?.length) {
+    return
+  }
+
+  return {
+    data: [
+      {
+        amount: elWithdrawalsTotalAmount?.data.total_amount,
+        isTotalAmountRow: true,
+      },
+      ...elWithdrawalsWithIdentifiers.value.data,
+    ],
+    paging: elWithdrawalsWithIdentifiers.value.paging,
+  }
+})
+
 const query = defineModel<TableQueryParams>('query')
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -45,26 +65,6 @@ const setSearch = (value?: string) => {
     search: value,
   }
 }
-
-const tableData = computed(() => {
-  if (!elWithdrawals?.data?.length) {
-    return
-  }
-
-  return {
-    data: [
-      {
-        amount: elWithdrawalsTotalAmount?.data.total_amount,
-        block_queued: -1, // used for identifier
-        isTotalAmountRow: true,
-        itx_index_queued: -1, // used for identifier
-        tx_index_queued: -1, // used for identifier
-      },
-      ...elWithdrawals.data,
-    ],
-    paging: elWithdrawals.paging,
-  }
-})
 
 const { groups } = useValidatorDashboardGroups()
 const getGroupName = (groupId: number) => {
@@ -87,7 +87,7 @@ const getGroupName = (groupId: number) => {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="addIdentifier(tableData, 'block_queued', 'tx_index_queued', 'itx_index_queued')"
+          :data="tableData"
           expandable
           table-class="dashboard-table-el-withdrawals"
           data-key="identifier"

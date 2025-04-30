@@ -9,7 +9,6 @@ import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getGroupLabel } from '~/utils/dashboard/group'
 import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const {
@@ -35,17 +34,17 @@ const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators,
 } = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
-
-const query = defineModel<TableQueryParams>('query')
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
 
+const clDepositsWithIdentifiers = computed(() =>
+  addIdentifier(clDeposits, 'slot', 'slot_index'),
+)
 const tableData = computed(() => {
-  if (!clDeposits?.data?.length) {
+  if (!clDepositsWithIdentifiers.value?.data?.length) {
     return
   }
 
@@ -54,18 +53,14 @@ const tableData = computed(() => {
       {
         amount: clDepositsTotalAmount?.data.total_amount,
         isTotalAmountRow: true,
-        slot: -1, // used for identifier
-        slot_index: -1, // used for identifier
       },
-      ...clDeposits.data,
+      ...clDepositsWithIdentifiers.value.data,
     ],
-    paging: clDeposits.paging,
+    paging: clDepositsWithIdentifiers.value.paging,
   }
 })
 
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
-}
+const query = defineModel<TableQueryParams>('query')
 
 const onSort = (sort: DataTableSortEvent) => {
   query.value = setQuerySort(sort, query.value)
@@ -92,8 +87,9 @@ const getRowClass = (row: VDBConsensusDepositsTableRow) => {
   }
 }
 
-const isRowExpandable = (row: VDBConsensusDepositsTableRow) => {
-  return row.index !== undefined
+const { groups } = useValidatorDashboardGroups()
+const getGroupName = (groupId: number) => {
+  return groups.value.find(group => group.id === groupId)?.name
 }
 
 const {
@@ -117,7 +113,7 @@ const {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="addIdentifier(tableData, 'slot', 'slot_index')"
+          :data="tableData"
           data-key="identifier"
           expandable
           table-class="dashboard-table-cl-deposits"
@@ -125,7 +121,7 @@ const {
           :cursor="query?.cursor"
           :page-size="query?.limit"
           :row-class="getRowClass"
-          :is-row-expandable
+          :is-row-expandable="(row: VDBConsensusDepositsTableRow) => row.index !== undefined"
           :is-loading
           @set-cursor="setCursor"
           @sort="onSort"
@@ -177,7 +173,7 @@ const {
           >
             <template #body="slotProps">
               <span v-if="!slotProps.data.isTotalAmountRow">
-                {{ groupNameLabel(slotProps.data.group_id) }}
+                {{ getGroupName(slotProps.data.group_id) }}
               </span>
             </template>
           </Column>
@@ -287,7 +283,7 @@ const {
                     {{ $t("dashboard.validator.col.group") }}
                   </div>
                   <div class="dashboard-table-cl-deposits__details-value">
-                    {{ groupNameLabel(slotProps.data.group_id) }}
+                    {{ getGroupName(slotProps.data.group_id) }}
                   </div>
                 </div>
                 <div class="dashboard-table-cl-deposits__details-row">
