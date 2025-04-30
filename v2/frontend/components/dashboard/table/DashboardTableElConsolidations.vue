@@ -89,6 +89,7 @@ const setSearch = (value?: string) => {
             v-if="!isMobile"
             field="source"
             :header="$t('table.source')"
+            body-class="dashboard-table-el-consolidations__validator-cell"
           >
             <template #body="slotProps">
               <BcIcon
@@ -109,6 +110,7 @@ const setSearch = (value?: string) => {
             v-if="!isMobile"
             field="target"
             :header="$t('table.target')"
+            body-class="dashboard-table-el-consolidations__validator-cell"
           >
             <template #body="slotProps">
               <BcIcon
@@ -400,6 +402,11 @@ const setSearch = (value?: string) => {
   .dashboard-table-el-consolidations__age-cell {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
+    white-space: nowrap;
+  }
+
+  .dashboard-table-el-consolidations__validator-cell {
+    white-space: nowrap;
   }
 }
 </style>
