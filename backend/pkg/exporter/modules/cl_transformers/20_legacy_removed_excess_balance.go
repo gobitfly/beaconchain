@@ -2,8 +2,9 @@ package cl_transformers
 
 import (
 	"fmt"
+	"slices"
 
-	"github.com/doug-martin/goqu/v9"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
@@ -11,10 +12,10 @@ import (
 	"encoding/json"
 )
 
-type LegacyConsolidationProcessedEventTransformer struct{}
+type LegacyRemovedExcessBalanceEventTransformer struct{}
 
-func (d *LegacyConsolidationProcessedEventTransformer) Transform(tx *sqlx.Tx, events []types.ConsensusLayerEvent) (int, error) {
-	eventName := types.ConsolidationProcessedEventName
+func (d *LegacyRemovedExcessBalanceEventTransformer) Transform(tx *sqlx.Tx, events []types.ConsensusLayerEvent) (int, error) {
+	eventName := types.RemovedExcessBalanceEventName
 	// filter events for the relevant type
 	events, err := FilterEventsByTypeAndSort(events, eventName)
 	if err != nil {
@@ -24,7 +25,7 @@ func (d *LegacyConsolidationProcessedEventTransformer) Transform(tx *sqlx.Tx, ev
 		return 0, nil
 	}
 	// convert raw data from events into actual structs
-	data := make([]types.ConsolidationProcessedEvent, len(events))
+	data := make([]types.RemovedExcessBalance, len(events))
 	for i, event := range events {
 		// unmarshal from data field to DepositQueuedEvent using json
 		err = json.Unmarshal(event.RawData, &data[i])
@@ -33,65 +34,76 @@ func (d *LegacyConsolidationProcessedEventTransformer) Transform(tx *sqlx.Tx, ev
 		}
 	}
 
-	filters := make([]types.ConsensusLayerEventFilter, 0)
-	for _, event := range events {
-		filters = append(filters, types.ConsensusLayerEventFilter{
-			Slot:      uint64(event.Slot),
-			BlockRoot: event.BlockRoot,
-		})
+	// get validator pubkey => validator index from postgres
+	var validatorMapping []struct {
+		Pubkey []byte `db:"pubkey"`
+		Index  uint64 `db:"validatorindex"`
 	}
 
-	var orConditions []goqu.Expression
-	for _, filter := range filters {
-		orConditions = append(orConditions, goqu.Ex{
-			"slot":       filter.Slot,
-			"block_root": filter.BlockRoot,
-		})
-	}
-
-	ds := goqu.Dialect("postgres").Insert("blocks_consolidation_requests").Cols(
-		"block_slot",
-		"block_root",
-		"request_index",
-		"source_index",
-		"target_index",
-		"amount_consolidated").
-		FromQuery(
-			goqu.From("consensus_layer_events").As("cle").
-				Select(
-					"cle.slot",
-					"cle.block_root",
-					"cle.event_index",
-					goqu.L("src.validatorindex AS source_index"),
-					goqu.L("tgt.validatorindex AS target_index"),
-					goqu.L("(cle.data->>'amount')::bigint AS amount_consolidated"),
-				).
-				Join(goqu.T("validators").As("src"), goqu.On(goqu.Ex{
-					"src.pubkey": goqu.L(`decode(cle.data ->> 'source_pubkey', 'base64')`),
-				})).
-				Join(goqu.T("validators").As("tgt"), goqu.On(goqu.Ex{
-					"tgt.pubkey": goqu.L(`decode(cle.data ->> 'target_pubkey', 'base64')`),
-				})).
-				Where(goqu.And(
-					goqu.Ex{"event_name": eventName},
-					goqu.Or(orConditions...),
-					goqu.Ex{"version": types.ConsensusLayerEventVersion},
-				)),
-		).OnConflict(goqu.DoNothing())
-
-	query, args, err := ds.Prepared(true).ToSQL()
+	err = tx.Select(&validatorMapping, `
+		SELECT pubkey, validatorindex
+		FROM validators
+		`)
 	if err != nil {
-		return 0, fmt.Errorf("error preparing query: %w", err)
+		return 0, fmt.Errorf("error getting validator mapping: %w", err)
+	}
+	// create a map of pubkey => validator index
+	pubkeyToIndex := make(map[string]uint64)
+	for _, mapping := range validatorMapping {
+		pubkeyToIndex[string(mapping.Pubkey)] = mapping.Index
+	}
+	type BlocksWithdrawalRow struct {
+		BlockSlot       uint64 `db:"block_slot"`
+		BlockRoot       []byte `db:"block_root"`
+		WithdrawalIndex int64  `db:"withdrawalindex"`
+		ValidatorIndex  uint64 `db:"validatorindex"`
+		Address         []byte `db:"address"`
+		Amount          int64  `db:"amount"`
+	}
+	newRows := make([]BlocksWithdrawalRow, len(events))
+	for i, event := range data {
+		// get the validator index from the pubkey
+		pubkey := string(event.Pubkey)
+		validatorIndex, ok := pubkeyToIndex[pubkey]
+		if !ok {
+			return 0, fmt.Errorf("error getting validator index for pubkey %s", pubkey)
+		}
+		// create a new row for the blocks_withdrawals table
+		newRows[i] = BlocksWithdrawalRow{
+			BlockSlot:       event.Slot,
+			BlockRoot:       event.BlockRoot,
+			WithdrawalIndex: -20000 + int64(event.EventIndex),
+			ValidatorIndex:  validatorIndex,
+			Address:         []byte{},
+			Amount:          int64(event.Amount),
+		}
 	}
 
-	res, err := tx.Exec(query, args...)
-	if err != nil {
-		return 0, fmt.Errorf("error executing query: %w", err)
-	}
-	c, err := res.RowsAffected()
-	if err != nil {
-		return 0, fmt.Errorf("error getting rows affected: %w", err)
+	// chunk to max 2000 rows
+	for chunk := range slices.Chunk(newRows, 2000) {
+		log.Debugf("inserting %d new rows into blocks_withdrawals table", len(chunk))
+		_, err = tx.NamedExec(`
+			INSERT INTO
+			blocks_withdrawals (
+					block_slot,
+					block_root,
+					withdrawalindex,
+					validatorindex,
+					address,
+					amount
+				)
+			VALUES (
+				:block_slot,
+				:block_root,
+				:withdrawalindex,
+				:validatorindex,
+				:address,
+				:amount
+			) ON CONFLICT DO NOTHING`, chunk)
+		if err != nil {
+			return 0, errors.Wrap(err, "error inserting new rows into blocks_removed_excess_balance_events table")
+		}
 	}
 
-	return int(c), nil
+	return len(newRows), nil
 }
