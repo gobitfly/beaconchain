@@ -101,7 +101,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	}
 	defer utils.Rollback(tx)
 
-	if d.FirstRun {
+	if d.FirstRun && !utils.Config.SkipFirstRunCheck {
 		log.Infof("performing first run consistency checks")
 		// get all slots we currently have in the database
 		dbSlots, err := db.GetAllSlots(tx)

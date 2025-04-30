@@ -232,6 +232,7 @@ type Config struct {
 	CorsAllowedHosts []string `yaml:"corsAllowedHosts" env:"CORS_ALLOWED_HOSTS"`
 
 	SkipDataAccessServiceInitWait bool `yaml:"skipDataAccessServiceInitWait" env:"SKIP_DATA_ACCESS_SERVICE_INIT_WAIT"`
+	SkipFirstRunCheck             bool `yaml:"skipFirstRunCheck" env:"SKIP_FIRST_RUN_CHECK"`
 }
 
 type Chain struct {
