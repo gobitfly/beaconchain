@@ -573,12 +573,20 @@ func (d *dashboardData) processElectraConsolidations(data *MultiEpochData, tar *
 				return nil
 			}
 			for _, consolidation := range data.epochBasedData.electraConsolidations[epoch] {
-				(*tar)[tI].ConsolidationsIncomingAmount[uint64(tO)+consolidation.TargetValidatorIndex] += int64(consolidation.Amount)
-				(*tar)[tI].ConsolidationsIncomingCount[uint64(tO)+consolidation.TargetValidatorIndex]++
-				(*tar)[tI].ConsolidationsOutgoingAmount[uint64(tO)+consolidation.SourceValidatorIndex] += int64(consolidation.Amount)
-				(*tar)[tI].ConsolidationsOutgoingCount[uint64(tO)+consolidation.SourceValidatorIndex]++
+				targetIndex, ok := data.validatorBasedData.validatorIndices[string(consolidation.TargetPubkey)]
+				if !ok {
+					return fmt.Errorf("target validator %s not found in validator indices map", string(consolidation.TargetPubkey))
+				}
+				sourceIndex, ok := data.validatorBasedData.validatorIndices[string(consolidation.SourcePubkey)]
+				if !ok {
+					return fmt.Errorf("source validator %s not found in validator indices map", string(consolidation.SourcePubkey))
+				}
+				(*tar)[tI].ConsolidationsIncomingAmount[uint64(tO)+targetIndex] += int64(consolidation.Amount)
+				(*tar)[tI].ConsolidationsIncomingCount[uint64(tO)+targetIndex]++
+				(*tar)[tI].ConsolidationsOutgoingAmount[uint64(tO)+sourceIndex] += int64(consolidation.Amount)
+				(*tar)[tI].ConsolidationsOutgoingCount[uint64(tO)+sourceIndex]++
 				// source => target
-				d.log.Tracef("processed electra consolidation: %d => %d %d GWEI in epoch %d", consolidation.SourceValidatorIndex, consolidation.TargetValidatorIndex, consolidation.Amount, epoch)
+				d.log.Tracef("processed electra consolidation: %d => %d %d GWEI in epoch %d", consolidation.SourcePubkey, consolidation.TargetPubkey, consolidation.Amount, epoch)
 			}
 			return nil
 		})
@@ -603,9 +611,13 @@ func (d *dashboardData) processElectraRemovedExcessBalanceEvents(data *MultiEpoc
 				return nil
 			}
 			for _, event := range data.epochBasedData.electraRemovedExcessBalanceEvents[epoch] {
-				(*tar)[tI].WithdrawalsAmount[uint64(tO)+event.ValidatorIndex] += int64(event.Amount)
-				(*tar)[tI].WithdrawalsCount[uint64(tO)+event.ValidatorIndex]++
-				d.log.Tracef("processed electra removed excess balance event: %d %d GWEI in epoch %d", event.ValidatorIndex, event.Amount, epoch)
+				validatorIndex, ok := data.validatorBasedData.validatorIndices[string(event.ValidatorPubkey)]
+				if !ok {
+					return fmt.Errorf("validator %s not found in validator indices map", string(event.ValidatorPubkey))
+				}
+				(*tar)[tI].WithdrawalsAmount[uint64(tO)+validatorIndex] += int64(event.Amount)
+				(*tar)[tI].WithdrawalsCount[uint64(tO)+validatorIndex]++
+				d.log.Tracef("processed electra removed excess balance event: %d %d GWEI in epoch %d", event.ValidatorPubkey, event.Amount, epoch)
 			}
 			return nil
 		})
