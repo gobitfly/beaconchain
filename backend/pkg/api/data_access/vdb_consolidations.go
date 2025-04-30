@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math/big"
 	"slices"
 	"time"
 
@@ -72,7 +71,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		LeftJoin(
 			goqu.T("blocks_consolidation_requests_v2").As("cl_cr"),
 			goqu.On(
-				goqu.I("el_cr.id").Eq(goqu.I("cl_cr.id")),
+				goqu.I("el_cr.id").Eq(goqu.I("cl_cr.eth1_id")),
 			),
 		).
 		LeftJoin(
@@ -80,6 +79,9 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			goqu.On(
 				goqu.I("b.blockroot").Eq(goqu.I("cl_cr.block_queued_root")),
 			),
+		).
+		Where(
+			goqu.I("vs.validatorindex").Neq(goqu.I("vt.validatorindex")),
 		)
 
 	if dashboardId.Validators != nil {
@@ -128,9 +130,9 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		defaultSlotSortDesc = colSort.Desc
 	}
 	defaultColumns := []t.SortColumn{
-		{Column: goqu.I("el_cr.block_number"), Desc: defaultSlotSortDesc, Offset: currentCursor.BlockProcessed},
-		{Column: goqu.I("el_cr.tx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.TxIndex},   // should be log/itx_index; BEDS-1405
-		{Column: goqu.I("el_cr.itx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.ITxIndex}, // should be log/itx_index; BEDS-1405
+		{Column: goqu.I("el_cr.block_number"), Desc: defaultSlotSortDesc, Offset: currentCursor.BlockQueued},
+		{Column: goqu.I("el_cr.tx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.TxIndex},
+		{Column: goqu.I("el_cr.itx_index"), Desc: defaultSlotSortDesc, Offset: currentCursor.ITxIndex},
 	}
 	order, directions, err := applySortAndPagination(defaultColumns, t.SortColumn{Column: colSort.Column.ToExpr(), Desc: colSort.Desc}, currentCursor.GenericCursor)
 	if err != nil {
@@ -150,13 +152,13 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		BlockQueued        uint64        `db:"block_queued"`
 		BlockQueuedTime    time.Time     `db:"block_queued_ts"`
 		TxIndex            uint64        `db:"tx_index"`           // for cursor only
-		ITxIndex           uint64        `db:"itx_index"`          // for cursor only // BEDS-1405
+		ITxIndex           uint64        `db:"itx_index"`          // for cursor only
 		BlockProcessed     sql.NullInt64 `db:"block_processed"`    // need CL queued events from BEDS-1399
 		BlockProcessedTime sql.NullInt64 `db:"block_processed_ts"` // need CL queued events from BEDS-1399
 		From               []byte        `db:"from_address"`       // BEDS-1405 (might get from BT for now)
 		Consolidator       []byte        `db:"consolidator"`
 		TxHash             []byte        `db:"tx_hash"`
-		Fee                []byte        `db:"fee"` // BEDS-1405 // TODO change to number
+		Fee                uint64        `db:"fee"`
 		Status             string        `db:"status"`
 	}
 	dbRes, err := runQueryRows[[]elDbResult](ctx, d.readerDb, ds)
@@ -191,8 +193,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			TxIndexQueued:   res.TxIndex,
 			ITxIndexQueued:  res.ITxIndex,
 			TimestampQueued: res.BlockQueuedTime.Unix(),
-			// Status:             res.Status, // BEDS-1399
-			TxHash: t.Hash(hexutil.Encode(res.TxHash)),
+			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
 		}
 		row.Consolidator = prepareAddressRequest(&consolidatorContractStatusRequests, res.Consolidator, &res)
 		// BEDS-1405
@@ -201,9 +202,9 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			row.From = prepareAddressRequest(&fromContractStatusRequests, res.From, &res)
 		}*/
 
-		row.Fee = decimal.NewFromBigInt(new(big.Int).SetBytes(res.Fee), 0)
+		row.Fee = decimal.NewFromUint64(res.Fee)
 
-		if res.BlockProcessedTime.Valid { // BEDS-1399
+		if res.BlockProcessedTime.Valid {
 			row.Status = "processed"
 			row.BlockProcessed = uint64(res.BlockProcessed.Int64)
 			row.TimestampProcessed = res.BlockProcessedTime.Int64
@@ -271,6 +272,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
+		slices.Reverse(dbRes)
 	}
 
 	p, err := utils.GetPagingFromData(dbRes, currentCursor, moreDataFlag)
