@@ -20,6 +20,9 @@ const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
+const {
+  getTimestampFromSlot,
+} = useNetworkStore()
 
 const query = defineModel<TableQueryParams>('query')
 
@@ -73,7 +76,7 @@ const setSearch = (value?: string) => {
             <template #body="slotProps">
               <BcTableDateTime
                 v-if="slotProps.data.slot_processed !== undefined"
-                :unix-timestamp="slotProps.data.slot_processed"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot_processed)"
               />
               <span v-else>-</span>
             </template>
