@@ -92,6 +92,8 @@ const getGroupName = (groupId: number) => {
           table-class="dashboard-table-el-withdrawals"
           data-key="identifier"
           :selected-sort="query?.sort"
+          :cursor="query?.cursor"
+          :page-size="query?.limit"
           :row-class="(row: VDBWithdrawalsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           :is-row-expandable="(row: VDBWithdrawalsElTableRow) => row.index !== undefined"
           @set-cursor="setCursor"
@@ -101,7 +103,7 @@ const getGroupName = (groupId: number) => {
           <Column
             sortable
             body-class="dashboard-table-el-withdrawals__age-cell"
-            field="timestamp"
+            field="block_queued"
           >
             <template #header>
               <BcTableAgeHeader />
