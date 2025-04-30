@@ -16,6 +16,10 @@ const {
 }>()
 
 const {
+  getTimestampFromSlot,
+} = useNetworkStore()
+
+const {
   isGuestDashboard,
 } = useDashboardKey()
 
@@ -80,7 +84,7 @@ const setSearch = (value?: string) => {
             <template #body="slotProps">
               <BcTableDateTime
                 v-if="slotProps.data.block_processed !== undefined"
-                :unix-timestamp="slotProps.data.block_processed"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.block_processed)"
               />
               <span v-else>-</span>
             </template>
