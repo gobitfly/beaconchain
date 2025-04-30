@@ -1859,11 +1859,10 @@ func ElectraGetEpochProcessedHashes(epoch uint64) ([][]byte, error) {
 		`, (utils.Config.ClConfig.SlotsPerEpoch*epoch)-1))
 	*/
 	// use goqu
-	q := goqu.Dialect("postgres").Select("block_root").
-		From("consensus_layer_events").
+	q := goqu.Dialect("postgres").Select("transition_block_hash").
+		From("consensus_layer_events_indexer_metadata").
 		Where(
-			goqu.I("event_name").Eq("EpochProcessedEvent"),
-			goqu.I("slot").Eq((utils.Config.ClConfig.SlotsPerEpoch*epoch)-1),
+			goqu.I("epoch").Eq(epoch - 1), // it is what it is
 		)
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
@@ -1881,18 +1880,17 @@ func ElectraGetProcessedDeposits(epoch uint64) ([]constypes.ElectraDeposit, erro
 	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var result []constypes.ElectraDeposit
 	q := goqu.Dialect("postgres").Select(
-		goqu.L("data->>'amount'").As("amount"),
-		goqu.L("data->>'pubkey'").As("pubkey"),
-		// SignatureValid field, assume true if not present
-		goqu.COALESCE(goqu.L("data->>'signature_valid'"), goqu.L("'true'")).As("signature_valid"),
+		goqu.L("amount").As("amount"),
+		goqu.L("pubkey").As("pubkey"),
+		goqu.L("true").As("signature_valid"),
 	).
-		From("consensus_layer_events").
+		From("blocks_deposit_requests_v2").
 		Where(
-			goqu.I("event_name").Eq("DepositProcessedEvent"),
-			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lt(endSlot),
+			goqu.I("status").Eq("completed"),
+			goqu.I("slot_processed").Gte(startSlot),
+			goqu.I("slot_processed").Lt(endSlot),
 		).
-		Order(goqu.I("slot").Asc(), goqu.I("event_index").Asc())
+		Order(goqu.I("slot_processed").Asc(), goqu.I("index_processed").Asc())
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra deposits for epoch %v: %w", epoch, err)
@@ -1910,16 +1908,17 @@ func ElectraGetProcessedConsolidations(epoch uint64) ([]constypes.ElectraConsoli
 	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var consolidations []constypes.ElectraConsolidation
 	q := goqu.Dialect("postgres").Select(
-		goqu.L("data->>'amount'").As("amount"),
-		goqu.L("data->>'source_index'").As("source_index"),
-		goqu.L("data->>'target_index'").As("target_index"),
+		goqu.L("amount_consolidated").As("amount"),
+		goqu.L("source_pubkey").As("source_pubkey"),
+		goqu.L("target_pubkey").As("target_pubkey"),
 	).
-		From("consensus_layer_events").
+		From("blocks_consolidation_requests_v2").
 		Where(
-			goqu.I("event_name").Eq("ConsolidationProcessedEvent"),
-			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lt(endSlot),
-		)
+			goqu.I("status").Eq("completed"),
+			goqu.I("slot_processed").Gte(startSlot),
+			goqu.I("slot_processed").Lt(endSlot),
+		).
+		Order(goqu.I("slot_processed").Asc(), goqu.I("index_processed").Asc())
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra consolidations for epoch %v: %w", epoch, err)
@@ -1936,15 +1935,16 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 	endSlot := (epoch+1)*utils.Config.ClConfig.SlotsPerEpoch - 1
 	var excessBalanceEvents []constypes.ElectraExcessBalance
 	q := goqu.Dialect("postgres").Select(
-		goqu.L("data->>'validator_index'").As("validator_index"),
-		goqu.L("data->>'amount'").As("amount"),
+		goqu.L("validator_pubkey").As("validator_pubkey"),
+		goqu.L("amount").As("amount"),
 	).
-		From("consensus_layer_events").
+		From("blocks_removed_excess_balance_events").
 		Where(
-			goqu.I("event_name").Eq("RemovedExcessBalanceEvent"),
-			goqu.I("slot").Gte(startSlot),
-			goqu.I("slot").Lt(endSlot),
-		)
+			goqu.I("status").Eq("completed"),
+			goqu.I("slot_processed").Gte(startSlot),
+			goqu.I("slot_processed").Lt(endSlot),
+		).
+		Order(goqu.I("slot_processed").Asc(), goqu.I("index_processed").Asc())
 	sql, args, err := q.Prepared(true).ToSQL()
 	if err != nil {
 		return nil, fmt.Errorf("error fetching electra excess balance events for epoch %v: %w", epoch, err)
