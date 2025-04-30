@@ -121,6 +121,7 @@ const {
           data-key="identifier"
           expandable
           table-class="dashboard-table-cl-deposits"
+          :selected-sort="query?.sort"
           :cursor="query?.cursor"
           :page-size="query?.limit"
           :row-class="getRowClass"

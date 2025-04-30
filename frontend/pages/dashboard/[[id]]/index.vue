@@ -193,7 +193,8 @@ const dashboardData = useDashboardData()
 
 // Execution Layer Deposits data
 const elDepositsQueryParams = ref<TableQueryParams>({
-  limit: 5, sort: 'timestamp:desc',
+  limit: 5,
+  sort: 'timestamp:desc',
 })
 const {
   data: elDepositsData,
@@ -247,7 +248,7 @@ const clDepositsTotalAmount = computed(() => clDepositsData.value?.[1])
 // Execution Layer Withdrawals data
 const elWithdrawalsQueryParams = ref<TableQueryParams>({
   limit: 5,
-  sort: 'timestamp:desc',
+  sort: 'block_queued:desc',
 })
 const {
   data: elWithdrawalsData,
@@ -274,7 +275,7 @@ const elWithdrawalsTotalAmount = computed(() => elWithdrawalsData.value?.[1])
 // Consensus Layer Withdrawals data
 const clWithdrawalsQueryParams = ref<TableQueryParams>({
   limit: 5,
-  sort: 'timestamp:desc',
+  sort: 'slot:desc',
 })
 const {
   data: clWithdrawalsData,
@@ -300,7 +301,8 @@ const clWithdrawalsTotalAmount = computed(() => clWithdrawalsData.value?.[1])
 
 // Execution Layer Consolidations data
 const elConsolidationsQueryParams = ref<TableQueryParams>({
-  limit: 5, sort: 'block_processed:desc',
+  limit: 5,
+  sort: 'block_processed:desc',
 })
 const {
   data: elConsolidationsData,
@@ -322,7 +324,8 @@ const elConsolidations = computed(() => {
 
 // Consensus Layer Consolidations data
 const clConsolidationsQueryParams = ref<TableQueryParams>({
-  limit: 5, sort: 'timestamp:desc',
+  limit: 5,
+  sort: 'timestamp:desc',
 })
 const {
   data: clConsolidationsData,
