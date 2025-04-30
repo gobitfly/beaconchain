@@ -928,15 +928,21 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGrou
 	}
 
 	nextData := &t.VDBWithdrawalsClTableRow{
-		SlotProcessed: nextWithdrawalSlot,
-		Index:         nextValidator.ValidatorIndex,
-		GroupId:       nextValidator.GroupId,
+		SlotProcessed:         nextWithdrawalSlot,
+		Index:                 nextValidator.ValidatorIndex,
+		PublicKey:             t.PubKey(hexutil.Encode(nextValidatorData.PublicKey)),
+		WithdrawalCredentials: t.Hash(hexutil.Encode(nextValidatorData.WithdrawalCredentials)),
+		GroupId:               nextValidator.GroupId,
 		Recipient: &t.Address{
 			Hash:       t.Hash(address.String()),
 			Ens:        ens_name,
 			IsContract: contractStatus[0] == types.CONTRACT_CREATION || contractStatus[0] == types.CONTRACT_PRESENT,
 		},
-		Amount: utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
+		Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
+		Type:      "auto",
+		Status:    "queued",
+		Slot:      nextWithdrawalSlot,
+		SlotIndex: 0, // ?
 	}
 
 	return nextData, nil
