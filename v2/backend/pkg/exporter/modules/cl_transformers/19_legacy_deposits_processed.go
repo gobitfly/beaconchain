@@ -59,7 +59,7 @@ func (d *LegacyDepositProcessedEventTransformer) Transform(tx *sqlx.Tx, events [
 			"amount",
 			"signature").
 		FromQuery(
-			goqu.From("consensus_layer_events").As("cle").
+			goqu.From(goqu.T("consensus_layer_events").As("cle")).
 				Select(
 					"cle.slot",
 					"cle.block_root",

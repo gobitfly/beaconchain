@@ -57,7 +57,7 @@ func (d *LegacySwitchToCompoundingEventTransformer) Transform(tx *sqlx.Tx, event
 			"address",
 			"validator_index").
 		FromQuery(
-			goqu.From("consensus_layer_events").As("cle").
+			goqu.From(goqu.T("consensus_layer_events").As("cle")).
 				Select(
 					"cle.slot",
 					"cle.block_root",
@@ -65,9 +65,9 @@ func (d *LegacySwitchToCompoundingEventTransformer) Transform(tx *sqlx.Tx, event
 					goqu.L("decode((cle.data->>'address'), 'base64') AS address"),
 					goqu.L("vali.validatorindex AS validator_index"),
 				).
-				Join(goqu.T("validators"), goqu.On(goqu.Ex{
+				Join(goqu.T("validators").As("vali"), goqu.On(goqu.Ex{
 					"vali.pubkey": goqu.L(`decode(cle.data ->> 'pubkey', 'base64')`),
-				})).As("vali").
+				})).
 				Where(goqu.And(
 					goqu.Ex{"event_name": eventName},
 					goqu.Or(orConditions...),
