@@ -92,6 +92,8 @@ const getGroupName = (groupId: number) => {
           table-class="dashboard-table-cl-withdrawals"
           data-key="identifier"
           :selected-sort="query?.sort"
+          :cursor="query?.cursor"
+          :page-size="query?.limit"
           :row-class="(row: VDBWithdrawalsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           :is-row-expandable="(row: VDBWithdrawalsElTableRow) => row.index !== undefined"
           @set-cursor="setCursor"
@@ -101,7 +103,7 @@ const getGroupName = (groupId: number) => {
           <Column
             sortable
             body-class="dashboard-table-cl-withdrawals__age-cell"
-            field="slot_processed"
+            field="slot"
           >
             <template #header>
               <BcTableAgeHeader />
