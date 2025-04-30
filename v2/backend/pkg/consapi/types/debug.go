@@ -50,9 +50,9 @@ func (b *Base64Bytes) Scan(value interface{}) error {
 }
 
 type ElectraDeposit struct {
-	Pubkey         Base64Bytes `json:"pubkey" db:"pubkey"`
-	Amount         int64       `json:"amount,string" db:"amount"`
-	SignatureValid bool        `json:"signature_valid" db:"signature_valid"`
+	Pubkey         []byte `json:"pubkey" db:"pubkey"`
+	Amount         int64  `json:"amount,string" db:"amount"`
+	SignatureValid bool   `json:"signature_valid" db:"signature_valid"`
 }
 
 type ElectraConsolidation struct {
