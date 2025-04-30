@@ -406,17 +406,13 @@ const {
   }
 
   .age-field {
+    padding: 0 7px;
     white-space: nowrap;
   }
 
   .status-cell-content {
     display: flex;
     align-items: center;
-  }
-
-  tr>td.age-field {
-    padding: 0 7px;
-    @include utils.set-all-width(110px);
   }
 }
 

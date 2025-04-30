@@ -438,11 +438,8 @@ const {
   }
 
   .age-field {
-    white-space: nowrap;
-  }
-  tr > td.age-field {
     padding: 0 7px;
-    @include utils.set-all-width(151px);
+    white-space: nowrap;
   }
 }
 
