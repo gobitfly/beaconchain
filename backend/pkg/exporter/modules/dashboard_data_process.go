@@ -400,6 +400,10 @@ func (d *dashboardData) processDeposits(data *MultiEpochData, tar *[]types.VDBDa
 	g := &errgroup.Group{}
 	for i, e := range data.epochBasedData.epochs {
 		epoch := e
+		if epoch >= utils.Config.ClConfig.ElectraForkEpoch {
+			// skip deposits after the electra fork epoch because they will get converted to electra deposits instead
+			continue
+		}
 		tI := data.epochBasedData.tarIndices[i]
 		tO := data.epochBasedData.tarOffsets[i]
 		startSlot := epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch
