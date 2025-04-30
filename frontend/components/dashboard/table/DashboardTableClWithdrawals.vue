@@ -29,6 +29,26 @@ const isMobile = computed(() => {
   return width.value < 768
 })
 
+const clWithdrawalsWithIdentifiers = computed(() =>
+  addIdentifier(clWithdrawals, 'slot', 'slot_index'),
+)
+const tableData = computed(() => {
+  if (!clWithdrawalsWithIdentifiers.value?.data?.length) {
+    return
+  }
+
+  return {
+    data: [
+      {
+        amount: clWithdrawalsTotalAmount?.data.total_amount,
+        isTotalAmountRow: true,
+      },
+      ...clWithdrawalsWithIdentifiers.value.data,
+    ],
+    paging: clWithdrawalsWithIdentifiers.value.paging,
+  }
+})
+
 const query = defineModel<TableQueryParams>('query')
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -46,25 +66,6 @@ const setSearch = (value?: string) => {
     search: value,
   }
 }
-
-const tableData = computed(() => {
-  if (!clWithdrawals?.data?.length) {
-    return
-  }
-
-  return {
-    data: [
-      {
-        amount: clWithdrawalsTotalAmount?.data.total_amount,
-        isTotalAmountRow: true,
-        slot: -1, // used for identifier
-        slot_index: -1, // used for identifier
-      },
-      ...clWithdrawals.data,
-    ],
-    paging: clWithdrawals.paging,
-  }
-})
 
 const { groups } = useValidatorDashboardGroups()
 const getGroupName = (groupId: number) => {
@@ -87,7 +88,7 @@ const getGroupName = (groupId: number) => {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="addIdentifier(tableData, 'slot', 'slot_index')"
+          :data="tableData"
           expandable
           table-class="dashboard-table-cl-withdrawals"
           data-key="identifier"
