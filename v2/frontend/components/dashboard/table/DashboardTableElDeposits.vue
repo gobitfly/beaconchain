@@ -6,7 +6,6 @@ import type {
   VDBExecutionDepositsTableRow,
 } from '~/types/api/validator_dashboard'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { getGroupLabel } from '~/utils/dashboard/group'
 import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
@@ -29,9 +28,6 @@ const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators,
 } = storeToRefs(validatorDashboardOverviewStore)
-const { groups } = useValidatorDashboardGroups()
-
-const query = defineModel<TableQueryParams>('query')
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -44,8 +40,11 @@ const colsVisible = computed(() => {
   }
 })
 
+const elDepositsWithIdentifiers = computed(() =>
+  addIdentifier(elDeposits, 'block', 'block_index'),
+)
 const tableData = computed(() => {
-  if (!elDeposits?.data?.length) {
+  if (!elDepositsWithIdentifiers.value?.data?.length) {
     return
   }
 
@@ -53,46 +52,36 @@ const tableData = computed(() => {
     data: [
       {
         amount: elDepositsTotalAmount?.data.total_amount,
-        block: -1, // used for identifier
-        block_index: -1, // used for identifier
         isTotalAmountRow: true,
       },
-      ...elDeposits.data,
+      ...elDepositsWithIdentifiers.value.data,
     ],
-    paging: elDeposits.paging,
+    paging: elDepositsWithIdentifiers.value.paging,
   }
 })
 
-const groupNameLabel = (groupId?: number) => {
-  return getGroupLabel($t, groupId, groups.value)
-}
+const query = defineModel<TableQueryParams>('query')
 
 const onSort = (sort: DataTableSortEvent) => {
   query.value = setQuerySort(sort, query.value)
 }
-
 const setCursor = (cursor: Cursor) => {
   query.value = setQueryCursor(cursor, query.value)
 }
 const setPageSize = (limit: number) => {
   query.value = setQueryPageSize(limit, query.value)
 }
-
 const setSearch = (value?: string) => {
   query.value = {
     ...query.value, search: value,
   }
 }
 
-const getRowClass = (row: VDBExecutionDepositsTableRow) => {
-  if (row.index === undefined) {
-    return 'total-row'
-  }
+const { groups } = useValidatorDashboardGroups()
+const getGroupName = (groupId: number) => {
+  return groups.value.find(group => group.id === groupId)?.name
 }
 
-const isRowExpandable = (row: VDBExecutionDepositsTableRow) => {
-  return row.index !== undefined
-}
 const {
   displayCurrencyDefault,
   selectedCurrencyMain,
@@ -113,16 +102,16 @@ const {
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="addIdentifier(tableData, 'block', 'block_index')"
+          :data="tableData"
           data-key="identifier"
           expandable
           table-class="dashboard-table-el-deposits"
           :cursor="query?.cursor"
-          :page-size="query?.limit"
-          :row-class="getRowClass"
-          :is-row-expandable
-          :is-loading
           :selected-sort="query?.sort"
+          :page-size="query?.limit"
+          :row-class="(row: VDBExecutionDepositsTableRow) => row.index === undefined ? 'total-row' : ''"
+          :is-row-expandable="(row: VDBExecutionDepositsTableRow) => row.index !== undefined"
+          :is-loading
           @set-cursor="setCursor"
           @sort="onSort"
           @set-page-size="setPageSize"
@@ -174,7 +163,7 @@ const {
           >
             <template #body="slotProps">
               <span v-if="!slotProps.data.isTotalAmountRow">
-                {{ groupNameLabel(slotProps.data.group_id) }}
+                {{ getGroupName(slotProps.data.group_id) }}
               </span>
             </template>
           </Column>
@@ -298,7 +287,7 @@ const {
                   {{ $t("dashboard.validator.col.group") }}
                 </div>
                 <div class="value">
-                  {{ groupNameLabel(slotProps.data.group_id) }}
+                  {{ getGroupName(slotProps.data.group_id) }}
                 </div>
               </div>
 
