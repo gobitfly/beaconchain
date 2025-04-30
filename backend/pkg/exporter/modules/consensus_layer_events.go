@@ -228,6 +228,10 @@ func (c *consensusLayerEventsIndexer) IndexEvents() (bool, error) {
 		&cl_transformers.RemovedExcessBalanceEventTransformer{},
 		&cl_transformers.ExitRequestProcessedEventTransformer{},
 		&cl_transformers.SwitchToCompoundingEventTransformer{},
+		&cl_transformers.LegacySwitchToCompoundingEventTransformer{},
+		&cl_transformers.LegacyConsolidationProcessedEventTransformer{},
+		&cl_transformers.LegacyDepositProcessedEventTransformer{},
+		&cl_transformers.LegacyRemovedExcessBalanceEventTransformer{},
 	}
 	// the processing boils down to the following basically:
 	// chunk the filters into chunks. for each chunk, fetch all possible events from the db using the filters,

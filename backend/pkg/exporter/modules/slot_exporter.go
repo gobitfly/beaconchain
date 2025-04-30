@@ -377,47 +377,6 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 
 	if block.EpochAssignments != nil { // export the epoch assignments as they are included in the first slot of an epoch
 		epoch := utils.EpochOfSlot(block.Slot)
-		/*
-			if epoch > utils.Config.ClConfig.ElectraForkEpoch {
-				log.Infof("checking that events have been loaded for epoch %v", epoch)
-				exported, err := db.HasEventsForEpoch(epoch)
-				if err != nil {
-					return fmt.Errorf("error retrieving events for epoch %v: %w", epoch, err)
-				}
-				if !exported {
-					return fmt.Errorf("events for epoch %v have not been loaded yet", epoch)
-					// log.Infof("ERROR: events for epoch %v have not been loaded yet, RE-EXPORT events manually!!!", epoch)
-				} else {
-					log.Infof("events for epoch %v have been loaded, transforming consolidations & deposits", epoch)
-
-					firstSlot := (epoch - 1) * utils.Config.Chain.ClConfig.SlotsPerEpoch
-					lastSlot := (epoch * utils.Config.Chain.ClConfig.SlotsPerEpoch) - 1
-
-					switchToCompoundingRequestsProcessed, err := db.TransformSwitchToCompoundingRequests(firstSlot, lastSlot, tx)
-					if err != nil {
-						return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-					}
-					log.Infof("transformed switch to compounding requests for epoch %v, processed %d requests", epoch, switchToCompoundingRequestsProcessed)
-
-					consolidationRequestsProcessed, err := db.TransformConsolidationRequests(firstSlot, lastSlot, tx)
-					if err != nil {
-						return fmt.Errorf("error transforming consolidation requests for epoch %v: %w", epoch, err)
-					}
-					log.Infof("transformed consolidations for epoch %v, processed %d requests", epoch, consolidationRequestsProcessed)
-
-					depositRequestsProcessed, err := db.TransformDepositRequests(firstSlot, lastSlot, tx)
-					if err != nil {
-						return fmt.Errorf("error transforming deposit requests for epoch %v: %w", epoch, err)
-					}
-					log.Infof("transformed deposits for epoch %v, processed %d requests", epoch, depositRequestsProcessed)
-
-					removedExcessBalanceProcessed, err := db.TransformRemovedExcessBalanceEvents(firstSlot, lastSlot, tx)
-					if err != nil {
-						return fmt.Errorf("error transforming removed excess balance events for epoch %v: %w", epoch, err)
-					}
-					log.Infof("transformed removed excess balance events for epoch %v, processed %d events", epoch, removedExcessBalanceProcessed)
-				}
-			}*/
 
 		log.Infof("exporting duties & balances for epoch %v", epoch)
 		// prepare the duties for export to bigtable
