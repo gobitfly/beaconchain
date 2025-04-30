@@ -42,6 +42,24 @@ type Setter interface {
 	Set(value string) error
 }
 
+// MustAccessSecretVersion is a helper function that accesses a secret if
+// passed name starts with "projects/" and returns the payload as a string
+// or otherwise returns the passed name. It panics if there is an error.
+func MustAccessSecretVersion(name string) string {
+	hasPrefix := strings.HasPrefix(name, "projects/")
+	if !hasPrefix {
+		return name
+	}
+	x, err := AccessSecretVersion(name)
+	if err != nil {
+		log.Fatal(err, fmt.Sprintf("error getting secret: %s", name), 0, nil)
+	}
+	if x == nil {
+		return ""
+	}
+	return *x
+}
+
 func ProcessSecrets(cfg interface{}) error {
 	infos, err := gatherInfo("", cfg)
 	if err != nil {
