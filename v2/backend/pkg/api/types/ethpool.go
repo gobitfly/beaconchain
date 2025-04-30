@@ -29,6 +29,8 @@ type EthpoolData struct {
 	MissedAttestations   uint64    `json:"missed_attestations"`
 	SyncExecuted         uint64    `json:"sync_executed"`
 	SyncMissed           uint64    `json:"sync_missed"`
+	BalanceEnd           uint64    `json:"balance_end"`
+	BalanceStart         uint64    `json:"balance_start"`
 }
 
 type InternalGetEthpoolResponse ApiDataResponse[[]EthpoolData]

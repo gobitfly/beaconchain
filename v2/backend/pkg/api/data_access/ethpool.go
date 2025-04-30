@@ -41,6 +41,8 @@ func (d *DataAccessService) GetEthpool(ctx context.Context, day time.Time, valid
 		AttestationsScheduled uint64    `db:"attestations_scheduled"`
 		SyncExecuted          uint64    `db:"sync_executed"`
 		SyncScheduled         uint64    `db:"sync_scheduled"`
+		BalanceEnd            uint64    `db:"balance_end"`
+		BalanceStart          uint64    `db:"balance_start"`
 	}
 
 	var queryResults []Data
@@ -56,11 +58,14 @@ func (d *DataAccessService) GetEthpool(ctx context.Context, day time.Time, valid
 			goqu.C("attestations_scheduled"),
 			goqu.C("sync_executed"),
 			goqu.C("sync_scheduled"),
+			goqu.L("finalizeAggregation(balance_end) as balance_end"),
+			goqu.L("finalizeAggregation(balance_start) as balance_start"),
 		).
 		Where(
 			goqu.C("t").Eq(truncateToDay(day)),
 			goqu.C("validator_index").In(validators),
 		)
+
 	queryResults, err := runQueryRows[[]Data](ctx, d.clickhouseReader, ds)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving data from table validator_dashboard_data_daily: %w", err)
@@ -83,6 +88,8 @@ func (d *DataAccessService) GetEthpool(ctx context.Context, day time.Time, valid
 			MissedAttestations:   result.AttestationsScheduled - result.AttestationsExecuted,
 			SyncExecuted:         result.SyncExecuted,
 			SyncMissed:           result.SyncScheduled - result.SyncExecuted,
+			BalanceEnd:           result.BalanceEnd,
+			BalanceStart:         result.BalanceStart,
 		}
 	}
 
