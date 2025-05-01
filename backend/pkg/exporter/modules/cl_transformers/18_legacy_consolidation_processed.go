@@ -67,7 +67,7 @@ func (d *LegacyConsolidationProcessedEventTransformer) Transform(tx *sqlx.Tx, ev
 					goqu.L("(cle.data->>'amount')::bigint").As("amount_consolidated"),
 				).
 				Join(goqu.T("validators").As("src"), goqu.On(goqu.Ex{
-					"src.pubkey": goqu.L(`dgecode(cle.data ->> 'source_pubkey', 'base64')`),
+					"src.pubkey": goqu.L(`decode(cle.data ->> 'source_pubkey', 'base64')`),
 				})).
 				Join(goqu.T("validators").As("tgt"), goqu.On(goqu.Ex{
 					"tgt.pubkey": goqu.L(`decode(cle.data ->> 'target_pubkey', 'base64')`),
