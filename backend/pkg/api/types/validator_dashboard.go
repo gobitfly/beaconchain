@@ -310,7 +310,7 @@ type VDBWithdrawalsClTableRow struct {
 	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance'" faker:"oneof: full_queue, unknown_pubkey, no_execution_withdrawal_credentials, address_mismatch, inactive, exiting, too_young, pending_withdrawals, not_compounding, insufficient_effective_balance, excess_balance"`
 	// unique
 	Slot      uint64 `json:"slot"`
-	SlotIndex uint64 `json:"slot_index"`
+	SlotIndex int64  `json:"slot_index"`
 }
 type GetValidatorDashboardConsensusLayerWithdrawalsResponse ApiPagingResponse[VDBWithdrawalsClTableRow]
 

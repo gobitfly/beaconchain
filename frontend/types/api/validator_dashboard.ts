@@ -274,7 +274,7 @@ export interface VDBWithdrawalsClTableRow {
    * unique
    */
   slot: number /* uint64 */;
-  slot_index: number /* uint64 */;
+  slot_index: number /* int64 */;
 }
 export type GetValidatorDashboardConsensusLayerWithdrawalsResponse = ApiPagingResponse<VDBWithdrawalsClTableRow>;
 export interface VDBTotalExecutionWithdrawalsData {
