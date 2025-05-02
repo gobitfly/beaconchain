@@ -73,7 +73,7 @@ func (d *LegacySwitchToCompoundingEventTransformer) Transform(tx *sqlx.Tx, event
 					goqu.Or(orConditions...),
 					goqu.Ex{"version": types.ConsensusLayerEventVersion},
 				)),
-		)
+		).OnConflict(goqu.DoNothing())
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return 0, fmt.Errorf("error preparing query: %w", err)
