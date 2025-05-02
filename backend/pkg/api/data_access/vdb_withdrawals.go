@@ -238,7 +238,7 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			TxIndexQueued:   res.TxIndex,
 			ITxIndexQueued:  res.ITxIndex,
 			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
-			Amount:          res.Amount,
+			Amount:          res.Amount.Mul(decimal.NewFromInt(1e9)),
 		}
 		if res.GroupId.Valid && !dashboardId.AggregateGroups {
 			row.GroupId = uint64(res.GroupId.Int64)
@@ -408,7 +408,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 				With("request", requestsDs).
 				UnionAll(goqu.Dialect("postgres").From(goqu.T("bridge")).
 					Select(goqu.L("bridge.*")).
-					LeftJoin(goqu.T("request"), goqu.Using(goqu.C("slot"), goqu.C("index"))).
+					LeftJoin(goqu.T("request"), goqu.Using(goqu.C("slot_processed"), goqu.C("validatorindex"))).
 					Where(
 						goqu.I("request.slot").Eq(nil),
 					))
@@ -533,7 +533,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		if dashboardId.Validators != nil {
 			validatorsDs = validatorsDs.
 				SelectAppend(
-					goqu.V(t.DefaultGroupId).As("group_id"),
+					goqu.L("?::integer", t.DefaultGroupId).As("group_id"),
 				).
 				Where(
 					goqu.L("validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
@@ -570,13 +570,8 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 			// Complete the next data TODO
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
-		} else {
-			// If there is no next data, add a missing estimate row
-			nextData = &t.VDBWithdrawalsClTableRow{
-				IsMissingEstimate: true,
-			}
+			responseData = append([]t.VDBWithdrawalsClTableRow{*nextData}, responseData...)
 		}
-		responseData = append([]t.VDBWithdrawalsClTableRow{*nextData}, responseData...)
 
 		// Flag if above limit
 		moreDataFlag = moreDataFlag || len(responseData) > int(limit)
@@ -1036,7 +1031,7 @@ func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.
 			)
 	} else {
 		withdrawalsDs = withdrawalsDs.
-			Where(goqu.I("validator_index").In(pq.Array(dashboardId.Validators)))
+			Where(goqu.I("validator_index").In(dashboardId.Validators))
 	}
 
 	res, err := runQueryRows[[]queryResult](ctx, d.clickhouseReader, withdrawalsDs)
