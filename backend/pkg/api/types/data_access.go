@@ -120,7 +120,7 @@ type CLWithdrawalsCursor struct {
 	GenericCursor
 
 	Slot      uint64
-	SlotIndex uint64
+	SlotIndex int64
 	Amount    decimal.Decimal
 }
 

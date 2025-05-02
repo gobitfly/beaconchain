@@ -369,7 +369,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		Type                  string          `db:"type"`
 		// cursor
 		Slot      uint64 `db:"slot"`
-		SlotIndex uint64 `db:"index"`
+		SlotIndex int64  `db:"index"`
 	}
 
 	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
