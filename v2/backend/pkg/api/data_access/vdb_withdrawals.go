@@ -397,7 +397,14 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		if withdrawalsDs == nil {
 			withdrawalsDs = requestsDs
 		} else {
-			// priority merge to filter out duplicated processed entries in both tables; keep all (manual) requests + unmatched skimmings
+			// first filter out processed exits
+			withdrawalsDs = withdrawalsDs.Where(goqu.L("NOT EXISTS (?)", goqu.
+				From(goqu.T("blocks_exit_requests").As("ber")).
+				Where(
+					goqu.I("v.pubkey").Eq(goqu.I("ber.validator_pubkey")),
+				),
+			))
+			// then priority merge to filter out duplicated processed skimmings in both tables; keep all (manual) requests + unmatched skimmings
 			withdrawalsDs = goqu.Dialect("postgres").From(goqu.T("request")).
 				With("bridge", withdrawalsDs).
 				With("request", requestsDs).
@@ -707,7 +714,9 @@ func getWithdrawalRequestsDs(dashboardId t.VDBId, search string, isValidSearchWi
 			goqu.On(
 				goqu.I("wr.validator_pubkey").Eq(goqu.I("v.pubkey")),
 			),
-		)
+		).
+		// TODO remove, shouldn't even live in that table
+		Where(goqu.I("wr.amount").Neq(goqu.V(0))) // filter out exit requests
 
 	if dashboardId.Validators != nil {
 		withdrawalRequestsDs = withdrawalRequestsDs.Where(
@@ -1011,7 +1020,8 @@ func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.
 			goqu.SUM(goqu.I("withdrawals_amount")).As("acc_withdrawals_amount"),
 			goqu.MAX(goqu.I("epoch_end")).As("epoch_end"),
 		).
-		GroupBy(goqu.I("validator_index"))
+		GroupBy(goqu.I("validator_index")).
+		Where(goqu.L("finalizeAggregation(balance_end) != 0"))
 
 	if dashboardId.Validators == nil {
 		withdrawalsDs = withdrawalsDs.
