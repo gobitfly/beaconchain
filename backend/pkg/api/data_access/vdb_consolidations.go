@@ -41,6 +41,11 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 
 	ds := goqu.Dialect("postgres").
 		From(goqu.T("eth1_consolidation_requests").As("el_cr")).
+		SelectDistinct(
+			goqu.I("block_queued"),
+			goqu.I("tx_index"),
+			goqu.I("itx_index"),
+		).
 		Select(
 			goqu.I("vs.validatorindex").As("source_index"),
 			goqu.I("vt.validatorindex").As("target_index"),
@@ -187,13 +192,12 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 	for _, res := range dbRes {
 		row := t.VDBConsolidationsElTableRow{
-			Source:          res.SourceIndex,
-			Target:          res.TargetIndex,
-			BlockQueued:     res.BlockQueued,
-			TxIndexQueued:   res.TxIndex,
-			ITxIndexQueued:  res.ITxIndex,
-			TimestampQueued: res.BlockQueuedTime.Unix(),
-			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
+			Source:         res.SourceIndex,
+			Target:         res.TargetIndex,
+			TxIndexQueued:  res.TxIndex,
+			ITxIndexQueued: res.ITxIndex,
+			BlockQueued:    res.BlockQueued,
+			TxHash:         t.Hash(hexutil.Encode(res.TxHash)),
 		}
 		row.Consolidator = prepareAddressRequest(&consolidatorContractStatusRequests, res.Consolidator, &res)
 		// BEDS-1405
@@ -204,10 +208,13 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 
 		row.Fee = decimal.NewFromUint64(res.Fee)
 
+		row.TimestampQueued = res.BlockQueuedTime.Unix()
+
 		if res.BlockProcessedTime.Valid {
 			row.Status = "processed"
-			row.BlockProcessed = uint64(res.BlockProcessed.Int64)
-			row.TimestampProcessed = res.BlockProcessedTime.Int64
+			blockProcessed := uint64(res.BlockProcessed.Int64)
+			row.BlockProcessed = &blockProcessed
+			row.TimestampProcessed = &res.BlockProcessed.Int64
 		} else {
 			row.Status = "queued"
 			// TODO implement estimate
@@ -300,6 +307,10 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 
 	consolidationsDs := goqu.Dialect("postgres").
 		From(goqu.T("blocks_consolidation_requests_v2").As("bcr")).
+		SelectDistinct(
+			goqu.I("slot"),
+			goqu.I("index"),
+		).
 		Select(
 			goqu.I("slot_processed"),
 			goqu.I("slot_queued"),

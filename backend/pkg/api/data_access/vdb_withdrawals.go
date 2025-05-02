@@ -256,8 +256,9 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 
 		if res.BlockProcessedTime.Valid { // BEDS-1399
 			row.Status = "processed"
-			row.BlockProcessed = uint64(res.BlockProcessed.Int64)
-			row.TimestampProcessed = res.BlockProcessedTime.Int64
+			blockProcessed := uint64(res.BlockProcessed.Int64)
+			row.BlockProcessed = &blockProcessed
+			row.TimestampProcessed = &res.BlockProcessedTime.Int64
 		} else {
 			row.Status = "queued"
 			// TODO implement estimate
