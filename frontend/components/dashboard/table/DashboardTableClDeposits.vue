@@ -390,7 +390,7 @@ const {
                 </div>
               </div>
               <span
-                v-if="slotProps.data.status === 'queued'"
+                v-if="slotProps.data.type === 'auto'"
                 class="dashboard-table-cl-deposits__details-footer-text"
               >
                 <span>
