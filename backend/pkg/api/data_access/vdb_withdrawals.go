@@ -238,7 +238,7 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			TxIndexQueued:   res.TxIndex,
 			ITxIndexQueued:  res.ITxIndex,
 			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
-			Amount:          res.Amount.Mul(decimal.NewFromInt(1e9)),
+			Amount:          utils.GWeiToWei(big.NewInt(res.Amount.IntPart())),
 		}
 		if res.GroupId.Valid && !dashboardId.AggregateGroups {
 			row.GroupId = uint64(res.GroupId.Int64)
@@ -373,26 +373,21 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	}
 
 	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
-	hasPrePectraRows, hasPostPectraRows := true, false
+	hasPostPectraRows := false
 	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
 		hasPostPectraRows = true
 		if currentCursor.IsValid() && colSort.Column == enums.VDBWithdrawalsClColumns.Slot {
 			postElectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
 			lookBack := colSort.Desc != currentCursor.Reverse
-			if postElectra && !lookBack {
-				hasPrePectraRows, hasPostPectraRows = false, true
-			} else if !postElectra && lookBack {
-				hasPrePectraRows, hasPostPectraRows = true, false
+			if !postElectra && lookBack {
+				hasPostPectraRows = false
 			}
 		}
 	}
 
-	var withdrawalsDs *goqu.SelectDataset
-	if hasPrePectraRows {
-		withdrawalsDs, err = getWithdrawalsBridgeDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
-		if err != nil {
-			return nil, nil, err
-		}
+	withdrawalsDs, err := getWithdrawalsBridgeDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
+	if err != nil {
+		return nil, nil, err
 	}
 	if hasPostPectraRows {
 		requestsDs, err := getWithdrawalRequestsDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
