@@ -247,8 +247,8 @@ export interface VDBWithdrawalsElTableRow {
   timestamp_queued: number /* int64 */;
   tx_index_queued: number /* uint64 */;
   itx_index_queued: number /* uint64 */;
-  block_processed: number /* uint64 */;
-  timestamp_processed: number /* int64 */;
+  block_processed?: number /* uint64 */;
+  timestamp_processed?: number /* int64 */;
   index: number /* uint64 */;
   tx_hash: Hash;
   group_id: number /* uint64 */;
@@ -294,12 +294,12 @@ export interface VDBConsolidationsElTableRow {
   consolidator: Address;
   source: number /* uint64 */;
   target: number /* uint64 */;
-  block_queued?: number /* uint64 */;
-  timestamp_queued?: number /* int64 */;
+  block_queued: number /* uint64 */;
+  timestamp_queued: number /* int64 */;
   tx_index_queued: number /* uint64 */;
   itx_index_queued: number /* uint64 */;
-  block_processed: number /* uint64 */;
-  timestamp_processed: number /* int64 */;
+  block_processed?: number /* uint64 */;
+  timestamp_processed?: number /* int64 */;
   status: 'queued' | 'processed';
   tx_hash: Hash;
   fee: string /* decimal.Decimal */;

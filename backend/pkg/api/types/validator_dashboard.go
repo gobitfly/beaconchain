@@ -283,8 +283,8 @@ type VDBWithdrawalsElTableRow struct {
 	TimestampQueued    int64           `json:"timestamp_queued" faker:"past_timestamp"`
 	TxIndexQueued      uint64          `json:"tx_index_queued"`
 	ITxIndexQueued     uint64          `json:"itx_index_queued"`
-	BlockProcessed     uint64          `json:"block_processed"`
-	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
+	BlockProcessed     *uint64         `json:"block_processed,omitempty"`
+	TimestampProcessed *int64          `json:"timestamp_processed,omitempty" faker:"past_timestamp"`
 	Index              uint64          `json:"index"`
 	TxHash             Hash            `json:"tx_hash" faker:"tx_hash"`
 	GroupId            uint64          `json:"group_id"`
@@ -334,12 +334,12 @@ type VDBConsolidationsElTableRow struct {
 	Consolidator       Address         `json:"consolidator"`
 	Source             uint64          `json:"source"`
 	Target             uint64          `json:"target"`
-	BlockQueued        uint64          `json:"block_queued,omitempty"`
-	TimestampQueued    int64           `json:"timestamp_queued,omitempty" faker:"past_timestamp"`
+	BlockQueued        uint64          `json:"block_queued"`
+	TimestampQueued    int64           `json:"timestamp_queued" faker:"past_timestamp"`
 	TxIndexQueued      uint64          `json:"tx_index_queued"`
 	ITxIndexQueued     uint64          `json:"itx_index_queued"`
-	BlockProcessed     uint64          `json:"block_processed"`
-	TimestampProcessed int64           `json:"timestamp_processed" faker:"past_timestamp"`
+	BlockProcessed     *uint64         `json:"block_processed,omitempty"`
+	TimestampProcessed *int64          `json:"timestamp_processed,omitempty" faker:"past_timestamp"`
 	Status             string          `json:"status" tstype:"'queued' | 'processed'" faker:"oneof: queued, processed"`
 	TxHash             Hash            `json:"tx_hash" faker:"tx_hash"`
 	Fee                decimal.Decimal `json:"fee" faker:"eth"`
