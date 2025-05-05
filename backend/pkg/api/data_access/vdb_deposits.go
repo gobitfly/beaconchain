@@ -440,12 +440,14 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 			responseData[i].RejectReason = &row.RejectReason.String
 		}
 		if row.SlotProcessed.Valid {
-			responseData[i].SlotProcessed = uint64(row.SlotProcessed.Int64)
+			slotProcessed := uint64(row.SlotProcessed.Int64)
+			responseData[i].SlotProcessed = &slotProcessed
 		} else { //nolint:staticcheck
 			// TODO estimate
 		}
 		if row.SlotQueued.Valid {
-			responseData[i].SlotQueued = uint64(row.SlotQueued.Int64)
+			slotQueued := uint64(row.SlotQueued.Int64)
+			responseData[i].SlotQueued = &slotQueued
 		}
 	}
 	var paging t.Paging
