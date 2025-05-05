@@ -216,7 +216,7 @@ export interface VDBConsensusDepositsTableRow {
   index: number /* uint64 */;
   group_id: number /* uint64 */;
   slot_queued?: number /* uint64 */;
-  slot_processed: number /* uint64 */;
+  slot_processed?: number /* uint64 */;
   withdrawal_credential: Hash;
   amount: string /* decimal.Decimal */;
   signature: Hash;
