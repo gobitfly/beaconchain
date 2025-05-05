@@ -214,7 +214,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			row.Status = "processed"
 			blockProcessed := uint64(res.BlockProcessed.Int64)
 			row.BlockProcessed = &blockProcessed
-			row.TimestampProcessed = &res.BlockProcessed.Int64
+			row.TimestampProcessed = &res.BlockProcessedTime.Int64
 		} else {
 			row.Status = "queued"
 			// TODO implement estimate
