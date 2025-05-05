@@ -680,7 +680,7 @@ func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWit
 		searches = append(searches, goqu.I("v.pubkey").Eq(pubkey))
 	}
 	if isValidSearchIndexOrSlot {
-		searches = append(searches, goqu.I("block_slot").Eq(search), goqu.I("validatorindex").Eq(search))
+		searches = append(searches, goqu.I("block_slot").Eq(search), goqu.I("v.validatorindex").Eq(search))
 	}
 
 	if len(searches) > 0 {
