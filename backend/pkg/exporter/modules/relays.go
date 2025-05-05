@@ -152,7 +152,7 @@ outer:
 			}
 
 			if len(payloads) == 0 {
-				log.Error(fmt.Errorf("got no payloads"), "", 0, map[string]interface{}{"relay": r.ID})
+				log.Tracef("got no payloads for relay %v", r.ID)
 				break outer
 			}
 
