@@ -761,7 +761,7 @@ func getWithdrawalRequestsDs(dashboardId t.VDBId, search string, isValidSearchWi
 		searches = append(searches, goqu.I("v.pubkey").Eq(pubkey))
 	}
 	if isValidSearchIndexOrSlot {
-		searches = append(searches, goqu.I("slot_processed").Eq(search), goqu.I("validatorindex").Eq(search))
+		searches = append(searches, goqu.I("slot_processed").Eq(search), goqu.I("v.validatorindex").Eq(search))
 	}
 	if len(searches) > 0 {
 		withdrawalRequestsDs = withdrawalRequestsDs.Where(goqu.Or(searches...))
