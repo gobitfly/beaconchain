@@ -250,8 +250,8 @@ type VDBConsensusDepositsTableRow struct {
 	PublicKey            PubKey          `json:"public_key" faker:"pubkey"`
 	Index                uint64          `json:"index"`
 	GroupId              uint64          `json:"group_id"`
-	SlotQueued           uint64          `json:"slot_queued,omitempty"`
-	SlotProcessed        uint64          `json:"slot_processed"`
+	SlotQueued           *uint64         `json:"slot_queued,omitempty"`
+	SlotProcessed        *uint64         `json:"slot_processed,omitempty"`
 	WithdrawalCredential Hash            `json:"withdrawal_credential" faker:"withdrawal_credentials"`
 	Amount               decimal.Decimal `json:"amount" faker:"eth"`
 	Signature            Hash            `json:"signature"`
