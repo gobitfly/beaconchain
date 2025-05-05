@@ -57,6 +57,8 @@ export default function ({
         return redirectToV1('/user/notifications')
       }
       break
+    case 'privacy':
+      return redirect('https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf')
     case 'register':
       return redirectToV1('/register')
     case 'requestReset':
