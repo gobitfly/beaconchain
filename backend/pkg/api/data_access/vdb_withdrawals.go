@@ -1,20 +1,17 @@
 package dataaccess
 
 import (
-	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
 	"math/big"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
@@ -42,118 +39,11 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 		}
 	}
 
-	// filters
-	isValidSearchPubkey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
-	isValidSearchSenderOrWithdrawer := t.ReEthereumAddress.MatchString(search)
-	isValidSearchIndexOrBlock := t.ReInteger.MatchString(search)
-	isValidSearchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
-	isValidSearchTxHash := t.ReTransactionHash.MatchString(search)
-
-	if isInvalidSearch(search, isValidSearchPubkey, isValidSearchSenderOrWithdrawer, isValidSearchIndexOrBlock, isValidSearchGroup, isValidSearchTxHash) {
-		return responseData, &t.Paging{}, nil
-	}
-
-	ds := goqu.Dialect("postgres").
-		From(goqu.T("eth1_withdrawal_requests").As("el_wr")).
-		Select(
-			goqu.I("v.validatorindex").As("index"),
-			goqu.I("el_wr.block_number").As("block_queued"),
-			goqu.I("el_wr.block_ts").As("block_queued_ts"),
-			goqu.I("b.exec_block_number").As("block_processed"),
-			goqu.I("b.exec_timestamp").As("block_processed_ts"),
-			goqu.I("el_wr.itx_index"),
-			goqu.I("el_wr.from_address"),
-			goqu.I("el_wr.tx_index"),
-			goqu.I("el_wr.source_address").As("withdrawer"),
-			goqu.I("el_wr.tx_hash"),
-			goqu.I("el_wr.fee"),
-			goqu.I("el_wr.amount"),
-			goqu.Case().When(
-				goqu.I("b.exec_block_number").Neq(nil), "processed",
-			).Else(
-				goqu.V("queued"),
-			).As("status"),
-		).
-		InnerJoin(
-			goqu.T("validators").As("v"),
-			goqu.On(goqu.I("el_wr.validator_pubkey").Eq(goqu.I("v.pubkey"))),
-		).
-		// depends on BEDS-1399
-		// need to match EL events to correct CL events
-		// might needs some complex logic like "newest CL event after EL event which doesn't also match a previous EL event"
-		LeftJoin(
-			goqu.T("blocks_withdrawal_requests_v2").As("cl_wr"),
-			goqu.On(
-				goqu.I("el_wr.id").Eq(goqu.I("cl_wr.eth1_id")),
-			),
-		).
-		LeftJoin(
-			goqu.T("blocks").As("b"),
-			goqu.On(
-				goqu.I("b.blockroot").Eq(goqu.I("cl_wr.block_queued_root")),
-			),
-		).
-		Where(
-			goqu.I("el_wr.amount").Neq(goqu.V(0)), // filter out exit requests
-		)
-
-	searches := []exp.Expression{}
-	if dashboardId.Validators != nil {
-		ds = ds.
-			Where(
-				goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
-			)
-	} else {
-		ds = ds.
-			InnerJoin(
-				goqu.T("users_val_dashboards_validators").As("uvdv"),
-				goqu.On(
-					goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
-				),
-			).
-			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
-
-		if isValidSearchGroup {
-			ds = ds.
-				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
-					goqu.I("uvdv.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
-					goqu.I("uvdv.group_id").Eq(goqu.I("uvdg.id")),
-				))
-			searches = append(searches,
-				goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1)+"%"),
-			)
-		}
-	}
-
-	if isValidSearchSenderOrWithdrawer {
-		address, err := hexutil.Decode(search)
-		if err != nil {
-			return nil, nil, err
-		}
-		searches = append(searches,
-			goqu.I("el_wr.source_address").Eq(address),
-			// goqu.I("el_wr.from_address").Eq(address), // BEDS-1405
-		)
-	}
-	if isValidSearchPubkey {
-		pubkey, err := hexutil.Decode(search)
-		if err != nil {
-			return nil, nil, err
-		}
-		searches = append(searches, goqu.I("el_wr.validator_pubkey").Eq(pubkey))
-	}
-	if isValidSearchIndexOrBlock {
-		searches = append(searches,
-			goqu.I("el_wr.block_number").Eq(search),
-			goqu.I("b.exec_block_number").Eq(search),
-			goqu.I("v.validatorindex").Eq(search),
-		)
-	}
-	if isValidSearchTxHash {
-		searches = append(searches, goqu.I("el_wr.tx_hash").Eq(search))
-	}
-	if len(searches) > 0 {
-		ds = ds.Where(goqu.Or(searches...))
+	ds, err := getElWithdrawalsDs(dashboardId, search)
+	if err != nil {
+		return nil, nil, err
+	} else if ds == nil {
+		return responseData, &paging, nil
 	}
 
 	defaultSlotSortDesc := true
@@ -335,6 +225,123 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 	return responseData, p, nil
 }
 
+func getElWithdrawalsDs(dashboardId t.VDBId, search string) (*goqu.SelectDataset, error) {
+	isValidSearchPubkey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
+	isValidSearchSenderOrWithdrawer := t.ReEthereumAddress.MatchString(search)
+	isValidSearchIndexOrBlock := t.ReInteger.MatchString(search)
+	isValidSearchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+	isValidSearchTxHash := t.ReTransactionHash.MatchString(search)
+
+	if isInvalidSearch(search, isValidSearchPubkey, isValidSearchSenderOrWithdrawer, isValidSearchIndexOrBlock, isValidSearchGroup, isValidSearchTxHash) {
+		return nil, nil
+	}
+
+	ds := goqu.Dialect("postgres").
+		From(goqu.T("eth1_withdrawal_requests").As("el_wr")).
+		Select(
+			goqu.I("v.validatorindex").As("index"),
+			goqu.I("el_wr.block_number").As("block_queued"),
+			goqu.I("el_wr.block_ts").As("block_queued_ts"),
+			goqu.I("b.exec_block_number").As("block_processed"),
+			goqu.I("b.exec_timestamp").As("block_processed_ts"),
+			goqu.I("el_wr.itx_index"),
+			goqu.I("el_wr.from_address"),
+			goqu.I("el_wr.tx_index"),
+			goqu.I("el_wr.source_address").As("withdrawer"),
+			goqu.I("el_wr.tx_hash"),
+			goqu.I("el_wr.fee"),
+			goqu.I("el_wr.amount"),
+			goqu.Case().When(
+				goqu.I("b.exec_block_number").Neq(nil), "processed",
+			).Else(
+				goqu.V("queued"),
+			).As("status"),
+		).
+		InnerJoin(
+			goqu.T("validators").As("v"),
+			goqu.On(goqu.I("el_wr.validator_pubkey").Eq(goqu.I("v.pubkey"))),
+		).
+		// depends on BEDS-1399
+		// need to match EL events to correct CL events
+		// might needs some complex logic like "newest CL event after EL event which doesn't also match a previous EL event"
+		LeftJoin(
+			goqu.T("blocks_withdrawal_requests_v2").As("cl_wr"),
+			goqu.On(
+				goqu.I("el_wr.id").Eq(goqu.I("cl_wr.eth1_id")),
+			),
+		).
+		LeftJoin(
+			goqu.T("blocks").As("b"),
+			goqu.On(
+				goqu.I("b.blockroot").Eq(goqu.I("cl_wr.block_queued_root")),
+			),
+		).
+		Where(
+			goqu.I("el_wr.amount").Neq(goqu.V(0)), // filter out exit requests
+		)
+
+	searches := []exp.Expression{}
+	if dashboardId.Validators != nil {
+		ds = ds.
+			Where(
+				goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)),
+			)
+	} else {
+		ds = ds.
+			InnerJoin(
+				goqu.T("users_val_dashboards_validators").As("uvdv"),
+				goqu.On(
+					goqu.I("v.validatorindex").Eq(goqu.I("uvdv.validator_index")),
+				),
+			).
+			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
+
+		if isValidSearchGroup {
+			ds = ds.
+				InnerJoin(goqu.T("users_val_dashboards_groups").As("uvdg"), goqu.On(
+					goqu.I("uvdv.dashboard_id").Eq(goqu.I("uvdg.dashboard_id")),
+					goqu.I("uvdv.group_id").Eq(goqu.I("uvdg.id")),
+				))
+			searches = append(searches,
+				goqu.L("LOWER(?)", goqu.I("uvdg.name")).Like(strings.Replace(strings.ToLower(search), "_", "\\_", -1)+"%"),
+			)
+		}
+	}
+
+	if isValidSearchSenderOrWithdrawer {
+		address, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, err
+		}
+		searches = append(searches,
+			goqu.I("el_wr.source_address").Eq(address),
+			// goqu.I("el_wr.from_address").Eq(address), // BEDS-1405
+		)
+	}
+	if isValidSearchPubkey {
+		pubkey, err := hexutil.Decode(search)
+		if err != nil {
+			return nil, err
+		}
+		searches = append(searches, goqu.I("el_wr.validator_pubkey").Eq(pubkey))
+	}
+	if isValidSearchIndexOrBlock {
+		searches = append(searches,
+			goqu.I("el_wr.block_number").Eq(search),
+			goqu.I("b.exec_block_number").Eq(search),
+			goqu.I("v.validatorindex").Eq(search),
+		)
+	}
+	if isValidSearchTxHash {
+		searches = append(searches, goqu.I("el_wr.tx_hash").Eq(search))
+	}
+	if len(searches) > 0 {
+		ds = ds.Where(goqu.Or(searches...))
+	}
+
+	return ds, nil
+}
+
 func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Context, dashboardId t.VDBId, cursor string, colSort t.Sort[enums.VDBWithdrawalsClColumn], search string, limit uint64, protocolModes t.VDBProtocolModes) ([]t.VDBWithdrawalsClTableRow, *t.Paging, error) {
 	var currentCursor t.CLWithdrawalsCursor
 	var err error
@@ -342,16 +349,6 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		if currentCursor, err = utils.StringToCursor[t.CLWithdrawalsCursor](cursor); err != nil {
 			return nil, nil, fmt.Errorf("failed to parse passed cursor as CLWithdrawalsCursor: %w", err)
 		}
-	}
-
-	// filters
-	isValidSearchWithdrawalAddress := t.ReEthereumAddress.MatchString(search)
-	isValidSearchIndexOrSlot := t.ReInteger.MatchString(search)
-	isValidSearchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
-	isValidSearchPublicKey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
-
-	if isInvalidSearch(search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey) {
-		return make([]t.VDBWithdrawalsClTableRow, 0), &t.Paging{}, nil
 	}
 
 	// Get the withdrawals for the validators
@@ -385,36 +382,9 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		}
 	}
 
-	withdrawalsDs, err := getWithdrawalsBridgeDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
+	withdrawalsDs, err := d.getClWithdrawalsDs(dashboardId, search, hasPostPectraRows)
 	if err != nil {
 		return nil, nil, err
-	}
-	if hasPostPectraRows {
-		requestsDs, err := getWithdrawalRequestsDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
-		if err != nil {
-			return nil, nil, err
-		}
-		if withdrawalsDs == nil {
-			withdrawalsDs = requestsDs
-		} else {
-			// first filter out processed exits
-			withdrawalsDs = withdrawalsDs.Where(goqu.L("NOT EXISTS (?)", goqu.
-				From(goqu.T("blocks_exit_requests").As("ber")).
-				Where(
-					goqu.I("v.pubkey").Eq(goqu.I("ber.validator_pubkey")),
-				),
-			))
-			// then priority merge to filter out duplicated processed skimmings in both tables; keep all (manual) requests + unmatched skimmings
-			withdrawalsDs = goqu.Dialect("postgres").From(goqu.T("request")).
-				With("bridge", withdrawalsDs).
-				With("request", requestsDs).
-				UnionAll(goqu.Dialect("postgres").From(goqu.T("bridge")).
-					Select(goqu.L("bridge.*")).
-					LeftJoin(goqu.T("request"), goqu.Using(goqu.C("slot_processed"), goqu.C("validatorindex"))).
-					Where(
-						goqu.I("request.slot").Eq(nil),
-					))
-		}
 	}
 
 	defaultSlotSortDesc := true
@@ -554,7 +524,7 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 				Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
 		}
 		// TODO add more filters
-		if isValidSearchIndexOrSlot {
+		if t.ReInteger.MatchString(search) {
 			validatorsDs = validatorsDs.Where(
 				goqu.I("v.validatorindex").Eq(search),
 			)
@@ -595,6 +565,47 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	}
 
 	return responseData, paging, nil
+}
+
+func (d *DataAccessService) getClWithdrawalsDs(dashboardId t.VDBId, search string, hasPostPectraRows bool) (*goqu.SelectDataset, error) {
+	isValidSearchWithdrawalAddress := t.ReEthereumAddress.MatchString(search)
+	isValidSearchIndexOrSlot := t.ReInteger.MatchString(search)
+	isValidSearchGroup := len(search) > 0 && !dashboardId.AggregateGroups && t.ReName.MatchString(search)
+	isValidSearchPublicKey := t.ReValidatorPublicKeyWithPrefix.MatchString(search)
+
+	if isInvalidSearch(search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey) {
+		return nil, nil
+	}
+
+	withdrawalsDs, err := getWithdrawalsBridgeDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
+	if err != nil {
+		return nil, err
+	}
+	if hasPostPectraRows {
+		requestsDs, err := getWithdrawalRequestsDs(dashboardId, search, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey)
+		if err != nil {
+			return nil, err
+		}
+		// first filter out processed exits
+		withdrawalsDs = withdrawalsDs.Where(goqu.L("NOT EXISTS (?)", goqu.
+			From(goqu.T("blocks_exit_requests").As("ber")).
+			Where(
+				goqu.I("v.pubkey").Eq(goqu.I("ber.validator_pubkey")),
+			),
+		))
+		// then priority merge to filter out duplicated processed skimmings in both tables; keep all (manual) requests + unmatched skimmings
+		withdrawalsDs = goqu.Dialect("postgres").From(goqu.T("request")).
+			With("bridge", withdrawalsDs).
+			With("request", requestsDs).
+			UnionAll(goqu.Dialect("postgres").From(goqu.T("bridge")).
+				Select(goqu.L("bridge.*")).
+				LeftJoin(goqu.T("request"), goqu.Using(goqu.C("slot_processed"), goqu.C("validatorindex"))).
+				Where(
+					goqu.I("request.slot").Eq(nil),
+				))
+	}
+
+	return withdrawalsDs, nil
 }
 
 func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWithdrawalAddress, isValidSearchIndexOrSlot, isValidSearchGroup, isValidSearchPublicKey bool) (*goqu.SelectDataset, error) {
@@ -953,39 +964,20 @@ func (d *DataAccessService) GetValidatorDashboardTotalElWithdrawals(ctx context.
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
 
-	// Analyze the search term
-	validatorSearch, err := d.getValidatorSearch(search)
+	withdrawalsDs, err := getElWithdrawalsDs(dashboardId, search)
 	if err != nil {
 		return nil, err
-	}
-	if validatorSearch == nil {
-		// No validators found
+	} else if withdrawalsDs == nil {
 		return result, nil
 	}
 
-	withdrawalsDs := goqu.Dialect("postgres").
-		From(goqu.T("eth1_withdrawal_requests").As("w")).
-		InnerJoin(goqu.T("validators").As("v"), goqu.On(
-			goqu.I("w.validator_pubkey").Eq(goqu.I("v.pubkey")),
-		)).
-		Select(
-			goqu.COALESCE(goqu.SUM(goqu.I("w.amount")), goqu.V(0)).As("acc_withdrawals_amount"),
-		)
-
-	if dashboardId.Validators == nil {
-		withdrawalsDs = withdrawalsDs.
-			InnerJoin(goqu.T("users_val_dashboards_validators").As("uvdv"), goqu.On(
-				goqu.I("uvdv.validator_index").Eq(goqu.I("v.validatorindex")),
-			)).
-			Where(goqu.I("uvdv.dashboard_id").Eq(dashboardId.Id))
-	} else {
-		withdrawalsDs = withdrawalsDs.
-			Where(goqu.L("v.validatorindex = ANY(?)", pq.Array(dashboardId.Validators)))
-	}
+	withdrawalsDs = withdrawalsDs.
+		ClearSelect().
+		Select(goqu.COALESCE(goqu.SUM(goqu.I("el_wr.amount")), goqu.V(0)))
 
 	sum, err := runQuery[int64](ctx, d.readerDb, withdrawalsDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("error getting total el withdrawals for validators: %w", err)
+		return nil, fmt.Errorf("error getting total cl withdrawals: %w", err)
 	}
 
 	result.TotalAmount = utils.GWeiToWei(big.NewInt(sum))
@@ -997,143 +989,22 @@ func (d *DataAccessService) GetValidatorDashboardTotalClWithdrawals(ctx context.
 		TotalAmount: decimal.NewFromBigInt(big.NewInt(0), 0),
 	}
 
-	// Analyze the search term
-	validatorSearch, err := d.getValidatorSearch(search)
+	withdrawalsDs, err := d.getClWithdrawalsDs(dashboardId, search, d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch)
 	if err != nil {
 		return nil, err
-	}
-	if validatorSearch == nil {
-		// No validators found
+	} else if withdrawalsDs == nil {
 		return result, nil
 	}
 
-	type queryResult struct {
-		ValidatorIndex t.VDBValidator `db:"validator_index"`
-		Epoch          uint64         `db:"epoch_end"`
-		Amount         int64          `db:"acc_withdrawals_amount"`
-	}
+	withdrawalsDs = goqu.Dialect("postgres").
+		Select(goqu.COALESCE(goqu.SUM(goqu.C("amount")), goqu.V(0))).
+		From(withdrawalsDs)
 
-	withdrawalsDs := goqu.Dialect("postgres").
-		From(goqu.L("validator_dashboard_data_rolling_total FINAL")).
-		Select(
-			goqu.I("validator_index"),
-			goqu.SUM(goqu.I("withdrawals_amount")).As("acc_withdrawals_amount"),
-			goqu.MAX(goqu.I("epoch_end")).As("epoch_end"),
-		).
-		GroupBy(goqu.I("validator_index")).
-		Where(goqu.L("finalizeAggregation(balance_end) != 0"))
-
-	if dashboardId.Validators == nil {
-		withdrawalsDs = withdrawalsDs.
-			With("validators", goqu.L("(SELECT validator_index FROM users_val_dashboards_validators WHERE (dashboard_id = ?))", dashboardId.Id)).
-			InnerJoin(
-				goqu.T("validators").As("v"), goqu.On(
-					goqu.I("validator_dashboard_data_rolling_total.validator_index").Eq(goqu.I("v.validator_index")),
-				),
-			).
-			Where(
-				goqu.I("validator_index").In(goqu.L("SELECT validator_index FROM validators")),
-			)
-	} else {
-		withdrawalsDs = withdrawalsDs.
-			Where(goqu.I("validator_index").In(dashboardId.Validators))
-	}
-
-	res, err := runQueryRows[[]queryResult](ctx, d.clickhouseReader, withdrawalsDs)
-	if err != nil {
-		return nil, fmt.Errorf("error getting total cl withdrawals for validators: %+v: %w", dashboardId, err)
-	}
-
-	if len(res) == 0 {
-		// No validators to search for
-		return result, nil
-	}
-
-	var totalAmount int64
-	var validators []t.VDBValidator
-	lastEpoch := res[0].Epoch
-	lastSlot := (lastEpoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch - 1
-
-	for _, res := range res {
-		// Calculate the total amount of withdrawals
-		totalAmount += res.Amount
-
-		// Calculate the current validators
-		validators = append(validators, res.ValidatorIndex)
-	}
-
-	latestWithdrawalsDs := goqu.Dialect("postgres").
-		From(goqu.T("blocks_withdrawals").As("w")).
-		Select(
-			goqu.COALESCE(goqu.SUM(goqu.I("w.amount")), 0),
-		).
-		InnerJoin(
-			goqu.T("blocks").As("b"), goqu.On(
-				goqu.I("w.block_slot").Eq(goqu.I("b.slot")),
-				goqu.I("w.block_root").Eq(goqu.I("b.blockroot")),
-				goqu.I("b.status").Eq("1"),
-			),
-		).
-		Where(
-			goqu.I("w.block_slot").Gt(lastSlot),
-			goqu.L("w.validatorindex = ANY(?)", pq.Array(validators)),
-		)
-
-	latestWithdrawalsAmount, err := runQuery[int64](ctx, d.readerDb, latestWithdrawalsDs)
+	amount, err := runQuery[int64](ctx, d.readerDb, withdrawalsDs)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("error getting latest cl withdrawals for validators: %+v: %w", dashboardId, err)
+		return nil, fmt.Errorf("error getting total cl withdrawals: %w", err)
 	}
 
-	totalAmount += latestWithdrawalsAmount
-	result.TotalAmount = utils.GWeiToWei(big.NewInt(totalAmount))
+	result.TotalAmount = utils.GWeiToWei(big.NewInt(amount))
 	return result, nil
-}
-
-func (d *DataAccessService) getValidatorSearch(search string) ([]t.VDBValidator, error) {
-	validatorSearch := make([]t.VDBValidator, 0)
-
-	if search != "" {
-		if strings.HasPrefix(search, "0x") && (utils.IsHash(search) || utils.IsEth1Address(search)) {
-			search = strings.ToLower(search)
-
-			validatorMapping, err := d.services.GetCurrentValidatorMapping()
-			if err != nil {
-				return nil, err
-			}
-
-			if utils.IsHash(search) {
-				if index, ok := validatorMapping.ValidatorIndices[search]; ok {
-					validatorSearch = append(validatorSearch, index)
-				} else {
-					// No validator index for pubkey found, return empty results
-					return nil, nil
-				}
-			} else {
-				// Get the withdrawal credentials of the address
-				address, err := hexutil.Decode(search)
-				if err != nil {
-					return nil, fmt.Errorf("failed to decode search term %s as address: %w", search, err)
-				}
-				withdrawalCredentials := utils.GetWithdrawalCredentialsOfAddress(common.BytesToAddress(address))
-
-				for index, metadata := range validatorMapping.ValidatorMetadata {
-					if bytes.Equal(withdrawalCredentials, metadata.WithdrawalCredentials) {
-						validatorSearch = append(validatorSearch, t.VDBValidator(index))
-					}
-				}
-
-				if len(validatorSearch) == 0 {
-					// No validator index for withdrawal credentials found, return empty results
-					return nil, nil
-				}
-			}
-		} else if index, err := strconv.ParseUint(search, 10, 64); err == nil {
-			validatorSearch = append(validatorSearch, index)
-		} else {
-			// No allowed search term found, return empty results
-			return nil, nil
-		}
-	}
-
-	return validatorSearch, nil
 }

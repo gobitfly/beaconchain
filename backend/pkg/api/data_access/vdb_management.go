@@ -876,7 +876,7 @@ func (d *DataAccessService) GetValidatorDashboardPublicId(ctx context.Context, p
 	}{}
 
 	// Get the public validator dashboard
-	err := d.alloyReader.GetContext(ctx, &dbReturn, `
+	err := d.readerDb.GetContext(ctx, &dbReturn, `
 		SELECT public_id, dashboard_id, name, shared_groups
 		FROM users_val_dashboards_sharing
 		WHERE public_id = $1
@@ -905,7 +905,7 @@ func (d *DataAccessService) UpdateValidatorDashboardPublicId(ctx context.Context
 	}{}
 
 	// Update the name and settings of the public validator dashboard
-	err := d.alloyWriter.GetContext(ctx, &dbReturn, `
+	err := d.writerDb.GetContext(ctx, &dbReturn, `
 		UPDATE users_val_dashboards_sharing SET
 			name = $1,
 			shared_groups = $2
