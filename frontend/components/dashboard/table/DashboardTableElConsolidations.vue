@@ -16,10 +16,6 @@ const {
 }>()
 
 const {
-  getTimestampFromSlot,
-} = useNetworkStore()
-
-const {
   isGuestDashboard,
 } = useDashboardKey()
 
@@ -76,15 +72,15 @@ const setSearch = (value?: string) => {
           <Column
             sortable
             body-class="dashboard-table-el-consolidations__age-cell"
-            field="block_processed"
+            field="timestamp"
           >
             <template #header>
               <BcTableAgeHeader />
             </template>
             <template #body="slotProps">
               <BcTableDateTime
-                v-if="slotProps.data.block_processed !== undefined"
-                :unix-timestamp="getTimestampFromSlot(slotProps.data.block_processed)"
+                v-if="slotProps.data.timestamp_queued !== undefined"
+                :unix-timestamp="slotProps.data.timestamp_queued"
               />
               <span v-else>-</span>
             </template>

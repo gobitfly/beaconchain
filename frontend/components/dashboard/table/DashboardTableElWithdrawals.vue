@@ -103,7 +103,7 @@ const getGroupName = (groupId: number) => {
           <Column
             sortable
             body-class="dashboard-table-el-withdrawals__age-cell"
-            field="block_queued"
+            field="timestamp"
           >
             <template #header>
               <BcTableAgeHeader />
@@ -111,7 +111,7 @@ const getGroupName = (groupId: number) => {
             <template #body="slotProps">
               <span v-if="slotProps.data.isTotalAmountRow">Σ</span>
               <BcTableDateTime
-                v-else-if="!slotProps.data.timestamp_queued"
+                v-else-if="slotProps.data.timestamp_queued"
                 :unix-timestamp="slotProps.data.timestamp_queued"
               />
               <span v-else>-</span>

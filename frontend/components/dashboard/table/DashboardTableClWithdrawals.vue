@@ -3,7 +3,7 @@ import type { DataTableSortEvent } from 'primevue/datatable'
 import type {
   GetValidatorDashboardConsensusLayerWithdrawalsResponse,
   GetValidatorDashboardTotalConsensusWithdrawalsResponse,
-  VDBWithdrawalsElTableRow,
+  VDBWithdrawalsClTableRow,
 } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
@@ -95,8 +95,8 @@ const getGroupName = (groupId: number) => {
           :selected-sort="query?.sort"
           :cursor="query?.cursor"
           :page-size="query?.limit"
-          :row-class="(row: VDBWithdrawalsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
-          :is-row-expandable="(row: VDBWithdrawalsElTableRow) => row.index !== undefined"
+          :row-class="(row: VDBWithdrawalsClTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
+          :is-row-expandable="(row: VDBWithdrawalsClTableRow) => row.index !== undefined"
           @set-cursor="setCursor"
           @sort="onSort"
           @set-page-size="setPageSize"
@@ -104,7 +104,7 @@ const getGroupName = (groupId: number) => {
           <Column
             sortable
             body-class="dashboard-table-cl-withdrawals__age-cell"
-            field="slot"
+            field="timestamp"
           >
             <template #header>
               <BcTableAgeHeader />
@@ -112,8 +112,8 @@ const getGroupName = (groupId: number) => {
             <template #body="slotProps">
               <span v-if="slotProps.data.isTotalAmountRow">Σ</span>
               <BcTableDateTime
-                v-else-if="slotProps.data.slot_processed !== undefined"
-                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot_processed)"
+                v-else-if="slotProps.data.slot !== undefined"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot)"
               />
               <span v-else>-</span>
             </template>

@@ -75,8 +75,8 @@ const setSearch = (value?: string) => {
             </template>
             <template #body="slotProps">
               <BcTableDateTime
-                v-if="slotProps.data.slot_processed !== undefined"
-                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot_processed)"
+                v-if="slotProps.data.slot !== undefined"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot)"
               />
               <span v-else>-</span>
             </template>
