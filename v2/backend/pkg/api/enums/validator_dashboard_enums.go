@@ -298,7 +298,7 @@ type VDBConsolidationsElColumn int
 var _ EnumFactory[VDBConsolidationsElColumn] = VDBConsolidationsElColumn(0)
 
 const (
-	VDBConsolidationElBlockProcessed VDBConsolidationsElColumn = iota
+	VDBConsolidationElBlockQueued VDBConsolidationsElColumn = iota
 )
 
 func (c VDBConsolidationsElColumn) Int() int {
@@ -307,8 +307,8 @@ func (c VDBConsolidationsElColumn) Int() int {
 
 func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColumn {
 	switch s {
-	case "", "block_processed", "timestamp":
-		return VDBConsolidationElBlockProcessed
+	case "", "block_queued", "timestamp":
+		return VDBConsolidationElBlockQueued
 	default:
 		return VDBConsolidationsElColumn(-1)
 	}
@@ -316,7 +316,7 @@ func (VDBConsolidationsElColumn) NewFromString(s string) VDBConsolidationsElColu
 
 func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 	switch c {
-	case VDBConsolidationElBlockProcessed:
+	case VDBConsolidationElBlockQueued:
 		return goqu.I("el_cr.block_number")
 	default:
 		return nil
@@ -324,9 +324,9 @@ func (c VDBConsolidationsElColumn) ToExpr() OrderableSortable {
 }
 
 var VDBConsolidationsElColumns = struct {
-	BlockProcessed VDBConsolidationsElColumn
+	BlockQueued VDBConsolidationsElColumn
 }{
-	VDBConsolidationElBlockProcessed,
+	VDBConsolidationElBlockQueued,
 }
 
 // ----------------

@@ -353,6 +353,8 @@ type VDBConsolidationsClTableRow struct {
 	RejectReason  *string          `json:"reject_reason,omitempty" tstype:"'source_equals_target' | 'full_queue' | 'insufficient_consolidation_churn' | 'source_unknown_pubkey' | 'target_unknown_pubkey' | 'source_no_execution_withdrawal_credentials' | 'source_address_mismatch' | 'target_not_compounding' | 'source_inactive' | 'target_inactive' | 'source_exiting' | 'target_exiting' | 'source_too_young' | 'source_pending_withdrawals' | 'source_slashed'" faker:"oneof: source_equals_target, full_queue, insufficient_consolidation_churn, source_unknown_pubkey, target_unknown_pubkey, source_no_execution_withdrawal_credentials, source_address_mismatch, target_not_compounding, source_inactive, target_inactive, source_exiting, target_exiting, source_too_young, source_pending_withdrawals, source_slashed"`
 	Amount        *decimal.Decimal `json:"amount,omitempty" faker:"eth"`
 	Id            uint64           `json:"id"`
+	Slot          uint64           `json:"slot"`
+	SlotIndex     uint64           `json:"slot_index"`
 }
 type GetValidatorDashboardConsensusLayerConsolidationsResponse ApiPagingResponse[VDBConsolidationsClTableRow]
 
