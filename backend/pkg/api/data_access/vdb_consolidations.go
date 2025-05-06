@@ -130,7 +130,7 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 
 	defaultSlotSortDesc := true
-	if colSort.Column == enums.VDBConsolidationsElColumns.BlockProcessed {
+	if colSort.Column == enums.VDBConsolidationsElColumns.BlockQueued {
 		// this implements a form of multicolumn sort which we don't want to support atm, but for a time-sensitive sort it should be justified
 		defaultSlotSortDesc = colSort.Desc
 	}
@@ -156,11 +156,11 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		TargetIndex        uint64        `db:"target_index"`
 		BlockQueued        uint64        `db:"block_queued"`
 		BlockQueuedTime    time.Time     `db:"block_queued_ts"`
-		TxIndex            uint64        `db:"tx_index"`           // for cursor only
-		ITxIndex           uint64        `db:"itx_index"`          // for cursor only
-		BlockProcessed     sql.NullInt64 `db:"block_processed"`    // need CL queued events from BEDS-1399
-		BlockProcessedTime sql.NullInt64 `db:"block_processed_ts"` // need CL queued events from BEDS-1399
-		From               []byte        `db:"from_address"`       // BEDS-1405 (might get from BT for now)
+		TxIndex            uint64        `db:"tx_index"`  // for cursor only
+		ITxIndex           uint64        `db:"itx_index"` // for cursor only
+		BlockProcessed     sql.NullInt64 `db:"block_processed"`
+		BlockProcessedTime sql.NullInt64 `db:"block_processed_ts"`
+		From               []byte        `db:"from_address"` // BEDS-1405 (might get from BT for now)
 		Consolidator       []byte        `db:"consolidator"`
 		TxHash             []byte        `db:"tx_hash"`
 		Fee                uint64        `db:"fee"`
@@ -416,10 +416,12 @@ func (d *DataAccessService) GetValidatorDashboardConsensusLayerConsolidations(ct
 
 	for _, r := range res {
 		row := t.VDBConsolidationsClTableRow{
-			Source: r.Source,
-			Target: r.Target,
-			Status: r.Status,
-			Id:     r.Id,
+			Source:    r.Source,
+			Target:    r.Target,
+			Status:    r.Status,
+			Id:        r.Id,
+			Slot:      r.Slot,
+			SlotIndex: r.SlotIndex,
 		}
 
 		// some data integrity checks TODO add more
