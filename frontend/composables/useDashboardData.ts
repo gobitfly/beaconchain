@@ -30,12 +30,16 @@ export const useDashboardData = () => {
 
     return res
   }
-  async function fetchELDpositsTotalAmount(dashboardKey: DashboardKey) {
+  async function fetchELDpositsTotalAmount(
+    dashboardKey: DashboardKey,
+    query?: Pick<TableQueryParams, 'search'>,
+  ) {
     const res
       = await fetch<GetValidatorDashboardTotalExecutionDepositsResponse>(
         'DASHBOARD_EL_DEPOSITS_TOTAL',
         undefined,
         { dashboardKey },
+        query,
       )
 
     return res
@@ -56,12 +60,16 @@ export const useDashboardData = () => {
     return res
   }
 
-  async function fetchClDpositsTotalAmount(dashboardKey: DashboardKey) {
+  async function fetchClDpositsTotalAmount(
+    dashboardKey: DashboardKey,
+    query?: Pick<TableQueryParams, 'search'>,
+  ) {
     const res
       = await fetch<GetValidatorDashboardTotalConsensusDepositsResponse>(
         'DASHBOARD_CL_DEPOSITS_TOTAL',
         undefined,
         { dashboardKey },
+        query,
       )
 
     return res
@@ -112,12 +120,14 @@ export const useDashboardData = () => {
 
   async function fetchElWithdrawalsTotalAmount(
     dashboardKey: DashboardKey,
+    query?: Pick<TableQueryParams, 'search'>,
   ) {
     const res
       = await fetch<GetValidatorDashboardTotalExecutionWithdrawalsResponse>(
         'DASHBOARD_EL_WITHDRAWALS_TOTAL',
         undefined,
         { dashboardKey },
+        query,
       )
 
     return res
@@ -140,12 +150,14 @@ export const useDashboardData = () => {
 
   async function fetchClWithdrawalsTotalAmount(
     dashboardKey: DashboardKey,
+    query?: Pick<TableQueryParams, 'search'>,
   ) {
     const res
       = await fetch<GetValidatorDashboardTotalConsensusWithdrawalsResponse>(
         'DASHBOARD_CL_WITHDRAWALS_TOTAL',
         undefined,
         { dashboardKey },
+        query,
       )
 
     return res
