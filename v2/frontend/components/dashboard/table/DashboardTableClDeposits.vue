@@ -138,8 +138,8 @@ const {
             <template #body="slotProps">
               <span v-if="slotProps.data.isTotalAmountRow">Σ</span>
               <BcTableDateTime
-                v-else-if="slotProps.data.slot_processed !== undefined"
-                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot_processed)"
+                v-else-if="slotProps.data.slot !== undefined"
+                :unix-timestamp="getTimestampFromSlot(slotProps.data.slot)"
               />
               <span v-else>-</span>
             </template>
