@@ -15,10 +15,6 @@ const {
   isLoading: boolean,
 }>()
 
-const {
-  isGuestDashboard,
-} = useDashboardKey()
-
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
@@ -46,11 +42,7 @@ const setSearch = (value?: string) => {
 <template>
   <BcTableControl
     :title="$t('dashboard.validator.el_consolidations.title')"
-    :search-placeholder="$t(
-      isGuestDashboard
-        ? 'dashboard.validator.el_consolidations.search_placeholder_guest_dashboard'
-        : 'dashboard.validator.el_consolidations.search_placeholder_private_dashboard',
-    )
+    :search-placeholder="$t('dashboard.validator.el_consolidations.search_placeholder')
     "
     @set-search="setSearch"
   >
