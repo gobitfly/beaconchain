@@ -206,7 +206,10 @@ const {
       dashboardKey.value,
       elDepositsQueryParams.value,
     ),
-    dashboardData.fetchELDpositsTotalAmount(dashboardKey.value),
+    dashboardData.fetchELDpositsTotalAmount(
+      dashboardKey.value,
+      { search: elDepositsQueryParams.value.search },
+    ),
   ])
 },
 {
@@ -233,7 +236,10 @@ const {
       dashboardKey.value,
       clDepositsQueryParams.value,
     ),
-    dashboardData.fetchClDpositsTotalAmount(dashboardKey.value),
+    dashboardData.fetchClDpositsTotalAmount(
+      dashboardKey.value,
+      { search: clDepositsQueryParams.value.search },
+    ),
   ])
 },
 {
@@ -260,7 +266,10 @@ const {
       dashboardKey.value,
       elWithdrawalsQueryParams.value,
     ),
-    dashboardData.fetchElWithdrawalsTotalAmount(dashboardKey.value),
+    dashboardData.fetchElWithdrawalsTotalAmount(
+      dashboardKey.value,
+      { search: elWithdrawalsQueryParams.value.search },
+    ),
   ])
 },
 {
@@ -287,7 +296,10 @@ const {
       dashboardKey.value,
       clWithdrawalsQueryParams.value,
     ),
-    dashboardData.fetchClWithdrawalsTotalAmount(dashboardKey.value),
+    dashboardData.fetchClWithdrawalsTotalAmount(
+      dashboardKey.value,
+      { search: clWithdrawalsQueryParams.value.search },
+    ),
   ])
 },
 {
