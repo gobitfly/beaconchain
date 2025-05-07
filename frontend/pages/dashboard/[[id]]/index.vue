@@ -379,14 +379,16 @@ const refreshActiveTab = () => {
   }
 }
 
-watch(
+watch([
   activeTab,
-  () => {
-    refreshActiveTab()
-  },
-  {
-    immediate: true,
-  },
+  overview,
+],
+() => {
+  refreshActiveTab()
+},
+{
+  immediate: true,
+},
 )
 </script>
 
