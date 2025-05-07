@@ -9,6 +9,7 @@ export const setQueryPageSize = (
 ): TableQueryParams => {
   return {
     ...query,
+    cursor: undefined,
     limit,
   }
 }
