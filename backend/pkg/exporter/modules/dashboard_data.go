@@ -419,7 +419,7 @@ func (d *dashboardData) fetchElectraConsolidations(epochStart uint64, epochEnd u
 	writeMutex := &sync.Mutex{}
 	for i := epochStart; i <= epochEnd; i++ {
 		epoch := i
-		if epoch <= utils.Config.Chain.ClConfig.ElectraForkEpoch {
+		if epoch < utils.Config.Chain.ClConfig.ElectraForkEpoch {
 			d.log.Tracef("skipping epoch %d for electra consolidations because it is before the electra fork", epoch)
 			continue
 		}
@@ -475,7 +475,7 @@ func (d *dashboardData) fetchElectraRemovedExcessBalances(epochStart uint64, epo
 	writeMutex := &sync.Mutex{}
 	for i := epochStart; i <= epochEnd; i++ {
 		epoch := i
-		if epoch <= utils.Config.ClConfig.ElectraForkEpoch {
+		if epoch < utils.Config.ClConfig.ElectraForkEpoch {
 			d.log.Tracef("skipping epoch %d for electra removed excess balances because it is before the electra fork", epoch)
 			continue
 		}
