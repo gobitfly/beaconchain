@@ -352,11 +352,8 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	} else if colSort.Column == enums.VDBDepositsClColumns.Slot && currentCursor.IsValid() {
 		isStartPostPectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
 		isLookBack := colSort.Desc != currentCursor.Reverse
-		if isStartPostPectra && !currentCursor.Reverse {
-			hasPrePectraRows = false
-		} else if !isStartPostPectra && isLookBack {
-			hasPostPectraRows = false
-		}
+		hasPrePectraRows = !isStartPostPectra || isLookBack  // if we start before pectra or are going backwards, we need to query pre-pectra
+		hasPostPectraRows = isStartPostPectra || !isLookBack // if we start after pectra or are going forwards, we need to query post-pectra
 	}
 
 	var depositsDs *goqu.SelectDataset
