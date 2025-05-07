@@ -480,7 +480,6 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		responseData = append(responseData, row)
 	}
 
-	moreDataFlag := len(responseData) > int(limit)
 	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
@@ -535,20 +534,18 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 			// TODO integrate label/ens data for "next" row
 			// nextData.Recipient.Ens = addressEns[string(nextData.Recipient.Hash)]
 			responseData = append([]t.VDBWithdrawalsClTableRow{*nextData}, responseData...)
-		}
-
-		// Flag if above limit
-		moreDataFlag = moreDataFlag || len(responseData) > int(limit)
-		if !moreDataFlag && !currentCursor.IsValid() {
-			// No paging required
-			return responseData, &t.Paging{}, nil
+			// dummy row for correct cursor
+			queryResult = append([]dbResult{{}}, queryResult...)
 		}
 	}
 
-	// Remove the last entry from data as it is only required for the check
+	moreDataFlag := len(responseData) > int(limit)
 	if moreDataFlag {
-		responseData = responseData[:len(responseData)-1]
-		queryResult = queryResult[:len(queryResult)-1]
+		responseData = responseData[:limit]
+		queryResult = queryResult[:limit]
+	} else if !currentCursor.IsValid() {
+		// No paging required
+		return responseData, &t.Paging{}, nil
 	}
 
 	paging, err := utils.GetPagingFromData(queryResult, currentCursor, moreDataFlag)
@@ -910,7 +907,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGrou
 	}
 
 	ens_name, err := db.GetEnsNameForAddress(*address, utils.SlotToTime(nextWithdrawalSlot))
-	if err != sql.ErrNoRows {
+	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
 
