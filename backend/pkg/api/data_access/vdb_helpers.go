@@ -11,7 +11,9 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/services"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/lib/pq"
@@ -701,4 +703,69 @@ func getViewAndDateColumn(aggregation enums.ChartAggregation) (string, string, e
 	}
 
 	return view, dateColumn, nil
+}
+
+// getElInfo is a generic function to get EL info for addresses and their contract status.
+// Returns a map of address + block + tx_index + itx_index to address info.
+// Use the func `getElInfoKey` to get the key for the map.
+func getElInfo[In any](ctx context.Context, d *DataAccessService, input []In, buildReqs func(In) []db.ContractInteractionAtRequest) (map[string]t.Address, error) {
+	// build reqs and address mapping
+	interactionsRequests := make([]db.ContractInteractionAtRequest, 0, len(input))
+	addressMapping := make(map[string]*t.Address)
+	for _, req := range input {
+		reqs := buildReqs(req)
+		interactionsRequests = append(interactionsRequests, reqs...)
+		for _, interaction := range reqs {
+			addressMapping["0x"+interaction.Address] = nil
+		}
+	}
+
+	elInfo := make(map[string]t.Address)
+	if len(interactionsRequests) == 0 {
+		return elInfo, nil
+	}
+
+	// fetch info
+	wg := errgroup.Group{}
+	wg.Go(func() error {
+		err := d.GetNamesAndEnsForAddresses(ctx, addressMapping)
+		if err != nil {
+			return fmt.Errorf("failed to get names and ens for addresses: %w", err)
+		}
+		return nil
+	})
+	contractStatuses := make([]types.ContractInteractionType, len(interactionsRequests))
+	wg.Go(func() error {
+		var err error
+		contractStatuses, err = d.bigtable.GetAddressContractInteractionsAt(interactionsRequests)
+		if err != nil {
+			return fmt.Errorf("failed to get contract interactions: %w", err)
+		}
+		return nil
+	})
+	if err := wg.Wait(); err != nil {
+		return nil, err
+	}
+
+	// build result
+	for i, req := range interactionsRequests {
+		address := req.Address
+
+		key := fmt.Sprintf("%s:%d:%d:%d", address, req.Block, req.TxIdx, req.TraceIdx)
+		if _, ok := elInfo[key]; ok {
+			continue
+		}
+		addressInfo, ok := addressMapping["0x"+address]
+		if addressInfo == nil || !ok {
+			return nil, fmt.Errorf("address %s not found in address mapping", address)
+		}
+		addressInfo.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
+		elInfo[key] = *addressInfo
+	}
+
+	return elInfo, nil
+}
+
+func getElInfoKey(address []byte, block, txIndex, itxIndex int64) string {
+	return fmt.Sprintf("%x:%d:%d:%d", address, block, txIndex, itxIndex)
 }

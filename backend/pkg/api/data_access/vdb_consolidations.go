@@ -14,7 +14,6 @@ import (
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -172,23 +171,19 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 	}
 
 	responseData := make([]t.VDBConsolidationsElTableRow, 0, len(dbRes))
-	addressMapping := make(map[string]*t.Address)
-	// fromContractStatusRequests := make([]db.ContractInteractionAtRequest, len(dbRes)) // BEDS-1405
-	consolidatorContractStatusRequests := make([]db.ContractInteractionAtRequest, len(dbRes))
-	prepareAddressRequest := func(contractStateReqs *[]db.ContractInteractionAtRequest, addr []byte, dbRes *elDbResult) t.Address {
-		req := db.ContractInteractionAtRequest{
-			Address:  fmt.Sprintf("%x", addr),
-			Block:    -1,
-			TxIdx:    -1,
-			TraceIdx: -1,
+	buildReqs := func(row elDbResult) []db.ContractInteractionAtRequest {
+		return []db.ContractInteractionAtRequest{
+			{
+				Address:  fmt.Sprintf("%x", row.Consolidator),
+				Block:    int64(row.BlockQueued),
+				TxIdx:    int64(row.TxIndex),
+				TraceIdx: int64(row.ITxIndex),
+			},
 		}
-		if dbRes.BlockProcessed.Valid {
-			req.Block = dbRes.BlockProcessed.Int64
-		}
-		*contractStateReqs = append(*contractStateReqs, req)
-		addrStr := hexutil.Encode(addr)
-		addressMapping[addrStr] = nil
-		return t.Address{Hash: t.Hash(addrStr)}
+	}
+	elInfos, err := getElInfo(ctx, d, dbRes, buildReqs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
 	}
 	for _, res := range dbRes {
 		row := t.VDBConsolidationsElTableRow{
@@ -198,8 +193,8 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 			ITxIndexQueued: res.ITxIndex,
 			BlockQueued:    res.BlockQueued,
 			TxHash:         t.Hash(hexutil.Encode(res.TxHash)),
+			Consolidator:   elInfos[getElInfoKey(res.Consolidator, int64(res.BlockQueued), int64(res.TxIndex), int64(res.ITxIndex))],
 		}
-		row.Consolidator = prepareAddressRequest(&consolidatorContractStatusRequests, res.Consolidator, &res)
 		// BEDS-1405
 		/*row.From = row.Consolidator
 		if !bytes.Equal(res.Consolidator, res.From) {
@@ -242,26 +237,6 @@ func (d *DataAccessService) GetValidatorDashboardExecutionLayerConsolidations(ct
 		}
 
 		responseData = append(responseData, row)
-	}
-
-	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
-		return nil, nil, err
-	}
-	// BEDS-1405
-	/*fromContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(fromContractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}*/
-	depositorContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(consolidatorContractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}
-	for i := range dbRes {
-		// BEDS-1405
-		// responseData[i].From = *addressMapping[string(responseData[i].From.Hash)]
-		// responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
-		responseData[i].Consolidator = *addressMapping[string(responseData[i].Consolidator.Hash)]
-		responseData[i].Consolidator.IsContract = depositorContractStatuses[i] == types.CONTRACT_CREATION || depositorContractStatuses[i] == types.CONTRACT_PRESENT
 	}
 
 	var paging t.Paging

@@ -17,7 +17,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -203,10 +202,35 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	responseData := make([]t.VDBExecutionDepositsTableRow, len(data))
-	addressMapping := make(map[string]*t.Address)
-	fromContractStatusRequests := make([]db.ContractInteractionAtRequest, len(data))
-	depositorContractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(data))
+	buildReqs := func(row dbResult) []db.ContractInteractionAtRequest {
+		reqs := []db.ContractInteractionAtRequest{
+			{
+				Address: fmt.Sprintf("%x", row.From),
+				Block:   row.BlockNumber,
+				// TODO not entirely correct, would need to determine tx index and itx index of tx. But good enough for now
+				TxIdx:    -1,
+				TraceIdx: -1,
+			},
+		}
+
+		if len(row.Depositor) > 0 {
+			reqs = append(reqs, db.ContractInteractionAtRequest{
+				Address:  fmt.Sprintf("%x", row.Depositor),
+				Block:    row.BlockNumber,
+				TxIdx:    -1,
+				TraceIdx: -1,
+			})
+		}
+		return reqs
+	}
+	elInfos, err := getElInfo(ctx, d, data, buildReqs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
+	}
 	for i, row := range data {
+		if len(row.Depositor) == 0 {
+			row.Depositor = row.From
+		}
 		responseData[i] = t.VDBExecutionDepositsTableRow{
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Block:                uint64(row.BlockNumber),
@@ -216,19 +240,12 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredentials)),
 			Amount:               utils.GWeiToWei(big.NewInt(row.Amount)),
 			Validity:             "valid",
-			From:                 t.Address{Hash: t.Hash(hexutil.Encode(row.From))},
+			From:                 elInfos[getElInfoKey(row.From, row.BlockNumber, -1, -1)],
+			Depositor:            elInfos[getElInfoKey(row.Depositor, row.BlockNumber, -1, -1)],
 		}
 		if !row.IsValid {
 			// can never be "invalid" because v2 dashboards only contain validators with an index (= there was at least one valid deposit before)
 			responseData[i].Validity = "invalid_skipped"
-		}
-		addressMapping[hexutil.Encode(row.From)] = nil
-		fromContractStatusRequests[i] = db.ContractInteractionAtRequest{
-			Address: fmt.Sprintf("%x", row.From),
-			Block:   row.BlockNumber,
-			// TODO not entirely correct, would need to determine tx index and itx index of tx. But good enough for now
-			TxIdx:    -1,
-			TraceIdx: -1,
 		}
 		if row.GroupId.Valid {
 			if dashboardId.AggregateGroups {
@@ -239,41 +256,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		} else {
 			responseData[i].GroupId = t.DefaultGroupId
 		}
-		if len(row.Depositor) > 0 {
-			responseData[i].Depositor = t.Address{Hash: t.Hash(hexutil.Encode(row.Depositor))}
-			addressMapping[hexutil.Encode(row.Depositor)] = nil
-			depositorReq := fromContractStatusRequests[i]
-			depositorReq.Address = fmt.Sprintf("%x", row.Depositor)
-			depositorContractStatusRequests = append(depositorContractStatusRequests, depositorReq)
-		} else {
-			responseData[i].Depositor = responseData[i].From
-		}
 		if v, ok := validatorMapping.ValidatorIndices[pubkeys[i]]; ok {
 			responseData[i].Index = &v
-		}
-	}
-
-	// populate address data
-	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
-		return nil, nil, err
-	}
-	fromContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(fromContractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}
-	depositorContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(depositorContractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}
-	var depositorIdx int
-	for i := range data {
-		responseData[i].From = *addressMapping[string(responseData[i].From.Hash)]
-		responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
-		responseData[i].Depositor = *addressMapping[string(responseData[i].Depositor.Hash)]
-		responseData[i].Depositor.IsContract = responseData[i].From.IsContract
-		if responseData[i].Depositor.Hash != responseData[i].From.Hash {
-			responseData[i].Depositor.IsContract = depositorContractStatuses[depositorIdx] == types.CONTRACT_CREATION || depositorContractStatuses[depositorIdx] == types.CONTRACT_PRESENT
-			depositorIdx += 1
 		}
 	}
 
