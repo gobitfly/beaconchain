@@ -11,13 +11,11 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/doug-martin/goqu/v9/exp"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/lib/pq"
 	"github.com/shopspring/decimal"
@@ -310,7 +308,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 
 	// -------------------------------------
 	// Execute query
-	var proposals []struct {
+	type dbResult struct {
 		Proposer     t.VDBValidator      `db:"validator_index"`
 		Group        uint64              `db:"group_id"`
 		Epoch        uint64              `db:"epoch"`
@@ -326,12 +324,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		Reward decimal.Decimal
 	}
 	startTime := time.Now()
-	query, args, err := blocksDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = d.alloyReader.SelectContext(ctx, &proposals, query, args...)
+	proposals, err := runQueryRows[[]dbResult](ctx, d.readerDb, blocksDs)
 	log.Debugf("=== getting past blocks took %s", time.Since(startTime))
 	if err != nil {
 		return nil, nil, err
@@ -383,8 +376,23 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 	}
 
 	data := make([]t.VDBBlocksTableRow, len(proposals))
-	addressMapping := make(map[string]*t.Address)
-	contractStatusRequests := make([]db.ContractInteractionAtRequest, 0, len(proposals))
+	buildReqs := func(row dbResult) []db.ContractInteractionAtRequest {
+		if !row.ElReward.Valid {
+			return nil
+		}
+		return []db.ContractInteractionAtRequest{
+			{
+				Address:  fmt.Sprintf("%x", row.FeeRecipient),
+				Block:    row.Block.Int64,
+				TxIdx:    -1,
+				TraceIdx: -1,
+			},
+		}
+	}
+	elInfos, err := getElInfo(ctx, d, proposals, buildReqs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
+	}
 	for i, proposal := range proposals {
 		data[i].GroupId = proposal.Group
 		if dashboardId.AggregateGroups {
@@ -421,17 +429,8 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 		var reward t.ClElValue[decimal.Decimal]
 		if proposal.ElReward.Valid {
-			rewardRecp := t.Address{
-				Hash: t.Hash(hexutil.Encode(proposal.FeeRecipient)),
-			}
-			data[i].RewardRecipient = &rewardRecp
-			addressMapping[hexutil.Encode(proposal.FeeRecipient)] = nil
-			contractStatusRequests = append(contractStatusRequests, db.ContractInteractionAtRequest{
-				Address:  fmt.Sprintf("%x", proposal.FeeRecipient),
-				Block:    proposal.Block.Int64,
-				TxIdx:    -1,
-				TraceIdx: -1,
-			})
+			rewardRecipient := elInfos[getElInfoKey(proposal.FeeRecipient, proposal.Block.Int64, -1, -1)]
+			data[i].RewardRecipient = &rewardRecipient
 			reward.El = proposal.ElReward.Decimal.Mul(decimal.NewFromInt(1e18))
 		}
 		if clReward, ok := clRewards[proposal.Slot]; ok && clReward.Valid {
@@ -439,26 +438,6 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 		}
 		proposals[i].Reward = proposal.ElReward.Decimal.Add(proposal.ClReward.Decimal)
 		data[i].Reward = &reward
-	}
-	// determine reward recipient ENS names
-	startTime = time.Now()
-	// determine ens/names
-	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
-		return nil, nil, err
-	}
-	log.Debugf("=== getting ens + labels names took %s", time.Since(startTime))
-	// determine contract statuses
-	contractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(contractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}
-	var contractIdx int
-	for i := range data {
-		if data[i].RewardRecipient != nil {
-			data[i].RewardRecipient = addressMapping[string(data[i].RewardRecipient.Hash)]
-			data[i].RewardRecipient.IsContract = contractStatuses[contractIdx] == types.CONTRACT_CREATION || contractStatuses[contractIdx] == types.CONTRACT_PRESENT
-			contractIdx += 1
-		}
 	}
 	if !moreDataFlag && !currentCursor.IsValid() {
 		// No paging required
