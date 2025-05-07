@@ -102,23 +102,19 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 	}
 
 	responseData = make([]t.VDBWithdrawalsElTableRow, 0, len(queryResult))
-	addressMapping := make(map[string]*t.Address)
-	// fromContractStatusRequests := make([]db.ContractInteractionAtRequest, len(dbRes)) // BEDS-1405
-	withdrawerContractStatusRequests := make([]db.ContractInteractionAtRequest, len(queryResult))
-	prepareAddressRequest := func(contractStateReqs *[]db.ContractInteractionAtRequest, addr []byte, dbRes *dbResult) t.Address {
-		req := db.ContractInteractionAtRequest{
-			Address:  fmt.Sprintf("%x", addr),
-			Block:    -1,
-			TxIdx:    -1,
-			TraceIdx: -1,
+	buildReqs := func(row dbResult) []db.ContractInteractionAtRequest {
+		return []db.ContractInteractionAtRequest{
+			{
+				Address:  fmt.Sprintf("%x", row.Withdrawer),
+				Block:    int64(row.BlockQueued),
+				TxIdx:    int64(row.TxIndex),
+				TraceIdx: int64(row.ITxIndex),
+			},
 		}
-		if dbRes.BlockProcessed.Valid {
-			req.Block = dbRes.BlockProcessed.Int64
-		}
-		*contractStateReqs = append(*contractStateReqs, req)
-		addrStr := hexutil.Encode(addr)
-		addressMapping[addrStr] = nil
-		return t.Address{Hash: t.Hash(addrStr)}
+	}
+	elInfos, err := getElInfo(ctx, d, queryResult, buildReqs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
 	}
 	for _, res := range queryResult {
 		row := t.VDBWithdrawalsElTableRow{
@@ -129,13 +125,13 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 			ITxIndexQueued:  res.ITxIndex,
 			TxHash:          t.Hash(hexutil.Encode(res.TxHash)),
 			Amount:          utils.GWeiToWei(big.NewInt(res.Amount.IntPart())),
+			Withdrawer:      elInfos[getElInfoKey(res.Withdrawer, int64(res.BlockQueued), int64(res.TxIndex), int64(res.ITxIndex))],
 		}
 		if res.GroupId.Valid && !dashboardId.AggregateGroups {
 			row.GroupId = uint64(res.GroupId.Int64)
 		} else {
 			row.GroupId = t.DefaultGroupId
 		}
-		row.Withdrawer = prepareAddressRequest(&withdrawerContractStatusRequests, res.Withdrawer, &res)
 		// BEDS-1405
 		/*row.From = row.Withdrawer
 		if !bytes.Equal(res.Withdrawer, res.From) {
@@ -176,26 +172,6 @@ func (d *DataAccessService) GetValidatorDashboardElWithdrawals(ctx context.Conte
 		}
 
 		responseData = append(responseData, row)
-	}
-
-	// Get the ENS names and (label) names for the addresses
-	if err := d.GetNamesAndEnsForAddresses(ctx, addressMapping); err != nil {
-		return nil, nil, err
-	}
-
-	// Get the contract status for the addresses
-	withdrawerContractStatuses, err := d.bigtable.GetAddressContractInteractionsAt(withdrawerContractStatusRequests)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Create the result
-	for i := range queryResult {
-		// BEDS-1405
-		// responseData[i].From = *addressMapping[string(responseData[i].From.Hash)]
-		// responseData[i].From.IsContract = fromContractStatuses[i] == types.CONTRACT_CREATION || fromContractStatuses[i] == types.CONTRACT_PRESENT
-		responseData[i].Withdrawer = *addressMapping[string(responseData[i].Withdrawer.Hash)]
-		responseData[i].Withdrawer.IsContract = withdrawerContractStatuses[i] == types.CONTRACT_CREATION || withdrawerContractStatuses[i] == types.CONTRACT_PRESENT
 	}
 
 	// Flag if above limit
