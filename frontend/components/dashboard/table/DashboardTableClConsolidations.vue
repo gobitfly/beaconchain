@@ -28,7 +28,7 @@ const {
 
 const {
   getTimestampFromSlot,
-} = useNetworkStore()
+} = useNetwork()
 
 const query = defineModel<TableQueryParams>('query')
 

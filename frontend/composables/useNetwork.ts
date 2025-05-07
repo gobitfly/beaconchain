@@ -3,7 +3,7 @@ import {
   ChainInfo,
 } from '~/types/network'
 
-export function useNetworkStore() {
+export function useNetwork() {
   const { chainIdByDefault } = useRuntimeConfig().public
   if (!chainIdByDefault) throw createError(
     {
@@ -68,6 +68,7 @@ export function useNetworkStore() {
     hasRocketPool,
     networkInfo,
     secondsPerEpoch,
+    secondsPerSlot,
     secondsUntilNetworkFinality,
   }
 }

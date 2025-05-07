@@ -3,7 +3,7 @@ export const useCurrency = () => {
     clCurrency,
     displayCurrencyDefault,
     elCurrency,
-  } = useNetworkStore()
+  } = useNetwork()
 
   const settingsStore = useSettingsStore()
   const {

@@ -9,7 +9,7 @@ const { t: $t } = useTranslation()
 const {
   secondsPerEpoch,
   secondsUntilNetworkFinality,
-} = useNetworkStore()
+} = useNetwork()
 
 const { user } = useUserStore()
 const hasPremiumPerkGroupEfficiency = computed(
@@ -81,7 +81,7 @@ const { minutes: minutesUntilNetworkFinality } = formatSecondsTo(secondsUntilNet
   minimumFractionDigits: 0,
 })
 
-const { hasRocketPool } = useNetworkStore()
+const { hasRocketPool } = useNetwork()
 </script>
 
 <template>

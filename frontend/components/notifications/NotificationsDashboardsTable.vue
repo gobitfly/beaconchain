@@ -12,7 +12,7 @@ const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
 // TODO: replace currentNetwork with selection from NETWORK_SWITCHER_COMPONENT that has yet to be implemented
-const { currentNetwork } = useNetworkStore()
+const { currentNetwork } = useNetwork()
 const networkId = ref<ChainId>(currentNetwork.value ?? 1)
 
 const {
@@ -96,7 +96,7 @@ const showDialog = (row: NotificationDashboardsTableRow & { identifier: string }
     },
   })
 }
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
 </script>
 
 <template>

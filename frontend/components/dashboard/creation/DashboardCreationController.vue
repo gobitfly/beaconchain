@@ -19,7 +19,7 @@ const {
   isLoggedIn,
   user,
 } = useUserStore()
-const { currentNetwork } = useNetworkStore()
+const { currentNetwork } = useNetwork()
 
 interface Props {
   displayMode: DashboardCreationDisplayMode,

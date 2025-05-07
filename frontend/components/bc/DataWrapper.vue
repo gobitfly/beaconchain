@@ -5,7 +5,7 @@ const {
   getUser,
   isLoggedIn,
 } = useUserStore()
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 const { secondsPerSlot } = networkInfo.value
 const { counter } = useInterval(secondsPerSlot)
 const { refreshLatestState } = useLatestStateStore()

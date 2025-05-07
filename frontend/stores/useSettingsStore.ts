@@ -6,7 +6,7 @@ export const useSettingsStore = defineStore('settings', () => {
     dateTimeFormat.value = dateTimeFormat.value === 'absolute' ? 'relative' : 'absolute'
   }
 
-  const { displayCurrencyDefault } = useNetworkStore()
+  const { displayCurrencyDefault } = useNetwork()
   const selectedCurrencyMain = ref<CurrencyCode>(displayCurrencyDefault.main)
 
   return {

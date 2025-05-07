@@ -9,7 +9,6 @@ import type {
   Cursor, TableQueryParams,
 } from '~/types/datatable'
 import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 const {
   clDeposits,
@@ -28,7 +27,7 @@ const { t: $t } = useTranslation()
 
 const {
   getTimestampFromSlot,
-} = useNetworkStore()
+} = useNetwork()
 
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {

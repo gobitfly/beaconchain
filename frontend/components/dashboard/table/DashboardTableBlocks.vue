@@ -114,7 +114,7 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   return row.status !== 'scheduled'
 }
 
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
 </script>
 
 <template>

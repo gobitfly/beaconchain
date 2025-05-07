@@ -138,7 +138,7 @@ const findNextEpochDuties = (epoch: number) => {
 
   return list.join(', ')
 }
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
 </script>
 
 <template>

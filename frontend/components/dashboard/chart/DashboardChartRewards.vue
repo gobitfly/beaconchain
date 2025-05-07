@@ -36,7 +36,7 @@ import { DashboardChartRewardsTooltip } from '#components'
 
 const {
   getTimestampFromEpoch,
-} = useNetworkStore()
+} = useNetwork()
 
 use([
   GridComponent,

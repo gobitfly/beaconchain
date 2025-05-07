@@ -59,7 +59,7 @@ const {
   getTimestampFromEpoch,
   getTimestampFromSlot,
   secondsPerEpoch,
-} = useNetworkStore()
+} = useNetwork()
 const { dashboardKey } = useDashboardKey()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const { overview } = storeToRefs(validatorDashboardOverviewStore)

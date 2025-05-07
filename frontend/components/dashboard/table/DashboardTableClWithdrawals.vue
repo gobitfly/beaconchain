@@ -22,7 +22,7 @@ const {
   isGuestDashboard,
 } = useDashboardKey()
 const { t: $t } = useTranslation()
-const { getTimestampFromSlot } = useNetworkStore()
+const { getTimestampFromSlot } = useNetwork()
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {

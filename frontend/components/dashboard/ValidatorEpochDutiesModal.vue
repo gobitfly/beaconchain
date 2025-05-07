@@ -147,7 +147,7 @@ watch(
   { immediate: true },
 )
 
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
 </script>
 
 <template>

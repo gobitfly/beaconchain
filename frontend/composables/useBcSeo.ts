@@ -7,7 +7,7 @@ export function useBcSeo(
 ) {
   const { t: $t } = useTranslation()
   const route = useRoute()
-  const { networkInfo } = useNetworkStore()
+  const { networkInfo } = useNetwork()
 
   const year = new Date().getFullYear()
 

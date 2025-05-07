@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ValidatorHistoryDuties } from '~/types/api/common'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
   compact?: boolean,
@@ -9,7 +8,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 
 const mapped = computed(() => {
   const mapSuccess = (

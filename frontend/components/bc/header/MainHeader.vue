@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { BcHeaderMegaMenu } from '#build/components'
 import { useLatestStateStore } from '~/stores/useLatestStateStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 import {
   mobileHeaderThreshold, smallHeaderThreshold,
 } from '~/types/header'
@@ -15,7 +14,7 @@ const { latestState } = storeToRefs(latestStateStore)
 const {
   getEpochFromSlot,
   networkInfo,
-} = useNetworkStore()
+} = useNetwork()
 const {
   doLogout,
   isLoggedIn,

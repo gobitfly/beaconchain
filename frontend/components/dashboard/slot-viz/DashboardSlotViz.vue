@@ -5,7 +5,7 @@ import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 const {
   dashboardKey,
 } = useDashboardKey()
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 const {
   loading: loadingSlotViz,
   refreshSlotViz,
@@ -16,7 +16,7 @@ const {
   counter,
   reset: resetIntervalCounter,
 } = useInterval(secondsPerSlot)
-const { getSlotFromTimestamp } = useNetworkStore()
+const { getSlotFromTimestamp } = useNetwork()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   loading: loadingOverview,
