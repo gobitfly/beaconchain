@@ -167,6 +167,7 @@ const setCursor = (value: Cursor) => {
 }
 
 const setPageSize = (value: number) => {
+  cursor.value = 0
   pageSize.value = value
 }
 
