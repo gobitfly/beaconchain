@@ -346,16 +346,16 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 	}
 
 	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
-	hasPrePectraRows, hasPostPectraRows := true, false
-	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
-		hasPostPectraRows = true
-		if currentCursor.IsValid() {
-			postElectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
-			if postElectra && !currentCursor.Reverse {
-				hasPrePectraRows, hasPostPectraRows = false, true
-			} else if !postElectra && currentCursor.Reverse {
-				hasPrePectraRows, hasPostPectraRows = true, false
-			}
+	hasPrePectraRows, hasPostPectraRows := true, true
+	if d.config.ClConfig.ElectraForkEpoch >= utils.MaxForkEpoch {
+		hasPostPectraRows = false
+	} else if colSort.Column == enums.VDBDepositsClColumns.Slot && currentCursor.IsValid() {
+		isStartPostPectra := currentCursor.Slot/d.config.ClConfig.SlotsPerEpoch > d.config.ClConfig.ElectraForkEpoch
+		isLookBack := colSort.Desc != currentCursor.Reverse
+		if isStartPostPectra && !currentCursor.Reverse {
+			hasPrePectraRows = false
+		} else if !isStartPostPectra && isLookBack {
+			hasPostPectraRows = false
 		}
 	}
 
