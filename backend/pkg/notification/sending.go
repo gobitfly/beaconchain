@@ -34,83 +34,69 @@ func InitNotificationSender() {
 
 func notificationSender() {
 	for {
-		start := time.Now()
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
-
-		conn, err := db.FrontendWriterDB.Conn(ctx)
-		if err != nil {
-			log.Error(err, "error creating connection", 0)
-			cancel()
-			continue
-		}
-
-		_, err = conn.ExecContext(ctx, `SELECT pg_advisory_lock(500)`)
-		if err != nil {
-			log.Error(err, "error getting advisory lock from db", 0)
-
-			err := conn.Close()
-			if err != nil {
-				log.Error(err, "error returning connection to connection pool", 0)
-			}
-			cancel()
-			continue
-		}
-
-		log.Infof("lock obtained")
-		err = dispatchNotifications()
-		if err != nil {
-			log.Error(err, "error dispatching notifications", 0)
-		}
-
-		// Record metrics related to Notification Queue like size of queue and duration of pending notifications
-		collectNotificationQueueMetrics()
-
-		err = garbageCollectSentEvents()
-		if err != nil {
-			log.Error(err, "error garbage collecting sent notifications", 0)
-		}
-
-		err = garbageCollectOldPendingEvents()
-		if err != nil {
-			log.Error(err, "error garbage collecting old pending notifications", 0)
-		}
-
-		log.InfoWithFields(log.Fields{"duration": time.Since(start)}, "notifications dispatched and garbage collected")
-		metrics.TaskDuration.WithLabelValues("service_notifications_sender").Observe(time.Since(start).Seconds())
-
-		unlocked := false
-		rows, err := conn.QueryContext(ctx, `SELECT pg_advisory_unlock(500)`)
-		if err != nil {
-			log.Error(err, "error executing advisory unlock", 0)
-
-			err = conn.Close()
-			if err != nil {
-				log.WarnWithStackTrace(err, "error returning connection to connection pool", 0)
-			}
-			cancel()
-			continue
-		}
-
-		for rows.Next() {
-			err = rows.Scan(&unlocked)
-			if err != nil {
-				log.Error(err, "error scanning advisory unlock result", 0)
-			}
-		}
-
-		if !unlocked {
-			log.Error(nil, fmt.Errorf("error releasing advisory lock unlocked: %v", unlocked), 0)
-		}
-
-		conn.Close()
-		if err != nil {
-			log.WarnWithStackTrace(err, "error returning connection to connection pool", 0)
-		}
-		cancel()
-
-		services.ReportStatus("notification-sender", "Running", nil)
-		time.Sleep(time.Second * 30)
+		runNotificationSenderLoop()
+		time.Sleep(30 * time.Second)
 	}
+}
+
+func runNotificationSenderLoop() {
+	start := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	defer cancel()
+
+	conn, err := db.FrontendWriterDB.Conn(ctx)
+	if err != nil {
+		log.Error(err, "error creating connection", 0)
+		return
+	}
+	defer func() {
+		if cerr := conn.Close(); cerr != nil {
+			log.WarnWithStackTrace(cerr, "error returning connection to pool", 0)
+		}
+	}()
+
+	_, err = conn.ExecContext(ctx, `SELECT pg_advisory_lock(500)`)
+	if err != nil {
+		log.Error(err, "error getting advisory lock from db", 0)
+		return
+	} else {
+		log.Infof("lock obtained")
+	}
+
+	if err = dispatchNotifications(); err != nil {
+		log.Error(err, "error dispatching notifications", 0)
+	}
+
+	collectNotificationQueueMetrics()
+
+	if err = garbageCollectSentEvents(); err != nil {
+		log.Error(err, "error garbage collecting sent notifications", 0)
+	}
+
+	if err = garbageCollectOldPendingEvents(); err != nil {
+		log.Error(err, "error garbage collecting old pending notifications", 0)
+	}
+
+	log.InfoWithFields(log.Fields{"duration": time.Since(start)}, "notifications dispatched and garbage collected")
+	metrics.TaskDuration.WithLabelValues("service_notifications_sender").Observe(time.Since(start).Seconds())
+
+	unlocked := false
+	rows, err := conn.QueryContext(ctx, `SELECT pg_advisory_unlock(500)`)
+	if err != nil {
+		log.Error(err, "error executing advisory unlock", 0)
+		return
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(&unlocked); err != nil {
+			log.Error(err, "error scanning advisory unlock result", 0)
+		}
+	}
+	if !unlocked {
+		log.Error(nil, fmt.Errorf("error releasing advisory lock unlocked: %v", unlocked), 0)
+	}
+
+	services.ReportStatus("notification-sender", "Running", nil)
 }
 
 func garbageCollectSentEvents() error {
