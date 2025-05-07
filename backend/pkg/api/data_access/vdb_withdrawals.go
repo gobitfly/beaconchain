@@ -482,13 +482,6 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	}
 
 	moreDataFlag := len(responseData) > int(limit)
-
-	// Remove the last entry from data as it is only required for the check
-	if moreDataFlag {
-		responseData = responseData[:len(responseData)-1]
-		queryResult = queryResult[:len(queryResult)-1]
-	}
-
 	if currentCursor.IsReverse() {
 		// Invert query result so response matches requested direction
 		slices.Reverse(responseData)
@@ -551,12 +544,12 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 			// No paging required
 			return responseData, &t.Paging{}, nil
 		}
+	}
 
-		// Remove the last entry from data as it is only required for the check
-		if moreDataFlag {
-			responseData = responseData[:len(responseData)-1]
-			queryResult = queryResult[:len(queryResult)-1]
-		}
+	// Remove the last entry from data as it is only required for the check
+	if moreDataFlag {
+		responseData = responseData[:len(responseData)-1]
+		queryResult = queryResult[:len(queryResult)-1]
 	}
 
 	paging, err := utils.GetPagingFromData(queryResult, currentCursor, moreDataFlag)
