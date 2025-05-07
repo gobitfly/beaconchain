@@ -369,7 +369,6 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 		SlotIndex int64  `db:"index"`
 	}
 
-	// there is a pre- and a post-pectra table in db; only query from respective tables if possible to increase compatibility and simplicity
 	hasPostPectraRows := false
 	if d.config.ClConfig.ElectraForkEpoch < utils.MaxForkEpoch {
 		hasPostPectraRows = true
