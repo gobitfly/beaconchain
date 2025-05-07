@@ -681,13 +681,6 @@ func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWit
 		if err != nil {
 			return nil, err
 		}
-		withdrawalsBridgeDs = withdrawalsBridgeDs.
-			InnerJoin(
-				goqu.T("validators").As("v"),
-				goqu.On(
-					goqu.I("v.index").Eq("w.validatorindex"),
-				),
-			)
 		searches = append(searches, goqu.I("v.pubkey").Eq(pubkey))
 	}
 	if isValidSearchIndexOrSlot {
