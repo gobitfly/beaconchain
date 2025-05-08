@@ -55,6 +55,7 @@
         "dashboard",
         "deps",
         "dialog",
+        "en.json",
         "eslint",
         "feature-flags",
         "format.ts",
