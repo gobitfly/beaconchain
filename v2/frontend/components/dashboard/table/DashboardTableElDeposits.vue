@@ -248,7 +248,7 @@ const {
             <template #body="slotProps">
               <div v-if="!slotProps.data.isTotalAmountRow">
                 <DashboardTableElDepositsValidity
-                  is-mobile
+                  is-compact
                   :validity="slotProps.data.validity"
                 />
               </div>

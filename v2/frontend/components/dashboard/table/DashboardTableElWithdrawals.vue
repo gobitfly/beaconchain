@@ -212,7 +212,7 @@ const getGroupName = (groupId: number) => {
               <DashboardTableElWithdrawalsStatus
                 v-if="!slotProps.data.isTotalAmountRow"
                 :status="slotProps.data.status"
-                is-mobile
+                is-compact
               />
             </template>
           </Column>
