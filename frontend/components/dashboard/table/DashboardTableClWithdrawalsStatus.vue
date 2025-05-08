@@ -2,7 +2,7 @@
 import type { VDBWithdrawalsClTableRow } from '~/types/api/validator_dashboard'
 
 defineProps<{
-  isMobile?: boolean,
+  isCompact?: boolean,
   rejectReason?: VDBWithdrawalsClTableRow['reject_reason'],
   status: VDBWithdrawalsClTableRow['status'],
 }>()
@@ -13,9 +13,9 @@ defineProps<{
     <BcBadge
       v-if="status === 'queued'"
       color="orange"
-      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isMobile }"
+      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isCompact }"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.queued" />
         <BcIcon
           name="sync"
@@ -28,10 +28,10 @@ defineProps<{
     </BcBadge>
     <BcBadge
       v-if="status === 'completed'"
-      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isMobile }"
+      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isCompact }"
       color="green"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.completed" />
         <BcIcon
           name="check"
@@ -44,10 +44,10 @@ defineProps<{
     </BcBadge>
     <BcBadge
       v-if="status === 'rejected'"
-      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isMobile }"
+      :class="{ 'dashboard-table-cl-withdrawals-status__badge': !isCompact }"
       color="red"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.rejected" />
         <BcIcon
           name="xmark"
@@ -59,7 +59,7 @@ defineProps<{
       </template>
     </BcBadge>
     <BcTooltip
-      v-if="status === 'rejected' && !isMobile"
+      v-if="status === 'rejected' && !isCompact"
       tooltip-width="266px"
       tooltip-text-align="left"
       class="dashboard-table-cl-withdrawals-status__tooltip-trigger"

@@ -2,7 +2,7 @@
 import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
 
 defineProps<{
-  isMobile?: boolean,
+  isCompact?: boolean,
   validity: VDBExecutionDepositsTableRow['validity'],
 }>()
 </script>
@@ -11,10 +11,10 @@ defineProps<{
   <div class="dashboard-table-el-deposits-validity">
     <BcBadge
       v-if="validity === 'valid'"
-      :class="{ 'width-overwrite-table': !isMobile }"
+      :class="{ 'width-overwrite-table': !isCompact }"
       color="green"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.valid" />
         <BcIcon
           name="check"
@@ -28,9 +28,9 @@ defineProps<{
     <BcBadge
       v-if="validity === 'invalid_skipped'"
       color="green"
-      :class="{ 'width-overwrite-table': !isMobile }"
+      :class="{ 'width-overwrite-table': !isCompact }"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.valid" />
         <BcIcon
           name="check"
@@ -42,7 +42,7 @@ defineProps<{
       </template>
     </BcBadge>
     <BcTooltip
-      v-if="validity === 'invalid_skipped' && !isMobile"
+      v-if="validity === 'invalid_skipped' && !isCompact"
       tooltip-width="195px"
       tooltip-text-align="left"
       class="status-tooltip-trigger"
@@ -59,9 +59,9 @@ defineProps<{
     <BcBadge
       v-if="validity === 'invalid'"
       color="red"
-      :class="{ 'width-overwrite-table': !isMobile }"
+      :class="{ 'width-overwrite-table': !isCompact }"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.invalid" />
         <BcIcon
           name="xmark"
