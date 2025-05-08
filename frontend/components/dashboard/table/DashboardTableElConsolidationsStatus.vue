@@ -2,7 +2,7 @@
 import type { VDBConsolidationsElTableRow } from '~/types/api/validator_dashboard'
 
 defineProps<{
-  isMobile?: boolean,
+  isCompact?: boolean,
   status: VDBConsolidationsElTableRow['status'],
 }>()
 </script>
@@ -12,9 +12,9 @@ defineProps<{
     <BcBadge
       v-if="status === 'queued'"
       color="orange"
-      :class="{ 'width-overwrite-table': !isMobile }"
+      :class="{ 'width-overwrite-table': !isCompact }"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.queued" />
         <BcIcon
           name="sync"
@@ -27,10 +27,10 @@ defineProps<{
     </BcBadge>
     <BcBadge
       v-if="status === 'processed'"
-      :class="{ 'width-overwrite-table': !isMobile }"
+      :class="{ 'width-overwrite-table': !isCompact }"
       color="green"
     >
-      <template v-if="isMobile">
+      <template v-if="isCompact">
         <BcScreenreaderOnly screenreader-text="dashboard.validator.table.status_text.completed" />
         <BcIcon
           name="check"

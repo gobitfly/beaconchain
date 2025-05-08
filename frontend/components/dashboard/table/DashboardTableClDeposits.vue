@@ -247,7 +247,7 @@ const {
               >
                 <DashboardTableClDepositsStatus
                   :status="slotProps.data.status"
-                  is-mobile
+                  is-compact
                 />
               </div>
             </template>

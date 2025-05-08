@@ -150,7 +150,7 @@ const setSearch = (value?: string) => {
             <template #body="slotProps">
               <DashboardTableClConsolidationsStatus
                 :status="slotProps.data.status"
-                is-mobile
+                is-compact
               />
             </template>
           </Column>
