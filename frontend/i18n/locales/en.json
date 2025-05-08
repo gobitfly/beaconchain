@@ -250,6 +250,9 @@
             "cl_deposits": {
                 "info_compound_event_deposit": "CL deposit was caused by a switch to compounding event",
                 "info_slot_processed_estimated": "This is an estimation since this deposit is still queued.",
+                "reject_reason": {
+                    "invalid_signature": "The signature was invalid at the time this deposit was processed."
+                },
                 "search_placeholder_guest_dashboard": "Index, Slot",
                 "search_placeholder_private_dashboard": "Index, Slot, Group",
                 "title": "Consensus Layer",
