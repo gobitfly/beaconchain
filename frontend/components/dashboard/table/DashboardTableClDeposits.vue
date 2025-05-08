@@ -204,7 +204,10 @@ const {
                 v-if="!slotProps.data.isTotalAmountRow"
                 class="status-cell-content"
               >
-                <DashboardTableClDepositsStatus :status="slotProps.data.status" />
+                <DashboardTableClDepositsStatus
+                  :status="slotProps.data.status"
+                  :reject-reason="slotProps.data.reject_reason"
+                />
               </div>
             </template>
           </Column>
@@ -356,7 +359,10 @@ const {
                   <div class="dashboard-table-cl-deposits__details-label">
                     {{ $t("dashboard.validator.col.status") }}
                   </div>
-                  <DashboardTableClDepositsStatus :status="slotProps.data.status" />
+                  <DashboardTableClDepositsStatus
+                    :status="slotProps.data.status"
+                    :reject-reason="slotProps.data.reject_reason"
+                  />
                 </div>
                 <div class="dashboard-table-cl-deposits__details-row">
                   <div class="dashboard-table-cl-deposits__details-label">
