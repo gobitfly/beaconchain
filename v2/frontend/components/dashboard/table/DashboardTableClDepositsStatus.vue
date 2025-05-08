@@ -3,6 +3,7 @@ import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboa
 
 defineProps<{
   isMobile?: boolean,
+  rejectReason?: VDBConsensusDepositsTableRow['reject_reason'],
   status: VDBConsensusDepositsTableRow['status'],
 }>()
 </script>
@@ -57,6 +58,23 @@ defineProps<{
         {{ $t("dashboard.validator.table.status_text.rejected") }}
       </template>
     </BcBadge>
+    <BcTooltip
+      v-if="rejectReason === 'invalid_signature' && status === 'rejected' && !isMobile"
+      tooltip-width="195px"
+      tooltip-text-align="left"
+      class="status-tooltip-trigger"
+    >
+      <BcIcon
+        name="circle-info"
+      />
+      <template #tooltip>
+        <slot name="tooltip">
+          <span v-if="rejectReason === 'invalid_signature'">
+            {{ $t('dashboard.validator.cl_consolidations.reject_reason.invalid_signature') }}
+          </span>
+        </slot>
+      </template>
+    </BcTooltip>
   </div>
 </template>
 
