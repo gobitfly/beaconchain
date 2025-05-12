@@ -103,7 +103,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex, update-roi-dividend")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -490,6 +490,8 @@ func Run() {
 		err = updateHighestActiveValidatorIndex(rpcClient)
 	case "export-relays":
 		err = exportRelays(opts.StartSlot, opts.EndSlot)
+	case "update-roi-dividend":
+		err = updateRoiDividend(opts.StartEpoch, opts.EndEpoch, opts.Table)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -2223,5 +2225,38 @@ func verifyFCMTokens() error {
 		}
 		time.Sleep(time.Millisecond * 250)
 	}
+	return nil
+}
+
+func updateRoiDividend(startEpoch, endEpoch uint64, table string) error {
+	if table == "" {
+		return fmt.Errorf("table name is empty")
+	}
+
+	if startEpoch > endEpoch {
+		return fmt.Errorf("startEpoch [%v] should be smaller than endEpoch [%v]", startEpoch, endEpoch)
+	}
+
+	var query string
+	if startEpoch == endEpoch {
+		query = fmt.Sprintf(`
+		UPDATE %s
+		SET roi_dividend = balance_end
+		WHERE epoch = %d;
+		`, table, startEpoch)
+	} else {
+		query = fmt.Sprintf(`
+		UPDATE %s
+		SET roi_dividend = balance_end
+		WHERE epoch >= %d AND epoch <= %d;
+		`, table, startEpoch, endEpoch)
+	}
+
+	_, err := db.ClickHouseWriter.Exec(query)
+	if err != nil {
+		return fmt.Errorf("error updating roi_dividend in table %s: %w", table, err)
+	}
+
+	log.Infof("updated all dividends from epoch %d to %d in table %s", startEpoch, endEpoch, table)
 	return nil
 }
