@@ -1739,6 +1739,7 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				// priority fee is capped because the base fee is filled first
 				tipFee = decimal.Min(prioFee, maxFee.Sub(baseFee))
 				blobTxCount += 1
+
 				// totalMinerTips = totalMinerTips.Add(tipFee.Mul(gasUsed))
 				txFees = baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))
 				totalTxSavings = totalTxSavings.Add(maxFee.Mul(gasUsed).Sub(baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))))
@@ -1752,8 +1753,6 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				// EIP-7702
 				// priority fee is capped because the base fee is filled first
 				tipFee = decimal.Min(prioFee, maxFee.Sub(baseFee))
-				blobTxCount += 1
-				// totalMinerTips = totalMinerTips.Add(tipFee.Mul(gasUsed))
 				txFees = baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))
 				totalTxSavings = totalTxSavings.Add(maxFee.Mul(gasUsed).Sub(baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))))
 
