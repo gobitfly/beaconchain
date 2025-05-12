@@ -2240,14 +2240,14 @@ func updateRoiDividend(startEpoch, endEpoch uint64, table string) error {
 	var query string
 	if startEpoch == endEpoch {
 		query = fmt.Sprintf(`
-		UPDATE %s
-		SET roi_dividend = balance_end
+		ALTER TABLE %s
+		UPDATE withdrawals_amount = balance_start
 		WHERE epoch = %d;
 		`, table, startEpoch)
 	} else {
 		query = fmt.Sprintf(`
-		UPDATE %s
-		SET roi_dividend = balance_end
+		ALTER TABLE %s
+		UPDATE withdrawals_amount = balance_start
 		WHERE epoch >= %d AND epoch <= %d;
 		`, table, startEpoch, endEpoch)
 	}
