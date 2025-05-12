@@ -281,7 +281,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 		defer func() {
 			err := tx.Rollback(context.Background())
-			if err != nil {
+			if err != nil && err != pgx.ErrTxClosed {
 				log.Error(err, "error rolling back transaction", 0)
 			}
 		}()
@@ -1196,7 +1196,10 @@ func gatherValidatorConsolidations(day uint64, data []*types.ValidatorStatsTable
 		metrics.TaskDuration.WithLabelValues("db_update_validator_consolidations_stats").Observe(time.Since(exportStart).Seconds())
 	}()
 
-	firstSlot := day * utils.EpochsPerDay() * utils.Config.Chain.ClConfig.SlotsPerEpoch
+	firstSlot := uint64(0)
+	if day > 0 {
+		firstSlot = utils.GetLastBalanceInfoSlotForDay(day-1) + 1
+	}
 	lastSlot := utils.GetLastBalanceInfoSlotForDay(day)
 
 	fields := log.Fields{
@@ -1205,7 +1208,7 @@ func gatherValidatorConsolidations(day uint64, data []*types.ValidatorStatsTable
 		"lastSlot":  lastSlot,
 	}
 
-	log.Info("gathering consolidation statistics", fields)
+	log.InfoWithFields(fields, "gathering consolidation statistics")
 	var consolidationData []struct {
 		SourceIndex        int   `db:"source_index"`
 		TargetIndex        int   `db:"target_index"`
