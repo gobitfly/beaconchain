@@ -491,7 +491,7 @@ func Run() {
 	case "export-relays":
 		err = exportRelays(opts.StartSlot, opts.EndSlot)
 	case "update-pectra-validator-withdrawals":
-		err = updatePectraValidatorWithdrawals(opts.StartEpoch, opts.EndEpoch, opts.Table)
+		err = updatePectraValidatorWithdrawals(opts.StartEpoch, opts.Table)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -2228,35 +2228,38 @@ func verifyFCMTokens() error {
 	return nil
 }
 
-func updatePectraValidatorWithdrawals(startEpoch, endEpoch uint64, table string) error {
+func updatePectraValidatorWithdrawals(epoch uint64, table string) error {
 	if table == "" {
 		return fmt.Errorf("table name is empty")
 	}
 
-	if startEpoch > endEpoch {
-		return fmt.Errorf("startEpoch [%v] should be smaller than endEpoch [%v]", startEpoch, endEpoch)
-	}
-
-	var query string
-	if startEpoch == endEpoch {
-		query = fmt.Sprintf(`
+	query := fmt.Sprintf(`
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
-		WHERE epoch = %d;
-		`, table, startEpoch)
-	} else {
-		query = fmt.Sprintf(`
-		ALTER TABLE %s
-		UPDATE withdrawals_amount = balance_start
-		WHERE epoch >= %d AND epoch <= %d;
-		`, table, startEpoch, endEpoch)
-	}
+		WHERE epoch = %d AND validator_index IN(
+			SELECT a.validator_index
+			FROM %s a
+			JOIN %s b ON a.validator_index = b.validator_index
+			WHERE
+				a.epoch = 364032
+				AND a.balance_start = 32000000000
+				AND a.balance_end = 0
+				AND a.roi_dividend = 0
+				AND a.roi_divisor = 32000000000
+				AND b.epoch = 364049
+				AND b.balance_start = 0
+				AND b.balance_end = 32000000000
+				AND b.deposits_amount = 32000000000
+				AND b.roi_dividend = 0
+				AND b.roi_divisor = 0
+		);
+		`, table, epoch, table, table)
 
 	_, err := db.ClickHouseWriter.Exec(query)
 	if err != nil {
 		return fmt.Errorf("error updating validator withdrawals in table %s: %w", table, err)
 	}
 
-	log.Infof("updated all validator withdrawals from epoch %d to %d in table %s", startEpoch, endEpoch, table)
+	log.Infof("updated all validator withdrawals for epoch in table %s", epoch, table)
 	return nil
 }
