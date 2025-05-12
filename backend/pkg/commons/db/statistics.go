@@ -1748,6 +1748,15 @@ func WriteExecutionChartSeriesForDay(day int64) error {
 				totalBurnedBlob = blobGasUsed.Mul(decimal.NewFromBigInt(new(big.Int).SetBytes(tx.BlobGasPrice), 0))
 				totalBlobCount = totalBlobCount.Add(decimal.NewFromInt(int64(len(tx.BlobVersionedHashes))))
 
+			case 4:
+				// EIP-7702
+				// priority fee is capped because the base fee is filled first
+				tipFee = decimal.Min(prioFee, maxFee.Sub(baseFee))
+				blobTxCount += 1
+				// totalMinerTips = totalMinerTips.Add(tipFee.Mul(gasUsed))
+				txFees = baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))
+				totalTxSavings = totalTxSavings.Add(maxFee.Mul(gasUsed).Sub(baseFee.Mul(gasUsed).Add(tipFee.Mul(gasUsed))))
+
 			default:
 				log.Fatal(fmt.Errorf("error unknown tx type %v hash: %x", tx.Status, tx.Hash), "", 0)
 			}
