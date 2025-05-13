@@ -76,6 +76,8 @@ var opts = struct {
 	Family              string
 	Key                 string
 	ValidatorNameRanges string
+	StartEpochTs        string
+	EndEpochTs          string
 	DryRun              bool
 }{}
 
@@ -125,6 +127,8 @@ func Run() {
 	fs.StringVar(&opts.ValidatorNameRanges, "validator-name-ranges", "https://config.dencun-devnet-8.ethpandaops.io/api/v1/nodes/validator-ranges", "url to or json of validator-ranges (format must be: {'ranges':{'X-Y':'name'}})")
 	fs.StringVar(&opts.Addresses, "addresses", "", "Comma separated list of addresses that should be processed by the command")
 	fs.StringVar(&opts.Columns, "columns", "", "Comma separated list of columns that should be affected by the command")
+	fs.StringVar(&opts.StartEpochTs, "start-epoch-ts", "", "Timestamp of the start epoch")
+	fs.StringVar(&opts.EndEpochTs, "end-epoch-ts", "", "Timestamp of the end epoch")
 
 	dryRun := fs.String("dry-run", "true", "if 'false' it deletes all rows starting with the key, per default it only logs the rows that would be deleted, but does not really delete them")
 	versionFlag := fs.Bool("version", false, "Show version and exit")
@@ -492,7 +496,7 @@ func Run() {
 	case "export-relays":
 		err = exportRelays(opts.StartSlot, opts.EndSlot)
 	case "update-pectra-validator-withdrawals":
-		err = updatePectraValidatorWithdrawals(opts.StartEpoch, opts.EndEpoch, opts.Table)
+		err = updatePectraValidatorWithdrawals(opts.StartEpochTs, opts.EndEpochTs, opts.Table)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
@@ -2229,40 +2233,44 @@ func verifyFCMTokens() error {
 	return nil
 }
 
-func updatePectraValidatorWithdrawals(startEpoch, endEpoch uint64, table string) error {
+func updatePectraValidatorWithdrawals(startEpochTs, endEpochTs, table string) error {
 	if table == "" {
 		return fmt.Errorf("table name is empty")
 	}
 
-	if startEpoch > endEpoch {
-		return fmt.Errorf("startEpoch [%v] should be smaller than endEpoch [%v]", startEpoch, endEpoch)
+	if startEpochTs == "" {
+		return fmt.Errorf("start epoch timestamp is empty")
+	}
+
+	if endEpochTs == "" {
+		return fmt.Errorf("end epoch timestamp is empty")
 	}
 
 	var query string
-	if startEpoch == endEpoch {
+	if startEpochTs == endEpochTs {
 		query = fmt.Sprintf(`
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
 		WHERE
-			epoch = %d
+			epoch_timestamp = %s
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
 			AND deposits_amount = 0
 			AND consolidations_outgoing_amount = 0;
-		`, table, startEpoch)
+		`, table, startEpochTs)
 	} else {
 		query = fmt.Sprintf(`
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
 		WHERE
-			epoch >= %d AND epoch <= %d
+			epoch_timestamp >= %s AND epoch_timestamp <= %s
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
 			AND deposits_amount = 0
 			AND consolidations_outgoing_amount = 0;
-		`, table, startEpoch, endEpoch)
+		`, table, startEpochTs, endEpochTs)
 	}
 
 	_, err := db.ClickHouseWriter.Exec(query)
@@ -2270,6 +2278,6 @@ func updatePectraValidatorWithdrawals(startEpoch, endEpoch uint64, table string)
 		return fmt.Errorf("error updating validator withdrawals in table %s: %w", table, err)
 	}
 
-	log.Infof("updated all validator withdrawals from epoch %d to %d in table %s", startEpoch, endEpoch, table)
+	log.Infof("updated all validator withdrawals in table %s", table)
 	return nil
 }
