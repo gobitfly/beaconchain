@@ -2244,6 +2244,7 @@ func updatePectraValidatorWithdrawals(table, timestamp string) error {
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
+			AND deposits_amount = 0
 			AND consolidations_outgoing_amount = 0;
 		`, timestamp, table)
 
