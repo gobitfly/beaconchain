@@ -57,7 +57,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 		LogIndex              int64         `db:"log_index"`
 		Timestamp             time.Time     `db:"block_ts"`
 		From                  []byte        `db:"from_address"`
-		Depositor             []byte        `db:"msg_sender"`
+		Depositor             []byte        `db:"depositor"`
 		TxHash                []byte        `db:"tx_hash"`
 		WithdrawalCredentials []byte        `db:"withdrawal_credentials"`
 		Amount                int64         `db:"amount"`
@@ -72,7 +72,7 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 			goqu.I("ed.block_number"),
 			goqu.L("COALESCE(ed.log_index, 0) AS log_index"),
 			goqu.I("ed.from_address"),
-			goqu.I("ed.msg_sender"),
+			goqu.COALESCE(goqu.I("ed.msg_sender"), goqu.I("ed.from_address")).As("depositor"),
 			goqu.I("ed.tx_hash"),
 			goqu.I("ed.withdrawal_credentials"),
 			goqu.I("ed.amount"),
@@ -202,8 +202,8 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 	}
 
 	responseData := make([]t.VDBExecutionDepositsTableRow, len(data))
-	buildReqs := func(row dbResult) []db.ContractInteractionAtRequest {
-		reqs := []db.ContractInteractionAtRequest{
+	elInfos, err := getElInfo(ctx, d, data, func(row dbResult) []db.ContractInteractionAtRequest {
+		return []db.ContractInteractionAtRequest{
 			{
 				Address: fmt.Sprintf("%x", row.From),
 				Block:   row.BlockNumber,
@@ -211,26 +211,18 @@ func (d *DataAccessService) GetValidatorDashboardElDeposits(ctx context.Context,
 				TxIdx:    -1,
 				TraceIdx: -1,
 			},
-		}
-
-		if len(row.Depositor) > 0 {
-			reqs = append(reqs, db.ContractInteractionAtRequest{
+			{
 				Address:  fmt.Sprintf("%x", row.Depositor),
 				Block:    row.BlockNumber,
 				TxIdx:    -1,
 				TraceIdx: -1,
-			})
+			},
 		}
-		return reqs
-	}
-	elInfos, err := getElInfo(ctx, d, data, buildReqs)
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
 	}
 	for i, row := range data {
-		if len(row.Depositor) == 0 {
-			row.Depositor = row.From
-		}
 		responseData[i] = t.VDBExecutionDepositsTableRow{
 			PublicKey:            t.PubKey(pubkeys[i]),
 			Block:                uint64(row.BlockNumber),
