@@ -84,6 +84,7 @@ useBcSeo(seoTitle, true)
 
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
+  hasValidators,
   overview,
 } = storeToRefs(validatorDashboardOverviewStore)
 const {
@@ -363,6 +364,8 @@ const route = useRoute()
 const activeTab = computed(() => route.hash)
 
 const refreshActiveTab = () => {
+  if (!hasValidators.value) return
+
   switch (activeTab.value) {
     case '#consolidations':
       refreshElConsolidationsData()

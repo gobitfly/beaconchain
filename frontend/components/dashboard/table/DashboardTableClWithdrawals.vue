@@ -29,6 +29,11 @@ const isMobile = computed(() => {
   return width.value < 768
 })
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const {
+  hasValidators,
+} = storeToRefs(validatorDashboardOverviewStore)
+
 const clWithdrawalsWithIdentifiers = computed(() =>
   addIdentifier(clWithdrawals, 'slot', 'slot_index'),
 )
@@ -387,6 +392,9 @@ const getGroupName = (groupId: number) => {
                 </div>
               </div>
             </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
           </template>
         </BcTable>
       </ClientOnly>

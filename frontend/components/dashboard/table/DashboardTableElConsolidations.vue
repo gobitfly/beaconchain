@@ -20,6 +20,11 @@ const isMobile = computed(() => {
   return width.value < 768
 })
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const {
+  hasValidators,
+} = storeToRefs(validatorDashboardOverviewStore)
+
 const query = defineModel<TableQueryParams>('query')
 
 const onSort = (sort: DataTableSortEvent) => {
@@ -329,6 +334,9 @@ const setSearch = (value?: string) => {
                 </div>
               </div>
             </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
           </template>
         </BcTable>
       </ClientOnly>

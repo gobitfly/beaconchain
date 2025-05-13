@@ -20,6 +20,12 @@ const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
+
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const {
+  hasValidators,
+} = storeToRefs(validatorDashboardOverviewStore)
+
 const {
   getTimestampFromSlot,
 } = useNetworkStore()
@@ -265,6 +271,9 @@ const setSearch = (value?: string) => {
                 </div>
               </div>
             </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
           </template>
         </BcTable>
       </ClientOnly>

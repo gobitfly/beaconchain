@@ -23,6 +23,11 @@ const {
 } = useDashboardKey()
 const { t: $t } = useTranslation()
 
+const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const {
+  hasValidators,
+} = storeToRefs(validatorDashboardOverviewStore)
+
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
@@ -353,6 +358,9 @@ const getGroupName = (groupId: number) => {
                 </div>
               </div>
             </div>
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
           </template>
         </BcTable>
       </ClientOnly>
