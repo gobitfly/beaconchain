@@ -2257,6 +2257,7 @@ func updatePectraValidatorWithdrawals(startEpochTs, endEpochTs, table string) er
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
 			AND deposits_amount = 0
+			AND consolidations_incoming_amount = 0
 			AND consolidations_outgoing_amount = 0;
 		`, table, startEpochTs)
 	} else {
@@ -2269,6 +2270,7 @@ func updatePectraValidatorWithdrawals(startEpochTs, endEpochTs, table string) er
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
 			AND deposits_amount = 0
+			AND consolidations_incoming_amount = 0
 			AND consolidations_outgoing_amount = 0;
 		`, table, startEpochTs, endEpochTs)
 	}
