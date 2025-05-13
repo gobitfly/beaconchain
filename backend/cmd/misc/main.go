@@ -76,7 +76,7 @@ var opts = struct {
 	Family              string
 	Key                 string
 	ValidatorNameRanges string
-	Timestamp           string
+	Epoch               uint64
 	DryRun              bool
 }{}
 
@@ -126,7 +126,7 @@ func Run() {
 	fs.StringVar(&opts.ValidatorNameRanges, "validator-name-ranges", "https://config.dencun-devnet-8.ethpandaops.io/api/v1/nodes/validator-ranges", "url to or json of validator-ranges (format must be: {'ranges':{'X-Y':'name'}})")
 	fs.StringVar(&opts.Addresses, "addresses", "", "Comma separated list of addresses that should be processed by the command")
 	fs.StringVar(&opts.Columns, "columns", "", "Comma separated list of columns that should be affected by the command")
-	fs.StringVar(&opts.Timestamp, "timestamp", "", "Timestamp to use for the command")
+	fs.Uint64Var(&opts.Epoch, "epoch", 0, "Epoch to process data")
 
 	dryRun := fs.String("dry-run", "true", "if 'false' it deletes all rows starting with the key, per default it only logs the rows that would be deleted, but does not really delete them")
 	versionFlag := fs.Bool("version", false, "Show version and exit")
@@ -2231,7 +2231,7 @@ func verifyFCMTokens() error {
 	return nil
 }
 
-func updatePectraValidatorWithdrawals(table, timestamp string) error {
+func updatePectraValidatorWithdrawals(table string, epoch uint64) error {
 	if table == "" {
 		return fmt.Errorf("table name is empty")
 	}
@@ -2240,19 +2240,19 @@ func updatePectraValidatorWithdrawals(table, timestamp string) error {
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
 		WHERE
-			epoch_timestamp = '%s' 
+			epoch = %d
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
 			AND deposits_amount = 0
 			AND consolidations_outgoing_amount = 0;
-		`, timestamp, table)
+		`, epoch, table)
 
 	_, err := db.ClickHouseWriter.Exec(query)
 	if err != nil {
 		return fmt.Errorf("error updating validator withdrawals in table %s: %w", table, err)
 	}
 
-	log.Infof("updated all validator withdrawals for timestamp %s in table %s", timestamp, table)
+	log.Infof("updated all validator withdrawals for epoch %d in table %s", epoch, table)
 	return nil
 }
