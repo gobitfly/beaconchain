@@ -494,7 +494,7 @@ func Run() {
 	case "export-relays":
 		err = exportRelays(opts.StartSlot, opts.EndSlot)
 	case "update-pectra-validator-withdrawals":
-		err = updatePectraValidatorWithdrawals(opts.Table, opts.Timestamp)
+		err = updatePectraValidatorWithdrawals(opts.Table, opts.Epoch)
 	default:
 		log.Fatal(nil, fmt.Sprintf("unknown command %s", opts.Command), 0)
 	}
