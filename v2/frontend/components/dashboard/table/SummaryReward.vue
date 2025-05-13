@@ -28,7 +28,7 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
         <div>
           <div>
             <h3 class="bold">
-              {{ $t("dashboard.validator.blocks.el_rewards") }}
+              {{ $t("dashboard.validator.blocks.el_reward") }}
             </h3>
             <BcFormatAmount
               :value="reward.el"
@@ -40,7 +40,7 @@ const hasReward = computed(() => !(reward.el === '0' && reward.cl === '0'))
           </div>
           <div>
             <h3 class="bold">
-              {{ $t("dashboard.validator.blocks.cl_rewards") }}
+              {{ $t("dashboard.validator.blocks.cl_reward") }}
             </h3>
             <BcFormatAmount
               :value="reward.cl"

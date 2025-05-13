@@ -30,7 +30,7 @@ defineProps<{
       <div>
         <div class="tooltip-row">
           <h3 class="tooltip-title">
-            {{ $t("dashboard.validator.blocks.el_rewards") }}
+            {{ $t("dashboard.validator.blocks.el_reward") }}
           </h3>
           <BcFormatAmount
             :value="reward?.el"
@@ -42,7 +42,7 @@ defineProps<{
         </div>
         <div class="tooltip-row">
           <h3 class="tooltip-title">
-            {{ $t("dashboard.validator.blocks.cl_rewards") }}
+            {{ $t("dashboard.validator.blocks.cl_reward") }}
           </h3>
           <template
             v-if="reward?.cl && reward.cl != '0'"

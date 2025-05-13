@@ -218,8 +218,10 @@
         "validator": {
             "blocks": {
                 "cl_pending": "CL Pending",
-                "cl_rewards": "Consensus Layer Reward",
-                "el_rewards": "Execution Layer Reward",
+                "cl_proposal_reward": "Consensus Layer Proposal Reward",
+                "cl_reward": "Consensus Layer Reward",
+                "el_proposal_reward": "Execution Layer Proposal Reward",
+                "el_reward": "Execution Layer Reward",
                 "pending": "Pending",
                 "search_placeholder": "Index, Public Key, Group",
                 "search_placeholder_public": "Index, Public Key",

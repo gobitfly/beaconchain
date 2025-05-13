@@ -36,7 +36,7 @@ const { missedRewards } = defineProps<{
             </span>
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t("dashboard.validator.blocks.el_rewards") }}:
+            <span class="bold">{{ $t("dashboard.validator.blocks.el_proposal_reward") }}:
             </span>
             <BcFormatAmount
               :value="missedRewards.proposer_rewards.el"
@@ -45,7 +45,7 @@ const { missedRewards } = defineProps<{
             />
           </div>
           <div class="tt-row">
-            <span class="bold">{{ $t("dashboard.validator.blocks.cl_rewards") }}:
+            <span class="bold">{{ $t("dashboard.validator.blocks.cl_proposal_reward") }}:
             </span>
             <BcFormatAmount
               :value="missedRewards.proposer_rewards.cl"
