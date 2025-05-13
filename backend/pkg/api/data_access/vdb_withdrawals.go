@@ -395,6 +395,22 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 	}
 
 	responseData := make([]t.VDBWithdrawalsClTableRow, 0, len(queryResult))
+	elInfos, err := getElInfo(ctx, d, queryResult, func(row dbResult) []db.ContractInteractionAtRequest {
+		if row.Recipient == nil {
+			return nil
+		}
+		return []db.ContractInteractionAtRequest{
+			{
+				Address:  fmt.Sprintf("%x", row.Recipient),
+				Block:    -1,
+				TxIdx:    -1,
+				TraceIdx: -1,
+			},
+		}
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get el info: %w", err)
+	}
 	for _, r := range queryResult {
 		row := t.VDBWithdrawalsClTableRow{
 			Index:                 r.ValidatorIndex,
@@ -449,8 +465,8 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 			}
 		}
 		if r.Recipient != nil {
-			// TODO add ens + contract info
-			row.Recipient = &t.Address{Hash: t.Hash(hexutil.Encode(r.Recipient))}
+			recipient := elInfos[getElInfoKey(r.Recipient, -1, -1, -1)]
+			row.Recipient = &recipient
 		}
 
 		responseData = append(responseData, row)
