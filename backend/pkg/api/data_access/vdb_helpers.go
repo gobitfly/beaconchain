@@ -3,7 +3,9 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math/big"
+	"slices"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -705,28 +707,43 @@ func getViewAndDateColumn(aggregation enums.ChartAggregation) (string, string, e
 	return view, dateColumn, nil
 }
 
+func interactionRequestAsKey(req db.ContractInteractionAtRequest) string {
+	return fmt.Sprintf("%s:%d:%d:%d", req.Address, req.Block, req.TxIdx, req.TraceIdx)
+}
+
 // getElInfo is a generic function to get EL info for addresses and their contract status.
 // Returns a map of address + block + tx_index + itx_index to address info.
 // Use the func `getElInfoKey` to get the key for the map.
 func getElInfo[In any](ctx context.Context, d *DataAccessService, input []In, buildReqs func(In) []db.ContractInteractionAtRequest) (map[string]t.Address, error) {
 	// build reqs and address mapping
-	interactionsRequests := make([]db.ContractInteractionAtRequest, 0, len(input))
+	requestMap := make(map[string]db.ContractInteractionAtRequest) // map for deduping
 	addressMapping := make(map[string]*t.Address)
 	for _, req := range input {
-		reqs := buildReqs(req)
-		interactionsRequests = append(interactionsRequests, reqs...)
-		for _, interaction := range reqs {
-			addressMapping["0x"+interaction.Address] = nil
+		for _, req := range buildReqs(req) {
+			requestMap[interactionRequestAsKey(req)] = req
+			addressMapping["0x"+req.Address] = nil
 		}
 	}
 
 	elInfo := make(map[string]t.Address)
-	if len(interactionsRequests) == 0 {
+	if len(requestMap) == 0 {
 		return elInfo, nil
 	}
 
 	// fetch info
 	wg := errgroup.Group{}
+
+	interactionRequests := slices.Collect(maps.Values(requestMap))
+	contractStatuses := make([]types.ContractInteractionType, len(interactionRequests)) // status of interactionRequests[i] will be stored in contractStatuses[i]
+	wg.Go(func() error {
+		var err error
+		contractStatuses, err = d.bigtable.GetAddressContractInteractionsAt(interactionRequests)
+		if err != nil {
+			return fmt.Errorf("failed to get contract interactions: %w", err)
+		}
+		return nil
+	})
+
 	wg.Go(func() error {
 		err := d.GetNamesAndEnsForAddresses(ctx, addressMapping)
 		if err != nil {
@@ -734,33 +751,21 @@ func getElInfo[In any](ctx context.Context, d *DataAccessService, input []In, bu
 		}
 		return nil
 	})
-	contractStatuses := make([]types.ContractInteractionType, len(interactionsRequests))
-	wg.Go(func() error {
-		var err error
-		contractStatuses, err = d.bigtable.GetAddressContractInteractionsAt(interactionsRequests)
-		if err != nil {
-			return fmt.Errorf("failed to get contract interactions: %w", err)
-		}
-		return nil
-	})
+
 	if err := wg.Wait(); err != nil {
 		return nil, err
 	}
 
 	// build result
-	for i, req := range interactionsRequests {
+	for i, req := range interactionRequests {
 		address := req.Address
 
-		key := fmt.Sprintf("%s:%d:%d:%d", address, req.Block, req.TxIdx, req.TraceIdx)
-		if _, ok := elInfo[key]; ok {
-			continue
-		}
 		addressInfo, ok := addressMapping["0x"+address]
 		if addressInfo == nil || !ok {
 			return nil, fmt.Errorf("address %s not found in address mapping", address)
 		}
 		addressInfo.IsContract = contractStatuses[i] == types.CONTRACT_CREATION || contractStatuses[i] == types.CONTRACT_PRESENT
-		elInfo[key] = *addressInfo
+		elInfo[interactionRequestAsKey(req)] = *addressInfo
 	}
 
 	return elInfo, nil
