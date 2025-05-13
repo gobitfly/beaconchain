@@ -2236,24 +2236,13 @@ func updatePectraValidatorWithdrawals(epoch uint64, table string) error {
 	query := fmt.Sprintf(`
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
-		WHERE epoch = %d AND validator_index IN(
-			SELECT a.validator_index
-			FROM %s a
-			JOIN %s b ON a.validator_index = b.validator_index
-			WHERE
-				a.epoch = 364032
-				AND a.balance_start = 32000000000
-				AND a.balance_end = 0
-				AND a.roi_dividend = 0
-				AND a.roi_divisor = 32000000000
-				AND b.epoch = 364049
-				AND b.balance_start = 0
-				AND b.balance_end = 32000000000
-				AND b.deposits_amount = 32000000000
-				AND b.roi_dividend = 0
-				AND b.roi_divisor = 0
-		);
-		`, table, epoch, table, table)
+		WHERE
+			epoch_timestamp = '2025-05-07 10:05:11' 
+			AND balance_start > 0 
+			AND balance_end = 0 
+			AND withdrawals_amount = 0 
+			AND consolidations_outgoing_amount = 0;
+		`, table)
 
 	_, err := db.ClickHouseWriter.Exec(query)
 	if err != nil {
