@@ -2252,7 +2252,7 @@ func updatePectraValidatorWithdrawals(startEpochTs, endEpochTs, table string) er
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
 		WHERE
-			epoch_timestamp = %s
+			epoch_timestamp = '%s'
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
@@ -2264,7 +2264,7 @@ func updatePectraValidatorWithdrawals(startEpochTs, endEpochTs, table string) er
 		ALTER TABLE %s
 		UPDATE withdrawals_amount = balance_start
 		WHERE
-			epoch_timestamp >= %s AND epoch_timestamp <= %s
+			epoch_timestamp >= '%s' AND epoch_timestamp <= '%s'
 			AND balance_start > 0 
 			AND balance_end = 0 
 			AND withdrawals_amount = 0 
