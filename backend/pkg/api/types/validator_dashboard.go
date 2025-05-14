@@ -96,9 +96,11 @@ type VDBGroupSummaryData struct {
 
 	SyncCommittee          VDBGroupSummaryColumnItem    `json:"sync"`
 	SyncCommitteeCount     VDBGroupSummarySyncCount     `json:"sync_count"`
+	SyncEfficiency         float64                      `json:"sync_efficiency"`
 	Slashings              VDBGroupSummaryColumnItem    `json:"slashings"`                // Failed slashings are count of validators in the group that were slashed
 	ProposalValidators     []uint64                     `json:"proposal_validators"`      // fill with up to 3 validator indexes
 	ProposalValidatorCount uint64                       `json:"proposal_validator_count"` // number of distinct validators
+	ProposalEfficiency     float64                      `json:"proposal_efficiency"`
 	MissedRewards          VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
 	Apr ClElValue[float64] `json:"apr"`
