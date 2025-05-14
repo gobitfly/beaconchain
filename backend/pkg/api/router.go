@@ -31,9 +31,6 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 	sessionManager := newSessionManager(cfg)
 	internalRouter.Use(sessionManager.LoadAndSave, getSlidingSessionExpirationMiddleware(sessionManager))
 
-	if !(cfg.Frontend.CsrfInsecure || cfg.Frontend.Debug) {
-		internalRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
-	}
 	handlerService := handlers.NewHandlerService(dataAccessor, dummy, sessionManager, cfg)
 
 	// store user id in context, if available
@@ -60,8 +57,7 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 		return gorillaHandlers.CORS(
 			gorillaHandlers.AllowedOrigins([]string{"*"}),
 			gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
-			gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
+			gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 		)
 	}
 
@@ -85,8 +81,7 @@ func GetCorsMiddleware(allowedHosts []string) func(http.Handler) http.Handler {
 			return false
 		}),
 		gorillaHandlers.AllowedMethods([]string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions, http.MethodHead}),
-		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-CSRF-Token"}),
-		gorillaHandlers.ExposedHeaders([]string{"X-CSRF-Token"}),
+		gorillaHandlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
 		gorillaHandlers.AllowCredentials(),
 	)
 }
