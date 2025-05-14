@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/alexedwards/scs/redisstore"
@@ -57,7 +58,7 @@ func getSlidingSessionExpirationMiddleware(scs *scs.SessionManager) func(http.Ha
 func contentTypeMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// if body is not empty, check if content type is set to json
-		if (r.Method == http.MethodPost || r.Method == http.MethodPut) && r.ContentLength > 0 && r.Header.Get("Content-Type") != "application/json" {
+		if (r.Method == http.MethodPost || r.Method == http.MethodPut) && r.ContentLength > 0 && regexp.MustCompile(`^application\/json(;.*)?$`).MatchString(r.Header.Get("Content-Type")) {
 			http.Error(w, "bad request: Content-Type header must be application/json", http.StatusBadRequest)
 			return
 		}
