@@ -855,11 +855,11 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		dividendColumn = "efficiency_attestations_dividend"
 		divisorColumn = "efficiency_attestations_divisor"
 	case enums.VDBSummaryChartSync:
-		dividendColumn = "efficiency_proposals_dividend"
-		divisorColumn = "efficiency_proposals_divisor"
-	case enums.VDBSummaryChartProposal:
 		dividendColumn = "efficiency_sync_dividend"
 		divisorColumn = "efficiency_sync_divisor"
+	case enums.VDBSummaryChartProposal:
+		dividendColumn = "efficiency_proposals_dividend"
+		divisorColumn = "efficiency_proposals_divisor"
 	}
 
 	chartDs := goqu.
