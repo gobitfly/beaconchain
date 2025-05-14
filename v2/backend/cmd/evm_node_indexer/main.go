@@ -611,7 +611,7 @@ Loop:
 			currentNodeBlockNumberLocalCopy := currentNodeBlockNumber.Load()
 			for blockRawDataLen < nodeRequestsAtOnce && current <= blockRange.end {
 				if currentNodeBlockNumberLocalCopy >= current {
-					blockRawData = append(blockRawData, raw.FullBlockData{BlockNumber: current})
+					blockRawData = append(blockRawData, raw.FullBlockData{ChainID: utils.Config.Chain.Id, BlockNumber: current})
 					blockRawDataLen++
 					current++
 				} else {
