@@ -80,9 +80,11 @@ export interface VDBGroupSummaryData {
   attestation_avg_incl_dist: number /* float64 */;
   sync: VDBGroupSummaryColumnItem;
   sync_count: VDBGroupSummarySyncCount;
+  sync_efficiency: number /* float64 */;
   slashings: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
   proposal_validators: number /* uint64 */[]; // fill with up to 3 validator indexes
   proposal_validator_count: number /* uint64 */; // number of distinct validators
+  proposal_efficiency: number /* float64 */;
   missed_rewards: VDBGroupSummaryMissedRewards;
   apr: ClElValue<number /* float64 */>;
   luck: Luck;

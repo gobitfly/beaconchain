@@ -504,6 +504,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			goqu.L("efficiency_divisor"),
 			goqu.L("efficiency_attestations_dividend"),
 			goqu.L("efficiency_attestations_divisor"),
+			goqu.L("efficiency_proposals_dividend"),
+			goqu.L("efficiency_proposals_divisor"),
+			goqu.L("efficiency_sync_dividend"),
+			goqu.L("efficiency_sync_divisor"),
 			goqu.L("attestations_scheduled"),
 			goqu.L("attestations_observed"),
 			goqu.L("attestations_head_executed"),
@@ -543,6 +547,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		EfficiencyTotalDivisor         decimal.Decimal `db:"efficiency_divisor"`
 		EfficiencyAttestationsDividend decimal.Decimal `db:"efficiency_attestations_dividend"`
 		EfficiencyAttestationsDivisor  decimal.Decimal `db:"efficiency_attestations_divisor"`
+		EfficiencyProposalsDividend    decimal.Decimal `db:"efficiency_proposals_dividend"`
+		EfficiencyProposalsDivisor     decimal.Decimal `db:"efficiency_proposals_divisor"`
+		EfficiencySyncDividend         decimal.Decimal `db:"efficiency_sync_dividend"`
+		EfficiencySyncDivisor          decimal.Decimal `db:"efficiency_sync_divisor"`
 
 		AttestationsScheduled      int64 `db:"attestations_scheduled"`
 		AttestationsObserved       int64 `db:"attestations_observed"`
@@ -612,17 +620,16 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	var totalEfficiencyTotalDividend, totalEfficiencyTotalDivisor decimal.Decimal
 	var totalEfficiencyAttestationsDividend, totalEfficiencyAttestationsDivisor decimal.Decimal
+	var totalEfficiencyProposalsDividend, totalEfficiencyProposalsDivisor decimal.Decimal
+	var totalEfficiencySyncDividend, totalEfficiencySyncDivisor decimal.Decimal
 
 	totalBlockChance := float64(0)
 	totalInclusionDelaySum := int64(0)
 	totalInclusionDelayDivisor := int64(0)
 
 	totalSyncExpected := float64(0)
-	totalSyncScheduled := uint32(0)
-	totalSyncExecuted := uint32(0)
 
 	totalBlocksScheduled := uint32(0)
-	totalBlocksProposed := uint32(0)
 
 	totalMissedRewardsBlocksCl := int64(0)
 	totalMissedRewardsAttestations := int64(0)
@@ -648,7 +655,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		if row.ValidatorIndex == 0 && row.BlocksProposed > 0 && row.BlocksProposed != row.BlocksScheduled {
 			row.BlocksProposed-- // subtract the genesis block from validator 0 (TODO: remove when fixed in the dashoard data exporter)
 		}
-		totalBlocksProposed += row.BlocksProposed
 		totalBlocksScheduled += row.BlocksScheduled
 		if row.BlocksScheduled > 0 {
 			if ret.ProposalValidators == nil {
@@ -656,9 +662,6 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			}
 			ret.ProposalValidators = append(ret.ProposalValidators, t.VDBValidator(row.ValidatorIndex))
 		}
-
-		totalSyncScheduled += row.SyncScheduled
-		totalSyncExecuted += row.SyncExecuted
 
 		ret.SyncCommittee.StatusCount.Success += uint64(row.SyncExecuted)
 		ret.SyncCommittee.StatusCount.Failed += uint64(row.SyncScheduled) - uint64(row.SyncExecuted)
@@ -694,6 +697,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalEfficiencyTotalDivisor = totalEfficiencyTotalDivisor.Add(row.EfficiencyTotalDivisor)
 		totalEfficiencyAttestationsDividend = totalEfficiencyAttestationsDividend.Add(row.EfficiencyAttestationsDividend)
 		totalEfficiencyAttestationsDivisor = totalEfficiencyAttestationsDivisor.Add(row.EfficiencyAttestationsDivisor)
+		totalEfficiencyProposalsDividend = totalEfficiencyProposalsDividend.Add(row.EfficiencyProposalsDividend)
+		totalEfficiencyProposalsDivisor = totalEfficiencyProposalsDivisor.Add(row.EfficiencyProposalsDivisor)
+		totalEfficiencySyncDividend = totalEfficiencySyncDividend.Add(row.EfficiencySyncDividend)
+		totalEfficiencySyncDivisor = totalEfficiencySyncDivisor.Add(row.EfficiencySyncDivisor)
 
 		if row.InclusionDelaySum > 0 {
 			totalInclusionDelayDivisor += row.AttestationsObserved
@@ -792,6 +799,14 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 
 	if !totalEfficiencyAttestationsDivisor.IsZero() {
 		ret.AttestationEfficiency = totalEfficiencyAttestationsDividend.Div(totalEfficiencyAttestationsDivisor).InexactFloat64() * 100
+	}
+
+	if !totalEfficiencyProposalsDivisor.IsZero() {
+		ret.ProposalEfficiency = totalEfficiencyProposalsDividend.Div(totalEfficiencyProposalsDivisor).InexactFloat64() * 100
+	}
+
+	if !totalEfficiencySyncDivisor.IsZero() {
+		ret.SyncEfficiency = totalEfficiencySyncDividend.Div(totalEfficiencySyncDivisor).InexactFloat64() * 100
 	}
 
 	rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
