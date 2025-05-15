@@ -182,3 +182,94 @@ func (bigtable *Bigtable) ClearByPrefix(table string, family, columns, prefix st
 
 	return nil
 }
+
+func (bigtable *Bigtable) ClearRawByPrefix(prefix string, dryRun bool) error {
+	if prefix == "" {
+		return fmt.Errorf("please provide prefix [%v]", prefix)
+	}
+	family := "*"
+	columns := "*"
+
+	rowRange := gcp_bigtable.PrefixRange(prefix)
+
+	btTable := bigtable.client.Open("blocks-raw")
+
+	mutsDelete := types.NewBulkMutations(MAX_BATCH_MUTATIONS)
+
+	var filter gcp_bigtable.Filter
+	columnsSlice := strings.Split(columns, ",")
+	if len(columnsSlice) > 1 {
+		columnNames := make([]gcp_bigtable.Filter, len(columnsSlice))
+		for i, f := range columnsSlice {
+			columnNames[i] = gcp_bigtable.ColumnFilter(f)
+		}
+		filter = gcp_bigtable.InterleaveFilters(columnNames...)
+	} else {
+		filter = gcp_bigtable.ColumnFilter("*")
+	}
+
+	keysCount := 0
+	deleteFunc := func(row gcp_bigtable.Row) bool {
+		var row_ string
+
+		if family == "*" {
+			row_ = row.Key()
+		} else {
+			row_ = row[family][0].Row
+		}
+		if dryRun {
+			log.Infof("would delete key %v", row_)
+		}
+
+		mutDelete := gcp_bigtable.NewMutation()
+		if columns == "*" {
+			mutDelete.DeleteRow()
+		} else {
+			for _, column := range columnsSlice {
+				mutDelete.DeleteCellsInColumn(family, column)
+			}
+		}
+
+		mutsDelete.Keys = append(mutsDelete.Keys, row_)
+		mutsDelete.Muts = append(mutsDelete.Muts, mutDelete)
+		keysCount++
+
+		// we still need to commit in batches here (instead of just calling WriteBulk only once) as loading all keys to be deleted in memory first is not feasible as the delete function could be used to delete millions of rows
+		if mutsDelete.Len() == MAX_BATCH_MUTATIONS {
+			log.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
+			if !dryRun {
+				err := bigtable.WriteBulk(mutsDelete, btTable, DEFAULT_BATCH_INSERTS)
+
+				if err != nil {
+					log.Error(err, "error writing bulk mutations", 0)
+					return false
+				}
+			}
+			mutsDelete = types.NewBulkMutations(MAX_BATCH_MUTATIONS)
+		}
+		return true
+	}
+	var err error
+	if columns == "*" {
+		err = btTable.ReadRows(context.Background(), rowRange, deleteFunc)
+	} else {
+		err = btTable.ReadRows(context.Background(), rowRange, deleteFunc, gcp_bigtable.RowFilter(filter))
+	}
+	if err != nil {
+		return err
+	}
+
+	if !dryRun && mutsDelete.Len() > 0 {
+		log.Infof("deleting %v keys (first key %v, last key %v)", len(mutsDelete.Keys), mutsDelete.Keys[0], mutsDelete.Keys[len(mutsDelete.Keys)-1])
+
+		err := bigtable.WriteBulk(mutsDelete, btTable, DEFAULT_BATCH_INSERTS)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Infof("deleted %v keys", keysCount)
+
+	return nil
+}

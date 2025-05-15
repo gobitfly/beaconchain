@@ -84,6 +84,9 @@ var opts = struct {
  * By default, all commands that are not in the REQUIRES_LIST will automatically require everything.
  */
 var REQUIRES_LIST = map[string]misctypes.Requires{
+	"clear-raw-bigtable": {
+		RawBigtable: true,
+	},
 	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
 	"update-highest-active-validatorindex": {
 		Bigtable: true,
@@ -103,7 +106,7 @@ func Run() {
 	}
 
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, clear-raw-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -151,6 +154,7 @@ func Run() {
 	if !ok {
 		requires = misctypes.Requires{
 			Bigtable:      true,
+			RawBigtable:   false,
 			Redis:         true,
 			ClNode:        true,
 			ElNode:        true,
@@ -167,6 +171,15 @@ func Run() {
 		bt, err = db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
 		if err != nil {
 			log.Fatal(err, "error initializing bigtable", 0)
+		}
+	}
+
+	var rawBt *db.Bigtable
+	if requires.RawBigtable {
+		log.InfoWithFields(map[string]interface{}{"project": utils.Config.RawBigtable.Project, "instance": utils.Config.RawBigtable.Instance, "chainId": chainIdString}, "initializing raw bigtable")
+		rawBt, err = db.InitBigtable(utils.Config.RawBigtable.Project, utils.Config.RawBigtable.Instance, chainIdString, utils.Config.RedisCacheEndpoint)
+		if err != nil {
+			log.Fatal(err, "error initializing raw bigtable", 0)
 		}
 	}
 
@@ -345,6 +358,8 @@ func Run() {
 		err = debugBlocks(rpcClient)
 	case "clear-bigtable":
 		clearBigtable(opts.Table, opts.Family, opts.Columns, opts.Key, opts.DryRun, bt)
+	case "clear-raw-bigtable":
+		clearRawBigtable(opts.Key, opts.DryRun, rawBt)
 	case "index-old-eth1-blocks":
 		indexOldEth1Blocks(opts.StartBlock, opts.EndBlock, opts.BatchSize, opts.DataConcurrency, opts.Transformers, erigonClient)
 	case "update-aggregation-bits":
@@ -1591,6 +1606,24 @@ func clearBigtable(table string, family string, columns string, key string, dryR
 		log.Fatal(err, "error deleting from bigtable", 0)
 	}
 	log.Infof("delete completed")
+}
+
+func clearRawBigtable(key string, dryRun bool, bt *db.Bigtable) {
+	if !dryRun {
+		confirmation := utils.CmdPrompt(fmt.Sprintf("Are you sure you want to delete all raw big table (project:%v, instance:%v) entries starting with [%v]?", utils.Config.RawBigtable.Project, utils.Config.RawBigtable.Instance, key))
+		if confirmation != "yes" {
+			log.Infof("Abort!")
+			return
+		}
+	}
+	if !strings.Contains(key, ":") {
+		log.Fatal(fmt.Errorf("provided invalid prefix: %s", key), "", 0)
+	}
+	err := bt.ClearRawByPrefix(key, dryRun)
+	if err != nil {
+		log.Fatal(err, "error deleting from raw bigtable", 0)
+	}
+	log.Infof("delete raw completed")
 }
 
 // Goes through the tableData table and checks what blocks in the given range from [start] to [end] are missing and exports/indexes the missing ones
