@@ -367,15 +367,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 	for _, res := range queryResult {
 		duty := t.VDBRewardsTableDuty{}
 		if res.AttestationsScheduled > 0 {
-			attestationPercentage := (float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled)) * 100.0
+			attestationPercentage := (float64(res.AttestationsExecuted) / float64(res.AttestationsScheduled))
 			duty.Attestation = &attestationPercentage
 		}
 		if res.BlocksScheduled > 0 {
-			ProposalPercentage := (float64(res.BlocksProposed) / float64(res.BlocksScheduled)) * 100.0
+			ProposalPercentage := (float64(res.BlocksProposed) / float64(res.BlocksScheduled))
 			duty.Proposal = &ProposalPercentage
 		}
 		if res.SyncScheduled > 0 {
-			SyncPercentage := (float64(res.SyncExecuted) / float64(res.SyncScheduled)) * 100.0
+			SyncPercentage := (float64(res.SyncExecuted) / float64(res.SyncScheduled))
 			duty.Sync = &SyncPercentage
 		}
 
@@ -425,15 +425,15 @@ func (d *DataAccessService) GetValidatorDashboardRewards(ctx context.Context, da
 
 		duty := t.VDBRewardsTableDuty{}
 		if totalInfo.AttestationsScheduled > 0 {
-			attestationPercentage := (float64(totalInfo.AttestationsExecuted) / float64(totalInfo.AttestationsScheduled)) * 100.0
+			attestationPercentage := (float64(totalInfo.AttestationsExecuted) / float64(totalInfo.AttestationsScheduled))
 			duty.Attestation = &attestationPercentage
 		}
 		if totalInfo.BlocksScheduled > 0 {
-			proposalPercentage := (float64(totalInfo.BlocksProposed) / float64(totalInfo.BlocksScheduled)) * 100.0
+			proposalPercentage := (float64(totalInfo.BlocksProposed) / float64(totalInfo.BlocksScheduled))
 			duty.Proposal = &proposalPercentage
 		}
 		if totalInfo.SyncScheduled > 0 {
-			SyncPercentage := (float64(totalInfo.SyncExecuted) / float64(totalInfo.SyncScheduled)) * 100.0
+			SyncPercentage := (float64(totalInfo.SyncExecuted) / float64(totalInfo.SyncScheduled))
 			duty.Sync = &SyncPercentage
 		}
 
