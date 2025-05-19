@@ -90,8 +90,10 @@ const summarySections = computed<SummaryRow[][]>(() => {
   addSummaryPropertiesToSection(1, [
     'sync',
     'validators_sync',
+    'sync_efficiency',
     'proposals',
     'validators_proposal',
+    'proposal_efficiency',
     'slashings',
     'validators_slashings',
   ])

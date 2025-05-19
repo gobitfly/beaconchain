@@ -36,6 +36,8 @@ export const SummaryDetailsEfficiencySpecialProps = [
   'luck',
   'attestation_avg_incl_dist',
   'attestation_efficiency',
+  'sync_efficiency',
+  'proposal_efficiency',
   'proposals',
   'missed_rewards',
 ] as const

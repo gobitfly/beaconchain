@@ -112,6 +112,16 @@ const data = computed(() => {
       tooltip,
     }
   }
+  else if (col && props.property === 'sync_efficiency') {
+    return {
+      syncEfficiency: col.attestation_efficiency,
+    }
+  }
+  else if (col && props.property === 'proposal_efficiency') {
+    return {
+      proposalEfficiency: col.proposal_efficiency,
+    }
+  }
   else if (row && col && props.property === 'apr') {
     return {
       apr: {
@@ -182,6 +192,24 @@ const openValidatorModal = () => {
     v-if="data?.missedRewards"
     :missed-rewards="data.missedRewards"
   />
+  <div
+    v-else-if="data?.syncEfficiency !== undefined"
+    class="info_row"
+  >
+    <BcFormatPercent
+      :percent="data?.syncEfficiency"
+      :color-break-point="80"
+    />
+  </div>
+  <div
+    v-else-if="data?.proposalEfficiency !== undefined"
+    class="info_row"
+  >
+    <BcFormatPercent
+      :percent="data?.proposalEfficiency"
+      :color-break-point="80"
+    />
+  </div>
   <DashboardTableSummaryReward
     v-else-if="data?.reward"
     :reward="data.reward"
