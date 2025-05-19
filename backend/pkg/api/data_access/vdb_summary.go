@@ -345,8 +345,8 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		total.Reward.El = total.Reward.El.Add(resultEntry.Reward.El)
 
 		// Efficiency
-		if queryEntry.EfficiencyDivisor.Valid && !queryEntry.EfficiencyDivisor.Decimal.IsZero() {
-			resultEntry.Efficiency = queryEntry.EfficiencyDividend.Decimal.Div(queryEntry.EfficiencyDivisor.Decimal).InexactFloat64() * 100
+		if queryEntry.EfficiencyDivisor.Valid {
+			resultEntry.Efficiency = calcEfficiency(queryEntry.EfficiencyDividend.Decimal, queryEntry.EfficiencyDivisor.Decimal)
 		}
 
 		// Add the duties info to the total
@@ -454,9 +454,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		totalEntry.Proposals.Failed = total.BlocksScheduled - total.BlocksProposed
 
 		// Efficiency
-		if !total.EfficiencyDivisor.IsZero() {
-			totalEntry.Efficiency = total.EfficiencyDividend.Div(total.EfficiencyDivisor).InexactFloat64() * 100
-		}
+		totalEntry.Efficiency = calcEfficiency(total.EfficiencyDividend, total.EfficiencyDivisor)
 
 		result = append([]t.VDBSummaryTableRow{totalEntry}, result...)
 	}
@@ -793,21 +791,10 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		}
 	}
 
-	if !totalEfficiencyTotalDivisor.IsZero() {
-		ret.Efficiency = totalEfficiencyTotalDividend.Div(totalEfficiencyTotalDivisor).InexactFloat64() * 100
-	}
-
-	if !totalEfficiencyAttestationsDivisor.IsZero() {
-		ret.AttestationEfficiency = totalEfficiencyAttestationsDividend.Div(totalEfficiencyAttestationsDivisor).InexactFloat64() * 100
-	}
-
-	if !totalEfficiencyProposalsDivisor.IsZero() {
-		ret.ProposalEfficiency = totalEfficiencyProposalsDividend.Div(totalEfficiencyProposalsDivisor).InexactFloat64() * 100
-	}
-
-	if !totalEfficiencySyncDivisor.IsZero() {
-		ret.SyncEfficiency = totalEfficiencySyncDividend.Div(totalEfficiencySyncDivisor).InexactFloat64() * 100
-	}
+	ret.Efficiency = calcEfficiency(totalEfficiencyTotalDividend, totalEfficiencyTotalDivisor)
+	ret.AttestationEfficiency = calcEfficiency(totalEfficiencyAttestationsDividend, totalEfficiencyAttestationsDivisor)
+	ret.ProposalEfficiency = calcEfficiency(totalEfficiencyProposalsDividend, totalEfficiencyProposalsDivisor)
+	ret.SyncEfficiency = calcEfficiency(totalEfficiencySyncDividend, totalEfficiencySyncDivisor)
 
 	rpOperatorInfo, err := d.getValidatorDashboardRpOperatorInfo(ctx, dashboardId)
 	if err != nil {
@@ -824,6 +811,13 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	ret.Balances = balances
 
 	return ret, nil
+}
+
+func calcEfficiency(dividend, divisor decimal.Decimal) float64 {
+	if divisor.IsZero() {
+		return 0
+	}
+	return dividend.Div(divisor).InexactFloat64() * 100
 }
 
 // for summary charts: series id is group id, no stack
@@ -947,11 +941,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 
 		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
-			if row.EfficiencyDivisor.IsZero() {
-				data[row.Timestamp][row.GroupId] = 0
+			data[row.Timestamp][row.GroupId] = calcEfficiency(row.EfficiencyDividend, row.EfficiencyDivisor)
+			if data[row.Timestamp][row.GroupId] == 0 {
 				continue
 			}
-			data[row.Timestamp][row.GroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
 			if data[row.Timestamp][row.GroupId] > 100 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
 				data[row.Timestamp][row.GroupId] = 100
@@ -993,11 +986,10 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			totalLineGroupId = t.DefaultGroupId
 		}
 		for _, row := range totalEfficiencyMap {
-			if row.EfficiencyDivisor.IsZero() {
-				data[row.Timestamp][totalLineGroupId] = 0
+			data[row.Timestamp][totalLineGroupId] = calcEfficiency(row.EfficiencyDividend, row.EfficiencyDivisor)
+			if data[row.Timestamp][totalLineGroupId] == 0 {
 				continue
 			}
-			data[row.Timestamp][totalLineGroupId] = row.EfficiencyDividend.Div(row.EfficiencyDivisor).InexactFloat64() * 100
 			if data[row.Timestamp][totalLineGroupId] > 100 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
 				data[row.Timestamp][totalLineGroupId] = 100
