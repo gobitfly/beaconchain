@@ -541,11 +541,11 @@
                     "title": "Attestation Efficiency: "
                 },
                 "block_proposal": "Block Proposal",
-                "sync": {
-                    "text": "If isPartOfSyncCommittee then sync_efficiency = executed_Sync / (scheduled_Sync - missed_Blocks) else 1",
-                    "title": "Sync Committee Efficiency: "
-                },
-                "sync_committee": "Sync Committee"
+                "sync_committee": "Sync Committee",
+                "sync_participation": {
+                    "text": "Sync Participation tracks how well a validator completes sync duties when selected. It’s the ratio of executed to scheduled duties (minus missed blocks).\nNon-selected validators get a default score of 1 for fairness.",
+                    "title": "Sync Committee Participation: "
+                }
             },
             "withdrawals": {
                 "future_tooltip": "If the withdrawal were to be processed at this very moment, this amount would be withdrawn",
