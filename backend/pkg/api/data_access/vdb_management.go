@@ -412,7 +412,6 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 			}
 
 			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
-			*efficiency *= 100
 			return err
 		})
 	}

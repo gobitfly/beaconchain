@@ -93,7 +93,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 	var averageNetworkEfficiency float64
 	if efficiency.TotalEfficiency[period].Valid {
-		averageNetworkEfficiency = efficiency.TotalEfficiency[period].Float64 * 100
+		averageNetworkEfficiency = efficiency.TotalEfficiency[period].Float64
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -738,7 +738,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	if totalBlockChance > 0 {
-		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance * 100
+		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
 		ret.Luck.Proposal.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalBlockChance) * float64(time.Hour)).Seconds())
@@ -754,7 +754,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncSlotDuties := float64(ret.SyncCommittee.StatusCount.Failed) + float64(ret.SyncCommittee.StatusCount.Success)
 		slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
 		syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
-		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
+		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
 		ret.Luck.Sync.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalSyncExpected) * float64(time.Hour)).Seconds())
@@ -817,7 +817,7 @@ func calcEfficiency(dividend, divisor decimal.Decimal) float64 {
 	if divisor.IsZero() {
 		return 0
 	}
-	return dividend.Div(divisor).InexactFloat64() * 100
+	return dividend.Div(divisor).InexactFloat64()
 }
 
 // for summary charts: series id is group id, no stack
@@ -945,9 +945,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			if data[row.Timestamp][row.GroupId] == 0 {
 				continue
 			}
-			if data[row.Timestamp][row.GroupId] > 100 {
+			if data[row.Timestamp][row.GroupId] > 1 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
-				data[row.Timestamp][row.GroupId] = 100
+				data[row.Timestamp][row.GroupId] = 1
 			}
 			groupMap[row.GroupId] = true
 		}
@@ -971,7 +971,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 		var averageNetworkEfficiency float64
 		if efficiency.AttestationEfficiency[enums.Last24h].Valid {
-			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64 * 100
+			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64
 		}
 
 		for ts := range tsMap {
@@ -990,9 +990,9 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			if data[row.Timestamp][totalLineGroupId] == 0 {
 				continue
 			}
-			if data[row.Timestamp][totalLineGroupId] > 100 {
+			if data[row.Timestamp][totalLineGroupId] > 1 {
 				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
-				data[row.Timestamp][totalLineGroupId] = 100
+				data[row.Timestamp][totalLineGroupId] = 1
 			}
 		}
 		groupMap[totalLineGroupId] = true
