@@ -53,8 +53,8 @@ const data = computed(() => {
     let tooltip: undefined | { text: string, title: string }
     if (props.property === 'sync') {
       tooltip = {
-        text: $t('dashboard.validator.tooltip.sync.text'),
-        title: $t('dashboard.validator.tooltip.sync.title'),
+        text: $t('dashboard.validator.tooltip.sync_participation.text'),
+        title: $t('dashboard.validator.tooltip.sync_participation.title'),
       }
     }
 
@@ -271,6 +271,7 @@ const openValidatorModal = () => {
     </DashboardTableEfficiency>
     <BcTooltip
       position="top"
+      tooltip-class="dashboard-table-summary-value__tooltip"
       :text="data.tooltip?.text"
       :title="data.tooltip?.title"
     >
@@ -468,5 +469,9 @@ const openValidatorModal = () => {
 
 .efficiency-total-tooltip {
   width: 155px;
+}
+
+:global(.dashboard-table-summary-value__tooltip) {
+  white-space: pre-line;
 }
 </style>
