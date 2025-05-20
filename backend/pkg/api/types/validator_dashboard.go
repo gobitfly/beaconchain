@@ -307,7 +307,7 @@ type VDBWithdrawalsClTableRow struct {
 	GroupId               uint64          `json:"group_id"`
 	Recipient             *Address        `json:"recipient,omitempty"`
 	Amount                decimal.Decimal `json:"amount" faker:"eth"`
-	Type                  string          `json:"type" tstype:"'auto' | 'manual'" faker:"oneof: auto, manual"`
+	Type                  string          `json:"type" tstype:"'manual' | 'system' | 'skimming'" faker:"oneof: manual, system, skimming"`
 	Status                string          `json:"status" tstype:"'queued' | 'completed' | 'rejected'" faker:"oneof: queued, completed, rejected"`
 	RejectReason          *string         `json:"reject_reason,omitempty" tstype:"'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance'" faker:"oneof: full_queue, unknown_pubkey, no_execution_withdrawal_credentials, address_mismatch, inactive, exiting, too_young, pending_withdrawals, not_compounding, insufficient_effective_balance, excess_balance"`
 	// unique
