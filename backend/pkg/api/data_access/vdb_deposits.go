@@ -418,7 +418,6 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 			WithdrawalCredential: t.Hash(hexutil.Encode(row.WithdrawalCredential)),
 			Amount:               utils.GWeiToWei(row.Amount.BigInt()),
 			Signature:            t.Hash(hexutil.Encode(row.Signature)),
-			Status:               row.Status,
 			Slot:                 row.Slot,
 			SlotIndex:            row.SlotIndex,
 		}
@@ -426,10 +425,14 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		if row.GroupId.Valid && !dashboardId.AggregateGroups {
 			responseData[i].GroupId = uint64(row.GroupId.Int64)
 		}
-		switch row.Type {
-		case "account", "genesis":
+		responseData[i].Status = row.Status
+		if types.GenericEventStatus(row.Status) == types.GenericEventStatusPostponed {
+			responseData[i].Status = "queued"
+		}
+		switch types.DepositRequestType(row.Type) {
+		case types.DepositRequestAccountType, types.DepositRequestGenesisType:
 			responseData[i].Type = "manual"
-		case "system_access":
+		case types.DepositRequestSystemExcessType:
 			responseData[i].Type = "auto"
 		default:
 			return nil, nil, fmt.Errorf("unknown deposit type %s", row.Type)
