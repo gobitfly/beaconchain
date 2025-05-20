@@ -316,6 +316,7 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		Type                 string          `db:"type"`
 		Status               string          `db:"status"`
 		RejectReason         sql.NullString  `db:"reject_reason"`
+		EstClearEpoch        sql.NullInt64   `db:"est_clear_epoch"`
 		// cursor
 		Slot      uint64 `db:"slot"`
 		SlotIndex int64  `db:"index"`
@@ -415,8 +416,9 @@ func (d *DataAccessService) GetValidatorDashboardClDeposits(ctx context.Context,
 		if row.SlotProcessed.Valid {
 			slotProcessed := uint64(row.SlotProcessed.Int64)
 			responseData[i].SlotProcessed = &slotProcessed
-		} else { //nolint:staticcheck
-			// TODO estimate
+		} else if row.EstClearEpoch.Valid {
+			slotProcessed := uint64(row.EstClearEpoch.Int64) * d.config.ClConfig.SlotsPerEpoch
+			responseData[i].SlotProcessed = &slotProcessed
 		}
 		if row.SlotQueued.Valid {
 			slotQueued := uint64(row.SlotQueued.Int64)
@@ -465,6 +467,7 @@ func getDepositsBridgeDs(dashboardId t.VDBId, search string, isValidSearchGroups
 			goqu.V("account").As("type"),
 			goqu.V("completed").As("status"), // TODO BEDS-1399 (or maybe check some other tables?)
 			goqu.V(nil).As("reject_reason"),
+			goqu.V(nil).As("est_clear_epoch"), // could add, low priority post pectra
 			// cursor
 			goqu.I("bd.block_slot").As("slot"),
 			goqu.I("bd.block_index").As("index"),
@@ -540,10 +543,14 @@ func getDepositRequestsDs(dashboardId t.VDBId, search string, isValidSearchGroup
 			goqu.I("bdr.type"),
 			goqu.I("bdr.status"),
 			goqu.I("bdr.reject_reason"),
+			goqu.I("pdq.est_clear_epoch"),
 			// cursor
 			enums.VDBDepositsClColumns.Slot.ToExpr().As("slot"),
 			goqu.COALESCE(goqu.I("index_queued"), goqu.I("index_processed")).As("index"),
-		)
+		).
+		LeftJoin(goqu.T("pending_deposits_queue").As("pdq"), goqu.On(
+			goqu.I("bdr.id").Eq(goqu.I("pdq.request_id")),
+		))
 
 	if dashboardId.Validators != nil {
 		depositRequestsDs = depositRequestsDs.
