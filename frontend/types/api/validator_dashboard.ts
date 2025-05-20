@@ -269,7 +269,7 @@ export interface VDBWithdrawalsClTableRow {
   group_id: number /* uint64 */;
   recipient?: Address;
   amount: string /* decimal.Decimal */;
-  type: 'auto' | 'manual';
+  type: 'manual' | 'system' | 'skimming';
   status: 'queued' | 'completed' | 'rejected';
   reject_reason?: 'full_queue' | 'unknown_pubkey' | 'no_execution_withdrawal_credentials' | 'address_mismatch' | 'inactive' | 'exiting' | 'too_young' | 'pending_withdrawals' | 'not_compounding' | 'insufficient_effective_balance' | 'excess_balance';
   /**
