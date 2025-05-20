@@ -464,9 +464,12 @@ func (d *DataAccessService) GetValidatorDashboardClWithdrawals(ctx context.Conte
 				row.RejectReason = &str // BEDS-1399
 			}
 		}
-		if r.Recipient != nil {
+		if len(r.Recipient) > 0 {
 			recipient := elInfos[getElInfoKey(r.Recipient, -1, -1, -1)]
 			row.Recipient = &recipient
+		} else {
+			// HACK should query directly from table
+			row.Type = "system"
 		}
 
 		responseData = append(responseData, row)
@@ -603,7 +606,7 @@ func getWithdrawalsBridgeDs(dashboardId t.VDBId, search string, isValidSearchWit
 			goqu.Cast(goqu.V(nil), "DECIMAL").As("slot_queued"),
 			goqu.V(nil).As("reject_reason"),
 			goqu.V("completed").As("status"),
-			goqu.V("auto").As("type"),
+			goqu.V("skimming").As("type"),
 			// cursor
 			goqu.I("w.block_slot").As("slot"),
 			goqu.I("w.withdrawalindex").As("index"),
@@ -924,7 +927,7 @@ func (d *DataAccessService) getNextWithdrawalRow(queryValidators []validatorGrou
 			IsContract: contractStatus[0] == types.CONTRACT_CREATION || contractStatus[0] == types.CONTRACT_PRESENT,
 		},
 		Amount:    utils.GWeiToWei(big.NewInt(int64(withdrawalAmount))),
-		Type:      "auto",
+		Type:      "skimming",
 		Status:    "queued",
 		Slot:      nextWithdrawalSlot,
 		SlotIndex: 0, // ?
