@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
-	"github.com/gobitfly/beaconchain/pkg/exporter/db"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
+	"github.com/gobitfly/beaconchain/pkg/exporter/types"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
@@ -20,6 +21,7 @@ func (d *dashboardData) roiBackfillTask() {
 	jobs := []edb.BackfillType{
 		edb.BackfillTypeRoi,
 		edb.BackfillTypeEBLookup,
+		edb.BackfillTypeElectraForkEpochEvents,
 	}
 	for _, backfillType := range jobs {
 		// fork for every backfill we have to do
@@ -52,7 +54,7 @@ func (d *dashboardData) roiBackfillTask() {
 		}()
 	}
 }
-func (d *dashboardData) handleIncompleteBackfills(t db.BackfillType) error {
+func (d *dashboardData) handleIncompleteBackfills(t edb.BackfillType) error {
 	incomplete, err := edb.GetIncompleteBackfillEpochs(t)
 	if err != nil {
 		return errors.Wrap(err, "failed to get incomplete backfill epochs")
@@ -70,7 +72,7 @@ func (d *dashboardData) handleIncompleteBackfills(t db.BackfillType) error {
 	return nil
 }
 
-func (d *dashboardData) backfillEpochs(t db.BackfillType, epochs []edb.BackfillMetadata) error {
+func (d *dashboardData) backfillEpochs(t edb.BackfillType, epochs []edb.BackfillMetadata) error {
 	now := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_backfill_%s_overall", t)).Observe(time.Since(now).Seconds())
@@ -97,6 +99,8 @@ func (d *dashboardData) backfillEpochs(t db.BackfillType, epochs []edb.BackfillM
 				err = edb.BackfillRoi(epochs)
 			case edb.BackfillTypeEBLookup:
 				err = edb.BackfillEBLookup(epochs)
+			case edb.BackfillTypeElectraForkEpochEvents:
+				err = d.BackfillElectraForkEpochEvents(epochs)
 			default:
 				return fmt.Errorf("unknown backfill type %s", t)
 			}
@@ -108,6 +112,12 @@ func (d *dashboardData) backfillEpochs(t db.BackfillType, epochs []edb.BackfillM
 
 			now := time.Now()
 			for i := range epochs {
+				if epochs[i].BackfillName != t {
+					return fmt.Errorf("backfill name %s does not match backfill type %s", epochs[i].BackfillName, t)
+				}
+				if epochs[i].BackfillBatchId == nil {
+					return fmt.Errorf("backfill batch id is nil for epoch %v", epochs[i])
+				}
 				epochs[i].SuccessfulBackfill = &now
 			}
 			err = edb.PushBackfillMetadata(epochs)
@@ -125,13 +135,13 @@ func (d *dashboardData) backfillEpochs(t db.BackfillType, epochs []edb.BackfillM
 	return nil
 }
 
-func (d *dashboardData) handlePendingBackfills(t db.BackfillType) error {
+func (d *dashboardData) handlePendingBackfills(t edb.BackfillType) error {
 	pending, err := edb.GetPendingBackfillEpochs(t, utils.Config.DashboardExporter.BackfillAtOnce*utils.Config.DashboardExporter.BackfillInParallel)
 	if err != nil {
 		return errors.Wrap(err, "failed to get pending backfill epochs")
 	}
 	if len(pending) == 0 {
-		d.log.Debugf("handlePendingBackfills, no pending backfill epochs")
+		d.log.Debugf("handlePendingBackfills, no pending backfill epochs") // this log messages, and basically all others, should include the backfill type
 		return nil
 	}
 	d.log.InfoWithFields(log.Fields{"backfillType": t, "pendingCount": len(pending)}, "handlePendingBackfills, found pending backfill epochs")
@@ -155,5 +165,79 @@ func (d *dashboardData) handlePendingBackfills(t db.BackfillType) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer pending epochs")
 	}
+	return nil
+}
+
+func (d *dashboardData) BackfillElectraForkEpochEvents(epochs []edb.BackfillMetadata) (err error) {
+	metricPrefix := string("dashboard_data_exporter_backfill_" + edb.BackfillTypeElectraForkEpochEvents)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
+	}()
+	// filter out epoch that arent the fork epoch
+	forkEpoch := utils.Config.Chain.ClConfig.ElectraForkEpoch
+	var forkEpochs []edb.BackfillMetadata
+	for _, e := range epochs {
+		if e.Epoch == forkEpoch {
+			forkEpochs = append(forkEpochs, e)
+		}
+	}
+	if len(forkEpochs) == 0 {
+		log.Debugf("no epochs to backfill for %s", edb.BackfillTypeElectraForkEpochEvents)
+		return nil
+	}
+	if len(forkEpochs) > 1 {
+		return fmt.Errorf("more than one epoch to backfill for %s", edb.BackfillTypeElectraForkEpochEvents)
+	}
+	backfillBatchID := epochs[0].BackfillBatchId
+	epoch := forkEpochs[0].Epoch
+
+	// reuse the existing stuff to do this, tho obv could be leaner
+	nodeData := NewMultiEpochData(1)
+	// prefill epochBasedData.epochs
+	nodeData.epochBasedData.epochs = []uint64{forkEpochs[0].Epoch}
+	eg := &errgroup.Group{}
+	eg.Go(func() error {
+		return d.fetchEpochValidatorStates(epoch, epoch, &nodeData)
+	})
+	eg.Go(func() error {
+		return d.fetchElectraRemovedExcessBalances(epoch, epoch, &nodeData)
+	})
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("failed to fetch validator states for epoch %d: %w", epoch, err)
+	}
+
+	// prepare the target data. i hate this as much as you do, but i dont have the time to refactor this rn
+	// was never really intended to be used like this anyway
+	processedData := make([]types.VDBDataEpochColumns, 1)
+	nodeData.epochBasedData.tarIndices = []int{0}
+	nodeData.epochBasedData.tarOffsets = []int{0}
+	valiCount := len(nodeData.epochBasedData.validatorStates[int64(epoch)].Data)
+	processedData[0], err = types.NewVDBDataEpochColumns(valiCount)
+	if err != nil {
+		return fmt.Errorf("failed to create new VDBDataEpochColumns: %w", err)
+	}
+
+	processedData[0].EpochsContained = []uint64{epoch}
+	eg = &errgroup.Group{} // docs say we should not reuse a group for different tasks
+	eg.Go(func() error {
+		// sets epochTimestamp and validatorIndex
+		return d.processValidatorStates(&nodeData, &processedData)
+	})
+	eg.Go(func() error {
+		// sets withdrawalAmount and withdrawalCount
+		return d.processElectraRemovedExcessBalanceEvents(&nodeData, &processedData)
+	})
+	if err := eg.Wait(); err != nil {
+		return fmt.Errorf("failed to process electra removed excess balance events: %w", err)
+	}
+
+	// now write it to the insert sink
+	err = db.UltraFastDumpToClickhouse(&processedData[0], "_insert_sink_backfill_electra_fork_epoch_events", backfillBatchID.String())
+	if err != nil {
+		d.log.Error(err, "failed to insert epochs", 0, log.Fields{"epochs": forkEpochs})
+		return errors.Wrap(err, "failed to insert epochs")
+	}
+
 	return nil
 }

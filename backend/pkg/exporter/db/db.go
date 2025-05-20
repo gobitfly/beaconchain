@@ -1791,7 +1791,10 @@ func GetPendingBackfillEpochs(t BackfillType, limit int64) ([]BackfillMetadata, 
 		return nil, fmt.Errorf("error fetching min assigned epoch: %w", err)
 	}
 	if minAssignedEpoch == -1 {
-		return nil, fmt.Errorf("no epochs found with transfer batch id")
+		// this isn't necessarily an error, because on a fresh export this backfill never gets assigned
+		// so log a debug message and return nil
+		log.Debugf("no epochs found with transfer batch id %s. this is expected if the export was started after the backfill was implemented", t)
+		return nil, nil
 	}
 	if minAssignedEpoch == 0 {
 		// this means we have assigned epochs till the first one, no more pending epochs
@@ -1983,6 +1986,7 @@ func (b BackfillType) Value() (driver.Value, error) {
 }
 
 const (
-	BackfillTypeRoi      BackfillType = "roi"
-	BackfillTypeEBLookup BackfillType = "eb_lookup"
+	BackfillTypeRoi                    BackfillType = "roi"
+	BackfillTypeEBLookup               BackfillType = "eb_lookup"
+	BackfillTypeElectraForkEpochEvents BackfillType = "electra_fork_epoch_events"
 )
