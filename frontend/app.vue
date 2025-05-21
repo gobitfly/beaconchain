@@ -5,13 +5,7 @@ const { locale } = useTranslation()
 useHead(
   {
     htmlAttrs: { lang: locale.value },
-    script: [ {
-      async: false,
-      key: 'revive',
-      src: '../js/revive.min.js',
-    } ],
   },
-  { mode: 'client' },
 )
 useWindowSizeProvider()
 useBcToastProvider()
