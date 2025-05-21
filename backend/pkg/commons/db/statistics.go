@@ -35,6 +35,17 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 
 	firstEpoch, lastEpoch := utils.GetFirstAndLastEpochForDay(day)
 
+	var err error
+
+	clEventsIndexerEpoch := int64(-1)
+	err = WriterDb.Get(&clEventsIndexerEpoch, "SELECT COALESCE(MAX(epoch), -1) FROM consensus_layer_events_indexer_metadata")
+	if err != nil {
+		return err
+	}
+	if clEventsIndexerEpoch < int64(lastEpoch) {
+		return fmt.Errorf("consensusLayerEventsIndexer lagging behind, day: %v, lastEpoch: %d, indexerEpoch: %d", day, lastEpoch, clEventsIndexerEpoch)
+	}
+
 	log.Infof("exporting statistics for day %v (epoch %v to %v)", day, firstEpoch, lastEpoch)
 
 	if err := CheckIfDayIsFinalized(day); err != nil {
@@ -47,7 +58,7 @@ func WriteValidatorStatisticsForDay(day uint64, client rpc.Client) error {
 		Status bool `db:"status"`
 	}
 	exported := Exported{}
-	err := WriterDb.Get(&exported, `
+	err = WriterDb.Get(&exported, `
 		SELECT
 			status
 		FROM validator_stats_status
@@ -841,34 +852,42 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 	depositsQry := `
 		with 
 		first_valid_deposits as (
-			select distinct on (publickey)
-				publickey,
-				block_slot,
-				block_index
+			select distinct on (blocks_deposits.publickey)
+				blocks_deposits.publickey,
+				blocks_deposits.block_slot,
+				blocks_deposits.block_index
 			from
 				blocks_deposits
+			inner join blocks on
+				blocks_deposits.block_root = blocks.blockroot and (blocks.status = '1' or blocks.slot = 0)
 			where
-				valid_signature
-				and publickey in (select bd.publickey from blocks_deposits bd where bd.valid_signature and bd.block_slot >= $1 and bd.block_slot <= $2)
+				-- filter out relevant requests for performance-reasons, no need to check for validity
+				blocks_deposits.publickey in (select bd.publickey from blocks_deposits bd where bd.block_slot >= $1 and bd.block_slot <= $2)
+				and blocks_deposits.valid_signature
 			order by
-				publickey,
-				block_slot,
-				block_index
+				blocks_deposits.publickey,
+				blocks_deposits.block_slot,
+				blocks_deposits.block_index
 		),
 		first_valid_deposit_requests as (
 			select
-				distinct on (pubkey)
-				pubkey,
-				block_slot,
-				request_index
+				distinct on (blocks_deposit_requests_v2.pubkey)
+				blocks_deposit_requests_v2.pubkey,
+				blocks_deposit_requests_v2.slot_processed as block_slot,
+				blocks_deposit_requests_v2.index_processed as request_index
 			from
-				blocks_deposit_requests
+				blocks_deposit_requests_v2
+			inner join blocks on
+				blocks_deposit_requests_v2.block_processed_root = blocks.blockroot and (blocks.status = '1' or blocks.slot = 0)
 			where
-				pubkey in (select bdr.pubkey from blocks_deposit_requests bdr where bdr.block_slot >= $1 and bdr.block_slot <= $2)
+				-- filter out relevant requests for performance-reasons, no need to check for validity
+				blocks_deposit_requests_v2.pubkey in (select bdr.pubkey from blocks_deposit_requests_v2 bdr where bdr.slot_processed >= $1 and bdr.slot_processed <= $2)
+				and blocks_deposit_requests_v2.slot_processed is not null
+				and blocks_deposit_requests_v2.status = 'completed'
 			order by
-				pubkey,
-				block_slot,
-				request_index
+				blocks_deposit_requests_v2.pubkey,
+				blocks_deposit_requests_v2.slot_processed,
+				blocks_deposit_requests_v2.index_processed
 		),
 		deposits as (
 			select
@@ -884,11 +903,10 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 			inner join first_valid_deposits on
 				blocks_deposits.publickey = first_valid_deposits.publickey
 			where
-				blocks_deposits.valid_signature
-				and blocks.slot >= $1
+				blocks.slot >= $1
 				and blocks.slot <= $2
-				and (blocks.status = '1'
-					or blocks.slot = 0)
+				and (blocks.status = '1' or blocks.slot = 0)
+				and first_valid_deposits.block_slot is not null
 				and (blocks_deposits.block_slot > first_valid_deposits.block_slot  -- any slot after the first valid deposit
 					or (blocks_deposits.block_slot = first_valid_deposits.block_slot -- or the same slot but a equal or higher block-index
 						and blocks_deposits.block_index >= first_valid_deposits.block_index)
@@ -902,27 +920,27 @@ func gatherValidatorDepositWithdrawals(day uint64, data []*types.ValidatorStatsT
 				count(*) as deposits,
 				sum(amount) as deposits_amount
 			from
-				blocks_deposit_requests bdr
+				blocks_deposit_requests_v2 bdr
 			inner join validators on
 				bdr.pubkey = validators.pubkey
 			inner join blocks on
-				bdr.block_root = blocks.blockroot
+				bdr.block_processed_root = blocks.blockroot
 			left join first_valid_deposits on
 				bdr.pubkey = first_valid_deposits.publickey
 			left join first_valid_deposit_requests on
 				bdr.pubkey = first_valid_deposit_requests.pubkey
 			where
-				blocks.slot >= $1
+				bdr.status = 'completed'
+				and blocks.slot >= $1
 				and blocks.slot <= $2
-				and (blocks.status = '1'
-					or blocks.slot = 0)
+				and (blocks.status = '1' or blocks.slot = 0)
 				and (
 					(first_valid_deposits.block_slot is not null 
-						and bdr.block_slot > first_valid_deposits.block_slot)  -- any slot after the first valid deposit
+						and bdr.slot_processed > first_valid_deposits.block_slot)  -- any slot after the first valid deposit
 					or (first_valid_deposit_requests.block_slot is not null
-						and (bdr.block_slot > first_valid_deposit_requests.block_slot -- or any slot after the first valid deposit request
-							or (bdr.block_slot = first_valid_deposit_requests.block_slot -- or the same slot but a equal or higher index
-							and bdr.request_index >= first_valid_deposit_requests.request_index)
+						and (bdr.slot_processed > first_valid_deposit_requests.block_slot -- or any slot after the first valid deposit request
+							or (bdr.slot_processed = first_valid_deposit_requests.block_slot -- or the same slot but a equal or higher index
+								and bdr.index_processed >= first_valid_deposit_requests.request_index)
 						)
 					)
 				)
@@ -1216,12 +1234,17 @@ func gatherValidatorConsolidations(day uint64, data []*types.ValidatorStatsTable
 	}
 	err := ReaderDb.Select(&consolidationData, `
 		SELECT
-			source_index,
-			target_index,
-			COALESCE(amount_consolidated, 0) AS amount_consolidated
-		FROM blocks_consolidation_requests
-		INNER JOIN blocks ON blocks_consolidation_requests.block_root = blocks.blockroot AND blocks.status = '1'
-		WHERE block_slot >= $1 AND block_slot <= $2
+			v_source.validatorindex AS source_index,
+			v_target.validatorindex AS target_index,
+			COALESCE(blocks_consolidation_requests_v2.amount_consolidated, 0) AS amount_consolidated
+		FROM blocks_consolidation_requests_v2
+		INNER JOIN blocks ON blocks_consolidation_requests_v2.block_processed_root = blocks.blockroot AND blocks.status = '1'
+		INNER JOIN validators v_source ON v_source.pubkey = blocks_consolidation_requests_v2.source_pubkey
+		INNER JOIN validators v_target ON v_target.pubkey = blocks_consolidation_requests_v2.target_pubkey
+		WHERE blocks_consolidation_requests_v2.slot_processed IS NOT NULL 
+			AND blocks_consolidation_requests_v2.slot_processed >= $1 
+			AND blocks_consolidation_requests_v2.slot_processed <= $2
+			AND blocks_consolidation_requests_v2.status = 'completed'
 	`, firstSlot, lastSlot)
 	if err != nil {
 		return fmt.Errorf("error retrieving consolidation data for day [%v], firstSlot [%v] and lastSlot [%v]: %w", day, firstSlot, lastSlot, err)
