@@ -61,6 +61,9 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		Settings: ch.Settings{
 			"deduplicate_blocks_in_dependent_materialized_views":                "1",
 			"update_insert_deduplication_token_in_dependent_materialized_views": "1",
+			// trade of higher background overhead for lower query specific memory pressure
+			// reduces memory usage by 20-30% in our prod insert queries
+			"optimize_on_insert": "0",
 		},
 		ClientInfo: ch.ClientInfo{
 			Products: []struct {
