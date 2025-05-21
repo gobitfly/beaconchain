@@ -59,8 +59,11 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 			log.Debugf("CH NATIVE WRITER: "+s, p...)
 		},
 		Settings: ch.Settings{
-			"deduplicate_blocks_in_dependent_materialized_views":                "1",
-			"update_insert_deduplication_token_in_dependent_materialized_views": "1",
+			// https://clickhouse.com/docs/operations/settings/settings#deduplicate_blocks_in_dependent_materialized_views
+			// when an insert to a table with dependent materialized views fails during the materialized view processing, said table will still retain the rows inserted.
+			// this setting ensure that when the insert query gets retried by our code, the attempt doesn't get filtered out by the target table doing de-duplication,
+			// and instead ensures that all dependent materialized views receive the data anyways
+			"deduplicate_blocks_in_dependent_materialized_views": "1",
 			// trade of higher background overhead for lower query specific memory pressure
 			// reduces memory usage by 20-30% in our prod insert queries
 			"optimize_on_insert": "0",
@@ -115,8 +118,8 @@ func UltraFastDumpToClickhouse[T UltraFastClickhouseStruct](data T, target_table
 	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
-		"insert_deduplication_token": insert_uuid, // 重复数据插入时，会根据这个字段进行去重
-		"insert_deduplicate":         true,
+		"insert_deduplication_token": insert_uuid, // this is used by tables & materialized views to correctly handle retries of inserts (skipping them if they already have the resulting rows, for example)
+		"insert_deduplicate":         true,        // enforce deduplication to be done by tables & materialized views
 	}), ch.WithLogs(func(l *ch.Log) {
 		log.Debugf("CH NATIVE WRITER: %s", l.Text)
 	}),
