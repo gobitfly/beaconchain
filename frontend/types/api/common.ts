@@ -59,12 +59,12 @@ export interface PercentageDetails<T extends any> {
   min_value: T;
   max_value: T;
 }
-export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
+export interface ChartSeries<I extends number /* int */ | string, D extends number /* float64 */ | undefined | number /* float64 */ | string /* decimal.Decimal */> {
   id: I; // id may be a string or an int
   property?: 'el' | 'cl'; // for stacking bar charts
   data: D[]; // y-axis values
 }
-export interface ChartData<I extends number /* int */ | string, D extends number /* float64 */ | string /* decimal.Decimal */> {
+export interface ChartData<I extends number /* int */ | string, D extends number /* float64 */ | undefined | number /* float64 */ | string /* decimal.Decimal */> {
   categories: number /* uint64 */[]; // x-axis
   series: ChartSeries<I, D>[];
 }

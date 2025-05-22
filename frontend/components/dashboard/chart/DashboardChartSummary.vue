@@ -208,9 +208,11 @@ const loadData = async () => {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
         const newObj: SeriesOption = {
+          connectNulls: false,
           data: element.data,
           name,
           smooth: false,
+          step: 'end',
           symbol: 'none',
           type: 'line',
         }
