@@ -1,6 +1,7 @@
 package db2
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -10,6 +11,8 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -403,8 +406,79 @@ func (c *ConsensusDB) SavePendingDepositsQueue(pendingDeposits []types.PendingDe
 		dat[i] = []interface{}{r.ID, r.ValidatorIndex, utils.DBEncodeToHex(r.Pubkey), utils.DBEncodeToHex(r.WithdrawalCredentials), r.Amount, utils.DBEncodeToHex(r.Signature), r.Slot, r.QueuedBalanceAhead, r.EstClearEpoch}
 	}
 
-	err := db.ClearAndCopyToTable(c.WriterDb, "pending_deposits_queue", []string{"id", "validator_index", "pubkey", "withdrawal_credentials", "amount", "signature", "slot", "queued_balance_ahead", "est_clear_epoch"}, dat)
+	conn, err := c.WriterDb.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("error retrieving raw sql connection: %w", err)
+	}
+	defer conn.Close()
+	err = conn.Raw(func(driverConn interface{}) error {
+		conn := driverConn.(*stdlib.Conn).Conn()
+		tx, err := conn.Begin(context.Background())
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			err := tx.Rollback(context.Background())
+			if err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+				log.Error(err, "error rolling back transaction", 0)
+			}
+		}()
+
+		err = db.ClearAndCopyToTable(tx, "pending_deposits_queue", []string{"id", "validator_index", "pubkey", "withdrawal_credentials", "amount", "signature", "slot", "queued_balance_ahead", "est_clear_epoch"}, dat)
+		if err != nil {
+			return errors.Wrap(err, "failed to save pending deposits queue")
+		}
+
+		err = matchDepositRequests(tx)
+		if err != nil {
+			return fmt.Errorf("error matching data with blocks_deposit_requests_v2 table: %w", err)
+		}
+
+		return tx.Commit(context.Background())
+	})
+
 	return err
+}
+
+func matchDepositRequests(tx pgx.Tx) error {
+	// matching will be wrong for postponed system-deposits
+	// but likelihood to ever occur for one pubkey, amount, slot combo is effectively 0
+	query := `
+	WITH pdq_ranked AS (
+		SELECT *, ROW_NUMBER() OVER (
+			PARTITION BY pubkey, amount, slot ORDER BY id
+		) AS rn
+		FROM pending_deposits_queue
+	),
+	bdr_ranked AS (
+		SELECT *, ROW_NUMBER() OVER (
+			PARTITION BY pubkey, amount, slot_queued ORDER BY index_queued ASC
+		) AS rn
+		FROM blocks_deposit_requests_v2
+		WHERE status = 'queued' OR status = 'postponed'
+	),
+	matches AS (
+		SELECT pdq.id AS pdq_id, bdr.id AS bdr_id
+		FROM pdq_ranked pdq
+		JOIN bdr_ranked bdr
+			ON pdq.pubkey = bdr.pubkey
+			AND pdq.amount = bdr.amount
+			AND (
+				pdq.slot = bdr.slot_queued AND pdq.rn = bdr.rn OR
+				(pdq.slot = 0 AND bdr.index_queued < 0)
+			)
+	)
+	UPDATE pending_deposits_queue
+	SET request_id = matches.bdr_id
+	FROM matches
+	WHERE pending_deposits_queue.id = matches.pdq_id;`
+
+	_, err := tx.Exec(context.Background(), query)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	return nil
 }
 
 func (c *ConsensusDB) GetLastIndexedConsensusLayerEventsEpoch() (count int64, err error) {
