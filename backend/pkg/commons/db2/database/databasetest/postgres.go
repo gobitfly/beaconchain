@@ -71,7 +71,7 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 	}
 
 	// ping database to check if it's ready
-	if err := checkIfPostgresIsReady(db, 10, 1*time.Second); err != nil {
+	if err := checkIfPostgresIsReady(t, db, 10, 1*time.Second); err != nil {
 		t.Fatal(err)
 	}
 
@@ -121,13 +121,13 @@ func truncate(db *sqlx.DB) error {
 	return nil
 }
 
-func checkIfPostgresIsReady(db *sqlx.DB, retry int, delay time.Duration) error {
+func checkIfPostgresIsReady(t *testing.T, db *sqlx.DB, retry int, delay time.Duration) error {
 	var err error
 	for i := 0; i < retry; i++ {
 		if err = db.Ping(); err == nil {
 			return nil
 		}
-		fmt.Printf("waiting for postgres to be ready... attempt %d/%d\n", i+1, retry)
+		t.Logf("waiting for postgres to be ready... attempt %d/%d\n", i+1, retry)
 		time.Sleep(delay)
 	}
 
