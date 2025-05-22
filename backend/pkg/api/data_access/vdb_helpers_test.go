@@ -41,7 +41,6 @@ func setupTestDataAccess(t *testing.T) (da *DataAccessService, mock sqlmock.Sqlm
 	dataAccess := &DataAccessService{
 		clickhouseReader: sqlxDB,
 		readerDb:         sqlxDB,
-		alloyReader:      sqlxDB,
 	}
 
 	return dataAccess, mock

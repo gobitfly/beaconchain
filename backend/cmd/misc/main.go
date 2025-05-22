@@ -209,10 +209,6 @@ func Run() {
 		db.WriterDb, db.ReaderDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
 		defer db.ReaderDb.Close()
 		defer db.WriterDb.Close()
-
-		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
-		defer db.AlloyReader.Close()
-		defer db.AlloyWriter.Close()
 	}
 	if requires.UserDBs {
 		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&cfg.Frontend.WriterDatabase, &cfg.Frontend.ReaderDatabase, "pgx", "postgres")

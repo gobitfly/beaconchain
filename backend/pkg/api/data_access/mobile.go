@@ -242,7 +242,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 			return fmt.Errorf("error preparing query: %w", err)
 		}
 
-		err = d.alloyReader.GetContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.GetContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 		}
@@ -318,7 +318,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 
 func (d *DataAccessService) getInternalRpNetworkStats(ctx context.Context) (*t.RPNetworkStats, error) {
 	var networkStats t.RPNetworkStats
-	err := d.alloyReader.GetContext(ctx, &networkStats, `
+	err := d.readerDb.GetContext(ctx, &networkStats, `
 			SELECT 
 				EXTRACT(EPOCH FROM claim_interval_time) / 3600 AS claim_interval_hours,
 				node_operator_rewards,
@@ -373,7 +373,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileValidators(ctx context.Co
 		LEFT JOIN rocketpool_nodes rn ON rocketpool_minipools.node_address = rn.address
 		WHERE validator_index = ANY($1)
 		`
-		err := d.alloyReader.SelectContext(ctx, &rocketPoolResults, validatorsQuery, indices)
+		err := d.readerDb.SelectContext(ctx, &rocketPoolResults, validatorsQuery, indices)
 		if err != nil {
 			return errors.Wrap(err, "error retrieving rocketpool data")
 		}

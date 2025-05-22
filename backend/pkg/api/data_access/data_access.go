@@ -52,8 +52,6 @@ type DataAccessService struct {
 
 	readerDb                *sqlx.DB
 	writerDb                *sqlx.DB
-	alloyReader             *sqlx.DB
-	alloyWriter             *sqlx.DB
 	clickhouseReader        *sqlx.DB
 	userReader              *sqlx.DB
 	userWriter              *sqlx.DB
@@ -78,8 +76,6 @@ func NewDataAccessService(cfg *types.Config) *DataAccessService {
 	db.WriterDb = das.writerDb
 	db.UserReader = das.userWriter
 	db.UserWriter = das.userReader
-	db.AlloyReader = das.alloyReader
-	db.AlloyWriter = das.alloyWriter
 	db.ClickHouseReader = das.clickhouseReader
 	db.BigtableClient = das.bigtable
 	db.PersistentRedisDbClient = das.persistentRedisDbClient
@@ -99,12 +95,6 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 	go func() {
 		defer wg.Done()
 		dataAccessService.writerDb, dataAccessService.readerDb = db.MustInitDB(&cfg.WriterDatabase, &cfg.ReaderDatabase, "pgx", "postgres")
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		dataAccessService.alloyWriter, dataAccessService.alloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
 	}()
 
 	wg.Add(1)
@@ -169,7 +159,7 @@ func createDataAccessService(cfg *types.Config) *DataAccessService {
 
 func (d *DataAccessService) StartDataAccessServices() {
 	// Create the services
-	d.services = services.NewServices(d.readerDb, d.writerDb, d.alloyReader, d.alloyWriter, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
+	d.services = services.NewServices(d.readerDb, d.writerDb, d.clickhouseReader, d.bigtable, d.persistentRedisDbClient)
 
 	// Initialize repositories
 	d.registerNotificationInterfaceTypes()
@@ -189,11 +179,11 @@ func (d *DataAccessService) Close() {
 	if d.writerDb != nil {
 		d.writerDb.Close()
 	}
-	if d.alloyReader != nil {
-		d.alloyReader.Close()
+	if d.readerDb != nil {
+		d.readerDb.Close()
 	}
-	if d.alloyWriter != nil {
-		d.alloyWriter.Close()
+	if d.writerDb != nil {
+		d.writerDb.Close()
 	}
 	if d.clickhouseReader != nil {
 		d.clickhouseReader.Close()

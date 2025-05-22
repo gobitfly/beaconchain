@@ -223,7 +223,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 		return nil, nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &elRewardsQueryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &elRewardsQueryResult, query, args...)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
 	}
@@ -1339,7 +1339,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %w", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table blocks_proposerslashings: %w", err)
 		}
@@ -1386,7 +1386,7 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 			return fmt.Errorf("error preparing query: %w", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+		err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving data from table blocks_attesterslashings: %w", err)
 		}
@@ -1527,7 +1527,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		return nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &queryResult, query, args...)
+	err = d.readerDb.SelectContext(ctx, &queryResult, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving data from table blocks: %w", err)
 	}

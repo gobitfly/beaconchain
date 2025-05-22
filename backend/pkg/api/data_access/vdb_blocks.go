@@ -226,7 +226,7 @@ func (d *DataAccessService) GetValidatorDashboardBlocks(ctx context.Context, das
 				if err != nil {
 					return nil, nil, err
 				}
-				if err = d.alloyReader.SelectContext(ctx, &filteredValidators, validatorsQuery, validatorsArgs...); err != nil {
+				if err = d.readerDb.SelectContext(ctx, &filteredValidators, validatorsQuery, validatorsArgs...); err != nil {
 					return nil, nil, err
 				}
 			}

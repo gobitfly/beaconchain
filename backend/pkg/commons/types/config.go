@@ -23,8 +23,6 @@ type Config struct {
 	DeploymentType             string            `yaml:"deploymentType" env:"DEPLOYMENT_TYPE"`
 	ReaderDatabase             DatabaseConfig    `yaml:"readerDatabase" env:", prefix=READER_"`
 	WriterDatabase             DatabaseConfig    `yaml:"writerDatabase" env:", prefix=WRITER_"`
-	AlloyReader                DatabaseConfig    `yaml:"alloyReader" env:", prefix=ALLOY_READER_"`
-	AlloyWriter                DatabaseConfig    `yaml:"alloyWriter" env:", prefix=ALLOY_WRITER_"`
 	Bigtable                   Bigtable          `yaml:"bigtable" env:", prefix=BIGTABLE_"`
 	BigTableWriteAmplification int               `yaml:"bigTableWriteAmplification" env:"BIGTABLE_WRITE_AMPLIFICATION"`
 	RawBigtable                Bigtable          `yaml:"rawBigtable" env:", prefix=RAW_BIGTABLE_"`

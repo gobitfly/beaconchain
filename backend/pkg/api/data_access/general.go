@@ -41,7 +41,7 @@ func (d *DataAccessService) GetNamesAndEnsForAddresses(ctx context.Context, addr
 		Address []byte `db:"address"`
 		Name    string `db:"name"`
 	}{}
-	err := d.alloyReader.SelectContext(ctx, &names, `SELECT address, name FROM address_names WHERE address = ANY($1)`, addresses)
+	err := d.readerDb.SelectContext(ctx, &names, `SELECT address, name FROM address_names WHERE address = ANY($1)`, addresses)
 	if err != nil {
 		return err
 	}
