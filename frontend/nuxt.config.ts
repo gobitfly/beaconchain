@@ -80,6 +80,7 @@ export default defineNuxtConfig({
   routeRules: { '/': { redirect: '/dashboard' } },
   devServer: {
     host: 'local.beaconcha.in',
+    // https://web.dev/articles/how-to-use-local-https
     https: {
       cert: 'local.beaconcha.in.pem',
       key: 'local.beaconcha.in-key.pem',
