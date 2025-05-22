@@ -36,7 +36,7 @@ func (d *DataAccessService) GetBlockHeightAt(ctx context.Context, slot uint64) (
 func (d *DataAccessService) GetLatestBlockHeightForSlot(ctx context.Context, slot uint64) (uint64, error) {
 	query := `SELECT MAX(exec_block_number) FROM blocks WHERE slot <= $1`
 	res := uint64(0)
-	err := d.alloyReader.GetContext(ctx, &res, query, slot)
+	err := d.readerDb.GetContext(ctx, &res, query, slot)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Warnf("no EL block found at or before slot %d", slot)
@@ -62,7 +62,7 @@ func (d *DataAccessService) GetLatestBlockHeightsForEpoch(ctx context.Context, e
 	ORDER BY slot DESC
 	LIMIT $2`
 	res := []uint64{}
-	err := d.alloyReader.SelectContext(ctx, &res, query, (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
+	err := d.readerDb.SelectContext(ctx, &res, query, (epoch+1)*utils.Config.Chain.ClConfig.SlotsPerEpoch, utils.Config.Chain.ClConfig.SlotsPerEpoch)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest existing block heights for slots in epoch %d: %w", epoch, err)
 	}

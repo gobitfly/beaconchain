@@ -41,8 +41,6 @@ const (
 	Event_DBConnWriterDB                    Event         = "db_conn_writer_db"
 	Event_DBConnUserReader                  Event         = "db_conn_user_reader"
 	Event_DBConnUserWriter                  Event         = "db_conn_user_writer"
-	Event_DBConnAlloyReader                 Event         = "db_conn_alloy_reader"
-	Event_DBConnAlloyWriter                 Event         = "db_conn_alloy_writer"
 	Event_DBConnFrontendReaderDB            Event         = "db_conn_frontend_reader_db"
 	Event_DBConnFrontendWriterDB            Event         = "db_conn_frontend_writer_db"
 	Event_DBConnClickhouseReader            Event         = "db_conn_clickhouse_reader"

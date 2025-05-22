@@ -322,7 +322,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 			SharedGroups sql.NullBool   `db:"shared_groups"`
 		}{}
 
-		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		err := d.readerDb.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.id,
 			uvd.name,
@@ -373,7 +373,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	wg.Go(func() error {
 		dbReturn := []DashboardCount{}
 
-		err := d.alloyReader.SelectContext(ctx, &dbReturn, `
+		err := d.readerDb.SelectContext(ctx, &dbReturn, `
 		SELECT
 			uvd.id,
 			COUNT(DISTINCT(uvdg.id)) AS group_count,
@@ -409,7 +409,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 	}
 
 	// Get the account dashboards
-	err = d.alloyReader.SelectContext(ctx, &result.AccountDashboards, `
+	err = d.readerDb.SelectContext(ctx, &result.AccountDashboards, `
 		SELECT
 			id,
 			name
@@ -426,7 +426,7 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 // return number of active / archived dashboards
 func (d *DataAccessService) GetUserValidatorDashboardCount(ctx context.Context, userId uint64, active bool) (uint64, error) {
 	var count uint64
-	err := d.alloyReader.GetContext(ctx, &count, `
+	err := d.readerDb.GetContext(ctx, &count, `
 		SELECT COUNT(*) FROM users_val_dashboards
 		WHERE user_id = $1 AND (($2 AND is_archived IS NULL) OR (NOT $2 AND is_archived IS NOT NULL))
 	`, userId, active)

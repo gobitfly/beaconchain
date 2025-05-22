@@ -89,12 +89,6 @@ func Run() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		db.AlloyWriter, db.AlloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
 		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&cfg.Frontend.WriterDatabase, &cfg.Frontend.ReaderDatabase, "pgx", "postgres")
 	}()
 
@@ -137,8 +131,6 @@ func Run() {
 	defer db.WriterDb.Close()
 	defer db.FrontendReaderDB.Close()
 	defer db.FrontendWriterDB.Close()
-	defer db.AlloyReader.Close()
-	defer db.AlloyWriter.Close()
 	defer db.ClickHouseReader.Close()
 	defer db.ClickHouseWriter.Close()
 	defer db.BigtableClient.Close()

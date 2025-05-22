@@ -131,7 +131,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 			WebhookFormat  string                 `db:"webhook_format"`
 		}
 		var dashboardDefinitions []dashboardDefinitionRow
-		err = db.AlloyWriter.Select(&dashboardDefinitions, `
+		err = db.WriterDb.Select(&dashboardDefinitions, `
 		SELECT
 			users_val_dashboards.id as dashboard_id,
 			users_val_dashboards.name as dashboard_name,
@@ -185,7 +185,7 @@ func GetSubsForEventFilter(eventName types.EventName, lastSentFilter string, las
 		}
 
 		var rocketpoolNodes []rocketpoolNodeRow
-		err = db.AlloyWriter.Select(&rocketpoolNodes, `
+		err = db.WriterDb.Select(&rocketpoolNodes, `
 		SELECT
 			pubkey,
 			node_address

@@ -107,7 +107,7 @@ func (d *DataAccessService) GetValidatorsByDepositAddress(ctx context.Context, d
 			goqu.I("d.from_address").Eq(addressParsed),
 		)
 
-	return runQueryRows[[]t.VDBValidator](ctx, d.alloyReader, validatorsDs)
+	return runQueryRows[[]t.VDBValidator](ctx, d.readerDb, validatorsDs)
 }
 
 func (d *DataAccessService) GetValidatorsByWithdrawalCredentials(ctx context.Context, withdrawalCredentials string) ([]t.VDBValidator, error) {
@@ -123,7 +123,7 @@ func (d *DataAccessService) GetValidatorsByWithdrawalCredentials(ctx context.Con
 			goqu.I("v.withdrawalcredentials").Eq(addressParsed),
 		)
 
-	return runQueryRows[[]t.VDBValidator](ctx, d.alloyReader, validatorsDs)
+	return runQueryRows[[]t.VDBValidator](ctx, d.readerDb, validatorsDs)
 }
 
 func (d *DataAccessService) GetValidatorsByGraffiti(ctx context.Context, graffiti string) ([]t.VDBValidator, error) {
@@ -135,5 +135,5 @@ func (d *DataAccessService) GetValidatorsByGraffiti(ctx context.Context, graffit
 			goqu.I("b.graffiti_text").Eq(graffiti),
 		)
 
-	return runQueryRows[[]t.VDBValidator](ctx, d.alloyReader, validatorsDs)
+	return runQueryRows[[]t.VDBValidator](ctx, d.readerDb, validatorsDs)
 }

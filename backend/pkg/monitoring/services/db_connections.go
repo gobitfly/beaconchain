@@ -66,8 +66,6 @@ func (s *ServerDbConnections) checkDBConnections() {
 		n(constants.Event_DBConnWriterDB, db.WriterDb),
 		n(constants.Event_DBConnUserReader, db.UserReader),
 		n(constants.Event_DBConnUserWriter, db.UserWriter),
-		n(constants.Event_DBConnAlloyReader, db.AlloyReader),
-		n(constants.Event_DBConnAlloyWriter, db.AlloyWriter),
 		n(constants.Event_DBConnFrontendReaderDB, db.FrontendReaderDB),
 		n(constants.Event_DBConnFrontendWriterDB, db.FrontendWriterDB),
 		n(constants.Event_DBConnClickhouseReader, db.ClickHouseReader),

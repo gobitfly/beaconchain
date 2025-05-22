@@ -63,11 +63,6 @@ func Run() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			db.AlloyWriter, db.AlloyReader = db.MustInitDB(&cfg.AlloyWriter, &cfg.AlloyReader, "pgx", "postgres")
-		}()
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
 			bt, err := db.InitBigtable(utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, fmt.Sprintf("%d", utils.Config.Chain.ClConfig.DepositChainID), utils.Config.RedisCacheEndpoint)
 			if err != nil {
 				log.Fatal(err, "error connecting to bigtable", 0)
@@ -152,8 +147,6 @@ func Run() {
 	monitoring.Start()
 
 	if !cfg.JustV2 {
-		defer db.AlloyReader.Close()
-		defer db.AlloyWriter.Close()
 		defer db.BigtableClient.Close()
 	}
 	defer db.ReaderDb.Close() // we need it to get the pectra workaround events
