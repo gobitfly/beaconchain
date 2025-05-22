@@ -813,17 +813,30 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	return ret, nil
 }
 
+func calcEfficiencyNulled(dividend, divisor decimal.Decimal) *float64 {
+	if divisor.IsZero() {
+		return nil
+	}
+	efficiency := calcEfficiency(dividend, divisor)
+	return &efficiency
+}
+
 func calcEfficiency(dividend, divisor decimal.Decimal) float64 {
 	if divisor.IsZero() {
-		return 0
+		return 100
 	}
-	return dividend.Div(divisor).InexactFloat64() * 100
+	eff := dividend.Div(divisor).InexactFloat64() * 100
+	if eff > 100 {
+		log.Error(nil, "efficiency is greater than 100%", 1, map[string]interface{}{"efficiency": eff})
+		eff = 100
+	}
+	return eff
 }
 
 // for summary charts: series id is group id, no stack
 
-func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
-	ret := &t.ChartData[int, float64]{}
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, *float64], error) {
+	ret := &t.ChartData[int, *float64]{}
 
 	if len(groupIds) == 0 { // short circuit if no groups are selected
 		return ret, nil
@@ -929,26 +942,22 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	// convert the returned data to the expected return type (not pretty)
 	tsMap := make(map[time.Time]bool)
-	data := make(map[time.Time]map[int64]float64)
+	data := make(map[time.Time]map[int64]*float64)
 	groupMap := make(map[int64]bool)
 
 	totalEfficiencyMap := make(map[time.Time]*t.VDBValidatorSummaryChartRow)
 	for _, row := range queryResults {
 		tsMap[row.Timestamp] = true
-
 		if data[row.Timestamp] == nil {
-			data[row.Timestamp] = make(map[int64]float64)
+			data[row.Timestamp] = make(map[int64]*float64)
 		}
 
 		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
-			data[row.Timestamp][row.GroupId] = calcEfficiency(row.EfficiencyDividend, row.EfficiencyDivisor)
-			if data[row.Timestamp][row.GroupId] == 0 {
+			eff := calcEfficiencyNulled(row.EfficiencyDividend, row.EfficiencyDivisor)
+			if eff == nil {
 				continue
 			}
-			if data[row.Timestamp][row.GroupId] > 100 {
-				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
-				data[row.Timestamp][row.GroupId] = 100
-			}
+			data[row.Timestamp][row.GroupId] = eff
 			groupMap[row.GroupId] = true
 		}
 
@@ -975,7 +984,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 
 		for ts := range tsMap {
-			data[ts][int64(t.NetworkAverage)] = averageNetworkEfficiency
+			data[ts][int64(t.NetworkAverage)] = &averageNetworkEfficiency
 		}
 		groupMap[t.NetworkAverage] = true
 	}
@@ -986,14 +995,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			totalLineGroupId = t.DefaultGroupId
 		}
 		for _, row := range totalEfficiencyMap {
-			data[row.Timestamp][totalLineGroupId] = calcEfficiency(row.EfficiencyDividend, row.EfficiencyDivisor)
-			if data[row.Timestamp][totalLineGroupId] == 0 {
-				continue
-			}
-			if data[row.Timestamp][totalLineGroupId] > 100 {
-				log.Error(nil, "efficiency is greater than 100%", 0, map[string]interface{}{"efficiency": efficiency})
-				data[row.Timestamp][totalLineGroupId] = 100
-			}
+			data[row.Timestamp][totalLineGroupId] = calcEfficiencyNulled(row.EfficiencyDividend, row.EfficiencyDivisor)
 		}
 		groupMap[totalLineGroupId] = true
 	}
@@ -1013,13 +1015,13 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	for _, ts := range tsArray {
 		ret.Categories = append(ret.Categories, uint64(ts.Unix()))
 	}
-	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
+	ret.Series = make([]t.ChartSeries[int, *float64], 0, len(groupsArray))
 
-	seriesMap := make(map[int64]*t.ChartSeries[int, float64])
+	seriesMap := make(map[int64]*t.ChartSeries[int, *float64])
 	for _, group := range groupsArray {
-		series := t.ChartSeries[int, float64]{
+		series := t.ChartSeries[int, *float64]{
 			Id:   int(group),
-			Data: make([]float64, 0, len(tsMap)),
+			Data: make([]*float64, 0, len(tsMap)),
 		}
 		seriesMap[group] = &series
 	}
