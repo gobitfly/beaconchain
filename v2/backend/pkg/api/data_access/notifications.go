@@ -170,7 +170,7 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			return mostNotifiedGroups, fmt.Errorf("failed to prepare getMostNotifiedGroups query: %w", err)
 		}
 		res := []string{}
-		err = d.alloyReader.SelectContext(ctx, &res, querySql, args...)
+		err = d.readerDb.SelectContext(ctx, &res, querySql, args...)
 		if err != nil {
 			return mostNotifiedGroups, fmt.Errorf("failed to execute getMostNotifiedGroups query: %w", err)
 		}
@@ -371,7 +371,7 @@ func (d *DataAccessService) GetDashboardNotifications(ctx context.Context, userI
 	if err != nil {
 		return nil, nil, err
 	}
-	err = d.alloyReader.SelectContext(ctx, &response, query, args...)
+	err = d.readerDb.SelectContext(ctx, &response, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -436,7 +436,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	INNER JOIN
 		users_val_dashboards_groups uvdg ON uvdg.dashboard_id = uvd.id
 	WHERE uvd.id = $1 AND uvdg.id = $2`
-	err := d.alloyReader.GetContext(ctx, &notificationDetails, query, dashboardId, groupId)
+	err := d.readerDb.GetContext(ctx, &notificationDetails, query, dashboardId, groupId)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return &notificationDetails, nil
@@ -454,7 +454,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 	// retrieve notification events
 	eventTypesEncodedList := [][]byte{}
 	query = `SELECT details FROM users_val_dashboards_notifications_history WHERE dashboard_id = $1 AND group_id = $2 AND epoch = $3`
-	err = d.alloyReader.SelectContext(ctx, &eventTypesEncodedList, query, dashboardId, groupId, epoch)
+	err = d.readerDb.SelectContext(ctx, &eventTypesEncodedList, query, dashboardId, groupId, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -1578,7 +1578,7 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		WebhookFormat sql.NullString `db:"webhook_format"`
 	}{}
 	wg.Go(func() error {
-		err := d.alloyReader.SelectContext(ctx, &valDashboards, `
+		err := d.readerDb.SelectContext(ctx, &valDashboards, `
 			SELECT
 				d.id AS dashboard_id,
 				d.is_archived IS NOT NULL AS is_archived,
@@ -1890,7 +1890,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 
 	// Get the network for the validator dashboard
 	var chainId uint64
-	err := d.alloyReader.GetContext(ctx, &chainId, `SELECT network FROM users_val_dashboards WHERE id = $1 AND user_id = $2`, dashboardId, userId)
+	err := d.readerDb.GetContext(ctx, &chainId, `SELECT network FROM users_val_dashboards WHERE id = $1 AND user_id = $2`, dashboardId, userId)
 	if err != nil {
 		return fmt.Errorf("error getting network for validator dashboard: %w", err)
 	}
@@ -1986,7 +1986,7 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		}
 	}
 
-	_, err = d.alloyWriter.ExecContext(ctx, `
+	_, err = d.writerDb.ExecContext(ctx, `
 		UPDATE users_val_dashboards_groups 
 		SET 
 			webhook_target = NULLIF($1, ''),

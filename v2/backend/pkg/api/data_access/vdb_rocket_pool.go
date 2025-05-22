@@ -18,7 +18,7 @@ import (
 
 func rocketPoolDeployed(ctx context.Context, d *DataAccessService) (bool, error) {
 	var rpDeployed bool
-	err := d.alloyReader.GetContext(ctx, &rpDeployed, "select count(*) > 0 from rocketpool_onchain_configs")
+	err := d.readerDb.GetContext(ctx, &rpDeployed, "select count(*) > 0 from rocketpool_onchain_configs")
 	return rpDeployed, err
 }
 
@@ -164,7 +164,7 @@ func (d *DataAccessService) GetValidatorDashboardRocketPool(ctx context.Context,
 			return fmt.Errorf("error preparing query: %w", err)
 		}
 
-		err = d.alloyReader.SelectContext(ctx, &rocketPoolResults, query, args...)
+		err = d.readerDb.SelectContext(ctx, &rocketPoolResults, query, args...)
 		if err != nil {
 			return fmt.Errorf("error retrieving rocketpool data: %w", err)
 		}

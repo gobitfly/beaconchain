@@ -44,7 +44,7 @@ func (d DataAccessService) getDashboardValidators(ctx context.Context, dashboard
 		}
 
 		var validatorsArray []t.VDBValidator
-		err = d.alloyReader.SelectContext(ctx, &validatorsArray, query, args...)
+		err = d.readerDb.SelectContext(ctx, &validatorsArray, query, args...)
 		return validatorsArray, err
 	}
 	return dashboardId.Validators, nil
@@ -196,7 +196,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	elTableDs := elDs.
 		Where(goqu.L("b.epoch >= ? AND b.epoch <= ?", rewardsResultTable.EpochStart, rewardsResultTable.EpochEnd))
 
-	result.Rewards.El, err = runQuery[decimal.Decimal](ctx, d.alloyReader, elTableDs)
+	result.Rewards.El, err = runQuery[decimal.Decimal](ctx, d.readerDb, elTableDs)
 	if err != nil {
 		return IncomeInfo{}, err
 	}
@@ -269,7 +269,7 @@ func (d *DataAccessService) getValidatorDashboardRpOperatorInfo(ctx context.Cont
 		return nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.alloyReader.SelectContext(ctx, &rpOperatorInfo, query, args...)
+	err = d.readerDb.SelectContext(ctx, &rpOperatorInfo, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving rocketpool validators data: %w", err)
 	}
@@ -467,7 +467,7 @@ func (d *DataAccessService) getPastSyncCommittees(ctx context.Context, indices [
 
 	ds := buildPastSyncCommitteesQuery(indices, pastSyncPeriodCutoff, currentSyncPeriod)
 
-	validatorIndices, err := runQueryRows[[]uint64](ctx, d.alloyReader, ds)
+	validatorIndices, err := runQueryRows[[]uint64](ctx, d.readerDb, ds)
 	if err != nil {
 		return nil, err
 	}
