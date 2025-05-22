@@ -33,6 +33,7 @@ type PendingDeposit struct {
 	Slot                  uint64        `db:"slot"`
 	QueuedBalanceAhead    uint64        `db:"queued_balance_ahead"`
 	EstClearEpoch         uint64        `db:"est_clear_epoch"` // approx epoch where validator deposit will be credited on beaconchain and validator getting assigned an index (happens in transition from est_clear_epoch-1 to est_clear_epoch)
+	RequestId             sql.NullInt64 `db:"request_id"`      // foreign key to the deposit's CL request
 	// eligible = est_clear_epoch + 1
 	// activation = eligible + 2 + MAX_SEED_LOOKAHEAD
 
