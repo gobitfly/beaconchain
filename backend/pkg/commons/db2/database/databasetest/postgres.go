@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -69,6 +70,11 @@ func NewPostgres(t *testing.T) *sqlx.DB {
 		t.Fatal(err)
 	}
 
+	// ping database to check if it's ready
+	if err := checkIfPostgresIsReady(db, 10, 1*time.Second); err != nil {
+		t.Fatal(err)
+	}
+
 	// only run migration once
 	oncePostgres.Do(func() {
 		_, path, _, _ := runtime.Caller(0)
@@ -113,4 +119,17 @@ func truncate(db *sqlx.DB) error {
 		return err
 	}
 	return nil
+}
+
+func checkIfPostgresIsReady(db *sqlx.DB, retry int, delay time.Duration) error {
+	var err error
+	for i := 0; i < retry; i++ {
+		if err = db.Ping(); err == nil {
+			return nil
+		}
+		fmt.Printf("waiting for postgres to be ready... attempt %d/%d\n", i+1, retry)
+		time.Sleep(delay)
+	}
+
+	return fmt.Errorf("postgres is not ready after %d attempts: %v", retry, err)
 }
