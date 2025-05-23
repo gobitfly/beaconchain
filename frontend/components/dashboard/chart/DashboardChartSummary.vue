@@ -212,7 +212,7 @@ const loadData = async () => {
           data: element.data,
           name,
           smooth: false,
-          step: 'end',
+          step: 'middle',
           symbol: 'none',
           type: 'line',
         }
