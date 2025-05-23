@@ -114,7 +114,7 @@ const data = computed(() => {
   }
   else if (col && props.property === 'sync_efficiency') {
     return {
-      syncEfficiency: col.attestation_efficiency,
+      syncEfficiency: col.sync_efficiency,
     }
   }
   else if (col && props.property === 'proposal_efficiency') {
