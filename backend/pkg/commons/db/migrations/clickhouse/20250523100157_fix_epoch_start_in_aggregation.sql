@@ -31,14 +31,14 @@ SELECT
     validator_index,
     balance_start
 FROM _final_validator_dashboard_data_epoch
-WHERE epoch = GREATEST(
+WHERE epoch_timestamp = {genesis_epoch_ts:DateTime} + (GREATEST(
         0,
         CEIL(
             (
                 toStartOfHour({fork_epoch_ts:DateTime})::DateTime - {genesis_epoch_ts:DateTime}
             ) / {epoch_duration:Int64}
         )
-    )
+    ) * {epoch_duration:Int64})
 UNION ALL 
 SELECT 
     epoch,
@@ -46,14 +46,14 @@ SELECT
     validator_index,
     balance_start
 FROM _final_validator_dashboard_data_epoch
-WHERE epoch = GREATEST(
+WHERE epoch_timestamp = {genesis_epoch_ts:DateTime} + (GREATEST(
         0,
         CEIL(
             (
                 toStartOfDay({fork_epoch_ts:DateTime})::DateTime - {genesis_epoch_ts:DateTime}
             ) / {epoch_duration:Int64}
         )
-    )
+    ) * {epoch_duration:Int64})
 UNION ALL 
 SELECT 
     epoch,
@@ -61,14 +61,14 @@ SELECT
     validator_index,
     balance_start
 FROM _final_validator_dashboard_data_epoch
-WHERE epoch = GREATEST(
+WHERE epoch_timestamp = {genesis_epoch_ts:DateTime} + (GREATEST(
         0,
         CEIL(
             (
                 toMonday({fork_epoch_ts:DateTime})::DateTime - {genesis_epoch_ts:DateTime}
             ) / {epoch_duration:Int64}
         )
-    )
+    ) * {epoch_duration:Int64})
 UNION ALL 
 SELECT 
     epoch,
@@ -76,14 +76,14 @@ SELECT
     validator_index,
     balance_start
 FROM _final_validator_dashboard_data_epoch
-WHERE epoch = GREATEST(
+WHERE epoch_timestamp = {genesis_epoch_ts:DateTime} + (GREATEST(
         0,
         CEIL(
             (
                 toStartOfMonth({fork_epoch_ts:DateTime})::DateTime - {genesis_epoch_ts:DateTime}
             ) / {epoch_duration:Int64}
         )
-    )
+    ) * {epoch_duration:Int64})
 -- +goose StatementEnd
 -- +goose StatementBegin
 SYSTEM SYNC REPLICA _tmp_fix_epoch_balance_start LIGHTWEIGHT;
