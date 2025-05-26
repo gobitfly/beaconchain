@@ -33,6 +33,7 @@ type Config struct {
 	EtherscanAPIKey            string `yaml:"etherscanApiKey" env:"ETHERSCAN_API_KEY"`
 	EtherscanAPIBaseURL        string `yaml:"etherscanApiBaseUrl" env:"ETHERSCAN_API_BASEURL"`
 	RedisCacheEndpoint         string `yaml:"redisCacheEndpoint" env:"REDIS_CACHE_ENDPOINT"`
+	RedisLocalCacheEndpoint    string `yaml:"redisLocalCacheEndpoint" env:"REDIS_LOCAL_CACHE_ENDPOINT"`
 	RedisSessionStoreEndpoint  string `yaml:"redisSessionStoreEndpoint" env:"REDIS_SESSION_STORE_ENDPOINT"`
 	TieredCacheProvider        string `yaml:"tieredCacheProvider" env:"CACHE_PROVIDER"`
 	ReportServiceStatus        bool   `yaml:"reportServiceStatus" env:"REPORT_SERVICE_STATUS"`

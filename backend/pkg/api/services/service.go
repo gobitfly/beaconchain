@@ -21,15 +21,17 @@ type Services struct {
 	clickhouseReader        *sqlx.DB
 	bigtable                *db.Bigtable
 	persistentRedisDbClient *redis.Client
+	localRedisDbClient      *redis.Client
 }
 
-func NewServices(readerDb, writerDb, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient *redis.Client) *Services {
+func NewServices(readerDb, writerDb, clickhouseReader *sqlx.DB, bigtable *db.Bigtable, persistentRedisDbClient, localRedisDbClient *redis.Client) *Services {
 	return &Services{
 		readerDb:                readerDb,
 		writerDb:                writerDb,
 		clickhouseReader:        clickhouseReader,
 		bigtable:                bigtable,
 		persistentRedisDbClient: persistentRedisDbClient,
+		localRedisDbClient:      localRedisDbClient,
 	}
 }
 

@@ -91,7 +91,7 @@ func (s *Services) updateValidatorMapping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	key := fmt.Sprintf("%d:%s", utils.Config.Chain.ClConfig.DepositChainID, "vm")
-	compressed, err := s.persistentRedisDbClient.Get(ctx, key).Bytes()
+	compressed, err := s.localRedisDbClient.Get(ctx, key).Bytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get compressed validator mapping from db")
 	}
