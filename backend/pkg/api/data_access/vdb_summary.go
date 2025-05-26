@@ -849,24 +849,19 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 
 	var queryResults []*t.VDBValidatorSummaryChartRow
 
-	containsGroups := false
 	requestedGroupsMap := make(map[int64]bool)
 	for _, groupId := range groupIds {
 		requestedGroupsMap[groupId] = true
-		if !containsGroups && groupId >= 0 {
-			containsGroups = true
-		}
 	}
 
 	// need default or all groups for anon dashboards and shared dashboards without group sharing
 	// TODO could move this to API layer & generalize for all methods
-	if (dashboardId.Validators != nil && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) ||
-		(dashboardId.AggregateGroups && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId]) {
+	if (dashboardId.Validators != nil || dashboardId.AggregateGroups) && !requestedGroupsMap[t.AllGroups] && !requestedGroupsMap[t.DefaultGroupId] {
 		return ret, nil
 	}
 
-	totalLineRequested := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
-	averageNetworkLineRequested := requestedGroupsMap[t.NetworkAverage]
+	hasTotalSeries := requestedGroupsMap[t.AllGroups] || dashboardId.AggregateGroups
+	hasNetworkAvgSeries := requestedGroupsMap[t.NetworkAverage]
 
 	var dividendColumn, divisorColumn string
 	switch efficiency {
@@ -916,8 +911,8 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 				Where(
 					goqu.I("dashboard_id").Eq(dashboardId.Id),
 					goqu.Or(
+						goqu.V(hasTotalSeries),
 						goqu.I("group_id").In(groupIds),
-						goqu.V(totalLineRequested),
 					),
 				),
 			).
@@ -940,39 +935,48 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		return nil, fmt.Errorf("error retrieving data from table %s: %w", dataTable, err)
 	}
 
-	// convert the returned data to the expected return type (not pretty)
-	tsMap := make(map[time.Time]bool)
-	data := make(map[time.Time]map[int64]*float64)
-	groupMap := make(map[int64]bool)
+	// map from `timestamp:groupId` to row pointer
+	type key struct {
+		Timestamp uint64
+		GroupId   int64
+	}
+	rowsMap := make(map[key]*t.VDBValidatorSummaryChartRow)
 
-	totalEfficiencyMap := make(map[time.Time]*t.VDBValidatorSummaryChartRow)
-	for _, row := range queryResults {
-		tsMap[row.Timestamp] = true
-		if data[row.Timestamp] == nil {
-			data[row.Timestamp] = make(map[int64]*float64)
-		}
-
-		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
-			eff := calcEfficiencyNulled(row.EfficiencyDividend, row.EfficiencyDivisor)
-			if eff == nil {
-				continue
-			}
-			data[row.Timestamp][row.GroupId] = eff
-			groupMap[row.GroupId] = true
-		}
-
-		if totalLineRequested {
-			if totalEfficiencyMap[row.Timestamp] == nil {
-				totalEfficiencyMap[row.Timestamp] = &t.VDBValidatorSummaryChartRow{
-					Timestamp: row.Timestamp,
-				}
-			}
-			totalEfficiencyMap[row.Timestamp].EfficiencyDividend = totalEfficiencyMap[row.Timestamp].EfficiencyDividend.Add(row.EfficiencyDividend)
-			totalEfficiencyMap[row.Timestamp].EfficiencyDivisor = totalEfficiencyMap[row.Timestamp].EfficiencyDivisor.Add(row.EfficiencyDivisor)
-		}
+	// fill rowsMap with the results
+	totalSeriesId := int64(t.AllGroups)
+	if dashboardId.AggregateGroups {
+		totalSeriesId = t.DefaultGroupId
 	}
 
-	if averageNetworkLineRequested {
+	timestamps := map[uint64]struct{}{} // set of timestamps
+	series := map[int64]struct{}{}      // set of series ids
+	for _, row := range queryResults {
+		ts := uint64(row.Timestamp.Unix())
+		timestamps[ts] = struct{}{}
+		if !dashboardId.AggregateGroups && requestedGroupsMap[row.GroupId] {
+			series[row.GroupId] = struct{}{}
+			rowsMap[key{ts, row.GroupId}] = row
+		}
+		if !hasTotalSeries {
+			continue
+		}
+		series[totalSeriesId] = struct{}{}
+		// add up to total row for the timestamp
+		totalKey := key{ts, totalSeriesId}
+		if rowsMap[totalKey] == nil {
+			rowsMap[totalKey] = &t.VDBValidatorSummaryChartRow{}
+		}
+		rowsMap[totalKey].EfficiencyDividend = rowsMap[totalKey].EfficiencyDividend.Add(row.EfficiencyDividend)
+		rowsMap[totalKey].EfficiencyDivisor = rowsMap[totalKey].EfficiencyDivisor.Add(row.EfficiencyDivisor)
+	}
+
+	data := make(map[key]*float64) // map from `timestamp:groupId` to efficiency value
+	// calculate the efficiency for each group and timestamp
+	for key, value := range rowsMap {
+		data[key] = calcEfficiencyNulled(value.EfficiencyDividend, value.EfficiencyDivisor)
+	}
+
+	if hasNetworkAvgSeries {
 		// Get the average network efficiency
 		efficiency, err := d.services.GetCurrentEfficiencyInfo()
 		if err != nil {
@@ -983,62 +987,23 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64 * 100
 		}
 
-		for ts := range tsMap {
-			data[ts][int64(t.NetworkAverage)] = &averageNetworkEfficiency
+		for ts := range timestamps {
+			data[key{ts, t.NetworkAverage}] = &averageNetworkEfficiency
 		}
-		groupMap[t.NetworkAverage] = true
+		series[t.NetworkAverage] = struct{}{}
 	}
 
-	if totalLineRequested {
-		totalLineGroupId := int64(t.AllGroups)
-		if dashboardId.AggregateGroups {
-			totalLineGroupId = t.DefaultGroupId
+	ret.Categories = slices.Sorted(maps.Keys(timestamps))
+	for _, seriesId := range slices.Sorted(maps.Keys(series)) {
+		seriesData := make([]*float64, len(ret.Categories))
+		for i, ts := range ret.Categories {
+			seriesData[i] = data[key{ts, seriesId}]
 		}
-		for _, row := range totalEfficiencyMap {
-			data[row.Timestamp][totalLineGroupId] = calcEfficiencyNulled(row.EfficiencyDividend, row.EfficiencyDivisor)
-		}
-		groupMap[totalLineGroupId] = true
+		ret.Series = append(ret.Series, t.ChartSeries[int, *float64]{
+			Id:   int(seriesId),
+			Data: seriesData,
+		})
 	}
-
-	tsArray := make([]time.Time, 0, len(tsMap))
-	for ts := range tsMap {
-		tsArray = append(tsArray, ts)
-	}
-	sort.Slice(tsArray, func(i, j int) bool {
-		return tsArray[i].Before(tsArray[j])
-	})
-
-	groupsArray := slices.Collect(maps.Keys(groupMap))
-	slices.Sort(groupsArray)
-
-	ret.Categories = make([]uint64, 0, len(tsArray))
-	for _, ts := range tsArray {
-		ret.Categories = append(ret.Categories, uint64(ts.Unix()))
-	}
-	ret.Series = make([]t.ChartSeries[int, *float64], 0, len(groupsArray))
-
-	seriesMap := make(map[int64]*t.ChartSeries[int, *float64])
-	for _, group := range groupsArray {
-		series := t.ChartSeries[int, *float64]{
-			Id:   int(group),
-			Data: make([]*float64, 0, len(tsMap)),
-		}
-		seriesMap[group] = &series
-	}
-
-	for _, ts := range tsArray {
-		for _, group := range groupsArray {
-			seriesMap[group].Data = append(seriesMap[group].Data, data[ts][group])
-		}
-	}
-
-	for _, series := range seriesMap {
-		ret.Series = append(ret.Series, *series)
-	}
-
-	sort.Slice(ret.Series, func(i, j int) bool {
-		return ret.Series[i].Id < ret.Series[j].Id
-	})
 
 	return ret, nil
 }
