@@ -1071,24 +1071,16 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 	}
 
 	// Fill the data
+	validatorsToFetchActivation := make(map[uint64]*uint64, 0)
 	for _, validatorIndex := range validatorIndices {
 		metadata := validatorMapping.ValidatorMetadata[validatorIndex]
 
 		switch constypes.ValidatorDbStatus(metadata.Status) {
 		case constypes.DbDeposited:
-			// could add activation epoch estimate if possible
+			// could add activation epoch estimate
 			result.Deposited = append(result.Deposited, validatorIndex)
 		case constypes.DbPending:
-			validatorInfo := t.IndexTimestamp{
-				Index: validatorIndex,
-			}
-			activationEpoch, err := d.getValidatorActivation(ctx, validatorIndex)
-			if err != nil {
-				log.Warnf("error getting validator activation: %v", err)
-			} else {
-				validatorInfo.Timestamp = uint64(utils.EpochToTime(activationEpoch).Unix())
-			}
-			result.Pending = append(result.Pending, validatorInfo)
+			validatorsToFetchActivation[validatorIndex] = nil
 		case constypes.DbActiveOnline:
 			result.Online = append(result.Online, validatorIndex)
 		case constypes.DbActiveOffline:
@@ -1139,6 +1131,23 @@ func (d *DataAccessService) GetValidatorDashboardSummaryValidators(ctx context.C
 				}
 			}
 		}
+	}
+
+	// Get the activation epoch for pending validators
+	err = d.getValidatorActivationEpochs(ctx, validatorsToFetchActivation)
+	if err != nil {
+		return nil, err
+	}
+	for validatorIndex, activationEpoch := range validatorsToFetchActivation {
+		if activationEpoch == nil {
+			continue
+		}
+
+		validatorInfo := t.IndexTimestamp{
+			Index:     validatorIndex,
+			Timestamp: uint64(utils.EpochToTime(*activationEpoch).Unix()),
+		}
+		result.Pending = append(result.Pending, validatorInfo)
 	}
 
 	return result, nil
