@@ -116,10 +116,10 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 
 	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable))).
+		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
 		With("validators", goqu.L("(SELECT dashboard_id, group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
-			goqu.L("ARRAY_AGG(r.validator_index) AS validator_indices"),
+			goqu.L("groupUniqArray(r.validator_index) AS validator_indices"),
 			goqu.L(d.getTotalRewardsColumns()).As("cl_rewards"),
 			goqu.L("SUM(r.efficiency_dividend::decimal) AS efficiency_dividend"),
 			goqu.L("SUM(r.efficiency_divisor::decimal) AS efficiency_divisor"),
@@ -493,38 +493,41 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	// TODO check: why this can't be aggregated?
+	// note(invis): added a group by to replace FINAL, does not resolve above comment
+	// 				group(validator_index) needed because rolling might have fragments not yet merged by db
 	ds := goqu.Dialect("postgres").
 		Select(
 			goqu.L("validator_index"),
-			goqu.L("epoch_start"),
-			goqu.L("epoch_end"),
-			goqu.L("efficiency_dividend"),
-			goqu.L("efficiency_divisor"),
-			goqu.L("efficiency_attestations_dividend"),
-			goqu.L("efficiency_attestations_divisor"),
-			goqu.L("efficiency_proposals_dividend"),
-			goqu.L("efficiency_proposals_divisor"),
-			goqu.L("efficiency_sync_dividend"),
-			goqu.L("efficiency_sync_divisor"),
-			goqu.L("attestations_scheduled"),
-			goqu.L("attestations_observed"),
-			goqu.L("attestations_head_executed"),
-			goqu.L("attestations_source_executed"),
-			goqu.L("attestations_target_executed"),
-			goqu.L("attestations_ideal_reward - attestations_reward_rewards_only").As("attestations_missed_rewards"),
-			goqu.L("blocks_scheduled"),
-			goqu.L("blocks_proposed"),
-			goqu.L("blocks_cl_missed_median_reward"),
-			goqu.L("sync_scheduled"),
-			goqu.L("sync_executed"),
-			goqu.L("slashed AS slashed_in_period"),
-			goqu.L("blocks_slashing_count AS slashed_amount"),
-			goqu.L("blocks_expected"),
-			goqu.L("inclusion_delay_sum"),
-			goqu.L("sync_localized_max_reward"),
-			goqu.L("sync_reward_rewards_only"),
-			goqu.L("sync_committees_expected")).
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+			goqu.MIN(goqu.L("epoch_start")).As("epoch_start"),
+			goqu.MAX(goqu.L("epoch_end")).As("epoch_end"),
+			goqu.SUM(goqu.L("efficiency_dividend")).As("efficiency_dividend"),
+			goqu.SUM(goqu.L("efficiency_divisor")).As("efficiency_divisor"),
+			goqu.SUM(goqu.L("efficiency_attestations_dividend")).As("efficiency_attestations_dividend"),
+			goqu.SUM(goqu.L("efficiency_attestations_divisor")).As("efficiency_attestations_divisor"),
+			goqu.SUM(goqu.L("efficiency_proposals_dividend")).As("efficiency_proposals_dividend"),
+			goqu.SUM(goqu.L("efficiency_proposals_divisor")).As("efficiency_proposals_divisor"),
+			goqu.SUM(goqu.L("efficiency_sync_dividend")).As("efficiency_sync_dividend"),
+			goqu.SUM(goqu.L("efficiency_sync_divisor")).As("efficiency_sync_divisor"),
+			goqu.SUM(goqu.L("attestations_scheduled")).As("attestations_scheduled"),
+			goqu.SUM(goqu.L("attestations_observed")).As("attestations_observed"),
+			goqu.SUM(goqu.L("attestations_head_executed")).As("attestations_head_executed"),
+			goqu.SUM(goqu.L("attestations_source_executed")).As("attestations_source_executed"),
+			goqu.SUM(goqu.L("attestations_target_executed")).As("attestations_target_executed"),
+			goqu.SUM(goqu.L("attestations_ideal_reward - attestations_reward_rewards_only")).As("attestations_missed_rewards"),
+			goqu.SUM(goqu.L("blocks_scheduled")).As("blocks_scheduled"),
+			goqu.SUM(goqu.L("blocks_proposed")).As("blocks_proposed"),
+			goqu.SUM(goqu.L("blocks_cl_missed_median_reward")).As("blocks_cl_missed_median_reward"),
+			goqu.SUM(goqu.L("sync_scheduled")).As("sync_scheduled"),
+			goqu.SUM(goqu.L("sync_executed")).As("sync_executed"),
+			goqu.MAX(goqu.L("slashed")).As("slashed_in_period"),
+			goqu.SUM(goqu.L("blocks_slashing_count")).As("slashed_amount"),
+			goqu.SUM(goqu.L("blocks_expected")).As("blocks_expected"),
+			goqu.SUM(goqu.L("inclusion_delay_sum")).As("inclusion_delay_sum"),
+			goqu.SUM(goqu.L("sync_localized_max_reward")).As("sync_localized_max_reward"),
+			goqu.SUM(goqu.L("sync_reward_rewards_only")).As("sync_reward_rewards_only"),
+			goqu.SUM(goqu.L("sync_committees_expected"))).As("sync_committees_expected").
+		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
+		GroupBy(goqu.L("validator_index"))
 
 	if dashboardId.Validators == nil {
 		ds = ds.
@@ -1253,15 +1256,16 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 
 	// Build the query
 	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf("%s AS r FINAL", clickhouseTable))).
+		From(goqu.L(fmt.Sprintf("%s AS r", clickhouseTable))).
 		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
-			goqu.L("r.epoch_start"),
-			goqu.L("r.epoch_end"),
+			goqu.SUM(goqu.L("r.epoch_start")).As("r.epoch_start"),
+			goqu.SUM(goqu.L("r.epoch_end")).As("r.epoch_end"),
 			goqu.L("r.validator_index"),
-			goqu.L("r.slashed"),
-			goqu.L("COALESCE(r.blocks_slashing_count, 0) AS slashed_amount")).
-		Where(goqu.L("(r.slashed OR r.blocks_slashing_count > 0)"))
+			goqu.MAX(goqu.L("r.slashed")).As("slashed"),
+			goqu.SUM(goqu.L("r.blocks_slashing_count")).As("slashed_amount")).
+		GroupBy(goqu.L("r.validator_index")).
+		Having(goqu.L("(r.slashed OR r.blocks_slashing_count > 0)")) // HAVING because it needs to be applied after the aggregation
 
 	// handle the case when we have a list of validators
 	if len(dashboardId.Validators) > 0 {
@@ -1480,11 +1484,9 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 
 	ds := goqu.Dialect("postgres").
 		Select(
-			goqu.L("epoch_start"),
-			goqu.L("epoch_end")).
-		From(goqu.L(fmt.Sprintf("%s FINAL", clickhouseTable))).
-		Order(goqu.L("epoch_start").Asc()).
-		Limit(1)
+			goqu.MIN(goqu.L("epoch_start")).As("epoch_start"),
+			goqu.MAX(goqu.L("epoch_end")).As("epoch_end")).
+		From(goqu.L(fmt.Sprintf("%s_epoch_minmax", clickhouseTable)))
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {

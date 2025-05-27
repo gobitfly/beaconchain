@@ -285,7 +285,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	retrieveEfficiency := func(table string, efficiency *float64) {
 		eg.Go(func() error {
 			ds := goqu.Dialect("postgres").
-				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
+				From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
 				Select(
 					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
@@ -452,11 +452,13 @@ func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indic
 		return map[uint64]float64{}, nil
 	}
 	ds := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
+		From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
 		Select(
 			goqu.L("r.validator_index"),
-			goqu.L("COALESCE(efficiency_dividend / NULLIF(efficiency_divisor, 0), 0)").As("efficiency"),
-		).Where(goqu.L("r.validator_index IN ?", indices))
+			goqu.L("COALESCE(SUM(efficiency_dividend) / NULLIF(SUM(efficiency_divisor), 0), 0)").As("efficiency"),
+		).
+		Where(goqu.L("r.validator_index IN ?", indices)).
+		GroupBy(goqu.L("r.validator_index"))
 
 	type qryResult []struct {
 		Index      uint64  `db:"validator_index"`
