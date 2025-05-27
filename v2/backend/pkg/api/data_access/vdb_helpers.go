@@ -98,6 +98,7 @@ func (d *DataAccessService) getTimeToNextWithdrawal(distance uint64) time.Time {
 }
 
 func (d *DataAccessService) getTotalRewardsColumns() string {
+	// note(invis): what the hell is this c;
 	rewardColumns := `
 		SUM(finalizeAggregation(r.balance_end)) +
 		SUM(r.withdrawals_amount) -
@@ -135,7 +136,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	}
 
 	rewardsDs := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf("%s AS r FINAL", table))).
+		From(goqu.L(fmt.Sprintf("%s AS", table))).
 		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("MIN(epoch_start) AS epoch_start"),
@@ -448,13 +449,10 @@ func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.Time
 }
 
 // Builds a query to retrieve the earliest epoch start value
-// Orders results in ascending order and limits to the first row.
 func buildEpochStartQuery(table string) *goqu.SelectDataset {
 	return goqu.Dialect("postgres").
-		Select(goqu.L("epoch_start")).
-		From(goqu.L(fmt.Sprintf("%s FINAL", table))).
-		Order(goqu.L("epoch_start").Asc()).
-		Limit(1)
+		Select(goqu.MIN(goqu.L("epoch_start")).As("epoch_start")).
+		From(goqu.L(fmt.Sprintf("%s_epoch_minmax", table)))
 }
 
 // Retrieves past sync committee validators for the given validator indices and epoch range
@@ -495,7 +493,7 @@ func buildMinMaxEpochsQuery(dashboardId t.VDBId, groupId int64, clickhouseTable 
 		Select(
 			goqu.L("MIN(epoch_start) as min_epoch_start"),
 			goqu.L("MAX(epoch_end) as max_epoch_end")).
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable)))
 
 	if dashboardId.Validators == nil {
 		ds = ds.
@@ -537,7 +535,7 @@ func buildLastScheduledBlockAndSyncDateQuery(clickhouseTable string, dashboardId
 		Select(
 			goqu.L("MAX(last_scheduled_block_epoch) as last_scheduled_block_epoch"),
 			goqu.L("MAX(last_scheduled_sync_epoch) as last_scheduled_sync_epoch")).
-		From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, clickhouseTable)))
+		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable)))
 
 	if dashboardId.Validators != nil {
 		// If Validators are provided, use them directly in the WHERE clause
