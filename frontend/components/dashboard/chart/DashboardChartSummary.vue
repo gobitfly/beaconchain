@@ -207,8 +207,11 @@ const loadData = async () => {
         else {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
+
+        const data = element.data.map(datapoint => datapoint * 100)
+
         const newObj: SeriesOption = {
-          data: element.data,
+          data,
           name,
           smooth: false,
           symbol: 'none',
