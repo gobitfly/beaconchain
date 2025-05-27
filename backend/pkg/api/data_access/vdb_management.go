@@ -396,7 +396,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				return err
 			}
 			ds := goqu.Dialect("postgres").
-				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
+				From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 				Select(
 					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
