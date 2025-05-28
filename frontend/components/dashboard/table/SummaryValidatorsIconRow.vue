@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import type { SummaryValidatorsIconRowInfo } from '~/types/validator'
 
-interface Props {
-  absolute: boolean,
+defineProps<{
   icons: SummaryValidatorsIconRowInfo[],
-  total?: number,
-}
-const props = defineProps<Props>()
-
-const combinedTotal = computed<number>(
-  () =>
-    props.total ?? props.icons?.reduce((sum, icon) => sum + icon.count, 0) ?? 0,
-)
+}>()
 </script>
 
 <template>
@@ -25,13 +17,7 @@ const combinedTotal = computed<number>(
       <BcIcon name="power-off" />
     </div>
     <BcFormatNumber
-      v-if="absolute"
       :value="status.count"
-    />
-    <BcFormatPercent
-      v-else
-      :value="status.count"
-      :base="combinedTotal"
     />
   </div>
 </template>
