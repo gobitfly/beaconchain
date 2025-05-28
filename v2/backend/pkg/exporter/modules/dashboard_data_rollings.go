@@ -154,16 +154,29 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 		source := source
 		minmax := minmax
 		eg.Go(func() error {
-			d.log.Infof("transferring rolling source %s to rolling %s", source, rolling)
+			d.log.Debugf("transferring rolling source %s to rolling %s", source, rolling)
 			now := time.Now()
 			err := edb.TransferRollingSourceToRolling(rolling, source, *minmax)
 			if err != nil {
 				return errors.Wrap(err, "failed to transfer rolling source to rolling")
 			}
-			// d.log.Infof("transferred rolling source %s to rolling %s in %s", source, rolling, time.Since(now))
+			d.log.Debugf("transferred rolling source %s to rolling %s in %s", source, rolling, time.Since(now))
 			// one metric for the source table and oe for the rolling table
 			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer", source)).Observe(time.Since(now).Seconds())
 			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer", rolling)).Observe(time.Since(now).Seconds())
+			return nil
+		})
+		eg.Go(func() error {
+			d.log.Debugf("transferring rolling roi source %s to rolling %s", source, rolling)
+			now := time.Now()
+			err := edb.TransferRollingRoiSourceToRolling(rolling, source, *minmax)
+			if err != nil {
+				return errors.Wrap(err, "failed to transfer rolling roi source to rolling")
+			}
+			d.log.Debugf("transferred rolling roi source %s to rolling %s in %s", source, rolling, time.Since(now))
+			// one metric for the source table and oe for the rolling table
+			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer_roi", source)).Observe(time.Since(now).Seconds())
+			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer_roi", rolling)).Observe(time.Since(now).Seconds())
 			return nil
 		})
 	}
