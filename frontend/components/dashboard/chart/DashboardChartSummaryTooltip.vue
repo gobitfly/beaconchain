@@ -46,9 +46,9 @@ defineProps<Props>()
       <div class="name">
         {{ entry.name }}:
       </div>
-      <BcFormatPercent
+      <BaseFormatPercent
         class="efficiency"
-        :percent="entry.efficiency"
+        :value="entry.efficiency / 100"
       />
     </div>
   </div>

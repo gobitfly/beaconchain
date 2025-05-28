@@ -137,7 +137,7 @@ const data = computed(() => {
   else if (row && props.property === 'efficiency') {
     return {
       efficiencyTotal: {
-        compare: row.average_network_efficiency,
+        networkEfficiency: row.average_network_efficiency,
         value: row.efficiency,
       },
     }
@@ -334,20 +334,14 @@ const openValidatorModal = () => {
             class="space_before"
             :value="data.apr.income.el"
             source-currency="elCurrency"
-          /> (
-          <BaseFormatPercent
-            :value="data.apr.apr.el"
-          />
-          )
+          /> (<BaseFormatPercent :value="data.apr.apr.el" />)
         </div>
         <div class="row">
           <b>{{ $t("common.consensus_layer") }}:</b>
           <BcFormatAmount
             class="space_before"
             :value="data.apr.income.cl"
-          /> (<BaseFormatPercent
-            :value="data.apr.apr.cl"
-          />)
+          /> (<BaseFormatPercent :value="data.apr.apr.cl" />)
         </div>
       </template>
     </BcTooltip>
@@ -419,25 +413,90 @@ const openValidatorModal = () => {
     </BcTooltip>
   </div>
 
-  <BcFormatPercent
-    v-else-if="data?.efficiencyTotal"
-    :percent="data.efficiencyTotal.value * 100"
-    :compare-percent="data.efficiencyTotal.compare * 100"
-    :color-break-point="80"
-  >
-    <template #leading-tooltip="{ compare }">
-      <span class="efficiency-total-tooltip">
-        {{
-          $t(`dashboard.validator.summary.tooltip.${compare}`, {
-            name: groupName,
-            average: formatPercent(row.average_network_efficiency, {
-              maximumFractionDigits: 2,
-            }),
-          })
-        }}
-      </span>
-    </template>
-  </BcFormatPercent>
+  <div v-else-if="data?.efficiencyTotal">
+    <BcColor
+      v-if="data.efficiencyTotal.value > data.efficiencyTotal.networkEfficiency"
+      color="green"
+    >
+      <BcTooltip>
+        <BcIcon
+          name="arrow-up"
+          size="sm"
+          class="efficiency-total-comparison-icon"
+        />
+        <template #tooltip>
+          <span class="efficiency-total-tooltip">
+            {{
+              $t('dashboard.validator.summary.tooltip.higher', {
+                name: groupName,
+                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+                  maximumFractionDigits: 2,
+                }),
+              })
+            }}
+          </span>
+        </template>
+      </BcTooltip>
+      <BaseFormatPercent
+        :value="data.efficiencyTotal.value"
+      />
+    </BcColor>
+    <BcColor
+      v-else-if="data.efficiencyTotal.networkEfficiency === data.efficiencyTotal.value"
+      color="yellow"
+    >
+      <BcTooltip>
+        <BcIcon
+          name="arrow-left-right"
+          size="sm"
+          class="efficiency-total-comparison-icon"
+        />
+        <template #tooltip>
+          <span class="efficiency-total-tooltip">
+            {{
+              $t('dashboard.validator.summary.tooltip.equal', {
+                name: groupName,
+                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+                  maximumFractionDigits: 2,
+                }),
+              })
+            }}
+          </span>
+        </template>
+      </BcTooltip>
+      <BaseFormatPercent
+        :value="data.efficiencyTotal.value"
+      />
+    </BcColor>
+    <BcColor
+      v-else
+      color="red"
+    >
+      <BcTooltip>
+        <BcIcon
+          name="arrow-down"
+          size="sm"
+          class="efficiency-total-comparison-icon"
+        />
+        <template #tooltip>
+          <span class="efficiency-total-tooltip">
+            {{
+              $t('dashboard.validator.summary.tooltip.lower', {
+                name: groupName,
+                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+                  maximumFractionDigits: 2,
+                }),
+              })
+            }}
+          </span>
+        </template>
+      </BcTooltip>
+      <BaseFormatPercent
+        :value="data.efficiencyTotal.value"
+      />
+    </BcColor>
+  </div>
+
   <span v-else-if="data?.simple">
     {{ data.simple?.value }}
   </span>
@@ -476,6 +535,10 @@ const openValidatorModal = () => {
 
 .efficiency-total-tooltip {
   width: 155px;
+}
+
+.efficiency-total-comparison-icon {
+  margin-right: var(--padding-small);
 }
 
 :global(.dashboard-table-summary-value__tooltip) {
