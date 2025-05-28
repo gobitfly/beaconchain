@@ -155,7 +155,6 @@ const infos = computed(() => {
     <span class="sub-title">{{ props?.subTitle }}</span>
     <DashboardTableSummaryValidatorsIconRow
       :icons="infos.validatorIcons"
-      :absolute="true"
     />
     <div
       v-for="(info, index) in infos.list"

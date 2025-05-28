@@ -3,6 +3,7 @@ export type Color =
   | 'gray'
   | 'green'
   | 'red'
+  | 'yellow'
 
 defineProps<{
   color?: Color,
@@ -15,6 +16,7 @@ defineProps<{
       'bc-color--gray': color === 'gray',
       'bc-color--green': color === 'green',
       'bc-color--red': color === 'red',
+      'bc-color--yellow': color === 'yellow',
     }"
   >
     <slot />
@@ -27,6 +29,9 @@ defineProps<{
   }
   .bc-color--red {
     color: var(--negative-color);
+  }
+  .bc-color--yellow {
+    color: var(--equal-color);
   }
   .bc-color--gray {
     color: var(--grey);

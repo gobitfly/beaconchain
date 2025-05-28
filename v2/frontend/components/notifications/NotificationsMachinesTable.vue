@@ -78,9 +78,9 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
               :header="$t('notifications.machine.col.threshold')"
             >
               <template #body="slotProps">
-                <BcFormatPercent
+                <BaseFormatPercent
                   v-if="slotProps.data.threshold"
-                  :percent="slotProps.data.threshold * 100"
+                  :value="slotProps.data.threshold"
                 />
                 <span v-else>-</span>
               </template>
@@ -121,9 +121,9 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                       $t('notifications.machine.col.threshold')
                     }}
                   </div>
-                  <BcFormatPercent
+                  <BaseFormatPercent
                     v-if="slotProps.data.threshold"
-                    :percent="slotProps.data.threshold * 100"
+                    :value="slotProps.data.threshold"
                   />
                   <span v-else>-</span>
                 </div>
