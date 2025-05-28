@@ -75,7 +75,7 @@ func InitBigtableSchemaIndexed() error {
 
 	admin, err := gcp_bigtable.NewAdminClient(ctx, utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance)
 	if err != nil {
-		return err
+		return fmt.Errorf("error calling gcp_bigtable.NewAdminClient, project: %s, instance: %s: %w", utils.Config.Bigtable.Project, utils.Config.Bigtable.Instance, err)
 	}
 
 	existingTables, err := admin.Tables(ctx)
