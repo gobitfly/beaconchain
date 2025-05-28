@@ -113,6 +113,14 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		if writer.SSL {
 			extraParams = "secure=true"
 		}
+		// after 3 seconds, starting predicting how long the query will take
+		extraParams += "&timeout_before_checking_execution_speed=3"
+		// if the predicted query execution time is more than 60 seconds, cancel it (to prevent bad queries)
+		// this is larger than the actual timeout because there might be temporary delays during the query execution
+		extraParams += "&max_estimated_execution_time=60"
+		// if the query actually takes more than 30 seconds to execute, cancel it (to prevent stuck queries)
+		extraParams += "&max_execution_time=30"
+
 		// debug
 		// sslParam += "&debug=true"
 	} else {
@@ -150,6 +158,13 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		if writer.SSL {
 			extraParams = "secure=true"
 		}
+		// after 3 seconds, starting predicting how long the query will take
+		extraParams += "&timeout_before_checking_execution_speed=3"
+		// if the predicted query execution time is more than 60 seconds, cancel it (to prevent bad queries)
+		// this is larger than the actual timeout because there might be temporary delays during the query execution
+		extraParams += "&max_estimated_execution_time=60"
+		// if the query actually takes more than 30 seconds to execute, cancel it (to prevent stuck queries)
+		extraParams += "&max_execution_time=30"
 		// debug
 		// sslParam += "&debug=true"
 	} else {
