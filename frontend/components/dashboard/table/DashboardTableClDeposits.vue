@@ -490,6 +490,7 @@ const {
     color: var(--text-color-discreet);
     gap: var(--padding);
     padding-top: var(--padding-medium);
+    line-height: 1.25rem;
   }
 
   &__type-badge {
