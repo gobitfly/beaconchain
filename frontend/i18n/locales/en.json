@@ -266,6 +266,8 @@
             "cl_withdrawals": {
                 "info_auto_queued": "Only shows the next automatic withdrawal estimate. Be aware that manual withdrawals use a different queue.",
                 "info_slot_processed_estimated": "This is an estimation since this withdrawal is still queued.",
+                "info_type_skimming": "This was an automatic skimming withdrawal because your validators balance exceeded its maximum effective balance.",
+                "info_type_system": "This special withdrawal was triggered by switching to a compounding validator. The amount was not withdrawn but automatically re-deposited, viewable in the deposits tab.",
                 "reject_reason": {
                     "address_mismatch": "Request must originate from the validator’s configured withdrawal address.",
                     "excess_balance": "Validator had no excess balance available for withdrawal.",
