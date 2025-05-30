@@ -174,7 +174,9 @@ const getGroupName = (groupId: number) => {
                   }}
                 </BcBadge>
                 <BcTooltip
-                  v-if="slotProps.data.type === 'auto' && slotProps.data.status === 'queued'"
+                  v-if="
+                    (slotProps.data.type === 'skimming' || slotProps.data.type === 'system')
+                      && slotProps.data.status === 'queued'"
                   tooltip-width="280px"
                   tooltip-text-align="left"
                   class="dashboard-table-cl-withdrawals__type-tooltip-trigger"
@@ -391,6 +393,18 @@ const getGroupName = (groupId: number) => {
                   />
                 </div>
               </div>
+              <span
+                v-if="slotProps.data.type === 'skimming'"
+                class="dashboard-table-cl-withdrawals__details-footer-text"
+              >
+                {{ $t('dashboard.validator.cl_withdrawals.info_type_skimming') }}
+              </span>
+              <span
+                v-else-if="slotProps.data.type === 'system'"
+                class="dashboard-table-cl-withdrawals__details-footer-text"
+              >
+                {{ $t('dashboard.validator.cl_withdrawals.info_type_system') }}
+              </span>
             </div>
           </template>
           <template #empty>
@@ -438,6 +452,14 @@ const getGroupName = (groupId: number) => {
 
 .dashboard-table-cl-withdrawals__details-value {
   display: flex;
+}
+
+.dashboard-table-cl-withdrawals__details-footer-text {
+  display: flex;
+  color: var(--text-color-discreet);
+  gap: var(--padding);
+  padding-top: var(--padding-medium);
+  line-height: 1.25rem;
 }
 
 .dashboard-table-cl-withdrawals__detail-value-tooltip {
