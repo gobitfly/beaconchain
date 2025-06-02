@@ -136,12 +136,12 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 	}
 
 	rewardsDs := goqu.Dialect("postgres").
-		From(goqu.L(fmt.Sprintf("%s AS", table))).
+		From(goqu.L(fmt.Sprintf("%s AS r", table))).
 		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
-			goqu.L("COUNT(*) AS validator_count"),
+			goqu.L("uniqueExact(*) AS validator_count"),
 			goqu.L("SUM(roi_dividend)").As("roi_dividend"),
 			goqu.L("SUM(roi_divisor)").As("roi_divisor"),
 		)
