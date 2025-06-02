@@ -141,7 +141,7 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 		Select(
 			goqu.L("MIN(epoch_start) AS epoch_start"),
 			goqu.L("MAX(epoch_end) AS epoch_end"),
-			goqu.L("uniqExact(*) AS validator_count"),
+			goqu.L("uniqExact(validator_index) AS validator_count"),
 			goqu.L("SUM(roi_dividend)").As("roi_dividend"),
 			goqu.L("SUM(roi_divisor)").As("roi_divisor"),
 		)
