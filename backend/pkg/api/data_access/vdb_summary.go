@@ -525,7 +525,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 			goqu.SUM(goqu.L("inclusion_delay_sum")).As("inclusion_delay_sum"),
 			goqu.SUM(goqu.L("sync_localized_max_reward")).As("sync_localized_max_reward"),
 			goqu.SUM(goqu.L("sync_reward_rewards_only")).As("sync_reward_rewards_only"),
-			goqu.SUM(goqu.L("sync_committees_expected"))).As("sync_committees_expected").
+			goqu.SUM(goqu.L("sync_committees_expected")).As("sync_committees_expected")).
 		From(goqu.L(fmt.Sprintf(`%s AS r`, clickhouseTable))).
 		GroupBy(goqu.L("validator_index"))
 
