@@ -14,32 +14,11 @@ Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introdu
 
 ## Setup
 
-Install `npm` and Nuxt.
-
 Clone the `beaconchain` repository from git.
 
-On your console, navigate to folder `beaconchain/frontend`.
+In your terminal, navigate to folder `beaconchain/frontend`.
 
-Type
-
-Then type:
-
-```bash
-cp .env-example .env
-```
-
-In file `.env`, write the URLs of the API servers and the secret key to access to them.
-The variable evoking the development is used to show/hide features and components that are not ready for production.
-
-Create server certificates for locally running on https, by runing these comands in the console:
-
-```bash
-openssl genrsa 2048 > server.key
-sudo chmod 400 server.key
-sudo openssl req -new -x509 -nodes -sha256 -days 365 -key server.key -out server.crt
-```
-
-Navigate to folder `beaconchain/frontend` and run
+### Install packages.
 
 ```bash
 npm install
@@ -59,6 +38,28 @@ then
 pnpm install
 yarn install
 bun install
+```
+
+### Create `.env` file
+Copy the existing `.env-example` file to a new `.env`:
+
+```bash
+cp .env-example .env
+```
+
+Inside of `.env`, add necessary URLs and secrets.
+
+### Create `SSL certificate` to enable local development over `https`
+
+We recommend using `mkcert` for creating self-signed certificates, as it simplifies the process and avoids browser warnings. If you don't have `mkcert` installed, you can follow the [installation instructions](https://github.com/FiloSottile/mkcert#installation).
+
+Once installed, run:
+
+```bash
+# create a local CA (Certificate Authority)
+mkcert -install
+# create a certificate for your local development domain
+mkcert local.beaconcha.in
 ```
 
 ## Development Server
@@ -121,7 +122,7 @@ You can `turn on` mocked data `globally` for all `configured enpoints`
 in your [.env](.env) or
 - running `npm run dev:mock:api` (See: [package.json](package.json))
 
-## Descision Record
+## Decision Record
 
 We documented our decisions in the [decisions](decisions.md) file.
 The documentation should be inspired by Architecture Decision Records ([ADR](https://adr.github.io/)).

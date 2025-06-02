@@ -30,6 +30,10 @@ pnpm-lock.yaml
 
 .npmrc
 
+# SSL certificate files created via `mkcert`
+*.pem
+
+# Prevent accidentally commiting obsolete SSL certificate files
 server.crt
 server.key
 
