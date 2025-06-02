@@ -25,11 +25,19 @@ export function useStripeProvider() {
     )
   })
 
+  const { apiClient } = useRuntimeConfig().public
+  const csrfToken = ref()
   const stripeInit = async (stripePulicKey: string) => {
     if (stripePulicKey === '') {
       return
     }
-
+    await $fetch(`${apiClient}/pricing`, {
+      onResponse({
+        response,
+      }) {
+        csrfToken.value = response.headers.get('x-csrf-token') ?? ''
+      },
+    })
     stripe.value = await loadStripe(stripePulicKey)
   }
 
@@ -45,6 +53,9 @@ export function useStripeProvider() {
       {
         baseURL: stripeBaseUrl,
         body: JSON.stringify({ returnURL: window.location.href }),
+        headers: {
+          'x-csrf-token': csrfToken.value,
+        },
       },
     )
 
@@ -69,6 +80,9 @@ export function useStripeProvider() {
           priceId,
           promotionCode: promoCode,
         }),
+        headers: {
+          'x-csrf-token': csrfToken.value,
+        },
       },
     )
 
