@@ -81,8 +81,8 @@ export default defineNuxtConfig({
   devServer: {
     host: 'local.beaconcha.in',
     https: {
-      cert: 'server.crt',
-      key: 'server.key',
+      cert: 'local.beaconcha.in.pem',
+      key: 'local.beaconcha.in-key.pem',
     },
   },
   compatibilityDate: '2024-07-15',
