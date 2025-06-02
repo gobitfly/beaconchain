@@ -116,7 +116,7 @@ func (d *DataAccessService) getTotalRewardsColumns() string {
 type IncomeInfo struct {
 	Rewards t.ClElValue[decimal.Decimal]
 
-	Apr t.ClElValue[float64]
+	Apr t.ClElValue[*float64]
 }
 
 func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId, groupId int64, timeFrame enums.TimePeriod) (rewardsApr IncomeInfo, err error) {
@@ -207,13 +207,18 @@ func (d *DataAccessService) getElClAPR(ctx context.Context, dashboardId t.VDBId,
 }
 
 // precondition: invested amount and rewards are in the same currency
-func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration) float64 {
+func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration) *float64 {
+	if cumulativeDivisor.IsZero() {
+		return nil
+	}
+	var apr float64
 	if rewards.IsZero() || cumulativeDivisor.IsZero() || duration.Nanoseconds() == 0 {
-		return 0
+		return &apr
 	}
 	annualizationFactor := decimal.NewFromInt(utils.Year.Nanoseconds()).Div(decimal.NewFromInt(duration.Nanoseconds()))
 	percentScaleFactor := decimal.NewFromInt(100) // TODO remove BEDS-1147
-	return rewards.Div(cumulativeDivisor).Mul(annualizationFactor).Mul(percentScaleFactor).InexactFloat64()
+	apr = rewards.Div(cumulativeDivisor).Mul(annualizationFactor).Mul(percentScaleFactor).InexactFloat64()
+	return &apr
 }
 
 // converts a cl amount to the main currency

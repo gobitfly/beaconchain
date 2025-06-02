@@ -173,7 +173,8 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
-	data.NetworkEfficiency = efficiency.TotalEfficiency[enums.AllTime].Float64 * 100
+	networkEfficiency := efficiency.TotalEfficiency[enums.AllTime].Float64 * 100
+	data.NetworkEfficiency = &networkEfficiency
 
 	// Validator status
 	eg.Go(func() error {
@@ -251,22 +252,33 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 			share := queryResult.EffectiveRPLStake.Div(rpNetworkStats.EffectiveRPLStaked)
 
 			periodsPerYear := decimal.NewFromFloat(365 / (rpNetworkStats.ClaimIntervalHours / 24))
-			data.RplApr = rpNetworkStats.NodeOperatorRewards.
+			rplApr := rpNetworkStats.NodeOperatorRewards.
 				Mul(share).
 				Div(queryResult.RPLStake).
 				Mul(periodsPerYear).
 				Mul(decimal.NewFromInt(100)).InexactFloat64()
+			data.RplApr = &rplApr
 		}
 		return nil
 	})
 
-	retrieveApr := func(timeFrame enums.TimePeriod, apr *float64) {
+	retrieveApr := func(timeFrame enums.TimePeriod, apr **float64) {
 		eg.Go(func() error {
 			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
 			if err != nil {
 				return err
 			}
-			*apr = incomeInfo.Apr.El + incomeInfo.Apr.Cl
+			if incomeInfo.Apr.El == nil && incomeInfo.Apr.Cl == nil {
+				return nil
+			}
+			var totalApr float64
+			if incomeInfo.Apr.El != nil {
+				totalApr += *incomeInfo.Apr.El
+			}
+			if incomeInfo.Apr.Cl != nil {
+				totalApr += *incomeInfo.Apr.El
+			}
+			*apr = &totalApr
 			return nil
 		})
 	}
@@ -282,19 +294,28 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		})
 	}
 
-	retrieveEfficiency := func(table string, efficiency *float64) {
+	retrieveEfficiency := func(table string, efficiency **float64) {
 		eg.Go(func() error {
 			ds := goqu.Dialect("postgres").
 				From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
 				Select(
-					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
+					goqu.L("SUM(efficiency_dividend::decimal)").As("efficiency_dividend"),
+					goqu.L("SUM(efficiency_divisor::decimal)").As("efficiency_divisor"),
 				).
 				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
 				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
-			*efficiency *= 100
+			type dbResult struct {
+				EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
+				EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
+			}
+			dbRes, err := runQuery[dbResult](ctx, d.clickhouseReader, ds)
+			if !dbRes.EfficiencyDivisor.IsZero() {
+				eff := dbRes.EfficiencyDividend.Div(dbRes.EfficiencyDivisor).InexactFloat64()
+				eff *= 100
+				*efficiency = &eff
+			}
 
 			return err
 		})
