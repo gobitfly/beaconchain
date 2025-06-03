@@ -1,9 +1,7 @@
 package handlers
 
 import (
-	"context"
 	"errors"
-	"io"
 	"net/http"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
@@ -25,17 +23,6 @@ func (h *HandlerService) InternalGetProductSummary(w http.ResponseWriter, r *htt
 		Data: *data,
 	}
 	returnOk(w, r, response)
-}
-
-// dummy endpoint used for csrf token injection only
-func (i *inputGetPricing) Validate(params map[string]string, body io.ReadCloser) error {
-	return nil
-}
-
-type inputGetPricing struct{}
-
-func (h *HandlerService) InternalGetPricing(ctx context.Context, req inputGetPricing) (types.ApiDataResponse[any], error) {
-	return types.ApiDataResponse[any]{}, nil
 }
 
 // --------------------------------------
