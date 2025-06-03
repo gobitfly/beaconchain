@@ -37,7 +37,7 @@ func NewApiRouter(dataAccessor dataaccess.DataAccessor, dummy dataaccess.DataAcc
 		csrfRouter := internalRouter.NewRoute().Subrouter()
 		csrfRouter.Use(getCsrfProtectionMiddleware(cfg), csrfInjecterMiddleware)
 
-		csrfRouter.HandleFunc("/pricing", handlers.Handle(http.StatusOK, handlerService.InternalGetPricing, false)).Methods(http.MethodGet)
+		csrfRouter.HandleFunc("/pricing", func(w http.ResponseWriter, r *http.Request) {}).Methods(http.MethodGet)
 	}
 
 	// store user id in context, if available
