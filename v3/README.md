@@ -47,7 +47,7 @@ make all
 make build-service && make run ARGS="--environment local"
 ```
 
-In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can gcurl against 9090
+In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 BeaconchainApiV1Service/ExecutionBlock`)
 
 ## Debugging
 Using visual studio code, navigate to main.go and click "Run" then "Start Debugging". Set break points before sending any requests (i.e. via the swagger link above or via curl).
@@ -61,7 +61,7 @@ https://github.com/grpc-ecosystem/grpc-gateway
 
 You can deploy and run the service in either your personal environment or against the real staging environment
 
-To deploy it to your personal project, note that you must connect to your own database. Also note you must replace the project IDs and cloudsql instance parameters below with appropriate values.
+To deploy it to your personal project, note that you must connect to your own database (`make cr-create-db`). Also note you must replace the project IDs and cloudsql instance parameters below with appropriate values.
 TODO: Update this when we have real personl environment setups via terraform going.
 
 ```

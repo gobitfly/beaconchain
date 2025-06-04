@@ -14,6 +14,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 )
 
 type ApiService struct {
@@ -70,6 +71,7 @@ func Run(
 	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
 	model.RegisterBeaconchainApiV1ServiceServer(s, apiService)
 
+	reflection.Register(s)
 	go s.Serve(lis)
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
@@ -99,11 +101,16 @@ func Run(
 	mux.Handle("/", rmux)
 
 	// start a standard HTTP server with the router
-	err = http.ListenAndServe(fmt.Sprintf(":%s", config.HttpPort), mux)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", config.HttpPort))
+	if err != nil {
+		log.Infof("failed to listen: %v", err)
+	}
+	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
+
+	err = http.Serve(l, mux)
 	if err != nil {
 		log.Info(err)
 	}
-	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
 	fmt.Println("To close connection CTRL+C :-)")
 }

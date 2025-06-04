@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -68,6 +69,7 @@ func Run(
 	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
 	model.RegisterBeaconchainApiServiceServer(s, apiService)
 
+	reflection.Register(s)
 	go s.Serve(lis)
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
@@ -95,18 +97,26 @@ func Run(
 	mux.Handle("/", rmux)
 
 	// start a standard HTTP server with the router
-	err = http.ListenAndServe(fmt.Sprintf(":%s", config.HttpPort), mux)
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", config.HttpPort))
+	if err != nil {
+		log.Infof("failed to listen: %v", err)
+	}
+	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
+
+	err = http.Serve(l, mux)
 	if err != nil {
 		log.Info(err)
 	}
-	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
 	fmt.Println("To close connection CTRL+C :-)")
 }
 
 func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		md, _ := metadata.FromIncomingContext(ctx)
+		md, ok := metadata.FromIncomingContext(ctx)
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "missing metadata")
+		}
 		log.Infof("GRPC Metadata: %v", md)
 
 		vals := metadata.ValueFromIncomingContext(ctx, string(auth.ApiKeyHeader))
@@ -137,7 +147,7 @@ func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerI
 
 		// Now use the userId to get the User struct, and put it in the context
 
-		return context.WithValue(ctx, auth.CtxUserKey, user), nil
+		return handler(context.WithValue(ctx, auth.CtxUserKey, user), req)
 	}
 }
 
