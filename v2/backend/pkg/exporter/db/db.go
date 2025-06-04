@@ -1422,265 +1422,235 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 	defer cancel()
 	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
 		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+		"max_threads":                   2,
 	}))
-	ds := goqu.Dialect("postgres").
-		From(goqu.T(fmt.Sprintf("_final_validator_dashboard_data_%s", source)).As("foo")).
-		Where(
-			goqu.C("t").Gte(*minMax.Min),
-			goqu.C("t").Lt(*minMax.Max),
-		).
-		Select(goqu.C("validator_index"))
+	column := "t"
+	selector := `
+		validator_index AS validator_index,
+		any(foo.t) AS t,
+		
+		groupArraySortedIfMergeState(2048)(epoch_map) AS epoch_map,
+		min(epoch_start) AS epoch_start,
+		max(epoch_end) AS epoch_end,
+		
+		argMinStateMerge(balance_start) AS balance_start,
+		argMaxStateMerge(balance_end) AS balance_end,
+		min(balance_min) AS balance_min,
+		max(balance_max) AS balance_max,
+		
+		sum(deposits_count) AS deposits_count,
+		sum(deposits_amount) AS deposits_amount,
+		sum(withdrawals_count) AS withdrawals_count,
+		sum(withdrawals_amount) AS withdrawals_amount,
+		
+		sum(attestations_scheduled) AS attestations_scheduled,
+		sum(attestations_observed) AS attestations_observed,
+		sum(attestations_head_matched) AS attestations_head_matched,
+		sum(attestations_target_matched) AS attestations_target_matched,
+		sum(attestations_source_matched) AS attestations_source_matched,
+		
+		sum(attestations_head_executed) AS attestations_head_executed,
+		sum(attestations_target_executed) AS attestations_target_executed,
+		sum(attestations_source_executed) AS attestations_source_executed,
+		
+		sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+		sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+		
+		sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+		sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+		
+		sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+		sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+		
+		sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+		sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+		
+		sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+		sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+		sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+		sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+		sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+		sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+		sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+
+		sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+		sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+		
+		sum(inclusion_delay_sum) AS inclusion_delay_sum,
+		sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+		
+		sum(blocks_scheduled) AS blocks_scheduled,
+		sum(blocks_proposed) AS blocks_proposed,
+		sum(blocks_cl_reward) AS blocks_cl_reward,
+		sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+		sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+		sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+		sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+		sum(blocks_slashing_count) AS blocks_slashing_count,
+		sum(blocks_expected) AS blocks_expected,
+		
+		sum(sync_scheduled) AS sync_scheduled,
+		sum(sync_executed) AS sync_executed,
+		sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+		sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+		sum(sync_localized_max_reward) AS sync_localized_max_reward,
+		sum(sync_committees_expected) AS sync_committees_expected,
+		max(slashed) AS slashed,
+		max(last_executed_duty_epoch) AS last_executed_duty_epoch,
+		max(last_scheduled_sync_epoch) AS last_scheduled_sync_epoch,
+		max(last_scheduled_block_epoch) AS last_scheduled_block_epoch,
+		sum(consolidations_incoming_count) AS consolidations_incoming_count,
+		sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+		sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+		sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount,
+		sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+		sum(efficiency_attestations_dividend) AS efficiency_attestations_dividend,
+		sum(efficiency_attestations_divisor) AS efficiency_attestations_divisor,
+		sum(efficiency_proposals_dividend) AS efficiency_proposals_dividend,
+		sum(efficiency_proposals_divisor) AS efficiency_proposals_divisor,
+		sum(efficiency_sync_dividend) AS efficiency_sync_dividend,
+		sum(efficiency_sync_divisor) AS efficiency_sync_divisor,
+		sum(sync_reward) AS sync_reward,
+		sum(efficiency_dividend) AS efficiency_dividend,
+		sum(efficiency_divisor) AS efficiency_divisor
+	`
+	join := fmt.Sprintf(`
+		left join (
+			select 
+				validator_index,
+				sum(roi_dividend) as roi_dividend,
+				sum(roi_divisor) as roi_divisor
+			from _final_validator_dashboard_roi_%[1]s
+			where
+				%[2]s >= $1 and
+				%[2]s <= $2 
+			group by
+				validator_index
+		) roi
+		on roi.validator_index = a.validator_index`, source, column)
+	extraSelect := ", roi.roi_dividend::Int128 AS roi_dividend, roi.roi_divisor::Int128 AS roi_divisor"
+
 	if source == RollingSourceEpochly {
-		ds = ds.SelectAppend(
-			goqu.C("epoch_timestamp").As("t"),
-			goqu.Func("initializeAggregation",
-				"groupArraySortedIfState(2048)",
-				goqu.L("-?", goqu.T("foo").Col("epoch")),
-				goqu.T("foo").Col("validator_index").Eq(0),
-			).As("epoch_map"),
-			goqu.C("epoch").As("epoch_start"),
-			goqu.C("epoch").As("epoch_end"),
-			goqu.Func("initializeAggregation",
-				"argMinState",
-				goqu.T("foo").Col("balance_start"),
-				goqu.T("foo").Col("epoch"),
-			).As("balance_start"),
-			goqu.Func("initializeAggregation",
-				"argMaxState",
-				goqu.T("foo").Col("balance_end"),
-				goqu.T("foo").Col("epoch"),
-			).As("balance_end"),
-			goqu.Func("least",
-				goqu.T("foo").Col("balance_start"),
-				goqu.T("foo").Col("balance_end"),
-			).As("balance_min"),
-			goqu.Func("greatest",
-				goqu.T("foo").Col("balance_start"),
-				goqu.T("foo").Col("balance_end"),
-			).As("balance_max"),
-		)
-	} else {
-		ds = ds.SelectAppend(
-			goqu.C("t"),
-			goqu.C("epoch_map"),
-			goqu.C("epoch_start"),
-			goqu.C("epoch_end"),
-			goqu.C("balance_start"),
-			goqu.C("balance_end"),
-			goqu.C("balance_min"),
-			goqu.C("balance_max"),
-		)
+		column = "epoch_timestamp"
+		// this is gonna be ugly. but cant avoid sadly without code generation
+		selector = `
+			validator_index AS validator_index,
+			any(epoch_timestamp) AS t,
+			
+			groupArraySortedIfState(2048)(-foo.epoch, validator_index = 0) AS epoch_map,
+			min(foo.epoch) AS epoch_start,
+			max(foo.epoch) AS epoch_end,
+			
+			argMinState(foo.balance_start, foo.epoch) AS balance_start,
+			argMaxState(foo.balance_end, foo.epoch) AS balance_end,
+			least(min(foo.balance_start), min(foo.balance_end)) AS balance_min,
+			greatest(max(foo.balance_start), max(foo.balance_end)) AS balance_max,
+			
+			sum(deposits_count) AS deposits_count,
+			sum(deposits_amount) AS deposits_amount,
+			sum(withdrawals_count) AS withdrawals_count,
+			sum(withdrawals_amount) AS withdrawals_amount,
+			
+			sum(attestations_scheduled) AS attestations_scheduled,
+			sum(attestations_observed) AS attestations_observed,
+			sum(attestations_head_matched) AS attestations_head_matched,
+			sum(attestations_target_matched) AS attestations_target_matched,
+			sum(attestations_source_matched) AS attestations_source_matched,
+
+			sum(attestations_head_executed) AS attestations_head_executed,
+			sum(attestations_target_executed) AS attestations_target_executed,
+			sum(attestations_source_executed) AS attestations_source_executed,
+
+			sum(attestations_head_reward_rewards_only) AS attestations_head_reward_rewards_only,
+			sum(attestations_head_reward_penalties_only) AS attestations_head_reward_penalties_only,
+			
+			sum(attestations_target_reward_rewards_only) AS attestations_target_reward_rewards_only,
+			sum(attestations_target_reward_penalties_only) AS attestations_target_reward_penalties_only,
+			
+			sum(attestations_source_reward_rewards_only) AS attestations_source_reward_rewards_only,
+			sum(attestations_source_reward_penalties_only) AS attestations_source_reward_penalties_only,
+			
+			sum(attestations_inactivity_reward_rewards_only) AS attestations_inactivity_reward_rewards_only,
+			sum(attestations_inactivity_reward_penalties_only) AS attestations_inactivity_reward_penalties_only,
+			
+			sum(attestations_inclusion_reward_rewards_only) AS attestations_inclusion_reward_rewards_only,
+			sum(attestations_inclusion_reward_penalties_only) AS attestations_inclusion_reward_penalties_only,
+		
+			sum(attestations_ideal_head_reward) AS attestations_ideal_head_reward,
+			sum(attestations_ideal_target_reward) AS attestations_ideal_target_reward,
+			sum(attestations_ideal_source_reward) AS attestations_ideal_source_reward,
+
+			sum(attestations_ideal_inactivity_reward) AS attestations_ideal_inactivity_reward,
+			sum(attestations_ideal_inclusion_reward) AS attestations_ideal_inclusion_reward,
+			
+			sum(attestations_localized_max_reward) AS attestations_localized_max_reward,
+			sum(attestations_hyperlocalized_max_reward) AS attestations_hyperlocalized_max_reward,
+
+			sum(inclusion_delay_sum) AS inclusion_delay_sum,
+			sum(optimal_inclusion_delay_sum) AS optimal_inclusion_delay_sum,
+
+			sum(blocks_scheduled) AS blocks_scheduled,
+			sum(blocks_proposed) AS blocks_proposed,
+			sum(blocks_cl_reward) AS blocks_cl_reward,
+			sum(blocks_cl_attestations_reward) AS blocks_cl_attestations_reward,
+			sum(blocks_cl_sync_aggregate_reward) AS blocks_cl_sync_aggregate_reward,
+			sum(blocks_cl_slasher_reward) AS blocks_cl_slasher_reward,
+			sum(blocks_cl_missed_median_reward) AS blocks_cl_missed_median_reward,
+
+			sum(blocks_slashing_count) AS blocks_slashing_count,
+			sum(blocks_expected) AS blocks_expected,
+			sum(sync_scheduled) AS sync_scheduled,
+			sum(sync_executed) AS sync_executed,
+			sum(sync_reward_rewards_only) AS sync_reward_rewards_only,
+			sum(sync_reward_penalties_only) AS sync_reward_penalties_only,
+			sum(sync_localized_max_reward) AS sync_localized_max_reward,
+			sum(sync_committees_expected) AS sync_committees_expected,
+			max(slashed) AS slashed,
+			maxIfOrNull(foo.epoch, (foo.blocks_proposed != 0) OR (foo.sync_executed != 0) OR (foo.attestations_observed != 0)) AS last_executed_duty_epoch,
+			maxIfOrNull(foo.epoch, foo.sync_scheduled != 0) AS last_scheduled_sync_epoch,
+			maxIfOrNull(foo.epoch, foo.blocks_proposed != 0) AS last_scheduled_block_epoch,
+			sum(consolidations_incoming_count) AS consolidations_incoming_count,
+			sum(consolidations_incoming_amount) AS consolidations_incoming_amount,
+			sum(consolidations_outgoing_count) AS consolidations_outgoing_count,
+			sum(consolidations_outgoing_amount) AS consolidations_outgoing_amount,
+			sum(attestations_reward_rewards_only) AS attestations_reward_rewards_only,
+			sum(efficiency_attestations_dividend) AS efficiency_attestations_dividend,
+			sum(efficiency_attestations_divisor) AS efficiency_attestations_divisor,
+			sum(efficiency_proposals_dividend) AS efficiency_proposals_dividend,
+			sum(efficiency_proposals_divisor) AS efficiency_proposals_divisor,
+			sum(efficiency_sync_dividend) AS efficiency_sync_dividend,
+			sum(efficiency_sync_divisor) AS efficiency_sync_divisor,
+			sum(sync_reward) AS sync_reward,
+			sum(efficiency_dividend) AS efficiency_dividend,
+			sum(efficiency_divisor) AS efficiency_divisor,
+			sum(roi_dividend::Int128) AS roi_dividend,
+			sum(roi_divisor::Int128) AS roi_divisor
+		`
+		join = ""
+		extraSelect = ""
 	}
-	ds = ds.SelectAppend(
-		goqu.C("deposits_count"),
-		goqu.C("deposits_amount"),
-		goqu.C("withdrawals_count"),
-		goqu.C("withdrawals_amount"),
-
-		goqu.C("attestations_scheduled"),
-		goqu.C("attestations_observed"),
-		goqu.C("attestations_head_matched"),
-		goqu.C("attestations_target_matched"),
-		goqu.C("attestations_source_matched"),
-
-		goqu.C("attestations_head_executed"),
-		goqu.C("attestations_target_executed"),
-		goqu.C("attestations_source_executed"),
-
-		goqu.C("attestations_head_reward_rewards_only"),
-		goqu.C("attestations_head_reward_penalties_only"),
-
-		goqu.C("attestations_target_reward_rewards_only"),
-		goqu.C("attestations_target_reward_penalties_only"),
-
-		goqu.C("attestations_source_reward_rewards_only"),
-		goqu.C("attestations_source_reward_penalties_only"),
-
-		goqu.C("attestations_inactivity_reward_rewards_only"),
-		goqu.C("attestations_inactivity_reward_penalties_only"),
-
-		goqu.C("attestations_inclusion_reward_rewards_only"),
-		goqu.C("attestations_inclusion_reward_penalties_only"),
-
-		goqu.C("attestations_ideal_head_reward"),
-		goqu.C("attestations_ideal_target_reward"),
-		goqu.C("attestations_ideal_source_reward"),
-
-		goqu.C("attestations_ideal_inactivity_reward"),
-		goqu.C("attestations_ideal_inclusion_reward"),
-
-		goqu.C("attestations_localized_max_reward"),
-		goqu.C("attestations_hyperlocalized_max_reward"),
-
-		goqu.C("inclusion_delay_sum"),
-		goqu.C("optimal_inclusion_delay_sum"),
-		goqu.C("blocks_scheduled"),
-		goqu.C("blocks_proposed"),
-
-		goqu.C("blocks_cl_reward"),
-		goqu.C("blocks_cl_attestations_reward"),
-		goqu.C("blocks_cl_sync_aggregate_reward"),
-		goqu.C("blocks_cl_slasher_reward"),
-		goqu.C("blocks_cl_missed_median_reward"),
-		goqu.C("blocks_slashing_count"),
-		goqu.C("blocks_expected"),
-
-		goqu.C("sync_scheduled"),
-		goqu.C("sync_executed"),
-		goqu.C("sync_reward_rewards_only"),
-		goqu.C("sync_reward_penalties_only"),
-		goqu.C("sync_localized_max_reward"),
-		goqu.C("sync_committees_expected"),
-		goqu.C("slashed"),
-	)
-	if source == RollingSourceEpochly {
-		ds = ds.SelectAppend(
-			goqu.Func("if",
-				goqu.Or(
-					goqu.T("foo").Col("blocks_proposed").Neq(0),
-					goqu.T("foo").Col("sync_executed").Neq(0),
-					goqu.T("foo").Col("attestations_observed").Neq(0),
-				),
-				goqu.T("foo").Col("epoch"),
-				nil,
-			).As("last_executed_duty_epoch"),
-			goqu.Func("if",
-				goqu.T("foo").Col("sync_scheduled").Neq(0),
-				goqu.T("foo").Col("epoch"),
-				nil,
-			).As("last_scheduled_sync_epoch"),
-			goqu.Func("if",
-				goqu.T("foo").Col("blocks_proposed").Neq(0),
-				goqu.T("foo").Col("epoch"),
-				nil,
-			).As("last_scheduled_block_epoch"),
+	err := db.ClickHouseNativeWriter.Exec(ctx,
+		fmt.Sprintf(`
+		insert into _unsafe_%[1]s
+		with a as (select
+			%[2]s
+			from
+				_final_validator_dashboard_data_%[3]s foo  -- we dont use final because the target table will do the merge anyways and the filter statement isnt affected by it
+			where
+				foo.%[4]s >= $1 and foo.%[4]s <= $2
+			group by 
+				validator_index
 		)
-	} else {
-		ds = ds.SelectAppend(
-			goqu.C("last_executed_duty_epoch"),
-			goqu.C("last_scheduled_sync_epoch"),
-			goqu.C("last_scheduled_block_epoch"),
-		)
-	}
-	ds = ds.SelectAppend(
-		goqu.C("consolidations_incoming_count"),
-		goqu.C("consolidations_incoming_amount"),
-		goqu.C("consolidations_outgoing_count"),
-		goqu.C("consolidations_outgoing_amount"),
-		goqu.C("attestations_reward_rewards_only"),
-		goqu.C("efficiency_attestations_dividend"),
-		goqu.C("efficiency_attestations_divisor"),
-		goqu.C("efficiency_proposals_dividend"),
-		goqu.C("efficiency_proposals_divisor"),
-		goqu.C("efficiency_sync_dividend"),
-		goqu.C("efficiency_sync_divisor"),
-		goqu.C("sync_reward"),
-		goqu.C("efficiency_dividend"),
-		goqu.C("efficiency_divisor"),
-	)
-	if source == RollingSourceEpochly {
-		ds = ds.SelectAppend(
-			goqu.Cast(goqu.C("roi_dividend"), "Int128"),
-			goqu.Cast(goqu.C("roi_divisor"), "Int128"),
-		)
-	} else {
-		ds = ds.SelectAppend(
-			goqu.L("0").As("roi_dividend"),
-			goqu.L("0").As("roi_divisor"),
-		)
-	}
-	insert_ds := goqu.Dialect("postgres").
-		Insert(goqu.T(fmt.Sprintf("_unsafe_%s", rolling))).
-		FromQuery(ds)
-	sql, args, err := insert_ds.Prepared(true).ToSQL()
+		select
+			a.*%[5]s
+		from a 
+		%[6]s
+	`, rolling, selector, source, column, extraSelect, join), *minMax.Min, *minMax.Max)
 	if err != nil {
-		return fmt.Errorf("error building SQL for transferring rolling source %s to rolling %s: %w", source, rolling, err)
-	}
-	err = db.ClickHouseNativeWriter.Exec(ctx, sql, args...)
-	if err != nil {
-		return fmt.Errorf("error executing transfer of rolling source %s to rolling %s: %w", source, rolling, err)
-	}
-	return nil
-}
-
-func TransferRollingRoiSourceToRolling(rolling Rollings, source RollingSourcesSuffix, minMax MinMax) error {
-	if source == RollingSourceEpochly {
-		log.Debugf("skipping attempted roi source to rolling transfer for epochly source, not needed")
-		return nil
-	}
-	abortCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
-		"select_sequential_consistency": 1,
-	}))
-
-	// inserted in a secondary query to prevent having to aggregate the main insert
-	insert_ds := goqu.Dialect("postgres").
-		Insert(goqu.T(fmt.Sprintf("_unsafe_%s", rolling))).
-		Cols(
-			"validator_index",
-			"epoch_start",
-			// "epoch_end", // uses max, so the default should be fine?
-			"balance_start", // uses argMinState, default would corrupt it
-			//"balance_end", // uses argMaxState, default should be fine?
-			"balance_min", // uses min, so the default of 0 would corrupt it
-			//"balance_max", // uses max, so default should be fine?
-			"roi_dividend",
-			"roi_divisor",
-		).
-		With(
-			"balances",
-			goqu.Select(
-				goqu.Cast(goqu.C("validator_index"), "Int32").As("validator_index"),
-				goqu.MIN(goqu.T("foo").Col("epoch_start")).As("epoch_start"),
-				goqu.Func("argMinStateMerge", goqu.T("foo").Col("balance_start")).As("balance_start"),
-				goqu.MIN(goqu.T("foo").Col("balance_min")).As("balance_min"),
-			).
-				From(goqu.T(fmt.Sprintf("_final_validator_dashboard_data_%s", source)).As("foo")).
-				Where(
-					goqu.C("t").Gte(*minMax.Min),
-					goqu.C("t").Lt(*minMax.Max),
-				).
-				GroupBy(goqu.C("validator_index")),
-		).
-		With(
-			"roi_data",
-			goqu.Select(
-				goqu.Cast(goqu.C("validator_index"), "Int32").As("validator_index"),
-				goqu.SUM(goqu.T("foo").Col("roi_dividend")).As("roi_dividend"),
-				goqu.SUM(goqu.T("foo").Col("roi_divisor")).As("roi_divisor"),
-			).
-				From(goqu.T(fmt.Sprintf("_final_validator_dashboard_roi_%s", source)).As("foo")).
-				Where(
-					goqu.C("t").Gte(*minMax.Min),
-					goqu.C("t").Lt(*minMax.Max),
-				).
-				GroupBy(goqu.C("validator_index")),
-		).
-		FromQuery(
-			goqu.Select(
-				goqu.T("balances").Col("validator_index"),
-				goqu.T("balances").Col("epoch_start"),
-				goqu.T("balances").Col("balance_start"),
-				goqu.T("balances").Col("balance_min"),
-				goqu.T("roi_data").Col("roi_dividend"),
-				goqu.T("roi_data").Col("roi_divisor"),
-			).
-				From(goqu.T("roi_data")).
-				Join(
-					goqu.T("balances"),
-					goqu.On(
-						goqu.T("balances").Col("validator_index").Eq(goqu.T("roi_data").Col("validator_index")),
-					),
-				),
-		)
-	sql, args, err := insert_ds.Prepared(true).ToSQL()
-	if err != nil {
-		return fmt.Errorf("error building SQL for transferring roi rolling source %s to rolling %s: %w", source, rolling, err)
-	}
-	err = db.ClickHouseNativeWriter.Exec(ctx, sql, args...)
-	if err != nil {
-		return fmt.Errorf("error executing transfer of roi rolling source %s to rolling %s: %w", source, rolling, err)
+		return fmt.Errorf("error transferring epochs: %w", err)
 	}
 	return nil
 }
