@@ -1360,11 +1360,13 @@ func NukeUnsafeRollingTable(rolling Rollings) error {
 }
 
 func GetRollingLastEpoch(rolling Rollings) (int64, error) {
+	// following doesnt handle epoch 0 correctly. fixing is left as an exercise for the reader
 	var epoch int64
 	// -1 if empty table
 	err := db.ClickHouseWriter.Get(&epoch, fmt.Sprintf(`
 		SELECT ifNull(max(toNullable(epoch_end::Int64)), -1) as epoch
 		FROM _final_%s
+		FINAL
 		SETTINGS select_sequential_consistency = 1
 	`, rolling))
 	if err != nil {
@@ -1425,7 +1427,7 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 		From(goqu.T(fmt.Sprintf("_final_validator_dashboard_data_%s", source)).As("foo")).
 		Where(
 			goqu.C("t").Gte(*minMax.Min),
-			goqu.C("t").Lte(*minMax.Max),
+			goqu.C("t").Lt(*minMax.Max),
 		).
 		Select(goqu.C("validator_index"))
 	if source == RollingSourceEpochly {
@@ -1637,7 +1639,7 @@ func TransferRollingRoiSourceToRolling(rolling Rollings, source RollingSourcesSu
 				From(goqu.T(fmt.Sprintf("_final_validator_dashboard_data_%s", source)).As("foo")).
 				Where(
 					goqu.C("t").Gte(*minMax.Min),
-					goqu.C("t").Lte(*minMax.Max),
+					goqu.C("t").Lt(*minMax.Max),
 				).
 				GroupBy(goqu.C("validator_index")),
 		).
@@ -1651,7 +1653,7 @@ func TransferRollingRoiSourceToRolling(rolling Rollings, source RollingSourcesSu
 				From(goqu.T(fmt.Sprintf("_final_validator_dashboard_roi_%s", source)).As("foo")).
 				Where(
 					goqu.C("t").Gte(*minMax.Min),
-					goqu.C("t").Lte(*minMax.Max),
+					goqu.C("t").Lt(*minMax.Max),
 				).
 				GroupBy(goqu.C("validator_index")),
 		).
@@ -1690,6 +1692,16 @@ func SwapRollingTables(rolling Rollings) error {
 	`, rolling))
 	if err != nil {
 		return fmt.Errorf("error swapping tables %s: %w", rolling, err)
+	}
+	return nil
+}
+
+func OptimizeUnsafeRollingTable(rolling Rollings) error {
+	_, err := db.ClickHouseWriter.Exec(fmt.Sprintf(`
+		OPTIMIZE TABLE _unsafe_%s FINAL
+	`, rolling))
+	if err != nil {
+		return fmt.Errorf("error optimizing table %s: %w", rolling, err)
 	}
 	return nil
 }
