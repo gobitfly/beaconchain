@@ -452,7 +452,7 @@ func (d *DataAccessService) getEpochStart(ctx context.Context, period enums.Time
 func buildEpochStartQuery(table string) *goqu.SelectDataset {
 	return goqu.Dialect("postgres").
 		Select(goqu.MIN(goqu.L("epoch_start")).As("epoch_start")).
-		From(goqu.L(fmt.Sprintf("%s_epoch_minmax", table)))
+		From(goqu.L(fmt.Sprintf("view_%s_epoch_minmax", table)))
 }
 
 // Retrieves past sync committee validators for the given validator indices and epoch range
