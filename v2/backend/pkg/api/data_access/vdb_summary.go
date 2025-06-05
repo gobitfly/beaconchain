@@ -1486,7 +1486,7 @@ func (d *DataAccessService) GetValidatorDashboardProposalSummaryValidators(ctx c
 		Select(
 			goqu.MIN(goqu.L("epoch_start")).As("epoch_start"),
 			goqu.MAX(goqu.L("epoch_end")).As("epoch_end")).
-		From(goqu.L(fmt.Sprintf("%s_epoch_minmax", clickhouseTable)))
+		From(goqu.L(fmt.Sprintf("view_%s_epoch_minmax", clickhouseTable)))
 
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
