@@ -69,7 +69,9 @@ func Run(
 	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
 	model.RegisterBeaconchainApiServiceServer(s, apiService)
 
-	reflection.Register(s)
+	if config.ExposeSchema {
+		reflection.Register(s)
+	}
 	go s.Serve(lis)
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
