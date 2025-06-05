@@ -3,14 +3,14 @@ readerAdminDatabase:
   username: "beaconchain"
   dbName: "users"
   host: "localhost"
-  port: "5433"
+  port: "5413"
   password: "testpassword"
   useSSL: false
 writerAdminDatabase:
   username: "beaconchain"
   dbName: "users"
   host: "localhost"
-  port: "5433"
+  port: "5413"
   password: "testpassword"
   useSSL: false
 
