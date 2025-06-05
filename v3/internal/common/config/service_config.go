@@ -43,6 +43,7 @@ type DatabaseConfig struct {
 type ServiceConfig struct {
 	HttpPort            string         `yaml:"httpPort"`
 	GrpcPort            string         `yaml:"grpcPort"`
+	ExposeSchema        bool           `yaml:"exposeSchema"`
 	ReaderChainDatabase DatabaseConfig `yaml:"readerChainDatabase"`
 	WriterChainDatabase DatabaseConfig `yaml:"writerChainDatabase"`
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`

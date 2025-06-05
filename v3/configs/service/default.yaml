@@ -2,6 +2,7 @@
 
 httpPort: 8080
 grpcPort: 9090
+exposeSchema: false
 
 # Network (i.e. Chain) Database Connection
 readerChainDatabase:
