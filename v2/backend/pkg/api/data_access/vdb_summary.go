@@ -1259,8 +1259,8 @@ func (d *DataAccessService) GetValidatorDashboardSlashingsSummaryValidators(ctx 
 		From(goqu.L(fmt.Sprintf("%s AS r", clickhouseTable))).
 		With("validators", goqu.L("(SELECT group_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 		Select(
-			goqu.SUM(goqu.L("r.epoch_start")).As("r.epoch_start"),
-			goqu.SUM(goqu.L("r.epoch_end")).As("r.epoch_end"),
+			goqu.SUM(goqu.L("r.epoch_start")).As("epoch_start"),
+			goqu.SUM(goqu.L("r.epoch_end")).As("epoch_end"),
 			goqu.L("r.validator_index"),
 			goqu.MAX(goqu.L("r.slashed")).As("slashed"),
 			goqu.SUM(goqu.L("r.blocks_slashing_count")).As("slashed_amount")).
