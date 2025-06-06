@@ -411,7 +411,7 @@ func (h *HandlerService) PublicDeleteValidatorDashboardGroup(w http.ResponseWrit
 		return
 	}
 	if groupId == types.DefaultGroupId {
-		returnBadRequest(w, r, errors.New("cannot delete default group"))
+		handleErr(w, r, errors.New("cannot delete default group"))
 		return
 	}
 	ctx := r.Context()

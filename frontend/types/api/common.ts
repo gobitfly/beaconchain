@@ -15,6 +15,7 @@ export interface ApiResponse {
 }
 export interface ApiErrorResponse {
   error: string;
+  code: ErrorCode;
 }
 export interface ApiDataResponse<T extends any> {
   data: T;
