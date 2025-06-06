@@ -207,9 +207,12 @@ const loadData = async () => {
         else {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
+
+        const data = element.data.map(datapoint => datapoint !== undefined ? datapoint * 100 : undefined)
+
         const newObj: SeriesOption = {
           connectNulls: false,
-          data: element.data,
+          data,
           name,
           smooth: false,
           step: 'middle',

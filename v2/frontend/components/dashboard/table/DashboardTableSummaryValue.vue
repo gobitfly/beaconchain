@@ -196,18 +196,18 @@ const openValidatorModal = () => {
     v-else-if="data?.syncEfficiency !== undefined"
     class="info_row"
   >
-    <BcFormatPercent
-      :percent="data?.syncEfficiency"
-      :color-break-point="80"
+    <BaseFormatPercent
+      :value="data?.syncEfficiency"
+      :color="data?.syncEfficiency >= 0.8 ? 'green' : 'red'"
     />
   </div>
   <div
     v-else-if="data?.proposalEfficiency !== undefined"
     class="info_row"
   >
-    <BcFormatPercent
-      :percent="data?.proposalEfficiency"
-      :color-break-point="80"
+    <BaseFormatPercent
+      :value="data?.proposalEfficiency"
+      :color="data?.proposalEfficiency >= 0.8 ? 'green' : 'red'"
     />
   </div>
   <DashboardTableSummaryReward
@@ -306,9 +306,9 @@ const openValidatorModal = () => {
     v-else-if="data?.attestationEfficiency !== undefined"
     class="info_row"
   >
-    <BcFormatPercent
-      :percent="data?.attestationEfficiency"
-      :color-break-point="80"
+    <BaseFormatPercent
+      :value="data?.attestationEfficiency"
+      :color="data?.attestationEfficiency >= 0.8 ? 'green' : 'red'"
     />
     <BcTooltip
       position="top"
@@ -322,7 +322,9 @@ const openValidatorModal = () => {
     v-else-if="data?.apr"
     class="info_row"
   >
-    <BcFormatPercent :percent="data.apr.total" />
+    <BaseFormatPercent
+      :value="data.apr.total"
+    />
     <BcTooltip position="top">
       <BcIcon name="circle-info" />
       <template #tooltip>
@@ -332,14 +334,20 @@ const openValidatorModal = () => {
             class="space_before"
             :value="data.apr.income.el"
             source-currency="elCurrency"
-          /> (<BcFormatPercent :percent="data.apr.apr.el" />)
+          /> (
+          <BaseFormatPercent
+            :value="data.apr.apr.el"
+          />
+          )
         </div>
         <div class="row">
           <b>{{ $t("common.consensus_layer") }}:</b>
           <BcFormatAmount
             class="space_before"
             :value="data.apr.income.cl"
-          /> (<BcFormatPercent :percent="data.apr.apr.cl" />)
+          /> (<BaseFormatPercent
+            :value="data.apr.apr.cl"
+          />)
         </div>
       </template>
     </BcTooltip>
@@ -351,17 +359,17 @@ const openValidatorModal = () => {
     <span class="info_row">
       <span class="no-wrap info_row-group">
         <BcIcon name="cube" />
-        <BcFormatPercent
+        <BaseFormatPercent
           class="space_before"
-          :percent="data.luck.proposal.percent"
+          :value="data.luck.proposal.percent"
           :maximum-fraction-digits="0"
         />
       </span>
       <span class="no-wrap info_row-group">
         <BcIcon name="sync" />
-        <BcFormatPercent
+        <BaseFormatPercent
           class="space_before"
-          :percent="data.luck.sync.percent"
+          :value="data.luck.sync.percent"
           :maximum-fraction-digits="0"
         />
       </span>
@@ -376,7 +384,7 @@ const openValidatorModal = () => {
         </div>
         <div class="row">
           <b> {{ $t("common.luck") }}: </b>
-          <BcFormatPercent :percent="data.luck.proposal.percent" />
+          <BaseFormatPercent :value="data.luck.proposal.percent" />
         </div>
         <div class="row">
           <b> {{ $t("common.average") }}: </b>
@@ -397,7 +405,7 @@ const openValidatorModal = () => {
         </div>
         <div class="row">
           <b> {{ $t("common.luck") }}: </b>
-          <BcFormatPercent :percent="data.luck.sync.percent" />
+          <BaseFormatPercent :value="data.luck.sync.percent" />
         </div>
         <div class="row">
           <b> {{ $t("common.average") }}: </b>
@@ -413,8 +421,8 @@ const openValidatorModal = () => {
 
   <BcFormatPercent
     v-else-if="data?.efficiencyTotal"
-    :percent="data.efficiencyTotal.value"
-    :compare-percent="data.efficiencyTotal.compare"
+    :percent="data.efficiencyTotal.value * 100"
+    :compare-percent="data.efficiencyTotal.compare * 100"
     :color-break-point="80"
   >
     <template #leading-tooltip="{ compare }">
@@ -423,7 +431,6 @@ const openValidatorModal = () => {
           $t(`dashboard.validator.summary.tooltip.${compare}`, {
             name: groupName,
             average: formatPercent(row.average_network_efficiency, {
-              isFraction: false,
               maximumFractionDigits: 2,
             }),
           })

@@ -28,28 +28,24 @@ const efficiencyInfos = [
   {
     label: $t('statistics.last_24h'),
     value: formatPercent(overview.value?.efficiency.last_24h ?? 0, {
-      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.last_7d'),
     value: formatPercent(overview.value?.efficiency.last_7d ?? 0, {
-      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.last_30d'),
     value: formatPercent(overview.value?.efficiency.last_30d ?? 0, {
-      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.all_time'),
     value: formatPercent(overview.value?.efficiency.all_time ?? 0, {
-      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
@@ -57,16 +53,13 @@ const efficiencyInfos = [
 
 const apr = computed(
   () => formatPercent((overview.value?.apr.last_30d.el ?? 0) + (overview.value?.apr.last_30d.cl ?? 0), {
-    isFraction: false,
     maximumFractionDigits: 2,
   }),
 )
 
 const getText = (value: undefined | { cl: number, el: number }) => `${formatPercent(value?.cl ?? 0, {
-  isFraction: false,
   maximumFractionDigits: 2,
 })} (CL) ${formatPercent(value?.el ?? 0, {
-  isFraction: false,
   maximumFractionDigits: 2,
 })} (EL)`
 
@@ -146,10 +139,11 @@ const aprInfos = [
       :infos="efficiencyInfos"
       :title="$t('dashboard.validator.overview.24h_efficiency')"
     >
-      {{ formatPercent(overview?.efficiency.last_24h ?? 0, {
-        isFraction: false,
-        maximumFractionDigits: 2,
-      }) }}
+      {{
+        formatPercent(overview?.efficiency.last_24h ?? 0, {
+          maximumFractionDigits: 2,
+        })
+      }}
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :title="$t('dashboard.validator.overview.30d_rewards')"
