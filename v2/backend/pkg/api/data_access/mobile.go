@@ -173,7 +173,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving validator dashboard overview data: %w", err)
 	}
-	data.NetworkEfficiency = efficiency.TotalEfficiency[enums.AllTime].Float64 * 100
+	data.NetworkEfficiency = efficiency.TotalEfficiency[enums.AllTime].Float64
 
 	// Validator status
 	eg.Go(func() error {
@@ -254,8 +254,7 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 			data.RplApr = rpNetworkStats.NodeOperatorRewards.
 				Mul(share).
 				Div(queryResult.RPLStake).
-				Mul(periodsPerYear).
-				Mul(decimal.NewFromInt(100)).InexactFloat64()
+				Mul(periodsPerYear).InexactFloat64()
 		}
 		return nil
 	})
@@ -294,7 +293,6 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
 			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
-			*efficiency *= 100
 
 			return err
 		})
@@ -474,7 +472,7 @@ func (d *DataAccessService) getIndividualEfficiencies(ctx context.Context, indic
 
 	// Calculate efficiency
 	for _, row := range queryResult {
-		result[row.Index] = row.Efficiency * 100
+		result[row.Index] = row.Efficiency
 	}
 
 	return result, nil
