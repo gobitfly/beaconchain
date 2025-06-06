@@ -93,7 +93,7 @@ func (d *DataAccessService) GetValidatorDashboardSummary(ctx context.Context, da
 	}
 	var averageNetworkEfficiency float64
 	if efficiency.TotalEfficiency[period].Valid {
-		averageNetworkEfficiency = efficiency.TotalEfficiency[period].Float64 * 100
+		averageNetworkEfficiency = efficiency.TotalEfficiency[period].Float64
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
@@ -741,7 +741,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 	}
 
 	if totalBlockChance > 0 {
-		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance * 100
+		ret.Luck.Proposal.Percent = (float64(totalBlocksScheduled)) / totalBlockChance
 
 		// calculate the average time it takes for the set of validators to propose a single block on average
 		ret.Luck.Proposal.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalBlockChance) * float64(time.Hour)).Seconds())
@@ -757,7 +757,7 @@ func (d *DataAccessService) GetValidatorDashboardGroupSummary(ctx context.Contex
 		totalSyncSlotDuties := float64(ret.SyncCommittee.StatusCount.Failed) + float64(ret.SyncCommittee.StatusCount.Success)
 		slotDutiesPerSyncCommittee := float64(utils.SlotsPerSyncCommittee())
 		syncCommittees := math.Ceil(totalSyncSlotDuties / slotDutiesPerSyncCommittee) // gets the number of sync committees
-		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected * 100
+		ret.Luck.Sync.Percent = syncCommittees / totalSyncExpected
 
 		// calculate the average time it takes for the set of validators to be elected into a sync committee on average
 		ret.Luck.Sync.AverageIntervalSeconds = uint64(time.Duration((luckHours / totalSyncExpected) * float64(time.Hour)).Seconds())
@@ -826,12 +826,12 @@ func calcEfficiencyNulled(dividend, divisor decimal.Decimal) *float64 {
 
 func calcEfficiency(dividend, divisor decimal.Decimal) float64 {
 	if divisor.IsZero() {
-		return 100
+		return 1
 	}
-	eff := dividend.Div(divisor).InexactFloat64() * 100
-	if eff > 100 {
+	eff := dividend.Div(divisor).InexactFloat64()
+	if eff > 1 {
 		log.Error(nil, "efficiency is greater than 100%", 1, map[string]interface{}{"efficiency": eff})
-		eff = 100
+		eff = 1
 	}
 	return eff
 }
@@ -983,7 +983,7 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 		}
 		var averageNetworkEfficiency float64
 		if efficiency.AttestationEfficiency[enums.Last24h].Valid {
-			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64 * 100
+			averageNetworkEfficiency = efficiency.AttestationEfficiency[enums.Last24h].Float64
 		}
 
 		for ts := range tsMap {
