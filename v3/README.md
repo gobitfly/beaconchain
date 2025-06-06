@@ -61,11 +61,10 @@ https://github.com/grpc-ecosystem/grpc-gateway
 
 You can deploy and run the service in either your personal environment or against the real staging environment
 
-To deploy it to your personal project, note that you must connect to your own database (`make cr-create-db`). Also note you must replace the project IDs and cloudsql instance parameters below with appropriate values.
-TODO: Update this when we have real personl environment setups via terraform going.
+To deploy it to your personal project, note that you must initialize it first. You can use [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) for that: go to `deployments` and run `terraform init -backend=false && terraform apply`. Fill in appropriate values in `terraform.tfvars`.
 
 ```
-gcloud run deploy --source . --project michael-test-454110 --network mono-vpc --region us-central1 --add-cloudsql-instances=michael-test-454110:us-central1:hoodi-ddf25050 --args="--environment","personal_cloudrun"
+make cr-deploy-personal
 ```
 
 To deploy it to staging, note that you are connecting to the shared staging database, so be careful of any modifying changes your service might execute.
