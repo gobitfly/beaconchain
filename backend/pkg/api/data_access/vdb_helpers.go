@@ -213,8 +213,7 @@ func calcAPR(rewards, cumulativeDivisor decimal.Decimal, duration time.Duration)
 		return 0
 	}
 	annualizationFactor := decimal.NewFromInt(utils.Year.Nanoseconds()).Div(decimal.NewFromInt(duration.Nanoseconds()))
-	percentScaleFactor := decimal.NewFromInt(100) // TODO remove BEDS-1147
-	return rewards.Div(cumulativeDivisor).Mul(annualizationFactor).Mul(percentScaleFactor).InexactFloat64()
+	return rewards.Div(cumulativeDivisor).Mul(annualizationFactor).InexactFloat64()
 }
 
 // converts a cl amount to the main currency
