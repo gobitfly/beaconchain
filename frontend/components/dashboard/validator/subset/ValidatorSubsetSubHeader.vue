@@ -169,12 +169,18 @@ const infos = computed(() => {
       />
       <BcFormatNumber :value="info.value" />
     </div>
-    <BcFormatPercent
+    <BaseFormatPercent
       v-if="infos.percent.total"
+      v-slot="{ result, ratio }"
       :base="infos.percent.total"
       :value="infos.percent.value"
-      :color-break-point="80"
-    />
+    >
+      <BcColor
+        :color="ratio >= 0.8 ? 'green' : 'red'"
+      >
+        {{ result }}
+      </BcColor>
+    </BaseFormatPercent>
   </div>
 </template>
 

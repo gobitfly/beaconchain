@@ -17,9 +17,9 @@ defineProps<Props>()
       class="group"
     >
       {{ $t("dashboard.validator.rewards.attestation") }}
-      <BcFormatPercent
+      <BaseFormatPercent
         class="round-brackets"
-        :percent="duty.attestation"
+        :value="duty.attestation"
         :maximum-fraction-digits="0"
       />
     </div>
@@ -28,9 +28,9 @@ defineProps<Props>()
       class="group"
     >
       {{ $t("dashboard.validator.rewards.proposal") }}
-      <BcFormatPercent
+      <BaseFormatPercent
         class="round-brackets"
-        :percent="duty.proposal"
+        :value="duty.proposal"
         :maximum-fraction-digits="0"
       />
     </div>
@@ -39,9 +39,9 @@ defineProps<Props>()
       class="group"
     >
       {{ $t("dashboard.validator.rewards.sync_committee") }}
-      <BcFormatPercent
+      <BaseFormatPercent
         class="round-brackets"
-        :percent="duty.sync"
+        :value="duty.sync"
         :maximum-fraction-digits="0"
       />
     </div>
