@@ -61,11 +61,15 @@ https://github.com/grpc-ecosystem/grpc-gateway
 
 You can deploy and run the service in either your personal environment or against the real staging environment
 
-To deploy it to your personal project, note that you must initialize it first. You can use [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) for that: go to `deployments` and run `terraform init -backend=false && terraform apply`. Fill in appropriate values in `terraform.tfvars`.
+To deploy it to your personal project, note that you must initialize it first:
+1. (optional) Create a cloud storage bucket to store terraform state in, and fill in `deployments/backend.hcl`
+2. Create a container artifact registry: `make cr-create-registry`
+3. Fill out configs, then push the service image: `make cr-deploy-personal`
+4. Install [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli), enter hash from prev step in `terraform.tfvars:image_url` and run: `cd deployments && terraform init -backend=false && terraform apply` (if you did step 0: `-backend-config=backend.hcl`)
 
-```
-make cr-deploy-personal
-```
+TODO
+- Could combine step 0+1 into another small setup terraform
+- Need to enable CI/CD in cloud run for changes to go live automatically on push. Until then you need to run steps 3 & 4 manually to update
 
 To deploy it to staging, note that you are connecting to the shared staging database, so be careful of any modifying changes your service might execute.
 

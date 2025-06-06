@@ -30,13 +30,13 @@ resource "google_sql_database_instance" "beaconchain-db" {
 }
 
 resource "google_cloud_run_service" "personal" {
-  name     = "personal-service"
+  name     = "beaconchain-api"
   location = var.region
 
   template {
     spec {
       containers {
-        image = var.image_url
+        image = "us-central1-docker.pkg.dev/${var.project_id}/service/beaconchain-api@${var.image}"
         args  = ["--environment", "personal_cloudrun"]
         env {
           name  = "INSTANCE_CONNECTION_NAME"
@@ -56,4 +56,13 @@ resource "google_cloud_run_service" "personal" {
     percent         = 100
     latest_revision = true
   }
+}
+
+resource "google_cloud_run_service_iam_member" "noauth" {
+  location = google_cloud_run_service.personal.location
+  project  = var.project_id
+  service  = google_cloud_run_service.personal.name
+
+  role   = "roles/run.invoker"
+  member = "allUsers"
 }

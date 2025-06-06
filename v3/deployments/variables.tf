@@ -1,5 +1,7 @@
 variable "project_id" {}
-variable "image_url" {}
+variable "image" {
+  default = "latest"
+}
 variable "db_password" {}
 variable "region" {
   default = "us-central1"

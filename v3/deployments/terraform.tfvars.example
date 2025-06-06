@@ -1,3 +1,3 @@
 project_id  = "dev-ramirond"
-image_url   = "us-central1-docker.pkg.dev/dev-ramirond/cloud-run-source-deploy/beaconchain-api:latest"
+image       = "sha256:d45f1a13e70fe9bd08d84c813386f97c862adeabec2461642dfb4f0544cb8f65"
 db_password = "postgres"
