@@ -6,3 +6,4 @@ variable "db_password" {}
 variable "region" {
   default = "us-central1"
 }
+variable "gcs_bucket" {}
