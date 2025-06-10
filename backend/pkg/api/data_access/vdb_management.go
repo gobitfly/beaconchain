@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math/big"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -189,6 +190,7 @@ func (d *DataAccessService) GetValidatorsFromSlices(ctx context.Context, indices
 	}
 
 	result := maps.Keys(validators)
+	slices.Sort(result)
 
 	return result, nil
 }
@@ -652,7 +654,8 @@ func (d *DataAccessService) GetValidatorDashboardValidators(ctx context.Context,
 				return (data[i].WithdrawalCredential < data[j].WithdrawalCredential) != colSort.Desc
 			}
 		}
-		return false
+		// default secondary sort criteria
+		return data[i].Index < data[j].Index
 	})
 
 	// Find the index for the cursor and limit the data
