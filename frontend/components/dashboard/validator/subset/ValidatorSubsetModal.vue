@@ -284,6 +284,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
+  position: relative;
 
   @media screen and (max-width: 500px) {
     width: unset;
