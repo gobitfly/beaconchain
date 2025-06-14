@@ -270,8 +270,7 @@ const aprInfos = [
   transform: translateY(0px); // hack: on safari top-border is not shown
   gap: 50px;
   height: 101px;
-  padding-left: var(--padding-xl);
-  padding-right: var(--padding-xl);
+  padding-inline: var(--padding-medium);
 }
 
 .tooltip {

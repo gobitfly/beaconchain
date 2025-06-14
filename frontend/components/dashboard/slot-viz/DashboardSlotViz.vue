@@ -229,6 +229,7 @@ watch(
       @include fonts.small_text_bold;
       margin-top: auto;
       margin-bottom: auto;
+      margin-left: var(--padding-medium);
     }
 
     &-row {
