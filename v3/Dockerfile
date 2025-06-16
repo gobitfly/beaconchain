@@ -16,7 +16,6 @@ WORKDIR /
 COPY --from=builder /app/server .
 COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/web ./web
-COPY --from=builder /app/api ./api
 
 # Cloud Run expects the service to listen on PORT (8080 by default)
 ENV PORT=8080

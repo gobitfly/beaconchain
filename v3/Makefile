@@ -6,7 +6,7 @@ all:
 generate-proto:
 	rm -rf api/gen
 	buf build
-	# Uses bug.gen.yaml and /api/protos/* to generate the api/gen proto files.
+	# Uses buf.gen.yaml and /api/protos/* to generate the api/gen proto files.
 	# Can be rate-limited, so don't spam it
 	buf generate
 build-service:
@@ -26,7 +26,7 @@ cr-create-registry:
 		--repository-format docker \
 		--location us-central1 \
 		--project ${PROJECT_NAME}
-cr-deploy-staging:
+cr-deploy-staging: generate-proto
 	gcloud run deploy --source . --project staging-456307 --network mono-vpc --region us-central1 --add-cloudsql-instances=staging-456307:us-central1:hoodi-d7ab6b26,staging-456307:us-central1:users-024879cd --args="--environment","staging"
-cr-deploy-personal:
+cr-deploy-personal: generate-proto
 	gcloud builds submit --project ${PROJECT_NAME} --tag "us-central1-docker.pkg.dev/${PROJECT_NAME}/service/beaconchain-api:latest"

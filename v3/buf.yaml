@@ -1,9 +1,10 @@
 version: v2
 modules:
   - path: api/protos
-# Always run `buf dep update` after updating this
 deps:
+  # Always run `buf dep update` after updating this
   - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway
 lint:
   use:
     - STANDARD
