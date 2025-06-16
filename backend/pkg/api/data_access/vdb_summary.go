@@ -838,8 +838,8 @@ func calcEfficiency(dividend, divisor decimal.Decimal) float64 {
 
 // for summary charts: series id is group id, no stack
 
-func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, *float64], error) {
-	ret := &t.ChartData[int, *float64]{}
+func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
+	ret := &t.ChartData[int, float64]{}
 
 	if len(groupIds) == 0 { // short circuit if no groups are selected
 		return ret, nil
@@ -1018,11 +1018,11 @@ func (d *DataAccessService) GetValidatorDashboardSummaryChart(ctx context.Contex
 	for _, ts := range tsArray {
 		ret.Categories = append(ret.Categories, uint64(ts.Unix()))
 	}
-	ret.Series = make([]t.ChartSeries[int, *float64], 0, len(groupsArray))
+	ret.Series = make([]t.ChartSeries[int, float64], 0, len(groupsArray))
 
-	seriesMap := make(map[int64]*t.ChartSeries[int, *float64])
+	seriesMap := make(map[int64]*t.ChartSeries[int, float64])
 	for _, group := range groupsArray {
-		series := t.ChartSeries[int, *float64]{
+		series := t.ChartSeries[int, float64]{
 			Id:   int(group),
 			Data: make([]*float64, 0, len(tsMap)),
 		}

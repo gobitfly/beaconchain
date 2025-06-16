@@ -379,8 +379,8 @@ func (*DummyService) GetValidatorDashboardGroupSummary(ctx context.Context, dash
 	return getDummyStruct[t.VDBGroupSummaryData](ctx)
 }
 
-func (*DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, *float64], error) {
-	return getDummyStruct[t.ChartData[int, *float64]](ctx)
+func (*DummyService) GetValidatorDashboardSummaryChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, efficiency enums.VDBSummaryChartEfficiencyType, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, float64], error) {
+	return getDummyStruct[t.ChartData[int, float64]](ctx)
 }
 
 func (*DummyService) GetValidatorDashboardSummaryValidators(ctx context.Context, dashboardId t.VDBId, groupId int64) (*t.VDBGeneralSummaryValidators, error) {
