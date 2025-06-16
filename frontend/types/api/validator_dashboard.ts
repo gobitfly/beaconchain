@@ -94,7 +94,7 @@ export interface VDBGroupSummaryData {
   };
 }
 export type GetValidatorDashboardGroupSummaryResponse = ApiDataResponse<VDBGroupSummaryData>;
-export type GetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */ | undefined>>; // line chart, series id is group id
+export type GetValidatorDashboardSummaryChartResponse = ApiDataResponse<ChartData<number /* int */, number /* float64 */>>; // line chart, series id is group id
 /**
  * ------------------------------------------------------------
  * Summary Validators

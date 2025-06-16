@@ -855,10 +855,11 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 	for _, epoch := range epochList {
 		result.Categories = append(result.Categories, epoch)
 		for idx, series := range result.Series {
+			d := epochData[epoch][uint64(series.Id)]
 			if series.Property == "el" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].El)
+				result.Series[idx].Data = append(result.Series[idx].Data, &d.El)
 			} else if series.Property == "cl" {
-				result.Series[idx].Data = append(result.Series[idx].Data, epochData[epoch][uint64(series.Id)].Cl)
+				result.Series[idx].Data = append(result.Series[idx].Data, &d.Cl)
 			} else {
 				return nil, fmt.Errorf("unknown series property: %s", series.Property)
 			}
