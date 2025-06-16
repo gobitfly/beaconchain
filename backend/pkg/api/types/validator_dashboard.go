@@ -114,7 +114,7 @@ type VDBGroupSummaryData struct {
 }
 type GetValidatorDashboardGroupSummaryResponse ApiDataResponse[VDBGroupSummaryData]
 
-type GetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, *float64]] // line chart, series id is group id
+type GetValidatorDashboardSummaryChartResponse ApiDataResponse[ChartData[int, float64]] // line chart, series id is group id
 
 // ------------------------------------------------------------
 // Summary Validators

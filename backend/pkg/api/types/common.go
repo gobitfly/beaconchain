@@ -72,13 +72,13 @@ type PercentageDetails[T any] struct {
 	MaxValue   T       `json:"max_value"`
 }
 
-type ChartSeries[I int | string, D *float64 | float64 | decimal.Decimal] struct {
+type ChartSeries[I int | string, D float64 | decimal.Decimal] struct {
 	Id       I      `json:"id"`                                      // id may be a string or an int
 	Property string `json:"property,omitempty" tstype:"'el' | 'cl'"` // for stacking bar charts
-	Data     []D    `json:"data"`                                    // y-axis values
+	Data     []*D   `json:"data" tstype:"(D | null)[]"`              // y-axis values
 }
 
-type ChartData[I int | string, D *float64 | float64 | decimal.Decimal] struct {
+type ChartData[I int | string, D float64 | decimal.Decimal] struct {
 	Categories []uint64            `json:"categories"` // x-axis
 	Series     []ChartSeries[I, D] `json:"series"`
 }
