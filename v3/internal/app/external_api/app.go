@@ -138,7 +138,7 @@ func serveSwaggerStatics(mux *http.ServeMux) {
 	// mount a path to expose the generated OpenAPI specification on disk
 	// http://localhost:8080/swagger-ui/#/BeaconchainApiService
 	mux.HandleFunc("/swagger-ui/swagger.json", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./api/gen/internal.swagger.json")
+		http.ServeFile(w, r, "./api/gen/external.swagger.json")
 	})
 
 	// mount the Swagger UI that uses the OpenAPI specification path above

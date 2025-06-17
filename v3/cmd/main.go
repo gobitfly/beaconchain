@@ -1,7 +1,11 @@
 package main
 
 import (
-	app "github.com/gobitfly/beaconchain-api/internal/app/external_api"
+	"fmt"
+	"os"
+
+	app_external "github.com/gobitfly/beaconchain-api/internal/app/external_api"
+	app_internal "github.com/gobitfly/beaconchain-api/internal/app/internal_api"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	"github.com/gobitfly/beaconchain-api/internal/dataaccess/db"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
@@ -11,9 +15,6 @@ import (
  * Initializes and kicks off the service.
  */
 func main() {
-	//flag.String("environment", "development", "The environment (and thus the config set) for which the service should be run (development, staging, production)")
-
-	//serviceConfig := config.LoadServiceConfig(config.Development)
 	serviceConfig := config.LoadServiceConfig()
 
 	// Initializes dependencies which are required for the service to operate
@@ -26,6 +27,13 @@ func main() {
 	valDashboardRepo := dataaccess.NewInMemoryValidatorDashboardRepository()
 
 	// Pass in initialized dependencies to service, and start the service
-
-	app.Run(*serviceConfig, userRepo, valDashboardRepo)
+	switch serviceConfig.Type {
+	case "external":
+		app_external.Run(*serviceConfig, userRepo, valDashboardRepo)
+	case "internal":
+		app_internal.Run(*serviceConfig, userRepo, valDashboardRepo)
+	default:
+		fmt.Printf("Unknown API type: %s\n", serviceConfig.Type)
+		os.Exit(1)
+	}
 }

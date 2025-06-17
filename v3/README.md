@@ -68,7 +68,7 @@ To deploy it to your personal project, note that you must initialize it first:
 4. Install [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli), enter hash from prev step in `terraform.tfvars:image_url` and run: `cd deployments && terraform init -backend=false && terraform apply` (if you did step 0: `-backend-config=backend.hcl`)
 
 TODO
-- Could combine step 0+1 into another small setup terraform
+- Could combine step 1+2 into another small setup terraform
 - Need to enable CI/CD in cloud run for changes to go live automatically on push. Until then you need to run steps 3 & 4 manually to update
 
 To deploy it to staging, note that you are connecting to the shared staging database, so be careful of any modifying changes your service might execute.
