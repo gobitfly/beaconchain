@@ -29,7 +29,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 /////////////// Service Definition ///////////////
 //////////////////////////////////////////////////
 
-service BeaconchainApiV1Service {
+service ExternalService {
 
   // Get execution blocks by execution block number
   rpc ExecutionBlock (ExecutionBlockRequest) returns (ExecutionBlockResponse) {

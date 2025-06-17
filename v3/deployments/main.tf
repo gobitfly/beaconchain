@@ -30,16 +30,16 @@ resource "google_sql_database_instance" "beaconchain-db" {
 }
 
 locals {
-  rendered_swagger = templatefile("../api/gen/beaconchain_api.swagger.json", {
+  rendered_swagger = templatefile("../api/gen/internal.swagger.json", {
     CLOUD_RUN_URL = google_cloud_run_v2_service.personal.uri
   })
-  rendered_swagger_v1 = templatefile("../api/gen/beaconchain_api_v1.swagger.json", {
+  rendered_swagger_v1 = templatefile("../api/gen/external.swagger.json", {
     CLOUD_RUN_URL = google_cloud_run_v2_service.personal.uri
   })
 
   swagger_files = {
-    "beaconchain_api"    = local.rendered_swagger
-    "beaconchain_api_v1" = local.rendered_swagger_v1
+    "internal" = local.rendered_swagger
+    "external" = local.rendered_swagger_v1
   }
 }
 
@@ -91,20 +91,22 @@ resource "google_cloud_run_v2_service" "personal" {
 }
 
 resource "google_api_gateway_api" "api" {
-  provider   = google-beta
-  api_id     = "beaconchain-api"
-  project    = var.project_id
+  provider = google-beta
+  api_id   = "beaconchain-api"
+  project  = var.project_id
 }
 
 resource "google_api_gateway_api_config" "api_cfg" {
-  provider      = google-beta
-  project       = var.project_id
-  api           = google_api_gateway_api.api.api_id
+  provider = google-beta
+  project  = var.project_id
+  api      = google_api_gateway_api.api.api_id
+  # omitting causes tf to create random ids which won't be cleaned up, has to be done for dependency / uptime reasons
+  # clean up manually or add a script
   # api_config_id = "beaconchain-api-config"
 
   openapi_documents {
     document {
-      path     = "beaconchain_api.swagger.json"
+      path     = "internal.swagger.json"
       contents = base64encode(local.rendered_swagger_v1)
     }
   }

@@ -29,7 +29,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 /////////////// Service Definition ///////////////
 //////////////////////////////////////////////////
 
-service BeaconchainApiService {
+service InternalService {
   
   // Creates a new Validator Dashboard
   rpc CreateValidatorDashboard (CreateValidatorDashboardRequest) returns (CreateValidatorDashboardResponse) {

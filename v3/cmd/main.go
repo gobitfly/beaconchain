@@ -1,7 +1,7 @@
 package main
 
 import (
-	app "github.com/gobitfly/beaconchain-api/internal/app/v1_api"
+	app "github.com/gobitfly/beaconchain-api/internal/app/external_api"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	"github.com/gobitfly/beaconchain-api/internal/dataaccess/db"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"

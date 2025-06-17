@@ -1,3 +1,4 @@
-project_id  = "dev-ramirond"
+project_id  = "your-gcp-project-id"
 image       = "sha256:d45f1a13e70fe9bd08d84c813386f97c862adeabec2461642dfb4f0544cb8f65"
 db_password = "postgres"
+gcs_bucket  = "your-gcs-bucket"

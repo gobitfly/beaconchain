@@ -5,28 +5,32 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
-
-	"google.golang.org/grpc/metadata"
 
 	model "github.com/gobitfly/beaconchain-api/api/gen"
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
-
 	"github.com/gobitfly/beaconchain-api/internal/auth"
+	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-api/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 )
 
 type ApiService struct {
-	model.UnimplementedBeaconchainApiServiceServer
+	model.UnimplementedExternalServiceServer
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
+}
+
+/**
+ * Initializes the state and dependencies of the service
+ */
+func InitWithInMemory() (*ApiService, error) {
+	return &ApiService{
+		//		userRepository:      dataaccess.NewInMemoryUserRepository(),
+		dashboardRepository: dataaccess.NewInMemoryValidatorDashboardRepository(),
+	}, nil
 }
 
 /**
@@ -63,11 +67,9 @@ func Run(
 		log.Infof("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(AuthInterceptor(userRepo)),
-	) // Unsecured
+	s := grpc.NewServer() // Unsecured
 	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
-	model.RegisterBeaconchainApiServiceServer(s, apiService)
+	model.RegisterExternalServiceServer(s, apiService)
 
 	if config.ExposeSchema {
 		reflection.Register(s)
@@ -83,9 +85,11 @@ func Run(
 	defer conn.Close()
 
 	// create an HTTP router which sends proxies HTTP requests to the gRPC server.
+	// Register both the API and APIv1 Service. We can serve requests for both services from the same endpoint this way
 	rmux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(HeaderMatcher))
-	client := model.NewBeaconchainApiServiceClient(conn)
-	err = model.RegisterBeaconchainApiServiceHandlerClient(ctx, rmux, client)
+
+	client := model.NewExternalServiceClient(conn)
+	err = model.RegisterExternalServiceHandlerClient(ctx, rmux, client)
 	if err != nil {
 		log.Info(err)
 	}
@@ -113,52 +117,12 @@ func Run(
 	fmt.Println("To close connection CTRL+C :-)")
 }
 
-func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerInterceptor {
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return nil, status.Errorf(codes.InvalidArgument, "missing metadata")
-		}
-		log.Infof("GRPC Metadata: %v", md)
-
-		vals := metadata.ValueFromIncomingContext(ctx, string(auth.ApiKeyHeader))
-		if len(vals) == 0 {
-			return ctx, status.Errorf(codes.Unauthenticated, "No %s header", string(auth.ApiKeyHeader))
-		}
-		var apikey = vals[0] // Just check the first, if there are for some reason multiple
-		/*
-			token, err := auth.AuthFromMD(ctx, "bearer")
-			if err != nil {
-				return nil, err
-			}
-
-			tokenInfo, err := parseToken(token)
-			if err != nil {
-				return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
-			}*/
-
-		//ctx = logging.InjectFields(ctx, logging.Fields{"auth.sub", userClaimFromToken(tokenInfo)})
-
-		// Using the APIKey, look it up in the database to get the userId
-		user, err := userRepository.GetUserByApiKey(ctx, vals[0])
-		if err != nil {
-			log.Info("Request called with no API Key")
-		}
-		// TODO: Remove this, we dont want to print keys
-		log.Debugf("Request called with API Key %s", apikey)
-
-		// Now use the userId to get the User struct, and put it in the context
-
-		return handler(context.WithValue(ctx, auth.CtxUserKey, user), req)
-	}
-}
-
 /**
- * GRPC expects headers in a format which includes . This function simply passes along all HTTP-specified headers to GRPC.
+ * GRPC expects headers in a different format. This function simply passes along all HTTP-specified headers to GRPC.
  * Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
  */
 func HeaderMatcher(key string) (string, bool) {
-	switch strings.ToLower(key) {
+	switch key {
 	case string(auth.ApiKeyHeader):
 		return key, true
 	default:
@@ -174,7 +138,7 @@ func serveSwaggerStatics(mux *http.ServeMux) {
 	// mount a path to expose the generated OpenAPI specification on disk
 	// http://localhost:8080/swagger-ui/#/BeaconchainApiService
 	mux.HandleFunc("/swagger-ui/swagger.json", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./api/gen/beaconchain_api.swagger.json")
+		http.ServeFile(w, r, "./api/gen/internal.swagger.json")
 	})
 
 	// mount the Swagger UI that uses the OpenAPI specification path above
