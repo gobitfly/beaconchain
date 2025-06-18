@@ -208,7 +208,10 @@ const loadData = async () => {
           name = getGroupLabel($t, element.id, groups.value, allGroups)
         }
 
-        const data = element.data.map(datapoint => datapoint !== undefined ? datapoint * 100 : undefined)
+        const data = element.data.map(datapoint => datapoint === null
+          ? null
+          : datapoint * 100,
+        )
 
         const newObj: SeriesOption = {
           connectNulls: false,
