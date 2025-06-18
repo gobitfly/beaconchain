@@ -15,6 +15,7 @@
         "BcTooltip",
         "DashboardChartSummary",
         "DashboardChartSummaryFilter",
+        "DashboardChartSummaryTooltip",
         "DashboardGroupManagementModal",
         "DashboardSlotViz",
         "DashboardTableClDeposits",

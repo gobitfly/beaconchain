@@ -46,7 +46,11 @@ defineProps<Props>()
       <div class="name">
         {{ entry.name }}:
       </div>
+      <span v-if="typeof entry.efficiency !== 'number'">
+        -
+      </span>
       <BaseFormatPercent
+        v-else
         class="efficiency"
         :value="entry.efficiency / 100"
       />

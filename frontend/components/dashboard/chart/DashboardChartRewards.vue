@@ -180,7 +180,7 @@ const elSeriesGroupTotal = computed(() => {
           { value },
           {
             sourceCurrency: elCurrency,
-            value: group.data[index],
+            value: group.data[index] ?? 0,
           },
         ],
       })
@@ -279,7 +279,7 @@ const getGroupInfo = (series: ChartSeries<number, string>[], currentIndex: numbe
       return {
         id,
         name: groups.value.find(group => group.id === id)?.name ?? '',
-        value: data[currentIndex] === '0'
+        value: data[currentIndex] === '0' || data[currentIndex] === null
           ? '-'
           : formatAmount(data[currentIndex], {
               hasCurrencyDisplay: true,
@@ -292,7 +292,7 @@ const getGroupInfo = (series: ChartSeries<number, string>[], currentIndex: numbe
     return {
       id,
       name: groups.value.find(group => group.id === id)?.name ?? '',
-      value: data[currentIndex] === '0'
+      value: data[currentIndex] === '0' || data[currentIndex] === null
         ? '-'
         : formatAmount(data[currentIndex], {
             hasCurrencyDisplay: true,
