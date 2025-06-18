@@ -16,6 +16,17 @@ resource "google_project_service" "sql" {
   service = "sqladmin.googleapis.com"
 }
 
+resource "google_project_service" "cloudbuild" {
+  service = "cloudbuild.googleapis.com"
+}
+
+resource "google_project_service" "apigateway" {
+  service = "apigateway.googleapis.com"
+}
+
+resource "google_project_service" "service_control" {
+  service = "servicecontrol.googleapis.com"
+}
 
 // dependency resources
 resource "google_sql_database_instance" "beaconchain-db" {
@@ -29,6 +40,7 @@ resource "google_sql_database_instance" "beaconchain-db" {
   }
 
   root_password = var.db_password
+  depends_on = [google_project_service.sql]
 }
 
 
@@ -118,6 +130,8 @@ resource "google_cloud_run_v2_service" "personal-internal" {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
   deletion_protection = false
+
+  depends_on = [google_project_service.run]
 }
 
 resource "google_cloud_run_v2_service" "personal-external" {
@@ -160,12 +174,16 @@ resource "google_cloud_run_v2_service" "personal-external" {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
   }
   deletion_protection = false
+
+  depends_on = [google_project_service.run]
 }
 
 resource "google_api_gateway_api" "api" {
   provider = google-beta
   api_id   = "beaconchain-api"
   project  = var.project_id
+
+  depends_on = [google_project_service.apigateway, google_project_service.service_control]
 }
 
 resource "google_api_gateway_api_config" "api_cfg" {
@@ -185,6 +203,8 @@ resource "google_api_gateway_api_config" "api_cfg" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [google_project_service.apigateway, google_project_service.service_control]
 }
 
 resource "google_api_gateway_gateway" "gateway" {
@@ -193,6 +213,8 @@ resource "google_api_gateway_gateway" "gateway" {
   api_config = google_api_gateway_api_config.api_cfg.id
   project    = var.project_id
   region     = var.region
+
+  depends_on = [google_project_service.apigateway, google_project_service.service_control]
 }
 
 resource "google_cloud_run_service_iam_member" "noauth" {

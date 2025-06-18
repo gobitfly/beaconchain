@@ -63,7 +63,7 @@ func LoadServiceConfig() *ServiceConfig {
 
 	// using standard library "flag" package
 	env := flag.String("environment", "Development", "Name of the environment")
-	apiType := flag.String("type", "internal", "api to launch (internal or external)")
+	apiType := flag.String("type", "external", "api to launch (internal or external)")
 	flag.Parse()
 
 	log.Infof("Found flag environment: %s", *env)

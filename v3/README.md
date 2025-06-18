@@ -38,7 +38,7 @@ More Info:
 brew install bufbuild/buf/buf
 ```
 
-To verify this is working correctly, you should be able to run `buf build` from the workspace's root directory, and no error should be returned.
+To verify this is working correctly, you should be able to run `make generate-proto` from the workspace's root directory, and no error should be returned.
 
 ## Build and Run locally
 
@@ -47,7 +47,7 @@ make all
 make build-service && make run ARGS="--environment local"
 ```
 
-In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 BeaconchainApiV1Service/ExecutionBlock`)
+In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 ExternalService/ExecutionBlock`)
 
 ## Debugging
 Using visual studio code, navigate to main.go and click "Run" then "Start Debugging". Set break points before sending any requests (i.e. via the swagger link above or via curl).
@@ -62,10 +62,10 @@ https://github.com/grpc-ecosystem/grpc-gateway
 You can deploy and run the service in either your personal environment or against the real staging environment
 
 To deploy it to your personal project, note that you must initialize it first:
-1. (optional) Create a cloud storage bucket to store terraform state in, and fill in `deployments/backend.hcl`
+1. Fill in your .env and run `source .env`. Then create a cloud storage bucket to store terraform state & some configs in, and fill in `deployments/backend.hcl`
 2. Create a container artifact registry: `make cr-create-registry`
-3. Fill out configs, then push the service image: `make cr-deploy-personal`
-4. Install [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli), enter hash from prev step in `terraform.tfvars:image_url` and run: `cd deployments && terraform init -backend=false && terraform apply` (if you did step 0: `-backend-config=backend.hcl`)
+3. Fill out configs (`default.yaml`: copy&paste example, `personal_cloudrun.yaml`: insert your project id), then push the service image: `make cr-deploy-personal` (if this step fails, try again after a few minutes for permission updates to propagate)
+4. Install [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli), enter hash from prev step in `terraform.tfvars:image` and run: `cd deployments && terraform init -backend-config=backend.hcl && terraform apply`
 
 TODO
 - Could combine step 1+2 into another small setup terraform
