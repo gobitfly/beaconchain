@@ -5,5 +5,5 @@ CREATE INDEX IF NOT EXISTS idx_blocks_voluntaryexits_validatorindex ON blocks_vo
 
 -- +goose Down
 -- +goose StatementBegin
-DROP INDEX IF NOT EXISTS idx_blocks_voluntaryexits_validatorindex;
+DROP INDEX IF EXISTS idx_blocks_voluntaryexits_validatorindex;
 -- +goose StatementEnd
