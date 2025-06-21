@@ -145,6 +145,7 @@ const openDuties = () => {
     },
   })
 }
+const { getTimestampFromEpoch } = useNetworkStore()
 </script>
 
 <template>
@@ -157,7 +158,7 @@ const openDuties = () => {
         <div class="small-screen-value">
           <b><BcTableAgeHeader class="label" /></b>
           <div class="value">
-            <BcTableDateTime :unix-timestamp="row.epoch" />
+            <BcTableDateTime :unix-timestamp="getTimestampFromEpoch(row.epoch)" />
           </div>
         </div>
         <div class="small-screen-value">
