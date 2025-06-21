@@ -21,6 +21,7 @@
         "DashboardTableClDeposits",
         "DashboardTableElConsolidations",
         "DashboardTableElDeposits",
+        "DashboardTableRewardsDetails",
         "DashboardTableSummary",
         "DashboardTableSummaryDetails",
         "DashboardTableSummaryValidatorsIconRow",
