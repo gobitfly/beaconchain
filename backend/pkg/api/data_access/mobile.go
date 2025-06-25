@@ -261,25 +261,22 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		return nil
 	})
 
-	retrieveApr := func(timeFrame enums.TimePeriod, apr **float64) {
-		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
-			if err != nil {
-				return err
-			}
-			if incomeInfo.Apr.El == nil && incomeInfo.Apr.Cl == nil {
-				return nil
-			}
-			var totalApr float64
-			if incomeInfo.Apr.El != nil {
-				totalApr += *incomeInfo.Apr.El
-			}
-			if incomeInfo.Apr.Cl != nil {
-				totalApr += *incomeInfo.Apr.El
-			}
-			*apr = &totalApr
-			return nil
-		})
+	retrieveApr := func(timeFrame enums.TimePeriod) (*float64, error) {
+		incomeInfo, err := d.getElClAPR(ctx, wrappedDashboardId, -1, timeFrame)
+		if err != nil {
+			return nil, err
+		}
+		if incomeInfo.Apr.El == nil && incomeInfo.Apr.Cl == nil {
+			return nil, nil
+		}
+		var totalApr float64
+		if incomeInfo.Apr.El != nil {
+			totalApr += *incomeInfo.Apr.El
+		}
+		if incomeInfo.Apr.Cl != nil {
+			totalApr += *incomeInfo.Apr.Cl
+		}
+		return &totalApr, nil
 	}
 
 	retrieveRewards := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal]) {
@@ -293,36 +290,42 @@ func (d *DataAccessService) GetValidatorDashboardMobileWidget(ctx context.Contex
 		})
 	}
 
-	retrieveEfficiency := func(table string, efficiency **float64) {
-		eg.Go(func() error {
-			ds := goqu.Dialect("postgres").
-				From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
-				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
-				Select(
-					goqu.L("SUM(efficiency_dividend::decimal)").As("efficiency_dividend"),
-					goqu.L("SUM(efficiency_divisor::decimal)").As("efficiency_divisor"),
-				).
-				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+	retrieveEfficiency := func(table string) (*float64, error) {
+		ds := goqu.Dialect("postgres").
+			From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
+			With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId)).
+			Select(
+				goqu.L("SUM(efficiency_dividend::decimal)").As("efficiency_dividend"),
+				goqu.L("SUM(efficiency_divisor::decimal)").As("efficiency_divisor"),
+			).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+			Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
 
-			type dbResult struct {
-				EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
-				EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
-			}
-			dbRes, err := runQuery[dbResult](ctx, d.clickhouseReader, ds)
-			if !dbRes.EfficiencyDivisor.IsZero() {
-				eff := dbRes.EfficiencyDividend.Div(dbRes.EfficiencyDivisor).InexactFloat64()
-				*efficiency = &eff
-			}
+		type dbResult struct {
+			EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
+			EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
+		}
+		dbRes, err := runQuery[dbResult](ctx, d.clickhouseReader, ds)
 
-			return err
-		})
+		var efficiency *float64
+		if !dbRes.EfficiencyDivisor.IsZero() {
+			eff := dbRes.EfficiencyDividend.Div(dbRes.EfficiencyDivisor).InexactFloat64()
+			efficiency = &eff
+		}
+
+		return efficiency, err
 	}
 
 	retrieveRewards(enums.Last24h, &data.Last24hIncome)
 	retrieveRewards(enums.Last7d, &data.Last7dIncome)
-	retrieveApr(enums.Last30d, &data.Last30dApr)
-	retrieveEfficiency("validator_dashboard_data_rolling_30d", &data.Last30dEfficiency)
+	eg.Go(func() error {
+		data.Last30dApr, err = retrieveApr(enums.Last30d)
+		return err
+	})
+	eg.Go(func() error {
+		data.Last30dEfficiency, err = retrieveEfficiency("validator_dashboard_data_rolling_30d")
+		return err
+	})
 
 	err = eg.Wait()
 
