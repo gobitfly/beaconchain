@@ -377,7 +377,7 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		return nil
 	})
 
-	retrieveRewardsAndEfficiency := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
+	retrieveRewardsAndEfficiency := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[*float64], efficiency **float64) {
 		// Rewards + APR
 		eg.Go(func() error {
 			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
@@ -399,7 +399,8 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 				From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
 				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
 				Select(
-					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
+					goqu.L("SUM(efficiency_dividend::decimal)").As("efficiency_dividend"),
+					goqu.L("SUM(efficiency_divisor::decimal)").As("efficiency_divisor"),
 				)
 
 			if len(dashboardId.Validators) == 0 {
@@ -411,7 +412,16 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
 			}
 
-			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
+			type dbResult struct {
+				EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
+				EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
+			}
+			dbRes, err := runQuery[dbResult](ctx, d.clickhouseReader, ds)
+			if !dbRes.EfficiencyDivisor.IsZero() {
+				eff := dbRes.EfficiencyDividend.Div(dbRes.EfficiencyDivisor).InexactFloat64()
+				*efficiency = &eff
+			}
+
 			return err
 		})
 	}

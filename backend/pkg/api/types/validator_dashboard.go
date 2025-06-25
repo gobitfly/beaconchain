@@ -25,9 +25,9 @@ type VDBOverviewData struct {
 	Network             uint64                                     `json:"network"`
 	Groups              []VDBOverviewGroup                         `json:"groups"`
 	Validators          ValidatorStateCounts                       `json:"validators"`
-	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
+	Efficiency          PeriodicValues[*float64]                   `json:"efficiency"`
 	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
-	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	Apr                 PeriodicValues[ClElValue[*float64]]        `json:"apr"`
 	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
 	Balances            ValidatorBalances                          `json:"balances"`
 	IsAboveEbLimit      bool                                       `json:"is_above_effective_balance_limit"` // refers to owner; relevant for shared dashboards
@@ -58,7 +58,7 @@ type VDBSummaryTableRow struct {
 	GroupId                  int64                      `json:"group_id" extensions:"x-order=1"`
 	Status                   VDBSummaryStatus           `json:"status"`
 	Validators               VDBSummaryValidators       `json:"validators"`
-	Efficiency               float64                    `json:"efficiency"`
+	Efficiency               *float64                   `json:"efficiency"`
 	AverageNetworkEfficiency float64                    `json:"average_network_efficiency"`
 	Attestations             StatusCount                `json:"attestations"`
 	Proposals                StatusCount                `json:"proposals"`
@@ -84,26 +84,26 @@ type VDBGroupSummaryMissedRewards struct {
 	Sync            decimal.Decimal            `json:"sync"`
 }
 type VDBGroupSummaryData struct {
-	Efficiency float64                    `json:"efficiency"`
+	Efficiency *float64                   `json:"efficiency"`
 	Balances   ValidatorBalances          `json:"balances"`
 	Rewards    ClElValue[decimal.Decimal] `json:"rewards"`
 
 	AttestationsHead       StatusCount `json:"attestations_head"`
 	AttestationsSource     StatusCount `json:"attestations_source"`
 	AttestationsTarget     StatusCount `json:"attestations_target"`
-	AttestationEfficiency  float64     `json:"attestation_efficiency"`
+	AttestationEfficiency  *float64    `json:"attestation_efficiency"`
 	AttestationAvgInclDist float64     `json:"attestation_avg_incl_dist"`
 
 	SyncCommittee          VDBGroupSummaryColumnItem    `json:"sync"`
 	SyncCommitteeCount     VDBGroupSummarySyncCount     `json:"sync_count"`
-	SyncEfficiency         float64                      `json:"sync_efficiency"`
+	SyncEfficiency         *float64                     `json:"sync_efficiency"`
 	Slashings              VDBGroupSummaryColumnItem    `json:"slashings"`                // Failed slashings are count of validators in the group that were slashed
 	ProposalValidators     []uint64                     `json:"proposal_validators"`      // fill with up to 3 validator indexes
 	ProposalValidatorCount uint64                       `json:"proposal_validator_count"` // number of distinct validators
-	ProposalEfficiency     float64                      `json:"proposal_efficiency"`
+	ProposalEfficiency     *float64                     `json:"proposal_efficiency"`
 	MissedRewards          VDBGroupSummaryMissedRewards `json:"missed_rewards"`
 
-	Apr ClElValue[float64] `json:"apr"`
+	Apr ClElValue[*float64] `json:"apr"`
 
 	Luck Luck `json:"luck"`
 

@@ -21,9 +21,9 @@ export interface VDBOverviewData {
   network: number /* uint64 */;
   groups: VDBOverviewGroup[];
   validators: ValidatorStateCounts;
-  efficiency: PeriodicValues<number /* float64 */>;
+  efficiency: PeriodicValues<number /* float64 */ | undefined>;
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
-  apr: PeriodicValues<ClElValue<number /* float64 */>>;
+  apr: PeriodicValues<ClElValue<number /* float64 */ | undefined>>;
   chart_history_seconds: ChartHistorySeconds;
   balances: ValidatorBalances;
   is_above_effective_balance_limit: boolean; // refers to owner; relevant for shared dashboards
@@ -47,7 +47,7 @@ export interface VDBSummaryTableRow {
   group_id: number /* int64 */;
   status: VDBSummaryStatus;
   validators: VDBSummaryValidators;
-  efficiency: number /* float64 */;
+  efficiency?: number /* float64 */;
   average_network_efficiency: number /* float64 */;
   attestations: StatusCount;
   proposals: StatusCount;
@@ -70,23 +70,23 @@ export interface VDBGroupSummaryMissedRewards {
   sync: string /* decimal.Decimal */;
 }
 export interface VDBGroupSummaryData {
-  efficiency: number /* float64 */;
+  efficiency?: number /* float64 */;
   balances: ValidatorBalances;
   rewards: ClElValue<string /* decimal.Decimal */>;
   attestations_head: StatusCount;
   attestations_source: StatusCount;
   attestations_target: StatusCount;
-  attestation_efficiency: number /* float64 */;
+  attestation_efficiency?: number /* float64 */;
   attestation_avg_incl_dist: number /* float64 */;
   sync: VDBGroupSummaryColumnItem;
   sync_count: VDBGroupSummarySyncCount;
-  sync_efficiency: number /* float64 */;
+  sync_efficiency?: number /* float64 */;
   slashings: VDBGroupSummaryColumnItem; // Failed slashings are count of validators in the group that were slashed
   proposal_validators: number /* uint64 */[]; // fill with up to 3 validator indexes
   proposal_validator_count: number /* uint64 */; // number of distinct validators
-  proposal_efficiency: number /* float64 */;
+  proposal_efficiency?: number /* float64 */;
   missed_rewards: VDBGroupSummaryMissedRewards;
-  apr: ClElValue<number /* float64 */>;
+  apr: ClElValue<number /* float64 */ | undefined>;
   luck: Luck;
   rocket_pool?: {
     minipools: number /* uint64 */;

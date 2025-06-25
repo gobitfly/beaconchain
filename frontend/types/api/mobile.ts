@@ -14,11 +14,11 @@ export interface MobileWidgetData {
   validator_state_counts: ValidatorStateCounts;
   last_24h_income: ClElValue<string /* decimal.Decimal */>;
   last_7d_income: ClElValue<string /* decimal.Decimal */>;
-  last_30d_apr: number /* float64 */;
-  last_30d_efficiency: number /* float64 */;
-  network_efficiency: number /* float64 */;
+  last_30d_apr?: number /* float64 */;
+  last_30d_efficiency?: number /* float64 */;
+  network_efficiency?: number /* float64 */;
   rpl_price: string /* decimal.Decimal */;
-  rpl_apr: number /* float64 */;
+  rpl_apr?: number /* float64 */;
   el_cl_price: number /* float64 */;
 }
 export type InternalGetValidatorDashboardMobileWidgetResponse = ApiDataResponse<MobileWidgetData>;
