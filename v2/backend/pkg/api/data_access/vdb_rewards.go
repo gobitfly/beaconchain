@@ -683,6 +683,113 @@ func (d *DataAccessService) GetValidatorDashboardGroupRewards(ctx context.Contex
 	return ret, nil
 }
 
+func buildRewardChartClDs(dashboardId t.VDBId, groupIds []int64, afterTs uint64, beforeTs uint64, aggregation enums.ChartAggregation, isAllGroupsRequested bool) *goqu.SelectDataset {
+	var dataTable exp.LiteralExpression
+	timeColumn := goqu.C("t")
+	epochStartCol, epochEndCol := "epoch_start", "epoch_end"
+	switch aggregation {
+	case enums.IntervalEpoch:
+		dataTable = goqu.L("validator_dashboard_data_epoch AS e")
+		timeColumn = goqu.C("epoch_timestamp")
+		epochStartCol, epochEndCol = "e.epoch", "e.epoch"
+	case enums.IntervalHourly:
+		dataTable = goqu.L("validator_dashboard_data_hourly AS e")
+	case enums.IntervalDaily:
+		dataTable = goqu.L("validator_dashboard_data_daily AS e")
+	case enums.IntervalWeekly:
+		dataTable = goqu.L("validator_dashboard_data_weekly AS e")
+	}
+
+	clDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L(`SUM(e.attestations_reward + e.blocks_cl_reward + e.sync_reward) AS cl_rewards`),
+			timeColumn.As("timestamp"),
+			goqu.MIN(epochStartCol).As("epoch_start"),
+			goqu.MAX(epochEndCol).As("epoch_end"),
+		).
+		From(dataTable).
+		Where(
+			timeColumn.Between(goqu.Range(
+				goqu.L("fromUnixTimestamp(?)", afterTs),
+				goqu.L("fromUnixTimestamp(?)", beforeTs))),
+		).
+		GroupBy(timeColumn).
+		Order(timeColumn.Asc())
+
+	if dashboardId.Validators == nil {
+		clDs = clDs.
+			With("validators", goqu.Dialect("postgres").
+				From(goqu.T("users_val_dashboards_validators")).
+				Select(
+					goqu.I("validator_index"),
+					goqu.I("group_id"),
+				).
+				Where(
+					goqu.I("dashboard_id").Eq(dashboardId.Id),
+					goqu.Or(
+						goqu.I("group_id").In(groupIds),
+						goqu.V(isAllGroupsRequested),
+					),
+				),
+			).
+			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
+			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
+
+		if dashboardId.AggregateGroups {
+			clDs = clDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
+		} else {
+			clDs = clDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupByAppend(goqu.L("result_group_id")).
+				OrderAppend(goqu.L("result_group_id").Asc())
+		}
+	} else {
+		// In case a list of validators is provided set the group to the default id
+		clDs = clDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators))
+	}
+	return clDs
+}
+
+func buildRewardChartElDs(dashboardId t.VDBId, epochStarts, epochEnds []uint64) *goqu.SelectDataset {
+	elDs := goqu.Dialect("postgres").
+		Select(
+			goqu.L("epoch_start"),
+			// goqu.L("epoch_end"), not needed
+			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
+		From(goqu.L("users_val_dashboards_validators v")).
+		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer"))).
+		GroupBy(goqu.L("epoch_start, epoch_end")).
+		Order(goqu.L("epoch_start").Asc())
+
+	if dashboardId.Validators == nil {
+		elDs = elDs.
+			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
+
+		if dashboardId.AggregateGroups {
+			elDs = elDs.
+				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
+		} else {
+			elDs = elDs.
+				SelectAppend(goqu.L("v.group_id AS result_group_id")).
+				GroupByAppend(goqu.L("result_group_id")).
+				OrderAppend(goqu.L("result_group_id").Asc())
+		}
+	} else {
+		// In case a list of validators is provided set the group to the default id
+		elDs = elDs.
+			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
+			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
+	}
+	elDs = elDs.
+		With("epoch_ranges(epoch_start, epoch_end)", goqu.L("(SELECT * FROM unnest(?::int[], ?::int[]))", pq.Array(epochStarts), pq.Array(epochEnds))).
+		InnerJoin(goqu.L("epoch_ranges"), goqu.On(goqu.L("b.epoch BETWEEN epoch_ranges.epoch_start AND epoch_ranges.epoch_end"))).
+		Where(goqu.L("b.epoch BETWEEN ? AND ?", epochStarts[0], epochEnds[len(epochEnds)-1]))
+	return elDs
+}
+
 func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Context, dashboardId t.VDBId, groupIds []int64, protocolModes t.VDBProtocolModes, aggregation enums.ChartAggregation, afterTs uint64, beforeTs uint64) (*t.ChartData[int, decimal.Decimal], error) {
 	// @DATA-ACCESS incorporate protocolModes
 	// bar chart for the CL and EL rewards for each group for each epoch.
@@ -694,252 +801,112 @@ func (d *DataAccessService) GetValidatorDashboardRewardsChart(ctx context.Contex
 		return ret, nil
 	}
 
-	var err error
-
-	var dataTable exp.LiteralExpression
-	timeColumn := goqu.C("t")
-	switch aggregation {
-	case enums.IntervalEpoch:
-		dataTable = goqu.L("validator_dashboard_data_epoch AS e")
-		timeColumn = goqu.C("epoch_timestamp")
-	case enums.IntervalHourly:
-		dataTable = goqu.L("validator_dashboard_data_hourly AS e FINAL")
-	case enums.IntervalDaily:
-		dataTable = goqu.L("validator_dashboard_data_daily AS e FINAL")
-	case enums.IntervalWeekly:
-		dataTable = goqu.L("validator_dashboard_data_weekly AS e FINAL")
-	default:
-		return nil, fmt.Errorf("unexpected aggregation type: %v", aggregation)
-	}
-
-	requestedAllGroups := dashboardId.AggregateGroups
-	for _, groupId := range groupIds {
-		if groupId == t.AllGroups {
-			// note: requesting all groups is only convenience on api level, this will NOT result in a "total" series as it wouldn't make sense for this endpoint
-			requestedAllGroups = true
-			break
-		}
-	}
-
+	requestedAllGroups := dashboardId.AggregateGroups || slices.Contains(groupIds, t.AllGroups)
 	// ------------------------------------------------------------------------------------------------------------------
-	// Build the query that serves as base for both the main and EL rewards queries
 	// CL
-	rewardsDs := goqu.Dialect("postgres").
-		Select(
-			goqu.L(`SUM(e.attestations_reward + e.blocks_cl_reward + e.sync_reward) AS cl_rewards`),
-			timeColumn.As("timestamp"),
-		).
-		From(dataTable).
-		With("validators", goqu.Dialect("postgres").
-			From(goqu.T("users_val_dashboards_validators")).
-			Select(
-				goqu.I("validator_index"),
-				goqu.I("group_id"),
-			).
-			Where(
-				goqu.I("dashboard_id").Eq(dashboardId.Id),
-				goqu.Or(
-					goqu.I("group_id").In(groupIds),
-					goqu.V(requestedAllGroups),
-				),
-			),
-		).
-		Where(
-			timeColumn.Between(goqu.Range(
-				goqu.L("fromUnixTimestamp(?)", afterTs),
-				goqu.L("fromUnixTimestamp(?)", beforeTs))),
-		)
 
-	if aggregation == enums.IntervalEpoch {
-		rewardsDs = rewardsDs.
-			SelectAppend(goqu.L("min(e.epoch)").As("epoch_start")).
-			SelectAppend(goqu.L("max(e.epoch)").As("epoch_end"))
-	} else {
-		rewardsDs = rewardsDs.
-			SelectAppend(goqu.L("min(epoch_start)").As("epoch_start")).
-			SelectAppend(goqu.L("max(epoch_end)").As("epoch_end"))
-	}
-
-	// EL
-	elDs := goqu.Dialect("postgres").
-		Select(
-			goqu.L("epoch_start"),
-			// goqu.L("epoch_end"), not needed
-			goqu.COALESCE(goqu.SUM(goqu.I("value")), 0).As("el_rewards")).
-		From(goqu.L("users_val_dashboards_validators v")).
-		LeftJoin(goqu.I("execution_rewards_finalized").As("b"), goqu.On(goqu.L("v.validator_index = b.proposer")))
-
-	// grouping, ordering
-	rewardsDs = rewardsDs.
-		GroupBy(timeColumn).
-		Order(timeColumn.Asc())
-
-	elDs = elDs.
-		GroupBy(goqu.L("epoch_start, epoch_end")).
-		Order(goqu.L("epoch_start").Asc())
-
-	if dashboardId.Validators == nil {
-		rewardsDs = rewardsDs.
-			InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("e.validator_index = v.validator_index"))).
-			Where(goqu.L("e.validator_index IN (SELECT validator_index FROM validators)"))
-		elDs = elDs.
-			Where(goqu.L("v.dashboard_id = ?", dashboardId.Id))
-
-		if dashboardId.AggregateGroups {
-			rewardsDs = rewardsDs.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
-			elDs = elDs.
-				SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId))
-		} else {
-			rewardsDs = rewardsDs.
-				SelectAppend(goqu.L("v.group_id AS result_group_id")).
-				GroupByAppend(goqu.L("result_group_id")).
-				OrderAppend(goqu.L("result_group_id").Asc())
-			elDs = elDs.
-				SelectAppend(goqu.L("v.group_id AS result_group_id")).
-				GroupByAppend(goqu.L("result_group_id")).
-				OrderAppend(goqu.L("result_group_id").Asc())
-		}
-	} else {
-		// In case a list of validators is provided set the group to the default id
-		rewardsDs = rewardsDs.
-			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("e.validator_index IN ?", dashboardId.Validators))
-		elDs = elDs.
-			SelectAppend(goqu.L("?::smallint AS result_group_id", t.DefaultGroupId)).
-			Where(goqu.L("b.proposer = ANY(?)", pq.Array(dashboardId.Validators)))
-	}
-
-	// ------------------------------------------------------------------------------------------------------------------
-	// Build the main query and get the data
-	queryResult := []struct {
+	clDs := buildRewardChartClDs(dashboardId, groupIds, afterTs, beforeTs, aggregation, requestedAllGroups)
+	type clResult struct {
 		Timestamp  time.Time `db:"timestamp"`
 		EpochStart uint64    `db:"epoch_start"`
 		EpochEnd   uint64    `db:"epoch_end"`
 		GroupId    uint64    `db:"result_group_id"`
 		ClRewards  int64     `db:"cl_rewards"`
-	}{}
-
-	query, args, err := rewardsDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
 	}
 
-	err = d.clickhouseReader.SelectContext(ctx, &queryResult, query, args...)
+	clQueryResult, err := runQueryRows[[]clResult](ctx, d.clickhouseReader, clDs)
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving rewards chart data: %w", err)
+		return nil, fmt.Errorf("error retrieving rewards chart cl data: %w", err)
 	}
 
-	if len(queryResult) == 0 {
+	if len(clQueryResult) == 0 {
 		return ret, nil
 	}
 
-	// deduplicate epoch boundaries & make sure they are correct even with newly activated validators
+	// deduplicate epoch boundaries & make sure they are correct even with newly activated / exited validators
+	// as these might have different epoch start and end times
 	type epochBoundaries struct {
 		Start uint64
 		End   uint64
 	}
-	epochBoundariesMap := make(map[time.Time]epochBoundaries)
-	for _, res := range queryResult {
-		curBoundary := epochBoundariesMap[res.Timestamp]
-		if epochBoundariesMap[res.Timestamp].Start == 0 || epochBoundariesMap[res.Timestamp].Start > res.EpochStart {
-			curBoundary.Start = res.EpochStart
+	epochBoundariesMap := make(map[int64]epochBoundaries)
+	for _, res := range clQueryResult {
+		curBoundary, ok := epochBoundariesMap[res.Timestamp.Unix()]
+		if !ok {
+			curBoundary = epochBoundaries{
+				Start: res.EpochStart,
+				End:   res.EpochEnd,
+			}
 		}
-		if epochBoundariesMap[res.Timestamp].End < res.EpochEnd {
-			curBoundary.End = res.EpochEnd
-		}
-		epochBoundariesMap[res.Timestamp] = curBoundary
+		curBoundary.Start = min(curBoundary.Start, res.EpochStart)
+		curBoundary.End = max(curBoundary.End, res.EpochEnd)
+		epochBoundariesMap[res.Timestamp.Unix()] = curBoundary
 	}
-	var epochStarts, epochEnds []uint64
-	for _, v := range epochBoundariesMap {
-		epochStarts = append(epochStarts, v.Start)
-		epochEnds = append(epochEnds, v.End)
+	epochStarts, epochEnds := make([]uint64, 0, len(epochBoundariesMap)), make([]uint64, 0, len(epochBoundariesMap))
+	for _, v := range slices.Sorted(maps.Keys(epochBoundariesMap)) {
+		epochStarts = append(epochStarts, epochBoundariesMap[v].Start)
+		epochEnds = append(epochEnds, epochBoundariesMap[v].End)
 	}
-	slices.Sort(epochStarts)
-	slices.Sort(epochEnds)
-	elDs = elDs.
-		With("epoch_ranges(epoch_start, epoch_end)", goqu.L("(SELECT * FROM unnest(?::int[], ?::int[]))", pq.Array(epochStarts), pq.Array(epochEnds))).
-		InnerJoin(goqu.L("epoch_ranges"), goqu.On(goqu.L("b.epoch BETWEEN epoch_ranges.epoch_start AND epoch_ranges.epoch_end"))).
-		Where(goqu.L("b.epoch BETWEEN ? AND ?", epochStarts[0], epochEnds[len(epochEnds)-1]))
 
 	// ------------------------------------------------------------------------------------------------------------------
-	// Get the EL rewards
-	elRewards := make(map[uint64]map[uint64]decimal.Decimal)
+	// EL
 
-	elQueryResult := []struct {
+	type elResult struct {
 		EpochStart uint64          `db:"epoch_start"`
 		GroupId    uint64          `db:"result_group_id"`
 		ElRewards  decimal.Decimal `db:"el_rewards"`
-	}{}
-
-	query, args, err = elDs.Prepared(true).ToSQL()
-	if err != nil {
-		return nil, fmt.Errorf("error preparing query: %w", err)
 	}
-
-	err = d.readerDb.SelectContext(ctx, &elQueryResult, query, args...)
+	elQueryResult, err := runQueryRows[[]elResult](ctx, d.readerDb, buildRewardChartElDs(dashboardId, epochStarts, epochEnds))
 	if err != nil {
-		return nil, fmt.Errorf("error retrieving el rewards data for rewards chart: %w", err)
-	}
-
-	for _, entry := range elQueryResult {
-		if _, ok := elRewards[entry.EpochStart]; !ok {
-			elRewards[entry.EpochStart] = make(map[uint64]decimal.Decimal)
-		}
-		elRewards[entry.EpochStart][entry.GroupId] = entry.ElRewards
-	}
-
-	if err != nil {
-		return nil, fmt.Errorf("error retrieving validator dashboard rewards chart data: %w", err)
+		return nil, fmt.Errorf("error retrieving rewards chart el data: %w", err)
 	}
 
 	// ------------------------------------------------------------------------------------------------------------------
 	// Create a map structure to store the data
-	epochStartData := make(map[uint64]map[int]t.ClElValue[decimal.Decimal])
-	epochStartList := make([]uint64, 0)
-	groupMap := make(map[int]bool)
 
-	for _, res := range queryResult {
-		if _, ok := epochStartData[res.EpochStart]; !ok {
-			epochStartData[res.EpochStart] = make(map[int]t.ClElValue[decimal.Decimal])
-			epochStartList = append(epochStartList, res.EpochStart)
-		}
+	type rewardsKey struct {
+		epochStart uint64
+		groupId    uint64
+	}
+	rewardsMap := make(map[rewardsKey]t.ClElValue[decimal.Decimal])
+	groupMap := make(map[uint64]struct{})
 
-		epochStartData[res.EpochStart][int(res.GroupId)] = t.ClElValue[decimal.Decimal]{
-			El: elRewards[res.EpochStart][res.GroupId],
+	for _, res := range clQueryResult {
+		groupMap[res.GroupId] = struct{}{}
+		epochStart := epochBoundariesMap[res.Timestamp.Unix()].Start // use epochStart from the boundaries map to maintain consistency with el data
+		rewardsMap[rewardsKey{epochStart, res.GroupId}] = t.ClElValue[decimal.Decimal]{
 			Cl: utils.GWeiToWei(big.NewInt(res.ClRewards)),
 		}
-		groupMap[int(res.GroupId)] = true
+	}
+	for _, entry := range elQueryResult {
+		rewards := rewardsMap[rewardsKey{entry.EpochStart, entry.GroupId}]
+		rewards.El = entry.ElRewards
+		rewardsMap[rewardsKey{entry.EpochStart, entry.GroupId}] = rewards
 	}
 
-	// Get the list of groups
-	groupList := slices.Collect(maps.Keys(groupMap))
-	slices.Sort(groupList)
-
-	// Create the series structure
-	propertyNames := []string{"el", "cl"}
-	for _, groupId := range groupList {
-		for _, propertyName := range propertyNames {
-			ret.Series = append(ret.Series, t.ChartSeries[int, decimal.Decimal]{
-				Id:       groupId,
-				Property: propertyName,
-			})
-		}
-	}
-
-	// Fill the epoch data
-	for _, epoch := range epochStartList {
+	// create the chart data
+	for _, epoch := range epochStarts {
 		ret.Categories = append(ret.Categories, uint64(utils.EpochToTime(epoch).Unix()))
-		for idx, series := range ret.Series {
-			d := epochStartData[epoch][series.Id]
-			if series.Property == "el" {
-				ret.Series[idx].Data = append(ret.Series[idx].Data, &d.El)
-			} else if series.Property == "cl" {
-				ret.Series[idx].Data = append(ret.Series[idx].Data, &d.Cl)
-			} else {
-				return nil, fmt.Errorf("unknown series property: %s", series.Property)
-			}
+	}
+	for _, groupId := range slices.Sorted(maps.Keys(groupMap)) {
+		clData, elData := make([]*decimal.Decimal, 0, len(epochStarts)), make([]*decimal.Decimal, 0, len(epochStarts))
+		for _, epoch := range epochStarts {
+			reward := rewardsMap[rewardsKey{epoch, groupId}]
+			clData = append(clData, &reward.Cl)
+			elData = append(elData, &reward.El)
 		}
+		ret.Series = append(ret.Series,
+			t.ChartSeries[int, decimal.Decimal]{
+				Id:       int(groupId),
+				Property: "cl",
+				Data:     clData,
+			},
+			t.ChartSeries[int, decimal.Decimal]{
+				Id:       int(groupId),
+				Property: "el",
+				Data:     elData,
+			},
+		)
 	}
 
 	return ret, nil
