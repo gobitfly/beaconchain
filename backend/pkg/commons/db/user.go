@@ -482,6 +482,12 @@ func GetFreeTierProduct(ctx context.Context) (*t.PremiumProduct, error) {
 				Daily:  0,
 				Weekly: 0,
 			},
+			RewardsChartHistorySeconds: t.ChartHistorySeconds{
+				Epoch:  0,
+				Hourly: 0,
+				Daily:  0,
+				Weekly: maxJsInt,
+			},
 			EmailNotificationsPerDay:                       10,
 			ConfigureNotificationsViaApi:                   false,
 			ValidatorGroupNotifications:                    1,
