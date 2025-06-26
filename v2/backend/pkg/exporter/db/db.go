@@ -1234,6 +1234,111 @@ func BackfillEBLookup(epochs []BackfillMetadata) error {
 	return nil
 }
 
+func doSanityCheckForBackfillEpochs(epochs []BackfillMetadata, backfillType BackfillType) error {
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	backfillBatchID := epochs[0].BackfillBatchId
+	for _, e := range epochs {
+		if e.BackfillBatchId == nil || *e.BackfillBatchId != *backfillBatchID {
+			return fmt.Errorf("backfill batch id is not set or not identical for all epochs")
+		}
+		if e.BackfillName != backfillType {
+			return fmt.Errorf("backfill name is not set to %s", backfillType)
+		}
+	}
+	// sanity check, check that there are more than a thousand entries for each epoch
+	const minEpochEntries = 1000
+	var timestamps []time.Time
+	for _, e := range epochs {
+		timestamps = append(timestamps, utils.EpochToTime(e.Epoch))
+	}
+	var result []struct {
+		Timestamp time.Time `db:"epoch_timestamp"`
+		Count     int       `db:"count"`
+	}
+	err := db.ClickHouseWriter.Select(&result, fmt.Sprintf(`
+		SELECT
+			epoch_timestamp,
+			count() as count
+		FROM %s
+		WHERE epoch_timestamp in $1
+		GROUP BY epoch_timestamp
+		Settings use_skip_indexes_if_final = 1
+	`, FinalEpochsTableName), timestamps)
+	if err != nil {
+		return fmt.Errorf("error fetching epoch count: %w", err)
+	}
+	if len(result) != len(epochs) {
+		return fmt.Errorf("epoch count mismatch: expected %d, got %d", len(epochs), len(result))
+	}
+	for _, r := range result {
+		if r.Count < minEpochEntries {
+			return fmt.Errorf("epoch %v has less than 1000 entries in the final table", utils.TimeToEpoch(r.Timestamp))
+		}
+	}
+	return nil
+}
+
+func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
+	metricPrefix := string("dashboard_data_exporter_backfill_" + BackfillTypeMissingMissedRewards)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
+	}()
+	// sort the epochs
+	sort.Slice(epochs, func(i, j int) bool {
+		return epochs[i].Epoch < epochs[j].Epoch
+	})
+
+	// sanity check
+	if err := doSanityCheckForBackfillEpochs(epochs, BackfillTypeMissingMissedRewards); err != nil {
+		return fmt.Errorf("error during sanity check for backfill epochs: %w", err)
+	}
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(start).Seconds())
+	now := time.Now()
+
+	// backfill the epochs
+	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    epochs[0].BackfillBatchId.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+	}))
+
+	var epoch_timestamp []time.Time
+	for _, e := range epochs {
+		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
+	}
+
+	// no final needed as its from the final table
+	ds := goqu.Insert(BackfillMissingMissedRewardsSink).
+		FromQuery(
+			goqu.From(FinalEpochsTableName).Select(
+				goqu.I("validator_index"),
+				goqu.I("epoch_timestamp").As("t"),
+				goqu.I("epoch"),
+				goqu.I("balance_start"),
+				goqu.I("blocks_cl_missed_median_reward").As("_fixed_blocks_cl_missed_median_reward"),
+			).Where(
+				goqu.I("epoch_timestamp").In(epoch_timestamp),
+				goqu.I("blocks_cl_missed_median_reward").Neq(0),
+			),
+		)
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing backfill query: %w", err)
+	}
+	err = db.ClickHouseNativeWriter.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error backfilling epochs: %w", err)
+	}
+
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_insert").Observe(time.Since(now).Seconds())
+
+	return nil
+}
+
 func GetIncompleteInsertEpochs() ([]EpochMetadata, error) { // no limit because it should never grow too large
 	var epochs []EpochMetadata
 	err := db.ClickHouseWriter.Select(&epochs,
@@ -1963,6 +2068,7 @@ const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata t
 const ExporterBackfillMetadataTableName = "_exporter_backfill_metadata"
 const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
 const BackfillRoiSink = "_insert_sink_backfill_validator_dashboard_data_roi"
+const BackfillMissingMissedRewardsSink = "_insert_sink_backfill_missing_missed_rewards"
 const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
 const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"
 const EffectiveBalanceLookupTableName = "_final_validator_dashboard_effective_balance_lookup"
@@ -1989,4 +2095,5 @@ const (
 	BackfillTypeRoi                    BackfillType = "roi"
 	BackfillTypeEBLookup               BackfillType = "eb_lookup"
 	BackfillTypeElectraForkEpochEvents BackfillType = "electra_fork_epoch_events"
+	BackfillTypeMissingMissedRewards   BackfillType = "missing_missed_rewards"
 )
