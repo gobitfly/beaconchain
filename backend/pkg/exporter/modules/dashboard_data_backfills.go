@@ -22,6 +22,7 @@ func (d *dashboardData) roiBackfillTask() {
 		edb.BackfillTypeRoi,
 		edb.BackfillTypeEBLookup,
 		edb.BackfillTypeElectraForkEpochEvents,
+		edb.BackfillTypeMissingMissedRewards,
 	}
 	for _, backfillType := range jobs {
 		// fork for every backfill we have to do
@@ -101,6 +102,8 @@ func (d *dashboardData) backfillEpochs(t edb.BackfillType, epochs []edb.Backfill
 				err = edb.BackfillEBLookup(epochs)
 			case edb.BackfillTypeElectraForkEpochEvents:
 				err = d.BackfillElectraForkEpochEvents(epochs)
+			case edb.BackfillTypeMissingMissedRewards:
+				err = edb.BackfillMissingMissedRewards(epochs)
 			default:
 				return fmt.Errorf("unknown backfill type %s", t)
 			}
