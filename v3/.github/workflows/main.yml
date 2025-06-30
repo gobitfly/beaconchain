@@ -1,0 +1,66 @@
+name: Run Go Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_target:
+        description: "Select ENV file"
+        required: true
+        default: mainnet
+        type: choice
+        options:
+          - gnosis
+          - mainnet
+      branch:
+        description: "Branch to run tests against"
+        required: true
+        default: main
+        type: string
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout selected branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.branch }}
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.22
+
+      - name: Install tools
+        run: |
+          go install github.com/joho/godotenv/cmd/godotenv@latest
+          go install github.com/gotestyourself/gotestsum@latest
+
+      - name: Set ENV_FILE dynamically
+        run: |
+          if [ "${{ inputs.env_target }}" = "gnosis" ]; then
+            echo "ENV_FILE=.env.gnosis.staging" >> $GITHUB_ENV
+          else
+            echo "ENV_FILE=.env.mainnet.staging" >> $GITHUB_ENV
+          fi
+
+      - name: Run integration tests
+        run: |
+          gotestsum --format testname --junitfile report.xml -- -count=1 ./test
+
+      - name: Upload JUnit Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: junit-report-${{ inputs.env_target }}
+          path: report.xml
+
+      - name: Slack Notify
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          author_name: "Integration Tests (${{ inputs.env_target }})"
+          fields: repo,message,commit,author,job,workflow,took
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
