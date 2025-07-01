@@ -43,29 +43,14 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 				status,
 				metadata
 			FROM status_reports
-			LEFT JOIN clean_shutdown_events cse ON status_reports.emitter = clean_shutdown_events.emitter
-			WHERE expires_at > now() and deployment_type = {deployment_type:String} and (status_reports.inserted_at < cse.inserted_at or cse.inserted_at is null) AND event_id != {running_event_id:String}
+			LEFT ANTI JOIN clean_shutdown_events cse ON status_reports.emitter = cse.emitter AND status_reports.inserted_at >= cse.inserted_at
+			WHERE
+				expires_at > now() and
+				deployment_type = {deployment_type:String} and
+				event_id != {running_event_id:String}
 			ORDER BY
-				event_id ASC,
-				emitter ASC,
-				run_id ASC,
 				insert_id DESC
-		), latest_report_per_emitter as (
-			SELECT
-				event_id,
-				emitter,
-				any(inserted_at) as inserted_at, 
-				any(insert_id) as insert_id, 
-				any(expires_at) as expires_at,
-				any(timeouts_at) as timeouts_at,
-				any(status) AS status,
-				any(metadata) AS metadata
-			FROM
-				active_reports
-			GROUP BY
-				event_id,
-				emitter
-			order by insert_id desc
+			LIMIT 1 BY (event_id, emitter)
 		)
 		SELECT
 			event_id,
@@ -85,22 +70,24 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 						)
 					) as result
 		FROM
-			latest_report_per_emitter
+			active_reports
 		GROUP BY
 			event_id, 
 			status
 		ORDER BY event_id ASC, max(inserted_at) DESC
-		SETTINGS
-			use_query_cache = true,
-			query_cache_compress_entries = false,
-			query_cache_nondeterministic_function_handling='save',
-			query_cache_ttl=10
 	`
+	chCtx := ch.Context(ctx, ch.WithSettings(ch.Settings{
+		"use_query_cache":                                true,
+		"query_cache_compress_entries":                   true,
+		"query_cache_nondeterministic_function_handling": "save",
+		"query_cache_ttl":                                10,
+		"compatibility":                                  "25.4", // needs >24.12 for non-equal ON condition in LEFT ANTI JOIN. query tested to work with 25.4
+	}))
 
 	response.Reports = make(map[string][]types.HealthzResult)
 	response.ReportingUUID = utils.GetUUID()
 	response.DeploymentType = utils.Config.DeploymentType
-	err := db.ClickHouseReader.SelectContext(ctx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)), ch.Named("running_event_id", string(constants.Running)))
+	err := db.ClickHouseReader.SelectContext(chCtx, &results, query, ch.Named("deployment_type", utils.Config.DeploymentType), ch.Named("clean_shutdown_event_id", string(constants.Event_MonitoringCleanShutdown)), ch.Named("running_event_id", string(constants.Running)))
 	if err != nil {
 		response.Reports["response_error"] = []types.HealthzResult{
 			{
