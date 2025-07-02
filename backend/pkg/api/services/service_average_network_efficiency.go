@@ -62,12 +62,12 @@ func (s *Services) updateEfficiencyData() error {
 		}
 
 		ds := goqu.Dialect("postgres").
-			From(goqu.L(fmt.Sprintf(`%s AS r FINAL`, tableName))).
+			From(goqu.L(fmt.Sprintf(`%s AS r`, tableName))).
 			Select(
-				goqu.L("SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0)").As("total_efficiency"),
-				goqu.L("SUM(efficiency_attestations_dividend::Int256) / NULLIF(SUM(efficiency_attestations_divisor::Int256), 0)").As("attestation_efficiency"),
-				goqu.L("SUM(efficiency_proposals_dividend::Int256) / NULLIF(SUM(efficiency_proposals_divisor::Int256), 0)").As("proposal_efficiency"),
-				goqu.L("SUM(efficiency_sync_dividend::Int256) / NULLIF(SUM(efficiency_sync_divisor::Int256), 0)").As("sync_efficiency"),
+				goqu.L("SUM(efficiency_dividend::Int256) / SUM(efficiency_divisor::Int256)").As("total_efficiency"),
+				goqu.L("SUM(efficiency_attestations_dividend::Int256) / SUM(efficiency_attestations_divisor::Int256)").As("attestation_efficiency"),
+				goqu.L("SUM(efficiency_proposals_dividend::Int256) / SUM(efficiency_proposals_divisor::Int256)").As("proposal_efficiency"),
+				goqu.L("SUM(efficiency_sync_dividend::Int256) / SUM(efficiency_sync_divisor::Int256)").As("sync_efficiency"),
 			)
 
 		query, args, err := ds.Prepared(true).ToSQL()
