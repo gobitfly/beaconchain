@@ -451,3 +451,9 @@ type PostValidatorDashboardValidatorsRequest struct {
 type PostValidatorDashboardGroupsRequest struct {
 	Name string `json:"name"`
 }
+
+type TruncatedGuestValidatorDashboardData struct {
+	Validators []uint64 `json:"validators"`
+}
+
+type GetTruncatedGuestValidatorDashboardResponse ApiDataResponse[TruncatedGuestValidatorDashboardData]

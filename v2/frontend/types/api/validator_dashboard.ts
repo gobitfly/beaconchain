@@ -406,3 +406,7 @@ export interface PostValidatorDashboardValidatorsRequest {
 export interface PostValidatorDashboardGroupsRequest {
   name: string;
 }
+export interface TruncatedGuestValidatorDashboardData {
+  validators: number /* uint64 */[];
+}
+export type GetTruncatedGuestValidatorDashboardResponse = ApiDataResponse<TruncatedGuestValidatorDashboardData>;
