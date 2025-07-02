@@ -1196,6 +1196,10 @@ func (d *dashboardData) processProposalRewards(data *MultiEpochData, tar *[]type
 				metrics.TaskDuration.WithLabelValues("dashboard_data_exporter_process_proposal_rewards_single").Observe(time.Since(now).Seconds())
 			}()
 			for j := startSlot; j < endSlot; j++ {
+				// skip slot 0, as nobody proposed it
+				if j == 0 {
+					continue
+				}
 				// calculate median reward
 				medianStartSlot := uint64(0)
 				if j >= buffer {
