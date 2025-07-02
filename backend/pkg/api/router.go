@@ -134,6 +134,7 @@ func addRoutes(hs *handlers.HandlerService, publicRouter, internalRouter *mux.Ro
 		{http.MethodPut, "/users/me/password", nil, hs.InternalPutUserPassword},
 		{http.MethodGet, "/users/me/dashboards", hs.PublicGetUserDashboards, hs.InternalGetUserDashboards},
 		{http.MethodPut, "/users/me/notifications/settings/paired-devices/{client_id}/token", nil, hs.InternalPostUsersMeNotificationSettingsPairedDevicesToken},
+		{http.MethodGet, "/truncated-guest-validator-dashboard", nil, handlers.Handle(http.StatusOK, hs.GetTruncatedGuestValidatorDashboard, allowMocking)},
 
 		{http.MethodGet, "/users/me/machine-metrics", hs.PublicGetUserMachineMetrics, hs.InternalGetUserMachineMetrics},
 

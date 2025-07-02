@@ -2,11 +2,17 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"maps"
+	"math/big"
+	"slices"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/api/enums"
 	"github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/shopspring/decimal"
 )
 
 // PostValidatorDashboardGroups godoc
@@ -585,5 +591,57 @@ func (h *HandlerService) GetValidatorDashboardTotalConsensusLayerDeposits(ctx co
 		return r, err
 	}
 	r.Data = *data
+	return r, nil
+}
+
+// GetTruncatedGuestValidatorDashboard godoc
+//
+// @Description Get validators (ordered by index) eligible for the guest dashboard's free tier, stopping once their total effective balance meets the tier's balance limit.
+//
+//	@Tags			Validator Dashboard
+//	@Produce		json
+//	@Param			validators	query		string	true	"Provide a comma separated list of validator indices or public keys to put into the dashboard."
+//	@Success		200			{object}	types.GetTruncatedGuestValidatorDashboardResponse
+//	@Failure		400			{object}	types.ApiErrorResponse
+//	@Router			/truncated-guest-validator-dashboard [get]
+func (i *inputGetTruncatedGuestValidatorDashboard) Validate(params map[string]string, _ io.ReadCloser) error {
+	var v validationError
+	i.validatorIndices, i.publicKeys = v.checkValidatorList(params["validators"], allowEmpty)
+	return v.AsError()
+}
+
+type inputGetTruncatedGuestValidatorDashboard struct {
+	validatorIndices []types.VDBValidator
+	publicKeys       []string
+}
+
+func (h *HandlerService) GetTruncatedGuestValidatorDashboard(ctx context.Context, input inputGetTruncatedGuestValidatorDashboard) (types.GetTruncatedGuestValidatorDashboardResponse, error) {
+	var r types.GetTruncatedGuestValidatorDashboardResponse
+
+	requestedValidators, err := h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, input.validatorIndices, input.publicKeys)
+	if err != nil {
+		return r, fmt.Errorf("failed to get requested validators: %w", err)
+	}
+
+	effectiveBalancesMap, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, requestedValidators, true)
+	if err != nil {
+		return r, fmt.Errorf("failed to get effective balances: %w", err)
+	}
+
+	perks, err := h.daService.GetFreeTierPerks(ctx)
+	if err != nil {
+		return r, fmt.Errorf("failed to get free tier perks: %w", err)
+	}
+
+	var truncatedValidators []uint64
+	var totalBalance decimal.Decimal
+	for _, index := range slices.Sorted(maps.Keys(effectiveBalancesMap)) { // iterate over ascending order of indices
+		totalBalance = totalBalance.Add(utils.GWeiToWei(big.NewInt(int64(effectiveBalancesMap[index]))))
+		if totalBalance.GreaterThanOrEqual(perks.EffectiveBalancePerDashboard) {
+			break
+		}
+		truncatedValidators = append(truncatedValidators, index)
+	}
+	r.Data.Validators = truncatedValidators
 	return r, nil
 }
