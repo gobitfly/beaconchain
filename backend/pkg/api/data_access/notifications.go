@@ -2112,3 +2112,18 @@ func (d *DataAccessService) QueueTestPushNotification(ctx context.Context, userI
 func (d *DataAccessService) QueueTestWebhookNotification(ctx context.Context, userId uint64, webhookUrl string, isDiscordWebhook bool) error {
 	return notification.SendTestWebhookNotification(ctx, types.UserId(userId), webhookUrl, isDiscordWebhook)
 }
+
+// hasUserV1NotificationSubscriptions checks if a user has any v1 notification subscriptions.
+// Since some notification events are indistinguishable from v1 and v2, only validator-related that are not v2 are checked.
+func (d *DataAccessService) hasUserV1NotificationSubscriptions(ctx context.Context, userId uint64) (bool, error) {
+	ds := goqu.Dialect("postgres").
+		Select(goqu.COUNT(goqu.I("id"))).
+		From(goqu.T("users_subscriptions")).
+		Where(
+			goqu.I("user_id").Eq(userId),
+			goqu.I("event_name").Like("validator%"),
+			goqu.I("event_filter").NotLike("vdb:%"),
+		)
+	count, err := runQuery[int](ctx, d.userReader, ds)
+	return count > 0, err
+}

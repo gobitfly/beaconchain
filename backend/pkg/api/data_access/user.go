@@ -289,7 +289,33 @@ func (d *DataAccessService) GetUserIdByResetHash(ctx context.Context, hash strin
 }
 
 func (d *DataAccessService) GetUserInfo(ctx context.Context, userId uint64) (*t.UserInfo, error) {
-	return db.GetUserInfo(ctx, userId, d.userReader)
+	wg := errgroup.Group{}
+
+	var userInfo *t.UserInfo
+	wg.Go(func() error {
+		var err error
+		userInfo, err = db.GetUserInfo(ctx, userId, d.userReader)
+		if err != nil {
+			err = fmt.Errorf("error retrieving user info: %w", err)
+		}
+		return err
+	})
+
+	var hasV1Notifications bool
+	wg.Go(func() error {
+		var err error
+		hasV1Notifications, err = d.hasUserV1NotificationSubscriptions(ctx, userId)
+		if err != nil {
+			return fmt.Errorf("error retrieving if user has v1 notifications: %w", err)
+		}
+		return nil
+	})
+	err := wg.Wait()
+	if userInfo != nil {
+		userInfo.HasV1Notifications = hasV1Notifications
+	}
+
+	return userInfo, err
 }
 
 func (d *DataAccessService) GetProductSummary(ctx context.Context) (*t.ProductSummary, error) {
