@@ -6,13 +6,14 @@ const UserGroupAdmin = "ADMIN"
 const UserGroupDev = "DEV"
 
 type UserInfo struct {
-	Id            uint64             `json:"id"`
-	UserGroup     string             `json:"-"`
-	Email         string             `json:"email"`
-	ApiKeys       []string           `json:"api_keys"`
-	ApiPerks      ApiPerks           `json:"api_perks"`
-	PremiumPerks  PremiumPerks       `json:"premium_perks"`
-	Subscriptions []UserSubscription `json:"subscriptions"`
+	Id                 uint64             `json:"id"`
+	UserGroup          string             `json:"-"`
+	Email              string             `json:"email"`
+	ApiKeys            []string           `json:"api_keys"`
+	ApiPerks           ApiPerks           `json:"api_perks"`
+	PremiumPerks       PremiumPerks       `json:"premium_perks"`
+	Subscriptions      []UserSubscription `json:"subscriptions"`
+	HasV1Notifications bool               `json:"has_v1_notifications"`
 }
 
 type UserSubscription struct {

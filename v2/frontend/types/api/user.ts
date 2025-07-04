@@ -14,6 +14,7 @@ export interface UserInfo {
   api_perks: ApiPerks;
   premium_perks: PremiumPerks;
   subscriptions: UserSubscription[];
+  has_v1_notifications: boolean;
 }
 export interface UserSubscription {
   product_id: string;
