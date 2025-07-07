@@ -21,9 +21,11 @@
 go.work
 go.work.sum
 .vscode/
+node_modules/
 
 # env file
 .env
 
 # build output
 beaconchain-api-service
+buf.lock

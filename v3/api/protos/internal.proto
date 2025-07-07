@@ -8,38 +8,111 @@ option go_package = "github.com/gobitfly/beaconchain-api/model";
 
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 //////////////////////////////////////////////////
 /////////////// Service Definition ///////////////
 //////////////////////////////////////////////////
 
-service BeaconchainApiService {
+service InternalService {
   
   // Creates a new Validator Dashboard
   rpc CreateValidatorDashboard (CreateValidatorDashboardRequest) returns (CreateValidatorDashboardResponse) {
     option (google.api.http) = {
-      post: "/api/validatorDashboard"
+      post: "/api/i/validatorDashboard"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      extensions: {
+        key: "x-google-backend"
+        value: {
+          struct_value: {
+            fields: {
+              key: "address"
+              // will be set by terraform templatefile()
+              value: { string_value: "${CLOUD_RUN_URL}" }
+            }
+            fields: {
+              key: "path_translation"
+              value: { string_value: "APPEND_PATH_TO_ADDRESS" }
+            }
+          }
+        }
+      }
     };
   }
 
   // Retrieves a Validator Dashboard by its Id
   rpc GetValidatorDashboard (GetValidatorDashboardRequest) returns (GetValidatorDashboardResponse) {
     option (google.api.http) = {
-      get: "/api/validatorDashboard/{dashboardId}"
+      get: "/api/i/validatorDashboard/{dashboardId}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      extensions: {
+        key: "x-google-backend"
+        value: {
+          struct_value: {
+            fields: {
+              key: "address"
+              // will be set by terraform templatefile()
+              value: { string_value: "${CLOUD_RUN_URL}" }
+            }
+            fields: {
+              key: "path_translation"
+              value: { string_value: "APPEND_PATH_TO_ADDRESS" }
+            }
+          }
+        }
+      }
     };
   }
 
   // Retrieves multiple Validator Dashboards by ID or for the entire account
   rpc ListValidatorDashboards (ListValidatorDashboardsRequest) returns (ListValidatorDashboardsResponse) {
     option (google.api.http) = {
-      get: "/api/validatorDashboard"
+      get: "/api/i/validatorDashboard"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      extensions: {
+        key: "x-google-backend"
+        value: {
+          struct_value: {
+            fields: {
+              key: "address"
+              // will be set by terraform templatefile()
+              value: { string_value: "${CLOUD_RUN_URL}" }
+            }
+            fields: {
+              key: "path_translation"
+              value: { string_value: "APPEND_PATH_TO_ADDRESS" }
+            }
+          }
+        }
+      }
     };
   }
 
   // Deletes a Validator Dashboard by its Id
   rpc DeleteValidatorDashboard (DeleteValidatorDashboardRequest) returns (DeleteValidatorDashboardResponse) {
     option (google.api.http) = {
-      delete: "/api/validatorDashboard/{dashboardId}"
+      delete: "/api/i/validatorDashboard/{dashboardId}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      extensions: {
+        key: "x-google-backend"
+        value: {
+          struct_value: {
+            fields: {
+              key: "address"
+              // will be set by terraform templatefile()
+              value: { string_value: "${CLOUD_RUN_URL}" }
+            }
+            fields: {
+              key: "path_translation"
+              value: { string_value: "APPEND_PATH_TO_ADDRESS" }
+            }
+          }
+        }
+      }
     };
   }
 

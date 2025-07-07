@@ -41,6 +41,7 @@ type DatabaseConfig struct {
 }
 
 type ServiceConfig struct {
+	Type                string
 	HttpPort            string         `yaml:"httpPort"`
 	GrpcPort            string         `yaml:"grpcPort"`
 	ExposeSchema        bool           `yaml:"exposeSchema"`
@@ -62,6 +63,7 @@ func LoadServiceConfig() *ServiceConfig {
 
 	// using standard library "flag" package
 	env := flag.String("environment", "Development", "Name of the environment")
+	apiType := flag.String("type", "external", "api to launch (internal or external)")
 	flag.Parse()
 
 	log.Infof("Found flag environment: %s", *env)
@@ -94,6 +96,7 @@ func LoadServiceConfig() *ServiceConfig {
 	if err != nil {
 		log.Warnf("unable to decode into config struct, %v", err)
 	}
+	serviceConfig.Type = *apiType
 
 	logDebugConfigKeys()
 

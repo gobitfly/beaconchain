@@ -6,14 +6,14 @@
 readerAdminDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
   port: "5432"
   password: "postgres"
   useSSL: false
 writerAdminDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
   port: "5432"
   password: "postgres"
   useSSL: false
@@ -21,14 +21,14 @@ writerAdminDatabase:
 readerChainDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
   port: "5432"
   password: "postgres"
   useSSL: false
 writerChainDatabase:
   username: "postgres"
   dbName: "postgres"
-  host: "/cloudsql/michael-test-454110:us-central1:hoodi-ddf25050"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
   port: "5432"
   password: "postgres"
   useSSL: false

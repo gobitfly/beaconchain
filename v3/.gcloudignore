@@ -1,0 +1,13 @@
+.gcloudignore
+.git
+.gitignore
+.vscode/
+bin/
+
+node_modules/
+.env
+*.log
+
+deployments/
+
+beaconchain-api-service
