@@ -1339,20 +1339,9 @@ func (d *DataAccessService) UpdateNotificationSettingsGeneral(ctx context.Contex
 func (d *DataAccessService) UpdateNotificationSettingsNetworks(ctx context.Context, userId uint64, chainId uint64, settings t.NotificationSettingsNetwork) error {
 	epoch := utils.TimeToEpoch(time.Now())
 
-	networks, err := d.GetAllNetworks()
+	networkName, err := d.getNetworkName(chainId)
 	if err != nil {
-		return err
-	}
-
-	networkName := ""
-	for _, network := range networks {
-		if network.ChainId == chainId {
-			networkName = network.NotificationsName
-			break
-		}
-	}
-	if networkName == "" {
-		return fmt.Errorf("network with chain id %d to update general notification settings not found", chainId)
+		return fmt.Errorf("error getting network name: %w", err)
 	}
 
 	var eventsToInsert []goqu.Record
@@ -1534,20 +1523,9 @@ func (d *DataAccessService) GetNotificationSettingsDashboards(ctx context.Contex
 		Threshold float64         `db:"event_threshold"`
 	}{}
 
-	networks, err := d.GetAllNetworks()
+	networkName, err := d.getNetworkName(d.config.Chain.ClConfig.DepositChainID)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	var networkName string
-	for _, network := range networks {
-		if network.ChainId == utils.Config.Chain.ClConfig.DepositChainID {
-			networkName = network.NotificationsName
-			break
-		}
-	}
-	if networkName == "" {
-		return nil, nil, fmt.Errorf("network with chain id %d to update general notification settings not found", utils.Config.Chain.ClConfig.DepositChainID)
+		return nil, nil, fmt.Errorf("error getting network name: %w", err)
 	}
 
 	wg.Go(func() error {
@@ -1895,20 +1873,9 @@ func (d *DataAccessService) UpdateNotificationSettingsValidatorDashboard(ctx con
 		return fmt.Errorf("error getting network for validator dashboard: %w", err)
 	}
 
-	networks, err := d.GetAllNetworks()
+	networkName, err := d.getNetworkName(chainId)
 	if err != nil {
-		return err
-	}
-
-	networkName := ""
-	for _, network := range networks {
-		if network.ChainId == chainId {
-			networkName = network.NotificationsName
-			break
-		}
-	}
-	if networkName == "" {
-		return fmt.Errorf("network with chain id %d to update general notification settings not found", chainId)
+		return fmt.Errorf("error getting networ name: %w", err)
 	}
 
 	// Add and remove the events in users_subscriptions
@@ -2116,14 +2083,49 @@ func (d *DataAccessService) QueueTestWebhookNotification(ctx context.Context, us
 // hasUserV1NotificationSubscriptions checks if a user has any v1 notification subscriptions.
 // Since some notification events are indistinguishable from v1 and v2, only validator-related that are not v2 are checked.
 func (d *DataAccessService) hasUserV1NotificationSubscriptions(ctx context.Context, userId uint64) (bool, error) {
+	// event_name is always prefixed with the network name
+	networkName, err := d.getNetworkName(utils.Config.Chain.ClConfig.DepositChainID)
+	if err != nil {
+		return false, fmt.Errorf("error getting network name: %w", err)
+	}
+	events := []types.EventName{
+		types.ValidatorIsOfflineEventName,
+		types.ValidatorIsOnlineEventName,
+		types.ValidatorMissedProposalEventName,
+		types.ValidatorUpcomingProposalEventName,
+		types.ValidatorExecutedProposalEventName,
+		types.ValidatorMissedAttestationEventName,
+		types.ValidatorReceivedWithdrawalEventName,
+		types.ValidatorGotSlashedEventName,
+		types.ValidatorDidSlashEventName,
+		types.SyncCommitteeSoonEventName,
+		types.ValidatorReceivedDepositEventName,
+	}
+	for i, event := range events {
+		events[i] = types.EventName(fmt.Sprintf("%s:%s", networkName, event))
+	}
 	ds := goqu.Dialect("postgres").
 		Select(goqu.COUNT(goqu.I("id"))).
 		From(goqu.T("users_subscriptions")).
 		Where(
 			goqu.I("user_id").Eq(userId),
-			goqu.I("event_name").Like("validator%"),
+			goqu.L("event_name IN ?", events),
 			goqu.I("event_filter").NotLike("vdb:%"),
 		)
 	count, err := runQuery[int](ctx, d.userReader, ds)
 	return count > 0, err
+}
+
+func (d *DataAccessService) getNetworkName(chainId uint64) (string, error) {
+	networks, err := d.GetAllNetworks()
+	if err != nil {
+		return "", fmt.Errorf("error fetching networks: %w", err)
+	}
+
+	for _, network := range networks {
+		if network.ChainId == chainId {
+			return network.NotificationsName, nil
+		}
+	}
+	return "", fmt.Errorf("network with chain id %d not found", chainId)
 }
