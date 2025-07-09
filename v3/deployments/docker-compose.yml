@@ -13,6 +13,8 @@ services:
       retries: 10
   clickhouse:
     image: "clickhouse/clickhouse-server:25.4"
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
   redis:
     image: redis:7
   littlebigtable:
@@ -33,6 +35,7 @@ services:
       dockerfile: build/package/Dockerfile
     volumes:
       - ../api/gen/:/api/gen/
+      - ../configs/:/configs/
     ports:
       - "8080:8080"
       - "9090:9090"

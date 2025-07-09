@@ -1,4 +1,4 @@
-package db
+package data_sources
 
 import (
 	"errors"
@@ -28,7 +28,7 @@ const (
 )
 
 /**
- * Initializes a database connection, panicing if a connection was not able to be established.
+ * Initializes a database connection, panicking if a connection was not able to be established.
  */
 func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB {
 	//extraParams := []string{}
@@ -47,7 +47,8 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 			extraParams += "&connection_open_strategy=in_order"
 		}*/
 	//db := sqlx.MustConnect(databaseType.getDriverName(), createDbConnectionString(databaseType, *dbConfig, extraParams))
-	db := sqlx.MustConnect(databaseType.getDriverName(), createSqlAuthProxyConnectionString(*dbConfig))
+	//db := sqlx.MustConnect(databaseType.getDriverName(), createSqlAuthProxyConnectionString(databaseType, *dbConfig))
+	db := sqlx.MustConnect(databaseType.getDriverName(), createDbConnectionString(databaseType, *dbConfig))
 
 	if dbConfig.MaxOpenConns == 0 {
 		dbConfig.MaxOpenConns = 50
@@ -68,6 +69,10 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 	db.SetMaxIdleConns(dbConfig.MaxIdleConns)
 
 	return db
+}
+
+func createDbConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig) string {
+	return fmt.Sprintf("%s://%s:%s@%s:%s/%s", string(databaseType), dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DbName)
 }
 
 // TODO: Connect via IAM Auth

@@ -5,17 +5,32 @@ import (
 	"errors"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/gobitfly/beaconchain-api/internal/dataaccess/data_sources"
 )
 
 type DBValidatorDashboardRepository struct {
 	roConnection *sqlx.DB
 	rwConnection *sqlx.DB
+
+	roChConnection *sqlx.DB
+	rwChConnection *sqlx.DB
+
+	redis *data_sources.RedisCache
+
+	bigtable *data_sources.Bigtable
 }
 
-func NewDBValidatorDashboardRepository(roConnection *sqlx.DB, rwConnection *sqlx.DB) *DBValidatorDashboardRepository {
+func NewDBValidatorDashboardRepository(roConnection *sqlx.DB, rwConnection *sqlx.DB, roChConnection *sqlx.DB, rwChConnection *sqlx.DB, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) *DBValidatorDashboardRepository {
 	return &DBValidatorDashboardRepository{
 		roConnection: roConnection,
 		rwConnection: rwConnection,
+
+		roChConnection: roChConnection,
+		rwChConnection: rwChConnection,
+
+		redis: redis,
+
+		bigtable: bigtable,
 	}
 }
 

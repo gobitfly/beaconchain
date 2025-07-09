@@ -25,16 +25,6 @@ type ApiService struct {
 }
 
 /**
- * Initializes the state and dependencies of the service
- */
-func InitWithInMemory() (*ApiService, error) {
-	return &ApiService{
-		//		userRepository:      dataaccess.NewInMemoryUserRepository(),
-		dashboardRepository: dataaccess.NewInMemoryValidatorDashboardRepository(),
-	}, nil
-}
-
-/**
  * Initialize the repositories with proper databases
  */
 func InitDependencies(

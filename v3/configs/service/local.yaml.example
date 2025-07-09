@@ -35,3 +35,28 @@ writerChainDatabase:
   port: "5432"
   password: "postgres"
   useSSL: false
+
+readerClickhouse:
+  username: "default"
+  dbName: "default"
+  host: "clickhouse"
+  port: "9000"
+  password: ""
+  useSSL: false
+writerClickhouse:
+  username: "default"
+  dbName: "default"
+  host: "clickhouse"
+  port: "9000"
+  password: ""
+  useSSL: false
+
+redis:
+  endpoint: "redis:6379"
+
+bigtable:
+  project: "my-project"
+  instance: "my-instance"
+  emulator: true
+  emulatorHost: "littlebigtable"
+  emulatorPort: "9000"

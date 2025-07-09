@@ -14,7 +14,6 @@ FROM gcr.io/distroless/static-debian11
 WORKDIR /
 
 COPY --from=builder /app/server .
-COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/web ./web
 
 # Cloud Run expects the service to listen on PORT (8080 by default)
