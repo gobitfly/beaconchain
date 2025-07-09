@@ -1,11 +1,9 @@
 output "internal_cloud_run_url" {
+  description = "URL of the internal Cloud Run service"
   value = google_cloud_run_v2_service.personal-internal.uri
 }
 
 output "external_cloud_run_url" {
+  description = "URL of the external Cloud Run service"
   value = google_cloud_run_v2_service.personal-external.uri
-}
-
-output "api_gateway_url" {
-  value = "https://${google_api_gateway_gateway.gateway.default_hostname}"
 }
