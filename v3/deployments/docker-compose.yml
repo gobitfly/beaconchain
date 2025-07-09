@@ -30,12 +30,13 @@ services:
         condition: service_started
       littlebigtable:
         condition: service_started
+    environment:
+      - BIGTABLE_EMULATOR_HOST=littlebigtable:9000
     build:
       context: ..
       dockerfile: build/package/Dockerfile
     volumes:
       - ../api/gen/:/api/gen/
-      - ../configs/:/configs/
     ports:
       - "8080:8080"
       - "9090:9090"

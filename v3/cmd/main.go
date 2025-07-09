@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 
 	app_external "github.com/gobitfly/beaconchain-api/internal/app/external_api"
@@ -17,30 +16,10 @@ import (
  */
 func main() {
 	serviceConfig := config.LoadServiceConfig()
+	dataSources := data_sources.InitApiConnections(serviceConfig)
 
-	// Initializes dependencies which are required for the service to operate
-	roConnectionAdminDb := data_sources.InitDB(&serviceConfig.ReaderAdminDatabase, data_sources.Postgres)
-	rwConnectionAdminDb := data_sources.InitDB(&serviceConfig.WriterAdminDatabase, data_sources.Postgres)
-
-	roConnectionChainDb := data_sources.InitDB(&serviceConfig.ReaderChainDatabase, data_sources.Postgres)
-	rwConnectionChainDb := data_sources.InitDB(&serviceConfig.WriterChainDatabase, data_sources.Postgres)
-
-	redisConnection, err := data_sources.InitRedisCache(context.Background(), &serviceConfig.Redis)
-	if err != nil {
-		log.Infof("Failed to initialize Redis cache: %v\n", err)
-		os.Exit(1)
-	}
-	roConnectionClickhouse := data_sources.InitDB(&serviceConfig.ReaderClickhouse, data_sources.Clickhouse)
-	rwConnectionClickhouse := data_sources.InitDB(&serviceConfig.WriterClickhouse, data_sources.Clickhouse)
-
-	bigtableConnection, err := data_sources.InitBigtable(context.Background(), &serviceConfig.Bigtable)
-	if err != nil {
-		log.Infof("Failed to initialize Bigtable: %v\n", err)
-		os.Exit(1)
-	}
-
-	userRepo := dataaccess.NewDBUserRepository(roConnectionAdminDb, rwConnectionAdminDb)
-	valDashboardRepo := dataaccess.NewDBValidatorDashboardRepository(roConnectionChainDb, rwConnectionChainDb, roConnectionClickhouse, rwConnectionClickhouse, redisConnection, bigtableConnection)
+	userRepo := dataaccess.NewDBUserRepository(dataSources.RoAdminDb, dataSources.RwAdminDb)
+	valDashboardRepo := dataaccess.NewDBValidatorDashboardRepository(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
 
 	// Pass in initialized dependencies to service, and start the service
 	switch serviceConfig.Type {

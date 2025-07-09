@@ -30,5 +30,5 @@ cr-create-registry:
 cr-deploy-staging: generate-proto
 	gcloud run deploy --source . --project staging-456307 --network mono-vpc --region us-central1 --add-cloudsql-instances=staging-456307:us-central1:hoodi-d7ab6b26,staging-456307:us-central1:users-024879cd --args="--environment","staging"
 cr-deploy-personal: generate-proto
-	gcloud builds submit --project ${PROJECT_NAME} --tag "us-central1-docker.pkg.dev/${PROJECT_NAME}/service/beaconchain-api:latest"
+	gcloud builds submit --project ${PROJECT_NAME} --substitutions=_PROJECT_NAME="${PROJECT_NAME}" --config=build/package/cloudbuild.yaml
 

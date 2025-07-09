@@ -20,7 +20,7 @@ type DBValidatorDashboardRepository struct {
 	bigtable *data_sources.Bigtable
 }
 
-func NewDBValidatorDashboardRepository(roConnection *sqlx.DB, rwConnection *sqlx.DB, roChConnection *sqlx.DB, rwChConnection *sqlx.DB, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) *DBValidatorDashboardRepository {
+func NewDBValidatorDashboardRepository(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) *DBValidatorDashboardRepository {
 	return &DBValidatorDashboardRepository{
 		roConnection: roConnection,
 		rwConnection: rwConnection,

@@ -18,7 +18,7 @@ type RedisCache struct {
 func InitRedisCache(ctx context.Context, redisConfig *config.RedisConfig) (*RedisCache, error) {
 	rdc := redis.NewClient(&redis.Options{
 		Addr:        redisConfig.Endpoint,
-		ReadTimeout: time.Second * 20,
+		ReadTimeout: time.Second * 3,
 	})
 
 	if err := rdc.Ping(ctx).Err(); err != nil {

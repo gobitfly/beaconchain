@@ -7,6 +7,7 @@
 exposeSchema: true
 
 readerAdminDatabase:
+  isCloudConnection: false
   username: "postgres"
   dbName: "postgres"
   host: "postgres"
@@ -14,6 +15,7 @@ readerAdminDatabase:
   password: "postgres"
   useSSL: false
 writerAdminDatabase:
+  isCloudConnection: false
   username: "postgres"
   dbName: "postgres"
   host: "postgres"
@@ -22,6 +24,7 @@ writerAdminDatabase:
   useSSL: false
 
 readerChainDatabase:
+  isCloudConnection: false
   username: "postgres"
   dbName: "postgres"
   host: "postgres"
@@ -29,6 +32,7 @@ readerChainDatabase:
   password: "postgres"
   useSSL: false
 writerChainDatabase:
+  isCloudConnection: false
   username: "postgres"
   dbName: "postgres"
   host: "postgres"
@@ -37,6 +41,7 @@ writerChainDatabase:
   useSSL: false
 
 readerClickhouse:
+  isCloudConnection: false
   username: "default"
   dbName: "default"
   host: "clickhouse"
@@ -44,6 +49,7 @@ readerClickhouse:
   password: ""
   useSSL: false
 writerClickhouse:
+  isCloudConnection: false
   username: "default"
   dbName: "default"
   host: "clickhouse"

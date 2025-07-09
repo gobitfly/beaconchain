@@ -25,15 +25,16 @@ type BigtableConfig struct {
 }
 
 type DatabaseConfig struct {
-	Username     string `yaml:"username"`
-	Password     string `yaml:"password"`
-	DbName       string `yaml:"dbName"`
-	Host         string `yaml:"host"`
-	Port         string `yaml:"port"`
-	MaxOpenConns int    `yaml:"maxOpenConns"`
-	MaxIdleConns int    `yaml:"maxIdleConns"`
-	SSL          bool   `yaml:"ssl"`
-	Failovers    []struct {
+	IsCloudConnection bool   `yaml:"isCloudConnection"`
+	Username          string `yaml:"username"`
+	Password          string `yaml:"password"`
+	DbName            string `yaml:"dbName"`
+	Host              string `yaml:"host"`
+	Port              string `yaml:"port"`
+	MaxOpenConns      int    `yaml:"maxOpenConns"`
+	MaxIdleConns      int    `yaml:"maxIdleConns"`
+	SSL               bool   `yaml:"ssl"`
+	Failovers         []struct {
 		Host string `yaml:"host"`
 		Port string `yaml:"port"`
 	} `yaml:"failovers"`

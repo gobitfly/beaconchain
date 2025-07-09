@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
+	"github.com/gobitfly/beaconchain-api/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -13,7 +14,7 @@ type DBUserRepository struct {
 	rwConnectionAdminDb *sqlx.DB
 }
 
-func NewDBUserRepository(roConnectionAdminDb *sqlx.DB, rwConnectionAdminDb *sqlx.DB) *DBUserRepository {
+func NewDBUserRepository(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) *DBUserRepository {
 	return &DBUserRepository{
 		roConnectionAdminDb: roConnectionAdminDb,
 		rwConnectionAdminDb: rwConnectionAdminDb,
