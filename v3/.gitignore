@@ -20,7 +20,12 @@
 # Go workspace file
 go.work
 go.work.sum
+
+# IDE config files
 .vscode/
+.idea/
+
+# Node libraries
 node_modules/
 
 # env file
@@ -29,3 +34,4 @@ node_modules/
 # build output
 beaconchain-api-service
 buf.lock
+bin/

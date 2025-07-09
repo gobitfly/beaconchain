@@ -2,7 +2,7 @@ all:
 	buf build
 	buf generate
 	mkdir -p bin
-	go build -o ./beaconchain-api-service ./cmd/main.go
+	go build -o ./bin/beaconchain-api-service ./cmd/main.go
 generate-proto:
 	rm -rf api/gen
 	buf dep update
@@ -16,7 +16,7 @@ build-service:
 clean:
 	rm -rf bin
 lint:
-	go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
 	golangci-lint run --timeout 5m
 	buf lint
 run:
