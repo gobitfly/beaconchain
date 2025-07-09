@@ -20,10 +20,6 @@ resource "google_project_service" "cloudbuild" {
   service = "cloudbuild.googleapis.com"
 }
 
-resource "google_project_service" "apigateway" {
-  service = "apigateway.googleapis.com"
-}
-
 resource "google_project_service" "service_control" {
   service = "servicecontrol.googleapis.com"
 }
@@ -176,45 +172,6 @@ resource "google_cloud_run_v2_service" "personal-external" {
   deletion_protection = false
 
   depends_on = [google_project_service.run]
-}
-
-resource "google_api_gateway_api" "api" {
-  provider = google-beta
-  api_id   = "beaconchain-api"
-  project  = var.project_id
-
-  depends_on = [google_project_service.apigateway, google_project_service.service_control]
-}
-
-resource "google_api_gateway_api_config" "api_cfg" {
-  provider = google-beta
-  project  = var.project_id
-  api      = google_api_gateway_api.api.api_id
-  # omitting causes tf to create random ids which won't be cleaned up, has to be done for dependency / uptime reasons
-  # clean up manually or add a script
-  # api_config_id = "beaconchain-api-config"
-
-  openapi_documents {
-    document {
-      path     = "api-gateway.json"
-      contents = base64encode(local.merged_swagger)
-    }
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  depends_on = [google_project_service.apigateway, google_project_service.service_control]
-}
-
-resource "google_api_gateway_gateway" "gateway" {
-  provider   = google-beta
-  gateway_id = "beaconchain-gateway"
-  api_config = google_api_gateway_api_config.api_cfg.id
-  project    = var.project_id
-  region     = var.region
-
-  depends_on = [google_project_service.apigateway, google_project_service.service_control]
 }
 
 resource "google_cloud_run_service_iam_member" "noauth" {
