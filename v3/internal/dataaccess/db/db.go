@@ -3,8 +3,6 @@ package db
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	_ "database/sql/driver"
@@ -33,10 +31,10 @@ const (
  * Initializes a database connection, panicing if a connection was not able to be established.
  */
 func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB {
-	extraParams := []string{}
+	//extraParams := []string{}
 
-	sslParam := databaseType.getSSLParam(dbConfig.SSL)
-	extraParams = append(extraParams, sslParam)
+	//sslParam := databaseType.getSSLParam(dbConfig.SSL)
+	//extraParams = append(extraParams, sslParam)
 
 	// TODO: Also include the `connection_open_strategy` stuff for handling multiple failover hosts.
 	/*
@@ -49,7 +47,7 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 			extraParams += "&connection_open_strategy=in_order"
 		}*/
 	//db := sqlx.MustConnect(databaseType.getDriverName(), createDbConnectionString(databaseType, *dbConfig, extraParams))
-	db := sqlx.MustConnect(databaseType.getDriverName(), createSqlAuthProxyConnectionString(databaseType, *dbConfig))
+	db := sqlx.MustConnect(databaseType.getDriverName(), createSqlAuthProxyConnectionString(*dbConfig))
 
 	if dbConfig.MaxOpenConns == 0 {
 		dbConfig.MaxOpenConns = 50
@@ -72,31 +70,9 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 	return db
 }
 
-func createDbConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig, extraParams []string) string {
-	return fmt.Sprintf("%s://%s:%s@%s/%s?%s", string(databaseType), dbConfig.Username, dbConfig.Password, dbConfig.Host, dbConfig.DbName, strings.Join(extraParams, "&"))
-}
-
 // TODO: Connect via IAM Auth
-func createSqlAuthProxyConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig) string {
+func createSqlAuthProxyConnectionString(dbConfig config.DatabaseConfig) string {
 	return fmt.Sprintf("host=%s user=%s password=%s port=%s database=%s", dbConfig.Host, dbConfig.Username, dbConfig.Password, dbConfig.Port, dbConfig.DbName)
-}
-
-func (databaseType DatabaseType) getSSLParam(shouldUseSSL bool) string {
-	switch databaseType {
-	case Postgres:
-		// Defensively assume SSL is enabled by default
-		sslValue := "require"
-		if !shouldUseSSL {
-			sslValue = "disable"
-		}
-		return fmt.Sprintf("sslmode=%s", sslValue)
-	case Clickhouse:
-		return fmt.Sprintf("secure=%s", strconv.FormatBool(shouldUseSSL))
-	default:
-		log.Fatalf("Unknown databaseType: %s", string(databaseType))
-	}
-
-	return ""
 }
 
 func (dbType DatabaseType) getDriverName() string {

@@ -7,12 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const DEFAULT_DEV_IDENTIFIER = "default"
-
 type Config struct {
-	environment Environment // The environment (Dev,Staging,Prod) the service is hosted in
-	httpPort    string
-	grpcPort    string
 }
 
 type Bigtable struct {
@@ -82,10 +77,10 @@ func LoadServiceConfig() *ServiceConfig {
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
-	viper.SetConfigName(string(*env))
+	viper.SetConfigName(*env)
 	err = viper.MergeInConfig()
 	if err != nil {
-		log.Fatalf("Error reading %s config: %v", env, err)
+		log.Fatalf("Error reading %s config: %v", *env, err)
 	}
 
 	// Optionally read from environment variables (e.g., override with ENV vars)

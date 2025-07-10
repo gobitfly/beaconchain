@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/metadata"
 
@@ -33,7 +34,6 @@ type ApiService struct {
  * Initialize the repositories with proper databases
  */
 func InitDependencies(
-	config config.ServiceConfig,
 	userRepository dataaccess.UserRepository,
 	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
 	return &ApiService{
@@ -66,13 +66,18 @@ func Run(
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(AuthInterceptor(userRepo)),
 	) // Unsecured
-	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
+	apiService, _ := InitDependencies(userRepo, dashboardRepo)
 	model.RegisterInternalServiceServer(s, apiService)
 
 	if config.ExposeSchema {
 		reflection.Register(s)
 	}
-	go s.Serve(lis)
+	go func() {
+		err := s.Serve(lis)
+		if err != nil {
+			log.Infof("failed to serve: %v", err)
+		}
+	}()
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
 	// Establish a connection to the gRPC server above
@@ -80,7 +85,12 @@ func Run(
 	if err != nil {
 		log.Infof("fail to dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			log.Infof("failed to close connection: %v", err)
+		}
+	}()
 
 	// create an HTTP router which sends proxies HTTP requests to the gRPC server.
 	rmux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(HeaderMatcher))
@@ -105,12 +115,16 @@ func Run(
 	}
 	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
-	err = http.Serve(l, mux)
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: time.Second,
+	}
+	err = server.Serve(l)
 	if err != nil {
 		log.Info(err)
 	}
 
-	fmt.Println("To close connection CTRL+C :-)")
+	log.Infof("To close connection CTRL+C :-)")
 }
 
 func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerInterceptor {

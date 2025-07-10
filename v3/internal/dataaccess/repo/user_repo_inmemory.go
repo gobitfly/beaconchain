@@ -10,13 +10,6 @@ type InMemoryUserRepository struct {
 	lastId       uint64
 }
 
-func NewInMemoryUserRepository() *InMemoryUserRepository {
-	return &InMemoryUserRepository{
-		userDatabase: make(map[uint64]*User),
-		lastId:       0,
-	}
-}
-
 func (r *InMemoryUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*User, error) {
 	r.lastId = r.lastId + 1
 	newUser := User{id: r.lastId, isAdmin: false}
@@ -30,13 +23,13 @@ func (r *InMemoryUserRepository) CreateUser(ctx context.Context, email string, i
 func (r *InMemoryUserRepository) GetUserById(ctx context.Context, userId uint64) (*User, error) {
 	user := r.userDatabase[userId]
 	if user == nil {
-		return nil, errors.New("No user found with the provided ID")
+		return nil, errors.New("no user found with the provided ID")
 	}
 	return user, nil
 }
 
 func (r *InMemoryUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
-	return nil, errors.New("Unimplemented")
+	return nil, errors.New("unimplemented")
 }
 
 /**

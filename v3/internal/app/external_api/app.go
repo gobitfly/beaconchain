@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	model "github.com/gobitfly/beaconchain-api/api/gen"
 	"github.com/gobitfly/beaconchain-api/internal/auth"
@@ -74,7 +75,12 @@ func Run(
 	if config.ExposeSchema {
 		reflection.Register(s)
 	}
-	go s.Serve(lis)
+	go func() {
+		err := s.Serve(lis)
+		if err != nil {
+			log.Infof("failed to serve: %v", err)
+		}
+	}()
 	log.Infof("gRPC server listening at %v", lis.Addr())
 
 	// Establish a connection to the gRPC server above
@@ -82,7 +88,12 @@ func Run(
 	if err != nil {
 		log.Infof("fail to dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			log.Infof("failed to close connection: %v", err)
+		}
+	}()
 
 	// create an HTTP router which sends proxies HTTP requests to the gRPC server.
 	// Register both the API and APIv1 Service. We can serve requests for both services from the same endpoint this way
@@ -109,12 +120,16 @@ func Run(
 	}
 	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
 
-	err = http.Serve(l, mux)
+	server := &http.Server{
+		Handler:           mux,
+		ReadHeaderTimeout: time.Second,
+	}
+	err = server.Serve(l)
 	if err != nil {
-		log.Info(err)
+		log.Fatalf("error serving: %v", err)
 	}
 
-	fmt.Println("To close connection CTRL+C :-)")
+	log.Infof("To close connection CTRL+C :-)")
 }
 
 /**

@@ -23,12 +23,6 @@ linters:
       exported-fields-are-used: true
     forbidigo:
       forbid:
-        - pattern: ^logrus\.Fatalf.*$
-          msg: Use log.Fatal instead
-        - pattern: ^log\.Fatalf.*$
-          msg: Use log.Fatal instead
-        - pattern: ^logger\.Fatalf.*$
-          msg: Use log.Fatal instead
         - pattern: ^logrus\.Errorf.*$
           msg: Use log.Error instead
         - pattern: ^logger\.Errorf.*$

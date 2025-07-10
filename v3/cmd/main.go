@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	app_external "github.com/gobitfly/beaconchain-api/internal/app/external_api"
@@ -9,6 +8,7 @@ import (
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	"github.com/gobitfly/beaconchain-api/internal/dataaccess/db"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-api/internal/log"
 )
 
 /**
@@ -33,7 +33,7 @@ func main() {
 	case "internal":
 		app_internal.Run(*serviceConfig, userRepo, valDashboardRepo)
 	default:
-		fmt.Printf("Unknown API type: %s\n", serviceConfig.Type)
+		log.Infof("Unknown API type: %s\n", serviceConfig.Type)
 		os.Exit(1)
 	}
 }

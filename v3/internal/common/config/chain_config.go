@@ -9,7 +9,6 @@ import (
 type Chain struct {
 	Name    ChainName
 	ChainId uint64
-	config  ChainConfig
 }
 
 // Config for defining various chain names
@@ -45,8 +44,6 @@ func (chain Chain) LoadChainConfig() {
 
 	// Optionally read from environment variables (e.g., override with ENV vars)
 	viper.AutomaticEnv()
-
-	chain.ChainId = viper.GetUint64("ChainSpec.CHAIN_ID")
 
 	logDebugConfigKeys()
 }
