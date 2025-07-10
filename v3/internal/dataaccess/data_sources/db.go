@@ -49,7 +49,7 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 		}*/
 	connectStr := createDbConnectionString(databaseType, *dbConfig)
 	if dbConfig.IsCloudConnection {
-		connectStr = createSqlAuthProxyConnectionString(databaseType, *dbConfig)
+		connectStr = createSqlAuthProxyConnectionString(*dbConfig)
 	}
 	db := sqlx.MustConnect(databaseType.getDriverName(), connectStr)
 
@@ -79,7 +79,7 @@ func createDbConnectionString(databaseType DatabaseType, dbConfig config.Databas
 }
 
 // TODO: Connect via IAM Auth
-func createSqlAuthProxyConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig) string {
+func createSqlAuthProxyConnectionString(dbConfig config.DatabaseConfig) string {
 	// DSN-style is preferred for cloud SQL connections
 	return fmt.Sprintf("host=%s user=%s password=%s port=%s database=%s", dbConfig.Host, dbConfig.Username, dbConfig.Password, dbConfig.Port, dbConfig.DbName)
 }

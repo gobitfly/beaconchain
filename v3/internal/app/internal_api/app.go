@@ -10,7 +10,7 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	model "github.com/gobitfly/beaconchain-api/api/gen"
+	model "github.com/gobitfly/beaconchain-api/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 
 	"github.com/gobitfly/beaconchain-api/internal/auth"

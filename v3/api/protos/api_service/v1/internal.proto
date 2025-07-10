@@ -3,10 +3,10 @@
 // https://protobuf.dev/reference/go/go-generated/
 // https://protobuf.dev/reference/python/python-generated/
 syntax = "proto3";
+package api_service.v1;
 
 option go_package = "github.com/gobitfly/beaconchain-api/model";
 
-import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
@@ -44,7 +44,7 @@ service InternalService {
   // Retrieves a Validator Dashboard by its Id
   rpc GetValidatorDashboard (GetValidatorDashboardRequest) returns (GetValidatorDashboardResponse) {
     option (google.api.http) = {
-      get: "/api/i/validatorDashboard/{dashboardId}"
+      get: "/api/i/validatorDashboard/{dashboard_id}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       extensions: {
@@ -94,7 +94,7 @@ service InternalService {
   // Deletes a Validator Dashboard by its Id
   rpc DeleteValidatorDashboard (DeleteValidatorDashboardRequest) returns (DeleteValidatorDashboardResponse) {
     option (google.api.http) = {
-      delete: "/api/i/validatorDashboard/{dashboardId}"
+      delete: "/api/i/validatorDashboard/{dashboard_id}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       extensions: {
@@ -133,7 +133,7 @@ message CreateValidatorDashboardResponse {
 
 // Get
 message GetValidatorDashboardRequest {
-  string dashboardId = 1;
+  string dashboard_id = 1;
 
 }
 
@@ -144,7 +144,7 @@ message GetValidatorDashboardResponse {
 
 // List
 message ListValidatorDashboardsRequest {
-  repeated string dashboardId = 1;
+  repeated string dashboard_id = 1;
 }
 
 message ListValidatorDashboardsResponse {
@@ -153,9 +153,9 @@ message ListValidatorDashboardsResponse {
 
 // Modify
 message ModifyValidatorDashboardsRequest {
-  string dashboardId = 1;
+  string dashboard_id = 1;
   // Whether the Dashboard is publicly visible
-  optional bool isPublic = 2;
+  optional bool is_public = 2;
 }
 
 message ModifyValidatorDashboardsResponse {
@@ -164,7 +164,7 @@ message ModifyValidatorDashboardsResponse {
 
 // Delete
 message DeleteValidatorDashboardRequest {
-  string dashboardId = 1;
+  string dashboard_id = 1;
 }
 
 message DeleteValidatorDashboardResponse {
@@ -178,8 +178,8 @@ message DeleteValidatorDashboardResponse {
 //////////////////////////////////////////////////
 
 message ValidatorDashboard {
-  string dashboardId = 1;
-  bool isPublic = 2;
+  string dashboard_id = 1;
+  bool is_public = 2;
 }
 
 

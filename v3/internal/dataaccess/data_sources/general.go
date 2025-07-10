@@ -2,10 +2,10 @@ package data_sources
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
+	"github.com/gobitfly/beaconchain-api/internal/log"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -48,14 +48,14 @@ func InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
 
 	redis, err := InitRedisCache(context.Background(), &config.Redis)
 	if err != nil {
-		fmt.Printf("Failed to initialize Redis cache: %v\n", err)
+		log.Infof("Failed to initialize Redis cache: %v\n", err)
 		os.Exit(1)
 	}
 	dataSources.Redis = redis
 
 	bigtable, err := InitBigtable(context.Background(), &config.Bigtable)
 	if err != nil {
-		fmt.Printf("Failed to initialize Bigtable: %v\n", err)
+		log.Infof("Failed to initialize Bigtable: %v\n", err)
 		os.Exit(1)
 	}
 	dataSources.Bigtable = bigtable
