@@ -36,13 +36,15 @@ func InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
 	dataSources := &ApiDataSources{
 		RoChainDb: InitDB(&config.ReaderChainDatabase, Postgres),
 		RwChainDb: InitDB(&config.WriterChainDatabase, Postgres),
-
-		RoAdminDb: InitDB(&config.ReaderAdminDatabase, Postgres),
-		RwAdminDb: InitDB(&config.WriterAdminDatabase, Postgres),
-
-		RoChDb: InitDB(&config.ReaderClickhouse, Clickhouse),
-		RwChDb: InitDB(&config.WriterClickhouse, Clickhouse),
 	}
+	if config.IsCloudDeployment {
+		return dataSources
+	}
+
+	dataSources.RoAdminDb = InitDB(&config.ReaderAdminDatabase, Postgres)
+	dataSources.RwAdminDb = InitDB(&config.WriterAdminDatabase, Postgres)
+	dataSources.RoChDb = InitDB(&config.ReaderClickhouse, Clickhouse)
+	dataSources.RwChDb = InitDB(&config.WriterClickhouse, Clickhouse)
 
 	redis, err := InitRedisCache(context.Background(), &config.Redis)
 	if err != nil {

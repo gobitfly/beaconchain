@@ -5,6 +5,7 @@
 # ./cloud-sql-proxy --auto-iam-authn michael-test-454110:us-central1:hoodi-ddf25050
 
 exposeSchema: true
+isCloudDeployment: false
 
 readerAdminDatabase:
   isCloudConnection: false

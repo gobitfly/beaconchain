@@ -46,6 +46,8 @@ type ServiceConfig struct {
 	GrpcPort     string `yaml:"grpcPort"`
 	ExposeSchema bool   `yaml:"exposeSchema"`
 
+	IsCloudDeployment bool `yaml:"isCloudDeployment"` // temp flag, remove
+
 	ReaderChainDatabase DatabaseConfig `yaml:"readerChainDatabase"`
 	WriterChainDatabase DatabaseConfig `yaml:"writerChainDatabase"`
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`

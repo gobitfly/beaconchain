@@ -3,6 +3,9 @@
 # Instead, override these with Environment variables to keep things secure.
 #
 #
+
+isCloudDeployment: true
+
 readerAdminDatabase:
   isCloudConnection: true
   username: "postgres"
