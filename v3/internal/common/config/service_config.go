@@ -10,7 +10,11 @@ import (
 type Config struct {
 }
 
-type Bigtable struct {
+type RedisConfig struct {
+	Endpoint string `yaml:"endpoint"`
+}
+
+type BigtableConfig struct {
 	Project             string `yaml:"project"`
 	Instance            string `yaml:"instance"`
 	Emulator            bool   `yaml:"emulator"`
@@ -21,33 +25,38 @@ type Bigtable struct {
 }
 
 type DatabaseConfig struct {
-	Username     string `yaml:"username"`
-	Password     string `yaml:"password"`
-	DbName       string `yaml:"dbName"`
-	Host         string `yaml:"host"`
-	Port         string `yaml:"port"`
-	MaxOpenConns int    `yaml:"maxOpenConns"`
-	MaxIdleConns int    `yaml:"maxIdleConns"`
-	SSL          bool   `yaml:"ssl"`
-	Failovers    []struct {
+	IsCloudConnection bool   `yaml:"isCloudConnection"`
+	Username          string `yaml:"username"`
+	Password          string `yaml:"password"`
+	DbName            string `yaml:"dbName"`
+	Host              string `yaml:"host"`
+	Port              string `yaml:"port"`
+	MaxOpenConns      int    `yaml:"maxOpenConns"`
+	MaxIdleConns      int    `yaml:"maxIdleConns"`
+	SSL               bool   `yaml:"ssl"`
+	Failovers         []struct {
 		Host string `yaml:"host"`
 		Port string `yaml:"port"`
 	} `yaml:"failovers"`
 }
 
 type ServiceConfig struct {
-	Type                string
-	HttpPort            string         `yaml:"httpPort"`
-	GrpcPort            string         `yaml:"grpcPort"`
-	ExposeSchema        bool           `yaml:"exposeSchema"`
+	Type         string
+	HttpPort     string `yaml:"httpPort"`
+	GrpcPort     string `yaml:"grpcPort"`
+	ExposeSchema bool   `yaml:"exposeSchema"`
+
+	IsCloudDeployment bool `yaml:"isCloudDeployment"` // temp flag, remove
+
 	ReaderChainDatabase DatabaseConfig `yaml:"readerChainDatabase"`
 	WriterChainDatabase DatabaseConfig `yaml:"writerChainDatabase"`
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`
 	WriterAdminDatabase DatabaseConfig `yaml:"writerAdminDatabase"`
 	ReaderClickhouse    DatabaseConfig `yaml:"readerClickhouse"`
 	WriterClickhouse    DatabaseConfig `yaml:"writerClickhouse"`
-	Bigtable            Bigtable       `yaml:"bigtable"`
-	RawBigtable         Bigtable       `yaml:"rawBigtable"`
+	Bigtable            BigtableConfig `yaml:"bigtable"`
+	RawBigtable         BigtableConfig `yaml:"rawBigtable"`
+	Redis               RedisConfig    `yaml:"redis"`
 }
 
 // Two kinds of configs:

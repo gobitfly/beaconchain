@@ -3,7 +3,11 @@
 # Instead, override these with Environment variables to keep things secure.
 #
 #
+
+isCloudDeployment: true
+
 readerAdminDatabase:
+  isCloudConnection: true
   username: "postgres"
   dbName: "postgres"
   host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
@@ -11,6 +15,7 @@ readerAdminDatabase:
   password: "postgres"
   useSSL: false
 writerAdminDatabase:
+  isCloudConnection: true
   username: "postgres"
   dbName: "postgres"
   host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
@@ -19,6 +24,7 @@ writerAdminDatabase:
   useSSL: false
 
 readerChainDatabase:
+  isCloudConnection: true
   username: "postgres"
   dbName: "postgres"
   host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
@@ -26,6 +32,7 @@ readerChainDatabase:
   password: "postgres"
   useSSL: false
 writerChainDatabase:
+  isCloudConnection: true
   username: "postgres"
   dbName: "postgres"
   host: "/cloudsql/your-project-id:us-central1:beaconchain-db"

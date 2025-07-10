@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	model "github.com/gobitfly/beaconchain-api/api/gen"
+	model "github.com/gobitfly/beaconchain-api/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-api/internal/auth"
 	"github.com/gobitfly/beaconchain-api/internal/common/config"
 	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
@@ -22,16 +22,6 @@ type ApiService struct {
 	model.UnimplementedExternalServiceServer
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
-}
-
-/**
- * Initializes the state and dependencies of the service
- */
-func InitWithInMemory() (*ApiService, error) {
-	return &ApiService{
-		//		userRepository:      dataaccess.NewInMemoryUserRepository(),
-		dashboardRepository: dataaccess.NewInMemoryValidatorDashboardRepository(),
-	}, nil
 }
 
 /**

@@ -43,8 +43,9 @@ To verify this is working correctly, you should be able to run `make generate-pr
 ## Build and Run locally
 
 ```
-make all
-make build-service && make run ARGS="--environment local"
+cp configs/service/local.yaml.example configs/service/local.yaml
+make generate-proto
+docker compose -f deployments/docker-compose.yml up -d
 ```
 
 In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 ExternalService/ExecutionBlock`)

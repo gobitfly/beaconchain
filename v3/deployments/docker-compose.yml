@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:15.2-alpine
+    environment:
+      # has to match config
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+  clickhouse:
+    image: "clickhouse/clickhouse-server:25.4"
+    environment:
+      - CLICKHOUSE_SKIP_USER_SETUP=1
+  redis:
+    image: redis:7
+  littlebigtable:
+    image: "gobitfly/little_bigtable:latest"
+
+  api-service:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+      littlebigtable:
+        condition: service_started
+    environment:
+      - BIGTABLE_EMULATOR_HOST=littlebigtable:9000
+    build:
+      context: ..
+      dockerfile: build/package/Dockerfile
+    volumes:
+      - ../api/gen/:/api/gen/
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    command: ["--environment", "local"]

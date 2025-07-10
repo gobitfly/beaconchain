@@ -3,10 +3,10 @@
 // https://protobuf.dev/reference/go/go-generated/
 // https://protobuf.dev/reference/python/python-generated/
 syntax = "proto3";
+package api_service.v1;
 
 option go_package = "github.com/gobitfly/beaconchain-api/model";
 
-import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
@@ -19,7 +19,7 @@ service ExternalService {
   // Get execution blocks by execution block number
   rpc ExecutionBlock (ExecutionBlockRequest) returns (ExecutionBlockResponse) {
     option (google.api.http) = {
-      get: "/api/v1/execution/block/{blockNumber}"
+      get: "/api/v1/execution/block/{block_number}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       extensions: {
@@ -50,7 +50,7 @@ service ExternalService {
 // A request to get a summary of a particular execution block
 message ExecutionBlockRequest {
   // Provide one or more execution block numbers. Comma separated up to max 100.
-  string blockNumber = 1;
+  string block_number = 1;
 }
 
 // A Response containing a summary of the execution block
@@ -65,8 +65,8 @@ message ExecutionBlockResponse {
 //////////////////////////////////////////////////
 
 message BlockSummary {
-  string blockHash = 1;
-  string blockNumber = 2;
+  string block_hash = 1;
+  string block_number = 2;
 }
 
 
