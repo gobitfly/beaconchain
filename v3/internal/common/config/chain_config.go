@@ -5,12 +5,14 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Chain
 // This should be kept as simple and high-level as possible.
 type Chain struct {
 	Name    ChainName
 	ChainId uint64
 }
 
+// ChainName
 // Config for defining various chain names
 type ChainName string
 

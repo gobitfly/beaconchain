@@ -17,6 +17,7 @@ linters:
     - gosec
     - importas
     - unparam
+    - gocritic
 
   settings:
     unused:

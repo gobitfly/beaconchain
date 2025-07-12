@@ -1,11 +1,9 @@
 package config
 
-/**
- * Contains primitives and helper functions related to the definition of the development environment.
- * Should not contain anything related to the context of the chain
- *
- */
+// Contains primitives and helper functions related to the definition of the development environment.
+// Should not contain anything related to the context of the chain
 
+// Environment
 // Describes the execution environment of the service.
 type Environment string
 

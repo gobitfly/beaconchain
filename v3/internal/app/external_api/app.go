@@ -24,9 +24,8 @@ type ApiService struct {
 	dashboardRepository dataaccess.ValidatorDashboardRepository
 }
 
-/**
- * Initialize the repositories with proper databases
- */
+// InitDependencies
+// Initialize the repositories with proper databases
 func InitDependencies(
 	config config.ServiceConfig,
 	userRepository dataaccess.UserRepository,
@@ -37,10 +36,8 @@ func InitDependencies(
 	}, nil
 }
 
-/**
- * Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
- *
- */
+// Run
+// Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
 	config config.ServiceConfig,
 	userRepo dataaccess.UserRepository,
@@ -116,16 +113,15 @@ func Run(
 	}
 	err = server.Serve(l)
 	if err != nil {
-		log.Fatalf("error serving: %v", err)
+		log.Fatalf("error serving: %v", err) //nolint:gocritic
 	}
 
 	log.Infof("To close connection CTRL+C :-)")
 }
 
-/**
- * GRPC expects headers in a different format. This function simply passes along all HTTP-specified headers to GRPC.
- * Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
- */
+// HeaderMatcher
+// GRPC expects headers in a different format. This function simply passes along all HTTP-specified headers to GRPC.
+// Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
 func HeaderMatcher(key string) (string, bool) {
 	switch key {
 	case string(auth.ApiKeyHeader):
@@ -135,10 +131,8 @@ func HeaderMatcher(key string) (string, bool) {
 	}
 }
 
-/**
- * Abstract this later to make it easier to add additional ones.
- *
- */
+// serveSwaggerStatics
+// Abstract this later to make it easier to add additional ones.
 func serveSwaggerStatics(mux *http.ServeMux) {
 	// mount a path to expose the generated OpenAPI specification on disk
 	// http://localhost:8080/swagger-ui/#/BeaconchainApiService

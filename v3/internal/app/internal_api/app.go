@@ -30,9 +30,8 @@ type ApiService struct {
 	dashboardRepository dataaccess.ValidatorDashboardRepository
 }
 
-/**
- * Initialize the repositories with proper databases
- */
+// InitDependencies
+// Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
 	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
@@ -42,10 +41,8 @@ func InitDependencies(
 	}, nil
 }
 
-/**
- * Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
- *
- */
+// Run
+// Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
 	config config.ServiceConfig,
 	userRepo dataaccess.UserRepository,
@@ -140,18 +137,18 @@ func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerI
 			return ctx, status.Errorf(codes.Unauthenticated, "No %s header", string(auth.ApiKeyHeader))
 		}
 		var apikey = vals[0] // Just check the first, if there are for some reason multiple
-		/*
-			token, err := auth.AuthFromMD(ctx, "bearer")
-			if err != nil {
-				return nil, err
-			}
 
-			tokenInfo, err := parseToken(token)
-			if err != nil {
-				return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
-			}*/
+		// token, err := auth.AuthFromMD(ctx, "bearer")
+		// if err != nil {
+		//	return nil, err
+		// }
+		//
+		// tokenInfo, err := parseToken(token)
+		// if err != nil {
+		//	return nil, status.Errorf(codes.Unauthenticated, "invalid auth token: %v", err)
+		// }
 
-		//ctx = logging.InjectFields(ctx, logging.Fields{"auth.sub", userClaimFromToken(tokenInfo)})
+		// ctx = logging.InjectFields(ctx, logging.Fields{"auth.sub", userClaimFromToken(tokenInfo)})
 
 		// Using the APIKey, look it up in the database to get the userId
 		user, err := userRepository.GetUserByApiKey(ctx, vals[0])
@@ -167,10 +164,9 @@ func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerI
 	}
 }
 
-/**
- * GRPC expects headers in a format which includes . This function simply passes along all HTTP-specified headers to GRPC.
- * Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
- */
+// HeaderMatcher
+// GRPC expects headers in a format which includes . This function simply passes along all HTTP-specified headers to GRPC.
+// Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
 func HeaderMatcher(key string) (string, bool) {
 	switch strings.ToLower(key) {
 	case string(auth.ApiKeyHeader):
@@ -180,10 +176,8 @@ func HeaderMatcher(key string) (string, bool) {
 	}
 }
 
-/**
- * Abstract this later to make it easier to add additional ones.
- *
- */
+// serveSwaggerStatics
+// Abstract this later to make it easier to add additional ones.
 func serveSwaggerStatics(mux *http.ServeMux) {
 	// mount a path to expose the generated OpenAPI specification on disk
 	// http://localhost:8080/swagger-ui/#/InternalService

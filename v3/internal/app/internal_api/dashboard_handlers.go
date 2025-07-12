@@ -11,7 +11,7 @@ import (
 )
 
 func (service *ApiService) GetValidatorDashboard(ctx context.Context, in *model.GetValidatorDashboardRequest) (*model.GetValidatorDashboardResponse, error) {
-	if len(in.DashboardId) <= 0 {
+	if len(in.DashboardId) == 0 {
 		return nil, errors.New("dashboard identifier must be specified")
 	}
 
@@ -58,9 +58,8 @@ func (service *ApiService) CreateValidatorDashboard(ctx context.Context, in *mod
 	}, nil
 }
 
-/**
- * Converts the abstract database representation of a ValidatorDashboard to the proto model representation.
- */
+// transformDbDashboardToModel
+// Converts the abstract database representation of a ValidatorDashboard to the proto model representation.
 func transformDbDashboardToModel(dbDashboard dataaccess.ValidatorDashboard) model.ValidatorDashboard {
 	dashboardId := fmt.Sprintf("%d", dbDashboard.DashboardId)
 	return model.ValidatorDashboard{

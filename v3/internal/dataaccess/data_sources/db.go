@@ -18,9 +18,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-/*
-var DBPGX *pgxpool.Conn
-*/
+// var DBPGX *pgxpool.Conn
 type DatabaseType string
 
 const (
@@ -28,25 +26,23 @@ const (
 	Clickhouse DatabaseType = "clickhouse" // Deployed and managed for internal use only
 )
 
-/**
- * Initializes a database connection, panicking if a connection was not able to be established.
- */
+// InitDB
+// Initializes a database connection, panicking if a connection was not able to be established.
 func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB {
-	//extraParams := []string{}
+	// extraParams := []string{}
 
-	//sslParam := databaseType.getSSLParam(dbConfig.SSL)
-	//extraParams = append(extraParams, sslParam)
+	// sslParam := databaseType.getSSLParam(dbConfig.SSL)
+	// extraParams = append(extraParams, sslParam)
 
 	// TODO: Also include the `connection_open_strategy` stuff for handling multiple failover hosts.
-	/*
-		var hosts string
-		hosts = net.JoinHostPort(writer.Host, writer.Port)
-		if len(writer.Failovers) > 0 {
-			for _, failover := range writer.Failovers {
-				hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
-			}
-			extraParams += "&connection_open_strategy=in_order"
-		}*/
+	//	var hosts string
+	//	hosts = net.JoinHostPort(writer.Host, writer.Port)
+	//	if len(writer.Failovers) > 0 {
+	//		for _, failover := range writer.Failovers {
+	//			hosts += "," + net.JoinHostPort(failover.Host, failover.Port)
+	//		}
+	//		extraParams += "&connection_open_strategy=in_order"
+	//	}
 	connectStr := createDbConnectionString(databaseType, *dbConfig)
 	if dbConfig.IsCloudConnection {
 		connectStr = createSqlAuthProxyConnectionString(*dbConfig)
