@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/gobitfly/beaconchain-api/internal/log"
+	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/spf13/viper"
 )
 

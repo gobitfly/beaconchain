@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/gobitfly/beaconchain-api/internal/dataaccess/data_sources"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
 )
 

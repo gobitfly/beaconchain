@@ -1,4 +1,4 @@
-module github.com/gobitfly/beaconchain-api
+module github.com/gobitfly/beaconchain-backend
 
 go 1.23.5
 

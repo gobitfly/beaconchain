@@ -5,7 +5,7 @@
 syntax = "proto3";
 package api_service.v1;
 
-option go_package = "github.com/gobitfly/beaconchain-api/model";
+option go_package = "github.com/gobitfly/beaconchain-backend/model";
 
 import "google/api/annotations.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";

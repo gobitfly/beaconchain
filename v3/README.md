@@ -1,4 +1,4 @@
-# beaconchain-api
+# beaconchain-backend
 
 # Initial definition
 PoC for what a new repo which implements a scalable maintainable API service might look like

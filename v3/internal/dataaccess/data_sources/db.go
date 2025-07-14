@@ -8,8 +8,8 @@ import (
 
 	_ "database/sql/driver"
 
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
-	"github.com/gobitfly/beaconchain-api/internal/log"
+	"github.com/gobitfly/beaconchain-backend/internal/common/config"
+	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/jmoiron/sqlx"
 
 	// This brings in the driver

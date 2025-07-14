@@ -10,12 +10,12 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	model "github.com/gobitfly/beaconchain-api/api/gen/api_service/v1"
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
+	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 
-	"github.com/gobitfly/beaconchain-api/internal/auth"
-	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
-	"github.com/gobitfly/beaconchain-api/internal/log"
+	"github.com/gobitfly/beaconchain-backend/internal/auth"
+	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strconv"
 
-	model "github.com/gobitfly/beaconchain-api/api/gen/api_service/v1"
-	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
+	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 )
 
 func (service *ApiService) GetValidatorDashboard(ctx context.Context, in *model.GetValidatorDashboardRequest) (*model.GetValidatorDashboardResponse, error) {

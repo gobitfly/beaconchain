@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
+	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 )
 
 type RedisCache struct {

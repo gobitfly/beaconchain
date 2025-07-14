@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	app_external "github.com/gobitfly/beaconchain-api/internal/app/external_api"
-	app_internal "github.com/gobitfly/beaconchain-api/internal/app/internal_api"
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
-	"github.com/gobitfly/beaconchain-api/internal/dataaccess/data_sources"
-	dataaccess "github.com/gobitfly/beaconchain-api/internal/dataaccess/repo"
-	"github.com/gobitfly/beaconchain-api/internal/log"
+	app_external "github.com/gobitfly/beaconchain-backend/internal/app/external_api"
+	app_internal "github.com/gobitfly/beaconchain-backend/internal/app/internal_api"
+	"github.com/gobitfly/beaconchain-backend/internal/common/config"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
+	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/log"
 )
 
 /**

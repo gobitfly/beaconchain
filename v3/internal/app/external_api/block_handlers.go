@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	model "github.com/gobitfly/beaconchain-api/api/gen/api_service/v1"
+	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 )
 
 func (service *ApiService) ExecutionBlock(ctx context.Context, in *model.ExecutionBlockRequest) (*model.ExecutionBlockResponse, error) {

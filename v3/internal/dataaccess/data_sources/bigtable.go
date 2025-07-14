@@ -4,7 +4,7 @@ import (
 	"context"
 
 	gcp_bigtable "cloud.google.com/go/bigtable"
-	"github.com/gobitfly/beaconchain-api/internal/common/config"
+	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"google.golang.org/api/option"
 )
 
