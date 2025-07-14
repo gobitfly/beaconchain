@@ -24,6 +24,10 @@ resource "google_project_service" "service_control" {
   service = "servicecontrol.googleapis.com"
 }
 
+resource "google_project_service" "vpcaccess" {
+  service = "vpcaccess.googleapis.com"
+}
+
 // dependency resources
 resource "google_sql_database_instance" "beaconchain-db" {
   name             = "beaconchain-db"
@@ -36,16 +40,30 @@ resource "google_sql_database_instance" "beaconchain-db" {
   }
 
   root_password = var.db_password
-  depends_on = [google_project_service.sql]
+  depends_on    = [google_project_service.sql]
 }
 
+resource "google_compute_network" "mono-vpc" {
+  name = "vpc-network"
+}
+
+resource "google_vpc_access_connector" "mono-connector" {
+  name    = "mono-connector"
+  region  = var.region
+  network = google_compute_network.mono-vpc.name
+
+  ip_cidr_range = "10.10.0.0/28"
+
+  min_instances = 2
+  max_instances = 3
+}
 
 // service resources
 locals {
-  internal_swagger = templatefile("../api/gen/internal.swagger.json", {
+  internal_swagger = templatefile("../api/gen/api_service/v1/internal.swagger.json", {
     CLOUD_RUN_URL = google_cloud_run_v2_service.personal-internal.uri
   })
-  external_swagger = templatefile("../api/gen/external.swagger.json", {
+  external_swagger = templatefile("../api/gen/api_service/v1/external.swagger.json", {
     CLOUD_RUN_URL = google_cloud_run_v2_service.personal-external.uri
   })
 
@@ -90,6 +108,11 @@ resource "google_cloud_run_v2_service" "personal-internal" {
   name     = "beaconchain-api-internal"
   location = var.region
 
+  # internal access only
+  provider = google-beta
+  default_uri_disabled = true
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
+
   template {
     containers {
       image = "us-central1-docker.pkg.dev/${var.project_id}/service/beaconchain-api@${var.image}"
@@ -105,6 +128,10 @@ resource "google_cloud_run_v2_service" "personal-internal" {
         name       = "swagger-vol"
         mount_path = "/api/gen/"
       }
+      volume_mounts {
+        name = "cloudsql"
+        mount_path = "/cloudsql"
+      }
     }
 
     volumes {
@@ -116,8 +143,16 @@ resource "google_cloud_run_v2_service" "personal-internal" {
       }
     }
 
-    annotations = {
-      "run.googleapis.com/cloudsql-instances" = "${var.project_id}:${var.region}:${google_sql_database_instance.beaconchain-db.name}"
+    volumes {
+      name = "cloudsql"
+      cloud_sql_instance {
+        instances = [google_sql_database_instance.beaconchain-db.connection_name]
+      }
+    }
+
+    vpc_access {
+      connector = google_vpc_access_connector.mono-connector.id
+      egress    = "PRIVATE_RANGES_ONLY"
     }
   }
 
@@ -133,6 +168,7 @@ resource "google_cloud_run_v2_service" "personal-internal" {
 resource "google_cloud_run_v2_service" "personal-external" {
   name     = "beaconchain-api-external"
   location = var.region
+  ingress  = "INGRESS_TRAFFIC_ALL" # allow public access
 
   template {
     containers {
@@ -149,6 +185,11 @@ resource "google_cloud_run_v2_service" "personal-external" {
         name       = "swagger-vol"
         mount_path = "/api/gen/"
       }
+
+      volume_mounts {
+        name = "cloudsql"
+        mount_path = "/cloudsql"
+      }
     }
 
     volumes {
@@ -160,8 +201,11 @@ resource "google_cloud_run_v2_service" "personal-external" {
       }
     }
 
-    annotations = {
-      "run.googleapis.com/cloudsql-instances" = "${var.project_id}:${var.region}:${google_sql_database_instance.beaconchain-db.name}"
+    volumes {
+      name = "cloudsql"
+      cloud_sql_instance {
+        instances = [google_sql_database_instance.beaconchain-db.connection_name]
+      }
     }
   }
 
@@ -173,7 +217,6 @@ resource "google_cloud_run_v2_service" "personal-external" {
 
   depends_on = [google_project_service.run]
 }
-
 resource "google_cloud_run_service_iam_member" "noauth" {
   location = google_cloud_run_v2_service.personal-external.location
   project  = var.project_id
