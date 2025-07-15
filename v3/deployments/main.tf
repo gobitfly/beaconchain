@@ -59,17 +59,6 @@ resource "google_compute_firewall" "default" {
   source_ranges = ["35.235.240.0/20"]
 }
 
-resource "google_vpc_access_connector" "mono-connector" {
-  name    = "mono-connector"
-  region  = var.region
-  network = google_compute_network.mono-vpc.name
-
-  ip_cidr_range = "10.10.0.0/28"
-
-  min_instances = 2
-  max_instances = 3
-}
-
 // service resources
 locals {
   internal_swagger = templatefile("../api/gen/api_service/v1/internal.swagger.json", {
@@ -165,11 +154,6 @@ resource "google_cloud_run_v2_service" "personal-internal" {
       cloud_sql_instance {
         instances = [google_sql_database_instance.beaconchain-db.connection_name]
       }
-    }
-
-    vpc_access {
-      connector = google_vpc_access_connector.mono-connector.id
-      egress    = "PRIVATE_RANGES_ONLY"
     }
   }
 
