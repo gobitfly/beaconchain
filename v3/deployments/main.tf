@@ -47,6 +47,18 @@ resource "google_compute_network" "mono-vpc" {
   name = "vpc-network"
 }
 
+resource "google_compute_firewall" "default" {
+  name    = "default"
+  network = google_compute_network.mono-vpc.name
+
+  allow {
+    protocol = "tcp"
+    ports    = ["22"]
+  }
+
+  source_ranges = ["35.235.240.0/20"]
+}
+
 resource "google_vpc_access_connector" "mono-connector" {
   name    = "mono-connector"
   region  = var.region
@@ -110,7 +122,7 @@ resource "google_cloud_run_v2_service" "personal-internal" {
 
   # internal access only
   provider = google-beta
-  default_uri_disabled = true
+  default_uri_disabled = false
   ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   template {
@@ -124,6 +136,11 @@ resource "google_cloud_run_v2_service" "personal-internal" {
         name  = "INSTANCE_CONNECTION_NAME"
         value = "${var.project_id}:${var.region}:${google_sql_database_instance.beaconchain-db.name}"
       }
+      env {
+        name  = "GRPCPORT"
+        value = "8080"
+      }
+      
       volume_mounts {
         name       = "swagger-vol"
         mount_path = "/api/gen/"
@@ -168,7 +185,9 @@ resource "google_cloud_run_v2_service" "personal-internal" {
 resource "google_cloud_run_v2_service" "personal-external" {
   name     = "beaconchain-api-external"
   location = var.region
-  ingress  = "INGRESS_TRAFFIC_ALL" # allow public access
+  
+  # no public access for now
+  ingress  = "INGRESS_TRAFFIC_INTERNAL_ONLY"
 
   template {
     containers {
@@ -217,6 +236,7 @@ resource "google_cloud_run_v2_service" "personal-external" {
 
   depends_on = [google_project_service.run]
 }
+
 resource "google_cloud_run_service_iam_member" "noauth" {
   location = google_cloud_run_v2_service.personal-external.location
   project  = var.project_id

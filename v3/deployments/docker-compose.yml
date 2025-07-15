@@ -20,7 +20,7 @@ services:
   littlebigtable:
     image: "gobitfly/little_bigtable:latest"
 
-  api-service:
+  api-service-external:
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,5 +39,25 @@ services:
       - ../api/gen/:/api/gen/
     ports:
       - "8080:8080"
-      - "9090:9090"
     command: ["--environment", "local"]
+  api-service-internal:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+      redis:
+        condition: service_started
+      littlebigtable:
+        condition: service_started
+    environment:
+      - BIGTABLE_EMULATOR_HOST=littlebigtable:9000
+      - GRPCPORT=8080
+    build:
+      context: ..
+      dockerfile: build/package/Dockerfile
+    volumes:
+      - ../api/gen/:/api/gen/
+    ports:
+      - "9090:8080"
+    command: ["--environment", "local", "--type", "internal"]

@@ -48,7 +48,7 @@ make generate-proto
 docker compose -f deployments/docker-compose.yml up -d
 ```
 
-In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 ExternalService/ExecutionBlock`)
+In your browser, navigate to `http://localhost:8080/swagger-ui/#/BeaconchainService` to interact with the service. You can interact using curls against port 8080, or you can [grpcurl](https://github.com/fullstorydev/grpcurl) against 9090 (`grpcurl -plaintext localhost:9090 api_service.v1.ExternalService/ExecutionBlock`)
 
 ## Debugging
 Using visual studio code, navigate to main.go and click "Run" then "Start Debugging". Set break points before sending any requests (i.e. via the swagger link above or via curl).

@@ -24,8 +24,9 @@ func NewDBUserRepository(roConnectionAdminDb data_sources.AdminRoConnection, rwC
 func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*User, error) {
 	user := User{}
 
-	err := r.roConnectionAdminDb.GetContext(ctx, &user, "SELECT * FROM users WHERE id=$1 LIMIT 1", id)
-	return &user, err
+	// WIP
+	_ = r.roConnectionAdminDb.GetContext(ctx, &user, "SELECT * FROM users WHERE id=$1 LIMIT 1", id)
+	return &user, nil
 }
 
 func (r *DBUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
