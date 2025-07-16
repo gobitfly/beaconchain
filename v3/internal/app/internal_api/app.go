@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"strings"
-	"time"
 
 	"google.golang.org/grpc/metadata"
 
@@ -19,7 +17,6 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -48,11 +45,6 @@ func Run(
 	userRepo dataaccess.UserRepository,
 	dashboardRepo dataaccess.ValidatorDashboardRepository,
 ) {
-
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	log.Info("Starting server...")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GrpcPort))
@@ -60,65 +52,17 @@ func Run(
 		log.Infof("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(AuthInterceptor(userRepo)),
-	) // Unsecured
+	s := grpc.NewServer() // Unsecured on application level, authenticated via gcp access management
 	apiService, _ := InitDependencies(userRepo, dashboardRepo)
 	model.RegisterInternalServiceServer(s, apiService)
 
 	if config.ExposeSchema {
 		reflection.Register(s)
 	}
-	go func() {
-		err := s.Serve(lis)
-		if err != nil {
-			log.Infof("failed to serve: %v", err)
-		}
-	}()
+
 	log.Infof("gRPC server listening at %v", lis.Addr())
-
-	// Establish a connection to the gRPC server above
-	conn, err := grpc.NewClient(fmt.Sprintf(":%s", config.GrpcPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		log.Infof("fail to dial: %v", err)
-	}
-	defer func() {
-		err := conn.Close()
-		if err != nil {
-			log.Infof("failed to close connection: %v", err)
-		}
-	}()
-
-	// create an HTTP router which sends proxies HTTP requests to the gRPC server.
-	rmux := runtime.NewServeMux(runtime.WithIncomingHeaderMatcher(HeaderMatcher))
-	client := model.NewInternalServiceClient(conn)
-	err = model.RegisterInternalServiceHandlerClient(ctx, rmux, client)
-	if err != nil {
-		log.Info(err)
-	}
-
-	// create a standard HTTP router
-	mux := http.NewServeMux()
-
-	serveSwaggerStatics(mux)
-
-	// mount the gRPC HTTP gateway to the root
-	mux.Handle("/", rmux)
-
-	// start a standard HTTP server with the router
-	l, err := net.Listen("tcp", fmt.Sprintf(":%s", config.HttpPort))
-	if err != nil {
-		log.Infof("failed to listen: %v", err)
-	}
-	log.Infof("HTTP server listening and serving at :%s", config.HttpPort)
-
-	server := &http.Server{
-		Handler:           mux,
-		ReadHeaderTimeout: time.Second,
-	}
-	err = server.Serve(l)
-	if err != nil {
-		log.Info(err)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
 	}
 
 	log.Infof("To close connection CTRL+C :-)")
@@ -174,17 +118,4 @@ func HeaderMatcher(key string) (string, bool) {
 	default:
 		return runtime.DefaultHeaderMatcher(key)
 	}
-}
-
-// serveSwaggerStatics
-// Abstract this later to make it easier to add additional ones.
-func serveSwaggerStatics(mux *http.ServeMux) {
-	// mount a path to expose the generated OpenAPI specification on disk
-	// http://localhost:8080/swagger-ui/#/InternalService
-	mux.HandleFunc("/swagger-ui/swagger.json", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "./api/gen/api_service/v1/internal.swagger.json")
-	})
-
-	// mount the Swagger UI that uses the OpenAPI specification path above
-	mux.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.Dir("./web/swagger-ui"))))
 }

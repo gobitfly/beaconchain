@@ -22,7 +22,7 @@ func (service *ApiService) GetValidatorDashboard(ctx context.Context, in *model.
 	}
 
 	// Get the user
-	_, err = service.userRepository.GetUserById(ctx, 1234 /*TODO: Get userId from request headers via session/API Key*/)
+	_, err = service.userRepository.GetUserById(ctx, 1234 /*TODO: Get userId from request headers via session / JWT Token*/)
 	if err != nil {
 		return nil, errors.New("internal user id")
 	}
@@ -30,7 +30,7 @@ func (service *ApiService) GetValidatorDashboard(ctx context.Context, in *model.
 	// In a proper implementation we would also want to make sure that this dashboard is actually owned by the requesting user.
 	dbDashboard, err := service.dashboardRepository.GetValidatorDashboardByDashboardId(ctx, dashboardId)
 	if err != nil {
-		return nil, errors.New("internal service error")
+		return nil, err
 	}
 	// Request was valid and handled properly by the service, but nothing was found
 	if dbDashboard == nil {

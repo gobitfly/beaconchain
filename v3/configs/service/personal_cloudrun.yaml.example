@@ -5,6 +5,7 @@
 #
 
 isCloudDeployment: true
+exposeSchema: true
 
 readerAdminDatabase:
   isCloudConnection: true
