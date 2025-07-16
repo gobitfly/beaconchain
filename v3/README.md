@@ -62,11 +62,10 @@ https://github.com/grpc-ecosystem/grpc-gateway
 
 You can deploy and run the service in either your personal environment or against the real staging environment
 
-To deploy it to your personal project, note that you must initialize it first:
-1. Fill in your .env and run `source .env`. Then create a cloud storage bucket to store terraform state & some configs in, and fill in `deployments/backend.hcl`
-2. Create a container artifact registry: `make cr-create-registry`
-3. Fill out configs (`default.yaml`: copy&paste example, `personal_cloudrun.yaml`: insert your project id), then push the service image: `make cr-deploy-personal` (if this step fails, try again after a few minutes for permission updates to propagate)
-4. Install [terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli), enter hash from prev step in `terraform.tfvars:image` and run: `cd deployments && terraform init -backend-config=backend.hcl && terraform apply`
+To deploy it to your personal project, visit https://github.com/gobitfly/beaconchain-terraform and deploy via your branch. Then:
+1. Fill in your .env and run `source .env`.
+2. Fill out configs (`default.yaml`: copy&paste example, `personal_cloudrun.yaml`: insert your project id), then push the service image: `make cr-deploy-personal` (if this step fails, try again after a few minutes for permission updates to propagate)
+3. Enter hash from prev step in `components/api/terraform.tfvars:image` and re-apply tf
 
 TODO
 - Could combine step 1+2 into another small setup terraform

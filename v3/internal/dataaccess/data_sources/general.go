@@ -33,16 +33,19 @@ type ApiDataSources struct {
 }
 
 func InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
-	dataSources := &ApiDataSources{
-		RoChainDb: InitDB(&config.ReaderChainDatabase, Postgres),
-		RwChainDb: InitDB(&config.WriterChainDatabase, Postgres),
-	}
+
+	dataSources := &ApiDataSources{}
+	// TODO temp flag to be used until db config connection is available
 	if config.IsCloudDeployment {
 		return dataSources
 	}
 
+	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabase, Postgres)
+	dataSources.RwChainDb = InitDB(&config.WriterChainDatabase, Postgres)
+
 	dataSources.RoAdminDb = InitDB(&config.ReaderAdminDatabase, Postgres)
 	dataSources.RwAdminDb = InitDB(&config.WriterAdminDatabase, Postgres)
+
 	dataSources.RoChDb = InitDB(&config.ReaderClickhouse, Clickhouse)
 	dataSources.RwChDb = InitDB(&config.WriterClickhouse, Clickhouse)
 

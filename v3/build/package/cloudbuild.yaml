@@ -3,8 +3,8 @@ steps:
     args: [
       'build',
       '-f', 'build/package/Dockerfile',
-      '-t', 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/service/beaconchain-api:latest',
+      '-t', 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/beaconchain/beaconchain-api:latest',
       '.'
     ]
 images:
-  - 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/service/beaconchain-api:latest'
+  - 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/beaconchain/beaconchain-api:latest'
