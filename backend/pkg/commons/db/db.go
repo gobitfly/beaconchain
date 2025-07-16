@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	ch "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -222,6 +223,7 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 	var targetDB *sqlx.DB
 	var migrationPath string
 	goose.SetBaseFS(EmbedMigrations)
+	ctx := context.Background()
 	switch database {
 	case "postgres":
 		if err := goose.SetDialect("postgres"); err != nil {
@@ -235,6 +237,12 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 		}
 		targetDB = ClickHouseWriter
 		migrationPath = "migrations/clickhouse"
+		ctx = ch.Context(ctx, ch.WithSettings(ch.Settings{
+			"distributed_ddl_task_timeout": -1, // disable distributed DDL task timeout
+			"http_receive_timeout":         0,  // disable http receive timeout
+			"max_estimated_execution_time": 0,  // disable max estimated execution time
+			"max_execution_time":           0,  // disable max execution time
+		}))
 	default:
 		return fmt.Errorf("unknown target database: %s", database)
 	}
@@ -251,12 +259,12 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 		}
 	case version == -2:
 		log.Warnf("upgrading %s to the latest version", database)
-		if err := goose.Up(targetDB.DB, migrationPath); err != nil {
+		if err := goose.UpContext(ctx, targetDB.DB, migrationPath); err != nil {
 			return err
 		}
 	case version == -1:
 		log.Warnf("upgrading %s by one version", database)
-		if err := goose.UpByOne(targetDB.DB, migrationPath); err != nil {
+		if err := goose.UpByOneContext(ctx, targetDB.DB, migrationPath); err != nil {
 			return err
 		}
 	case version < 0:
@@ -266,13 +274,13 @@ func ApplyEmbeddedDbSchema(version int64, database string) error {
 			log.Warnf("downgrading %s to version %d. you have %d seconds to abort the command", database, version, 15-i)
 			time.Sleep(time.Second)
 		}
-		if err := goose.DownTo(targetDB.DB, migrationPath, version); err != nil {
+		if err := goose.DownToContext(ctx, targetDB.DB, migrationPath, version); err != nil {
 			return err
 		}
 	default:
 		// upgrade target branch.
 		log.Warnf("upgrading %s to version %d", database, version)
-		if err := goose.UpTo(targetDB.DB, migrationPath, version); err != nil {
+		if err := goose.UpToContext(ctx, targetDB.DB, migrationPath, version); err != nil {
 			return err
 		}
 	}
