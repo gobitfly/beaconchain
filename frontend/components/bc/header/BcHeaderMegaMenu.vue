@@ -33,6 +33,11 @@ const items = computed(() => {
       url: '/dashboard',
     },
     {
+      label: $t('header.megamenu.explorer'),
+      url: `${v1Domain}`,
+
+    },
+    {
       label: $t('header.megamenu.pricing'),
       url: '/pricing',
     },
