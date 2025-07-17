@@ -52,11 +52,6 @@ export default function ({
       return redirectToV1('/imprint')
     case 'mobile':
       return redirectToV1('/mobile')
-    case 'notifications':
-      if (!has('feature-notifications')) {
-        return redirectToV1('/user/notifications')
-      }
-      break
     case 'privacy':
       return redirect('https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf')
     case 'register':

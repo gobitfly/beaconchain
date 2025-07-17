@@ -50,6 +50,10 @@ export function useUserStore() {
     return data.value
   })
 
+  const hasV1Notifications = computed(() => {
+    return !!user.value?.has_v1_notifications
+  })
+
   const isLoggedIn = computed(() => {
     return !!user.value
   })
@@ -60,6 +64,7 @@ export function useUserStore() {
     doLogin,
     doLogout,
     getUser,
+    hasV1Notifications,
     isLoggedIn,
     premium_perks,
     user,

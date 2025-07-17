@@ -9,6 +9,7 @@ const { t: $t } = useTranslation()
 const { width } = useWindowSize()
 const {
   doLogout,
+  hasV1Notifications,
   isLoggedIn,
 } = useUserStore()
 const route = useRoute()
@@ -21,7 +22,7 @@ const breakpoint = `${smallHeaderThreshold}px`
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobile = computed(() => width.value < mobileHeaderThreshold)
 
-const { has } = useFeatureFlag()
+const v1Domain = useV1Domain()
 
 const items = computed(() => {
   let list: MenuItem[] = []
@@ -35,13 +36,23 @@ const items = computed(() => {
       label: $t('header.megamenu.pricing'),
       url: '/pricing',
     },
+    ...(hasV1Notifications.value
+      ? [
+          {
+            label: $t('header.megamenu.notifications_v1'),
+            url: `${v1Domain}/user/notifications`,
+          },
+          {
+            label: $t('header.megamenu.notifications_v2'),
+            url: '/notifications',
+          },
+        ]
+      : [ {
+          label: $t('header.megamenu.notifications'),
+          url: '/notifications',
+        } ]
+    ),
   ]
-  if (has('feature-notifications')) {
-    list.push({
-      label: $t('header.megamenu.notifications'),
-      url: '/notifications',
-    })
-  }
   if (isMobile.value) {
     if (isLoggedIn.value) {
       list.push({
