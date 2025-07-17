@@ -98,13 +98,6 @@ const items = computed<MenuBarEntry[]>(() => {
       return createMenuBarButton('account', getDashboardName(gd), `${gd.key ?? gd.id}`)
     }))
   }
-  const disabledTooltip = !has('feature-notifications') ? $t('common.coming_soon') : undefined
-  addToSortedItems($t('notifications.title'), [ {
-    active: route.name === 'notifications',
-    disabledTooltip,
-    label: $t('notifications.title'),
-    route: route.name !== 'notifications' ? '/notifications' : undefined,
-  } ])
 
   return buttons
 })

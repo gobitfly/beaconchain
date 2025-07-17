@@ -8,7 +8,7 @@ export const useFeatureFlag = () => {
     throw createError('Environment variable `deploymentType` is not provided.')
   }
 
-  const staging: FeatureFlag[] = [ 'feature-notifications' ]
+  const staging: FeatureFlag[] = []
   const development: FeatureFlag[] = [
     ...staging,
     'feature-account_dashboards',
@@ -16,7 +16,7 @@ export const useFeatureFlag = () => {
   ]
   const featureCatalog: Record<Environment, FeatureFlag[]> = {
     development,
-    production: [ 'feature-notifications' ],
+    production: [],
     staging,
   }
 

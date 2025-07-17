@@ -613,6 +613,8 @@
             "knowledge_base": "Knowledge Base",
             "mempool": "Mempool",
             "notifications": "Notifications",
+            "notifications_v1": "v1 Notifications",
+            "notifications_v2": "v2 Notifications",
             "overview": "Overview",
             "pool_benchmarks": "Pool Blockchain",
             "pricing": "Pricing",
