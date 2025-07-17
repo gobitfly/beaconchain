@@ -32,12 +32,11 @@ type ApiDataSources struct {
 	RwChDb ClickhouseRwConnection
 }
 
-func InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
-
+func (s *ApiDataSources) InitApiConnections(config *config.ServiceConfig) {
 	dataSources := &ApiDataSources{}
 	// TODO temp flag to be used until db config connection is available
 	if config.IsCloudDeployment {
-		return dataSources
+		return
 	}
 
 	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabase, Postgres)
@@ -62,6 +61,4 @@ func InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
 		os.Exit(1)
 	}
 	dataSources.Bigtable = bigtable
-
-	return dataSources
 }

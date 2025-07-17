@@ -9,6 +9,9 @@ type ValidatorDashboard struct {
 }
 
 type ValidatorDashboardRepository interface {
+	// to indicate if the repository is ready
+	Ping() error
+
 	// CreateValidatorDashboard
 	// Creates an empty Validator Dashboard
 	CreateValidatorDashboard(ctx context.Context, userId uint64) (*ValidatorDashboard, error)

@@ -2,6 +2,7 @@ package dataaccess
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
@@ -10,13 +11,35 @@ import (
 type DBUserRepository struct {
 	roConnectionAdminDb *sqlx.DB
 	rwConnectionAdminDb *sqlx.DB
+
+	skipInit bool // TODO remove temp var
 }
 
-func NewDBUserRepository(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) *DBUserRepository {
-	return &DBUserRepository{
-		roConnectionAdminDb: roConnectionAdminDb,
-		rwConnectionAdminDb: rwConnectionAdminDb,
+func (r *DBUserRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection, skipInit bool) {
+	r.roConnectionAdminDb = roConnectionAdminDb
+	r.rwConnectionAdminDb = rwConnectionAdminDb
+
+	r.skipInit = skipInit
+}
+
+func (r *DBUserRepository) Ping() error {
+	if r.skipInit {
+		return nil
 	}
+	if r.roConnectionAdminDb == nil {
+		return fmt.Errorf("read connection not initialized")
+	}
+	if err := r.roConnectionAdminDb.Ping(); err != nil {
+		return fmt.Errorf("read connection ping failed: %w", err)
+	}
+
+	if r.rwConnectionAdminDb == nil {
+		return fmt.Errorf("write connection not initialized")
+	}
+	if err := r.rwConnectionAdminDb.Ping(); err != nil {
+		return fmt.Errorf("write connection ping failed: %w", err)
+	}
+	return nil
 }
 
 func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*User, error) {
