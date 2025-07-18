@@ -30,6 +30,11 @@ node_modules/
 
 # env file
 .env
+.env.*
+
+# env examples 
+!*.example
+
 
 # build output
 beaconchain-api-service
