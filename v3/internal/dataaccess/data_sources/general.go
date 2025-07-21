@@ -34,10 +34,6 @@ type ApiDataSources struct {
 
 func (s *ApiDataSources) InitApiConnections(config *config.ServiceConfig) {
 	dataSources := &ApiDataSources{}
-	// TODO temp flag to be used until db config connection is available
-	if config.IsCloudDeployment {
-		return
-	}
 
 	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabase, Postgres)
 	dataSources.RwChainDb = InitDB(&config.WriterChainDatabase, Postgres)

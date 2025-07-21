@@ -58,9 +58,27 @@ func Run(
 		reflection.Register(grpcServer)
 	}
 
-	userRepo := &dataaccess.DBUserRepository{}
-	dashboardRepo := &dataaccess.DBValidatorDashboardRepository{}
-	apiService, _ := InitDependencies(userRepo, dashboardRepo)
+	var userRepoI dataaccess.UserRepository
+	var vdbRepoI dataaccess.ValidatorDashboardRepository
+	if config.IsCloudDeployment {
+		// TODO remove & use actual db repositories
+		userRepoI = &dataaccess.DummyUserRepository{}
+		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
+	} else {
+		userDbRepo := &dataaccess.DBUserRepository{}
+		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
+		userRepoI = userDbRepo
+		vdbRepoI = vbdDbRepo
+
+		// init async
+		go func() {
+			dataSources := data_sources.ApiDataSources{}
+			dataSources.InitApiConnections(&config)
+			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
+		}()
+	}
+	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
 	model.RegisterInternalServiceServer(grpcServer, apiService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
 
@@ -70,11 +88,6 @@ func Run(
 			log.Fatalf("failed to serve: %v", err)
 		}
 	}()
-
-	dataSources := data_sources.ApiDataSources{}
-	dataSources.InitApiConnections(&config)
-	userRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb, config.IsCloudDeployment)
-	dashboardRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable, config.IsCloudDeployment)
 
 	log.Infof("To close connection CTRL+C :-)")
 	select {} // block

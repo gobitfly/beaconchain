@@ -5,8 +5,8 @@ import (
 )
 
 type User struct {
-	// id      uint64
-	// isAdmin bool
+	id      uint64
+	isAdmin bool
 }
 
 type UserRepository interface {

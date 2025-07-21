@@ -31,7 +31,6 @@ type ApiService struct {
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
-	config config.ServiceConfig,
 	userRepository dataaccess.UserRepository,
 	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
 	return &ApiService{
@@ -63,9 +62,27 @@ func Run(
 		reflection.Register(grpcServer)
 	}
 
-	userRepo := &dataaccess.DBUserRepository{}
-	dashboardRepo := &dataaccess.DBValidatorDashboardRepository{}
-	apiService, _ := InitDependencies(config, userRepo, dashboardRepo)
+	var userRepoI dataaccess.UserRepository
+	var vdbRepoI dataaccess.ValidatorDashboardRepository
+	if config.IsCloudDeployment {
+		// TODO remove & use actual db repositories
+		userRepoI = &dataaccess.DummyUserRepository{}
+		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
+	} else {
+		userDbRepo := &dataaccess.DBUserRepository{}
+		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
+		userRepoI = userDbRepo
+		vdbRepoI = vbdDbRepo
+
+		// init async
+		go func() {
+			dataSources := data_sources.ApiDataSources{}
+			dataSources.InitApiConnections(&config)
+			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
+		}()
+	}
+	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
 	model.RegisterExternalServiceServer(grpcServer, apiService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
 
@@ -107,7 +124,6 @@ func Run(
 	mux := http.NewServeMux()
 
 	serveSwaggerStatics(mux)
-	dataSources := data_sources.ApiDataSources{}
 
 	// mount the gRPC HTTP gateway to the root
 	mux.Handle("/", rmux)
@@ -129,10 +145,6 @@ func Run(
 			log.Fatalf("error serving: %v", err)
 		}
 	}()
-
-	dataSources.InitApiConnections(&config)
-	userRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb, config.IsCloudDeployment)
-	dashboardRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable, config.IsCloudDeployment)
 
 	log.Infof("To close connection CTRL+C :-)")
 	select {} // block

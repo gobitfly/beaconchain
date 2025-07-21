@@ -19,11 +19,9 @@ type DBValidatorDashboardRepository struct {
 	redis *data_sources.RedisCache
 
 	bigtable *data_sources.Bigtable
-
-	skipInit bool // TODO remove temp var
 }
 
-func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable, skipInit bool) {
+func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) {
 	r.roConnection = roConnection
 	r.rwConnection = rwConnection
 
@@ -33,15 +31,9 @@ func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.Ch
 	r.redis = redis
 
 	r.bigtable = bigtable
-
-	r.skipInit = skipInit
 }
 
 func (r *DBValidatorDashboardRepository) Ping() error {
-	if r.skipInit {
-		return nil
-	}
-	
 	dbs := []*sqlx.DB{
 		r.roConnection,
 		r.rwConnection,
