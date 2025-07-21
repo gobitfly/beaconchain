@@ -168,4 +168,4 @@ AS SELECT
     attestations_reward,
     attestations_ideal_reward
 FROM _final_validator_dashboard_rolling_total FINAL
--- +goose StatementEnd#
+-- +goose StatementEnd
