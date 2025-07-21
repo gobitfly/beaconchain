@@ -12,7 +12,7 @@ import (
 )
 
 type RedisCache struct {
-	redisRemoteCache *redis.Client
+	RedisRemoteCache *redis.Client
 }
 
 func InitRedisCache(ctx context.Context, redisConfig *config.RedisConfig) (*RedisCache, error) {
@@ -26,17 +26,17 @@ func InitRedisCache(ctx context.Context, redisConfig *config.RedisConfig) (*Redi
 	}
 
 	r := &RedisCache{
-		redisRemoteCache: rdc,
+		RedisRemoteCache: rdc,
 	}
 	return r, nil
 }
 
 func (cache *RedisCache) SetString(ctx context.Context, key, value string, expiration time.Duration) error {
-	return cache.redisRemoteCache.Set(ctx, key, value, expiration).Err()
+	return cache.RedisRemoteCache.Set(ctx, key, value, expiration).Err()
 }
 
 func (cache *RedisCache) GetString(ctx context.Context, key string) (string, error) {
-	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
+	value, err := cache.RedisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return "", err
 	}
@@ -45,11 +45,11 @@ func (cache *RedisCache) GetString(ctx context.Context, key string) (string, err
 }
 
 func (cache *RedisCache) SetUint64(ctx context.Context, key string, value uint64, expiration time.Duration) error {
-	return cache.redisRemoteCache.Set(ctx, key, fmt.Sprintf("%d", value), expiration).Err()
+	return cache.RedisRemoteCache.Set(ctx, key, fmt.Sprintf("%d", value), expiration).Err()
 }
 
 func (cache *RedisCache) GetUint64(ctx context.Context, key string) (uint64, error) {
-	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
+	value, err := cache.RedisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return 0, err
 	}
@@ -62,11 +62,11 @@ func (cache *RedisCache) GetUint64(ctx context.Context, key string) (uint64, err
 }
 
 func (cache *RedisCache) SetBool(ctx context.Context, key string, value bool, expiration time.Duration) error {
-	return cache.redisRemoteCache.Set(ctx, key, fmt.Sprintf("%t", value), expiration).Err()
+	return cache.RedisRemoteCache.Set(ctx, key, fmt.Sprintf("%t", value), expiration).Err()
 }
 
 func (cache *RedisCache) GetBool(ctx context.Context, key string) (bool, error) {
-	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
+	value, err := cache.RedisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return false, err
 	}
@@ -83,11 +83,11 @@ func (cache *RedisCache) Set(ctx context.Context, key string, value interface{},
 	if err != nil {
 		return err
 	}
-	return cache.redisRemoteCache.Set(ctx, key, valueMarshal, expiration).Err()
+	return cache.RedisRemoteCache.Set(ctx, key, valueMarshal, expiration).Err()
 }
 
 func (cache *RedisCache) Get(ctx context.Context, key string, returnValue interface{}) (interface{}, error) {
-	value, err := cache.redisRemoteCache.Get(ctx, key).Result()
+	value, err := cache.RedisRemoteCache.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
 	}

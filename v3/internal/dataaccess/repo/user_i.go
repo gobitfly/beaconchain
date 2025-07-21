@@ -5,11 +5,14 @@ import (
 )
 
 type User struct {
-	// id      uint64
-	// isAdmin bool
+	id      uint64
+	isAdmin bool
 }
 
 type UserRepository interface {
+	// to indicate if the repository is ready
+	Ping() error
+	
 	// CreateUser
 	// Creates a new user
 	CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*User, error)

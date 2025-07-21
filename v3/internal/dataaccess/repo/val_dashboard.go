@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
@@ -20,18 +21,43 @@ type DBValidatorDashboardRepository struct {
 	bigtable *data_sources.Bigtable
 }
 
-func NewDBValidatorDashboardRepository(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) *DBValidatorDashboardRepository {
-	return &DBValidatorDashboardRepository{
-		roConnection: roConnection,
-		rwConnection: rwConnection,
+func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) {
+	r.roConnection = roConnection
+	r.rwConnection = rwConnection
 
-		roChConnection: roChConnection,
-		rwChConnection: rwChConnection,
+	r.roChConnection = roChConnection
+	r.rwChConnection = rwChConnection
 
-		redis: redis,
+	r.redis = redis
 
-		bigtable: bigtable,
+	r.bigtable = bigtable
+}
+
+func (r *DBValidatorDashboardRepository) Ping() error {
+	dbs := []*sqlx.DB{
+		r.roConnection,
+		r.rwConnection,
+		r.roChConnection,
+		r.rwChConnection,
 	}
+	for _, db := range dbs {
+		if db == nil {
+			return fmt.Errorf("database connection not initialized")
+		}
+		if err := db.Ping(); err != nil {
+			return fmt.Errorf("database connection ping failed: %w", err)
+		}
+	}
+
+	if r.redis == nil || r.redis.RedisRemoteCache == nil {
+		return fmt.Errorf("redis connection not initialized")
+	}
+	if err := r.redis.RedisRemoteCache.Ping(context.Background()).Err(); err != nil {
+		return fmt.Errorf("redis connection ping failed: %w", err)
+	}
+
+	// no built-in ping for bigtable, TODO write custom
+	return nil
 }
 
 /**

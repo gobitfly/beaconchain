@@ -6,12 +6,14 @@ import (
 	"net"
 	"strings"
 
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -42,8 +44,6 @@ func InitDependencies(
 // Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
 	config config.ServiceConfig,
-	userRepo dataaccess.UserRepository,
-	dashboardRepo dataaccess.ValidatorDashboardRepository,
 ) {
 	log.Info("Starting server...")
 
@@ -52,20 +52,45 @@ func Run(
 		log.Infof("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer() // Unsecured on application level, authenticated via gcp access management
-	apiService, _ := InitDependencies(userRepo, dashboardRepo)
-	model.RegisterInternalServiceServer(s, apiService)
+	grpcServer := grpc.NewServer() // Unsecured on application level, authenticated via gcp access management
 
 	if config.ExposeSchema {
-		reflection.Register(s)
+		reflection.Register(grpcServer)
 	}
 
-	log.Infof("gRPC server listening at %v", lis.Addr())
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	var userRepoI dataaccess.UserRepository
+	var vdbRepoI dataaccess.ValidatorDashboardRepository
+	if config.IsCloudDeployment {
+		// TODO remove & use actual db repositories
+		userRepoI = &dataaccess.DummyUserRepository{}
+		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
+	} else {
+		userDbRepo := &dataaccess.DBUserRepository{}
+		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
+		userRepoI = userDbRepo
+		vdbRepoI = vbdDbRepo
+
+		// init async
+		go func() {
+			dataSources := data_sources.ApiDataSources{}
+			dataSources.InitApiConnections(&config)
+			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
+		}()
 	}
+	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
+	model.RegisterInternalServiceServer(grpcServer, apiService)
+	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
+
+	go func() {
+		log.Infof("gRPC server listening at %v", lis.Addr())
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
 
 	log.Infof("To close connection CTRL+C :-)")
+	select {} // block
 }
 
 func AuthInterceptor(userRepository dataaccess.UserRepository) grpc.UnaryServerInterceptor {
@@ -118,4 +143,24 @@ func HeaderMatcher(key string) (string, bool) {
 	default:
 		return runtime.DefaultHeaderMatcher(key)
 	}
+}
+
+func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+	resp := grpc_health_v1.HealthCheckResponse_SERVING
+
+	if s.userRepository.Ping() != nil {
+		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
+	}
+
+	return &grpc_health_v1.HealthCheckResponse{
+		Status: resp,
+	}, nil
+}
+
+func (s *ApiService) List(ctx context.Context, req *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "List not implemented")
+}
+
+func (s *ApiService) Watch(*grpc_health_v1.HealthCheckRequest, grpc.ServerStreamingServer[grpc_health_v1.HealthCheckResponse]) error {
+	return status.Errorf(codes.Unimplemented, "Watch not implemented")
 }
