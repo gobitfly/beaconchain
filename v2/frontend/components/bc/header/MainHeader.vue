@@ -194,7 +194,6 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
       <div class="grid-cell explorer-info">
         <BcHeaderLogo layout-adaptability="high" />
         <span class="variant">
-          v2 beta |
           <span class="mobile">{{ networkInfo.shortName }}</span>
           <span class="large-screen">{{ networkInfo.name }}</span>
         </span>
