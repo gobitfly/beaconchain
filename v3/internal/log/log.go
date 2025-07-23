@@ -54,4 +54,8 @@ func Debugf(format string, args ...interface{}) {
 	logrus.Debugf(format, args...)
 }
 
+func Error(args ...interface{}) {
+	logrus.Error(args...)
+}
+
 type Fields = logrus.Fields

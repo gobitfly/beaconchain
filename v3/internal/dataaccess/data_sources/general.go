@@ -33,8 +33,7 @@ type ApiDataSources struct {
 	RwChDb ClickhouseRwConnection
 }
 
-func (s *ApiDataSources) InitApiConnections(config *config.ServiceConfig) {
-	dataSources := &ApiDataSources{}
+func (dataSources *ApiDataSources) InitApiConnections(config *config.ServiceConfig) {
 
 	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabase, Postgres)
 	dataSources.RwChainDb = InitDB(&config.WriterChainDatabase, Postgres)

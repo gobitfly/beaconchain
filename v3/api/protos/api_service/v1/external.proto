@@ -8,15 +8,40 @@ package api_service.v1;
 option go_package = "github.com/gobitfly/beaconchain-backend/model";
 
 import "google/api/annotations.proto";
+import "google/protobuf/descriptor.proto";
 
 //////////////////////////////////////////////////
 /////////////// Service Definition ///////////////
 //////////////////////////////////////////////////
 
+
+message RateLimitSettings {
+  float steady_rate = 1;
+  int32 bucket_capacity = 2;
+}
+
+message RateLimitsPerTier {
+  optional RateLimitSettings free = 1;
+  optional RateLimitSettings hobbyist = 2;
+  optional RateLimitSettings business = 3;
+  optional RateLimitSettings scale = 4;
+}
+
+extend google.protobuf.MethodOptions {
+  RateLimitsPerTier rate_limits_per_tier = 50001;
+}
+
+
 service ExternalService {
 
   // Get execution blocks by execution block number
   rpc ExecutionBlock (ExecutionBlockRequest) returns (ExecutionBlockResponse) {
+    option (rate_limits_per_tier) = {
+      free: { steady_rate: 1.0, bucket_capacity: 1 }
+      hobbyist: { steady_rate: 2.0, bucket_capacity: 2 }
+      business: { steady_rate: 5.0, bucket_capacity: 5 }
+      scale: { steady_rate: 10.0, bucket_capacity: 10 }
+    };
     option (google.api.http) = {
       get: "/api/v1/execution/block/{block_number}"
     };

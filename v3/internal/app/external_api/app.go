@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
@@ -13,6 +14,8 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
+	"github.com/gobitfly/beaconchain-backend/internal/ratelimit"
+	"github.com/gobitfly/beaconchain-backend/internal/subscription_products"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -20,6 +23,8 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type ApiService struct {
@@ -56,7 +61,13 @@ func Run(
 		log.Infof("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer() // Unsecured
+	dataSources := data_sources.ApiDataSources{}
+	dataSources.InitApiConnections(&config)
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit),
+		),
+	) // Unsecured
 
 	if config.ExposeSchema {
 		reflection.Register(grpcServer)
@@ -76,8 +87,6 @@ func Run(
 
 		// init async
 		go func() {
-			dataSources := data_sources.ApiDataSources{}
-			dataSources.InitApiConnections(&config)
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
 		}()
@@ -193,4 +202,29 @@ func (s *ApiService) List(ctx context.Context, req *grpc_health_v1.HealthListReq
 
 func (s *ApiService) Watch(*grpc_health_v1.HealthCheckRequest, grpc.ServerStreamingServer[grpc_health_v1.HealthCheckResponse]) error {
 	return status.Errorf(codes.Unimplemented, "Watch not implemented")
+}
+
+// getEndpointRatelimit retrieves the rate limit for a specific endpoint and tier from the protobuf definition for the ExternalService.
+func getEndpointRatelimit(fullMethod string, tier subscription_products.Tier) (*model.RateLimitSettings, error) {
+	service := model.File_api_service_v1_external_proto.Services().ByName("ExternalService")
+	methodName := strings.TrimPrefix(fullMethod, "/"+string(service.FullName())+"/")
+	method := service.Methods().ByName(protoreflect.Name(methodName))
+	if method == nil {
+		return nil, fmt.Errorf("method not found: %s", methodName)
+	}
+	ratelimitOpts := proto.GetExtension(method.Options(), model.E_RateLimitsPerTier).(*model.RateLimitsPerTier)
+	if ratelimitOpts == nil {
+		return nil, fmt.Errorf("rate limit options not found for method: %s", methodName)
+	}
+	switch tier {
+	case subscription_products.TierFree:
+		return ratelimitOpts.Free, nil
+	case subscription_products.TierHobbyist:
+		return ratelimitOpts.Hobbyist, nil
+	case subscription_products.TierBusiness:
+		return ratelimitOpts.Business, nil
+	case subscription_products.TierScale:
+		return ratelimitOpts.Scale, nil
+	}
+	return nil, fmt.Errorf("unknown subscription tier: %s", tier)
 }
