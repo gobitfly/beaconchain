@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
 )
@@ -16,12 +17,12 @@ type DBValidatorDashboardRepository struct {
 	roChConnection *sqlx.DB
 	rwChConnection *sqlx.DB
 
-	redis *data_sources.RedisCache
+	redis *redis.Client
 
 	bigtable *data_sources.Bigtable
 }
 
-func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *data_sources.RedisCache, bigtable *data_sources.Bigtable) {
+func (r *DBValidatorDashboardRepository) Initialize(roConnection data_sources.ChainRoConnection, rwConnection data_sources.ChainRwConnection, roChConnection data_sources.ClickhouseRoConnection, rwChConnection data_sources.ClickhouseRwConnection, redis *redis.Client, bigtable *data_sources.Bigtable) {
 	r.roConnection = roConnection
 	r.rwConnection = rwConnection
 
@@ -49,10 +50,10 @@ func (r *DBValidatorDashboardRepository) Ping() error {
 		}
 	}
 
-	if r.redis == nil || r.redis.RedisRemoteCache == nil {
+	if r.redis == nil {
 		return fmt.Errorf("redis connection not initialized")
 	}
-	if err := r.redis.RedisRemoteCache.Ping(context.Background()).Err(); err != nil {
+	if err := r.redis.Ping(context.Background()).Err(); err != nil {
 		return fmt.Errorf("redis connection ping failed: %w", err)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/jmoiron/sqlx"
@@ -20,7 +21,7 @@ type ClickhouseRwConnection *sqlx.DB
 
 type ApiDataSources struct {
 	Bigtable *Bigtable
-	Redis    *RedisCache
+	Redis    *redis.Client
 
 	RoChainDb ChainRoConnection
 	RwChainDb ChainRwConnection
