@@ -17,6 +17,7 @@ import (
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
+	"github.com/doug-martin/goqu/v9/exp"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
@@ -977,6 +978,16 @@ type BackfillMetadata struct {
 	SuccessfulBackfill *time.Time   `ch:"successful_backfill" db:"successful_backfill"`
 }
 
+type AggregateBackfillMetadata struct {
+	Timestamp          time.Time             `ch:"t" db:"t"`
+	BackfillName       AggregateBackfillType `ch:"backfill_name" db:"backfill_name"`
+	MaxEpochTimestamp  time.Time             `ch:"max_epoch_timestamp" db:"max_epoch_timestamp"`
+	Aggregation        AggregateType         `ch:"aggregation" db:"aggregation"`
+	DidCheck           *time.Time            `ch:"did_check" db:"did_check"`
+	BackfillBatchId    *uuid.UUID            `ch:"backfill_id" db:"backfill_id"`
+	SuccessfulBackfill *time.Time            `ch:"successful_backfill" db:"successful_backfill"`
+}
+
 //
 // |-GetIncompleteTransferEpochs
 // | - TransferEpochs
@@ -1278,8 +1289,8 @@ func doSanityCheckForBackfillEpochs(epochs []BackfillMetadata, backfillType Back
 	return nil
 }
 
-func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
-	metricPrefix := string("dashboard_data_exporter_backfill_" + BackfillTypeMissingMissedRewards)
+func doGenericBackfill(epochs []BackfillMetadata, backfillType BackfillType, columns []exp.AliasedExpression, filters []exp.Expression, targetTable string) error {
+	metricPrefix := string("dashboard_data_exporter_backfill_" + backfillType)
 	start := time.Now()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
@@ -1290,7 +1301,7 @@ func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
 	})
 
 	// sanity check
-	if err := doSanityCheckForBackfillEpochs(epochs, BackfillTypeMissingMissedRewards); err != nil {
+	if err := doSanityCheckForBackfillEpochs(epochs, backfillType); err != nil {
 		return fmt.Errorf("error during sanity check for backfill epochs: %w", err)
 	}
 	metrics.TaskDuration.WithLabelValues(metricPrefix + "_sanity_check").Observe(time.Since(start).Seconds())
@@ -1300,10 +1311,10 @@ func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
 	abortCtx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
-		"insert_deduplication_token":    epochs[0].BackfillBatchId.String(),
-		"insert_deduplicate":            true,
-		"select_sequential_consistency": 1,
-		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
+		"insert_deduplication_token": epochs[0].BackfillBatchId.String(),
+		"insert_deduplicate":         true,
+		"use_skip_indexes_if_final":  1, // this is only safe because our index is over a column from the primary key
+		"max_threads":                2,
 	}))
 
 	var epoch_timestamp []time.Time
@@ -1311,20 +1322,27 @@ func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
 		epoch_timestamp = append(epoch_timestamp, utils.EpochToTime(e.Epoch))
 	}
 
-	// no final needed as its from the final table
-	ds := goqu.Insert(BackfillMissingMissedRewardsSink).
-		FromQuery(
-			goqu.From(FinalEpochsTableName).Select(
-				goqu.I("validator_index"),
-				goqu.I("epoch_timestamp").As("t"),
-				goqu.I("epoch"),
-				goqu.I("balance_start"),
-				goqu.I("blocks_cl_missed_median_reward").As("_fixed_blocks_cl_missed_median_reward"),
-			).Where(
-				goqu.I("epoch_timestamp").In(epoch_timestamp),
-				goqu.I("blocks_cl_missed_median_reward").Neq(0),
-			),
-		)
+	selectds := goqu.From(FinalEpochsTableName).Select(
+		goqu.I("validator_index"),
+		goqu.I("epoch_timestamp").As("t"),
+		goqu.I("epoch"),
+		goqu.I("balance_start"),
+	).Where(
+		goqu.I("epoch_timestamp").In(epoch_timestamp),
+	)
+
+	if len(columns) > 0 {
+		for _, col := range columns {
+			selectds = selectds.SelectAppend(col)
+		}
+	}
+	if len(filters) > 0 {
+		selectds = selectds.Where(filters...)
+	}
+
+	ds := goqu.Insert(targetTable).
+		FromQuery(selectds)
+
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return fmt.Errorf("error preparing backfill query: %w", err)
@@ -1336,6 +1354,101 @@ func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
 
 	metrics.TaskDuration.WithLabelValues(metricPrefix + "_insert").Observe(time.Since(now).Seconds())
 
+	return nil
+}
+
+func BackfillMissingMissedRewards(epochs []BackfillMetadata) error {
+	return doGenericBackfill(
+		epochs,
+		BackfillTypeMissingMissedRewards,
+		[]exp.AliasedExpression{
+			goqu.I("blocks_cl_missed_median_reward").As("_fixed_blocks_cl_missed_median_reward"),
+		},
+		[]exp.Expression{
+			goqu.I("blocks_cl_missed_median_reward").Neq(0),
+		},
+		BackfillMissingMissedRewardsSink,
+	)
+}
+
+func AggregateBackfillBotchedEpochStart(a AggregateType, batch []AggregateBackfillMetadata) error {
+	metricPrefix := string("dashboard_data_exporter_aggregate_backfill_" + a)
+	start := time.Now()
+	defer func() {
+		metrics.TaskDuration.WithLabelValues(metricPrefix + "_batch").Observe(time.Since(start).Seconds())
+	}()
+	//
+	// sanity check, verify that the transfer batch id is set and identical for all epochs
+	backfillBatchID := batch[0].BackfillBatchId
+	for _, e := range batch {
+		if e.BackfillBatchId == nil || *e.BackfillBatchId != *backfillBatchID {
+			return fmt.Errorf("backfill batch id is not set or not identical for all epochs")
+		}
+		if e.BackfillName != AggregateBackfillTypeBotchedEpochStart {
+			return fmt.Errorf("backfill name is not set to %s", AggregateBackfillTypeBotchedEpochStart)
+		}
+		if e.Aggregation != a {
+			return fmt.Errorf("aggregation is not set to %s", a)
+		}
+	}
+
+	var timestamps []time.Time
+	for _, e := range batch {
+		timestamps = append(timestamps, e.Timestamp)
+	}
+	maxEpochTimestamp := batch[0].MaxEpochTimestamp
+	for _, e := range batch {
+		if !maxEpochTimestamp.Equal(e.MaxEpochTimestamp) {
+			return fmt.Errorf("max epoch timestamp is not identical for all epochs")
+		}
+	}
+
+	selectds := goqu.From(FinalEpochsTableName).Select(
+		goqu.C("validator_index"),
+		goqu.Func(a.AggregateFunction(), goqu.C("epoch_timestamp")).As("t"),
+		goqu.MIN(goqu.C("epoch")).As("_legacy_epoch_start"),
+		goqu.Func("argMinState", goqu.C("balance_start"), goqu.C("epoch")).As("_legacy_balance_start"),
+		goqu.MIN(goqu.Func("least", goqu.C("balance_start"), goqu.C("balance_end"))).As("_legacy_balance_min"),
+		goqu.V(1).As("_botched_epoch_start_backfill_revision"),
+		goqu.V(true).As("_is_backfill"),
+	).Where(
+		goqu.Func(a.AggregateFunction(), goqu.C("epoch_timestamp")).In(timestamps),
+		goqu.C("epoch_timestamp").Lte(maxEpochTimestamp),
+	).GroupBy(
+		goqu.C("validator_index"),
+		goqu.C("t"),
+	)
+
+	ds := goqu.Insert(goqu.T(string(a))).Cols(
+		goqu.C("validator_index"),
+		goqu.C("t"),
+		goqu.C("_legacy_epoch_start"),
+		goqu.C("_legacy_balance_start"),
+		goqu.C("_legacy_balance_min"),
+		goqu.C("_botched_epoch_start_backfill_revision"),
+		goqu.C("_is_backfill"),
+	).FromQuery(selectds)
+
+	query, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing aggregate backfill query: %w", err)
+	}
+
+	abortCtx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	ctx := ch.Context(abortCtx, ch.WithSettings(ch.Settings{
+		"insert_deduplication_token":    backfillBatchID.String(),
+		"insert_deduplicate":            true,
+		"select_sequential_consistency": 1,
+		"use_skip_indexes_if_final":     1, // this is only safe because our
+		// index is over a column from the primary key
+		"max_threads": 2,
+	}))
+	err = db.ClickHouseNativeWriter.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error backfilling epochs: %w", err)
+	}
+	metrics.TaskDuration.WithLabelValues(metricPrefix + "_insert").Observe(time.Since(start).Seconds())
 	return nil
 }
 
@@ -1422,6 +1535,28 @@ func GetBackfillProgress(t BackfillType) (int64, int64, error) {
 		return 0, 0, fmt.Errorf("error fetching backfill progress: %w", err)
 	}
 	return res.EpochsBackfilled, res.EpochsToBackfill, nil
+}
+
+func GetAggregateBackfillProgress(t AggregateBackfillType, a AggregateType) (int64, int64, int64, error) {
+	var res struct {
+		CountChecked    int64 `ch:"count_checked" db:"count_checked"`
+		CountBackfilled int64 `ch:"count_backfilled" db:"count_backfilled"`
+		CountToBackfill int64 `ch:"count_to_backfill" db:"count_to_backfill"`
+	}
+	err := db.ClickHouseWriter.Get(&res,
+		fmt.Sprintf(`
+				SELECT
+					countIf(did_check IS NOT NULL) AS count_checked,
+					countIf(successful_backfill IS NOT NULL) AS count_backfilled,
+					count() AS count_to_backfill
+				FROM %s
+				FINAL
+				WHERE backfill_name = ? AND aggregation = ?
+		`, ExporterAggregateBackfillMetadataTableName), t, a)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("error fetching aggregate backfill progress: %w", err)
+	}
+	return res.CountChecked, res.CountBackfilled, res.CountToBackfill, nil
 }
 
 // enum for rollings (hourly, daily, weekly, monthly, total)
@@ -1856,6 +1991,31 @@ func GetIncompleteBackfillEpochs(t BackfillType) ([]BackfillMetadata, error) { /
 	return epochs, nil
 }
 
+func GetIncompleteAggregateBackfillTimestamps(t AggregateBackfillType, a AggregateType) ([]AggregateBackfillMetadata, error) { // no limit because it should never grow too large
+	var timestamps []AggregateBackfillMetadata
+	err := db.ClickHouseWriter.Select(&timestamps,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE 
+				-- we decided that we have to backfill
+				(backfill_id IS NOT NULL) AND
+				-- we haven't done it yet
+				(successful_backfill IS NULL) AND
+				-- data matches our backfill type
+				(backfill_name = ?) AND
+				-- and the aggregate type matches
+				(aggregation = ?)
+			ORDER BY t DESC
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterAggregateBackfillMetadataTableName), t, a)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete aggregate backfill timestamps: %w", err)
+	}
+	return timestamps, nil
+}
+
 func GetPendingTransferEpochs(limit int64) ([]EpochMetadata, error) {
 	var epochs []EpochMetadata
 	err := db.ClickHouseWriter.Select(&epochs,
@@ -1915,6 +2075,30 @@ func GetPendingBackfillEpochs(t BackfillType, limit int64) ([]BackfillMetadata, 
 	return epochs, nil
 }
 
+func GetPendingAggregateBackfillTimestamps(t AggregateBackfillType, a AggregateType, limit int64) ([]AggregateBackfillMetadata, error) {
+	var timestamps []AggregateBackfillMetadata
+	err := db.ClickHouseWriter.Select(&timestamps,
+		fmt.Sprintf(`
+			SELECT *
+			FROM %[1]s
+			FINAL
+			WHERE 
+				-- we did not check it yet
+				(did_check IS NULL) AND
+				-- data matches our backfill type
+				(backfill_name = ?) AND
+				-- and the aggregate type matches
+				(aggregation = ?)
+			ORDER BY t DESC
+			LIMIT ?
+			SETTINGS select_sequential_consistency = 1
+		`, ExporterAggregateBackfillMetadataTableName), t, a, limit)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching incomplete aggregate backfill timestamps: %w", err)
+	}
+	return timestamps, nil
+}
+
 func PushEpochMetadata(metdata []EpochMetadata) error {
 	if len(metdata) == 0 {
 		return nil
@@ -1943,6 +2127,27 @@ func PushBackfillMetadata(metdata []BackfillMetadata) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 	defer cancel()
 	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterBackfillMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	for _, m := range metdata {
+		if err := batch.AppendStruct(&m); err != nil {
+			return fmt.Errorf("error appending struct to batch: %w", err)
+		}
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
+}
+
+func PushAggregateBackfillMetadata(metdata []AggregateBackfillMetadata) error {
+	if len(metdata) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterAggregateBackfillMetadataTableName)
 	if err != nil {
 		return fmt.Errorf("error preparing batch: %w", err)
 	}
@@ -2064,11 +2269,74 @@ func ElectraGetRemovedExcessBalanceEvents(epoch uint64) ([]constypes.ElectraExce
 	return excessBalanceEvents, nil
 }
 
+func CheckIfAggregateBackfillExists(t AggregateBackfillType) (bool, error) {
+	var exists bool
+	q := goqu.Dialect("postgres").Select(
+		goqu.COUNT(goqu.Star()).Gt(0).As("exists"),
+	).
+		From(goqu.T(ExporterAggregateBackfillMetadataTableName)).
+		Where(
+			goqu.I("backfill_name").Eq(t),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return false, fmt.Errorf("error building query to check if aggregate backfill exists: %w", err)
+	}
+
+	err = db.ClickHouseWriter.Get(&exists, sql, args...)
+	if err != nil {
+		return false, fmt.Errorf("error checking if aggregate backfill exists: %w", err)
+	}
+	return exists, nil
+}
+
+func CheckIfAggregateIsBotchedEpochStart(a AggregateType, t []AggregateBackfillMetadata) (map[time.Time]bool, error) {
+	is_dirty := make(map[time.Time]bool)
+	var res []struct {
+		T       time.Time `db:"t"`
+		IsDirty bool      `db:"is_dirty"`
+	}
+
+	timestamps := make([]time.Time, len(t))
+	for i, metadata := range t {
+		timestamps[i] = metadata.Timestamp
+	}
+
+	q := goqu.Dialect("postgres").Select(
+		goqu.C("t").As("t"),
+		goqu.Func("if", goqu.L("count() > 0"), 1, 0).As("is_dirty"), // if count > 0 then is_dirty = 1, else 0
+	).
+		From(goqu.T(string(a))).
+		Where(
+			goqu.C("t").In(timestamps),
+			goqu.C("_legacy_epoch_start").Eq(0),
+		).
+		GroupBy(goqu.C("t"))
+
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("error building query to check if aggregate is botched epoch start: %w", err)
+	}
+
+	err = db.ClickHouseWriter.Select(&res, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("error checking if aggregate is botched epoch start: %w", err)
+	}
+
+	// convert the result to a map
+	for _, r := range res {
+		is_dirty[r.T] = r.IsDirty
+	}
+	return is_dirty, nil
+}
+
 const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
 const ExporterBackfillMetadataTableName = "_exporter_backfill_metadata"
+const ExporterAggregateBackfillMetadataTableName = "_exporter_aggregate_backfill_metadata"
 const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
 const BackfillRoiSink = "_insert_sink_backfill_validator_dashboard_data_roi"
 const BackfillMissingMissedRewardsSink = "_insert_sink_backfill_missing_missed_rewards"
+const BackfillBotchedEpochStartSink = "_insert_sink_backfill_botched_epoch_start"
 const UnsafeEpochsTableName = "_unsafe_validator_dashboard_data_epoch"
 const FinalEpochsTableName = "_final_validator_dashboard_data_epoch"
 const EffectiveBalanceLookupTableName = "_final_validator_dashboard_effective_balance_lookup"
@@ -2076,7 +2344,7 @@ const EffectiveBalanceLookupTableName = "_final_validator_dashboard_effective_ba
 type BackfillType string
 
 // implement support for scanning into a BackfillType using sql.Scanner (and the oher way around)
-func (b *BackfillType) Scan(value interface{}) error {
+func (b *BackfillType) Scan(value any) error {
 	switch v := value.(type) {
 	case []byte:
 		*b = BackfillType(v)
@@ -2096,4 +2364,66 @@ const (
 	BackfillTypeEBLookup               BackfillType = "eb_lookup"
 	BackfillTypeElectraForkEpochEvents BackfillType = "electra_fork_epoch_events"
 	BackfillTypeMissingMissedRewards   BackfillType = "missing_missed_rewards"
+)
+
+type AggregateBackfillType string
+
+func (a *AggregateBackfillType) Scan(value any) error {
+	switch v := value.(type) {
+	case []byte:
+		*a = AggregateBackfillType(v)
+	case string:
+		*a = AggregateBackfillType(v)
+	default:
+		return fmt.Errorf("unsupported type %T for AggregateBackfillType", v)
+	}
+	return nil
+}
+
+func (a AggregateBackfillType) Value() (driver.Value, error) {
+	return string(a), nil
+}
+
+const (
+	AggregateBackfillTypeBotchedEpochStart AggregateBackfillType = "botched_epoch_start"
+)
+
+type AggregateType string
+
+func (a *AggregateType) Scan(value any) error {
+	switch v := value.(type) {
+	case []byte:
+		*a = AggregateType(v)
+	case string:
+		*a = AggregateType(v)
+	default:
+		return fmt.Errorf("unsupported type %T for AggregateType", v)
+	}
+	return nil
+}
+
+func (a AggregateType) Value() (driver.Value, error) {
+	return string(a), nil
+}
+
+func (a AggregateType) AggregateFunction() string {
+	switch a {
+	case AggregateHourly:
+		return "toStartOfHour"
+	case AggregateDaily:
+		return "toStartOfDay"
+	case AggregateWeekly:
+		return "toMonday"
+	case AggregateMonthly:
+		return "toStartOfMonth"
+	default:
+		return ""
+	}
+}
+
+const (
+	AggregateHourly  AggregateType = "_final_validator_dashboard_data_hourly"
+	AggregateDaily   AggregateType = "_final_validator_dashboard_data_daily"
+	AggregateWeekly  AggregateType = "_final_validator_dashboard_data_weekly"
+	AggregateMonthly AggregateType = "_final_validator_dashboard_data_monthly"
 )

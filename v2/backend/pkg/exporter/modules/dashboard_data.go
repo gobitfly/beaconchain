@@ -81,10 +81,11 @@ func (d *dashboardData) Init() error {
 		}
 		break
 	}
-	go d.insertTask()      // does all the inserting of the data
-	go d.maintenanceTask() // does all the transferring of the data
-	go d.rollingTask()     // does all the rolling of the data
-	go d.roiBackfillTask() // does all the backfilling of the roi data
+	go d.insertTask()            // does all the inserting of the data
+	go d.maintenanceTask()       // does all the transferring of the data
+	go d.rollingTask()           // does all the rolling of the data
+	go d.backfillTask()          // does all the backfilling of the data
+	go d.aggregateBackfillTask() // does all the backfilling of the aggregated data
 
 	return nil
 }
