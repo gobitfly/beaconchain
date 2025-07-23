@@ -17,7 +17,7 @@ import (
 
 // we wrap all our errors in this codebase
 
-func (d *dashboardData) roiBackfillTask() {
+func (d *dashboardData) backfillTask() {
 	jobs := []edb.BackfillType{
 		edb.BackfillTypeRoi,
 		edb.BackfillTypeEBLookup,
