@@ -199,18 +199,20 @@ type Config struct {
 		Enabled bool `yaml:"enabled" env:"ENABLED"`
 	} `yaml:"mevBoostRelayExporter" env:", prefix=MEVBOOSTRELAY_EXPORTER_"`
 	DashboardExporter struct {
-		InsertAtOnceLimit      int64 `yaml:"insertAtOnceLimit" env:"INSERT_AT_ONCE_LIMIT, default=2" `         // how much data to insert in a single insert
-		InsertInParallel       int64 `yaml:"insertInParallel" env:"INSERT_IN_PARALLEL, default=2"`             // how many inserts to do at once
-		FetchAtOnceLimit       int64 `yaml:"fetchAtOnceLimit" env:"FETCH_AT_ONCE_LIMIT, default=2"`            // how much data to fetch in a single fetch
-		FetchHeavyInParallel   int64 `yaml:"fetchHeavyInParallel" env:"FETCH_HEAVY_IN_PARALLEL, default=8"`    // how many heavy fetches to do at once
-		FetchMediumInParallel  int64 `yaml:"fetchMediumInParallel" env:"FETCH_MEDIUM_IN_PARALLEL, default=18"` // how many medium fetches to do at once
-		FetchLightInParallel   int64 `yaml:"fetchLightInParallel" env:"FETCH_LIGHT_IN_PARALLEL, default=128"`  // how many light fetches to do at once
-		TransferInParallel     int64 `yaml:"transferInParallel" env:"TRANSFER_IN_PARALLEL, default=3"`         // how many transfers to do at once
-		TransferAtOnce         int64 `yaml:"transferAtOnce" env:"TRANSFER_AT_ONCE, default=2"`                 // how much data to transfer in a single transfer
-		RollingsInParallel     int64 `yaml:"rollingsAtOnce" env:"ROLLINGS_AT_ONCE, default=3"`                 // how many rollings to do at once
-		RollingPartsInParallel int64 `yaml:"rollingsInParallel" env:"ROLLINGS_IN_PARALLEL, default=3"`         // how man parts of a single rolling to do at once
-		BackfillAtOnce         int64 `yaml:"backfillAtOnce" env:"BACKFILL_AT_ONCE, default=64"`                // how much data to backfill in a single backfill
-		BackfillInParallel     int64 `yaml:"backfillInParallel" env:"BACKFILL_IN_PARALLEL, default=2"`         // how many backfills to do at once
+		InsertAtOnceLimit                      int64 `yaml:"insertAtOnceLimit" env:"INSERT_AT_ONCE_LIMIT, default=2" `                                           // how much data to insert in a single insert
+		InsertInParallel                       int64 `yaml:"insertInParallel" env:"INSERT_IN_PARALLEL, default=2"`                                               // how many inserts to do at once
+		FetchAtOnceLimit                       int64 `yaml:"fetchAtOnceLimit" env:"FETCH_AT_ONCE_LIMIT, default=2"`                                              // how much data to fetch in a single fetch
+		FetchHeavyInParallel                   int64 `yaml:"fetchHeavyInParallel" env:"FETCH_HEAVY_IN_PARALLEL, default=8"`                                      // how many heavy fetches to do at once
+		FetchMediumInParallel                  int64 `yaml:"fetchMediumInParallel" env:"FETCH_MEDIUM_IN_PARALLEL, default=18"`                                   // how many medium fetches to do at once
+		FetchLightInParallel                   int64 `yaml:"fetchLightInParallel" env:"FETCH_LIGHT_IN_PARALLEL, default=128"`                                    // how many light fetches to do at once
+		TransferInParallel                     int64 `yaml:"transferInParallel" env:"TRANSFER_IN_PARALLEL, default=3"`                                           // how many transfers to do at once
+		TransferAtOnce                         int64 `yaml:"transferAtOnce" env:"TRANSFER_AT_ONCE, default=2"`                                                   // how much data to transfer in a single transfer
+		RollingsInParallel                     int64 `yaml:"rollingsAtOnce" env:"ROLLINGS_AT_ONCE, default=3"`                                                   // how many rollings to do at once
+		RollingPartsInParallel                 int64 `yaml:"rollingsInParallel" env:"ROLLINGS_IN_PARALLEL, default=3"`                                           // how man parts of a single rolling to do at once
+		BackfillAtOnce                         int64 `yaml:"backfillAtOnce" env:"BACKFILL_AT_ONCE, default=4"`                                                   // how much data to backfill in a single backfill
+		BackfillInParallel                     int64 `yaml:"backfillInParallel" env:"BACKFILL_IN_PARALLEL, default=2"`                                           // how many backfills to do at once
+		AggregateBackfillsIncompleteInParallel int64 `yaml:"aggregateBackfillsIncompleteInParallel" env:"AGGREGATE_BACKFILLS_INCOMPLETE_IN_PARALLEL, default=2"` // how many incomplete aggregate backfills to do at once
+		AggregateBackfillsPendingInParallel    int64 `yaml:"aggregateBackfillsPendingInParallel" env:"AGGREGATE_BACKFILLS_PENDING_IN_PARALLEL, default=32"`      // how many pending aggregate backfills to do at once
 	} `yaml:"dashboardExporter" env:", prefix=DASHBOARD_EXPORTER_"`
 	Pprof struct {
 		Enabled bool   `yaml:"enabled" env:"ENABLED"`
