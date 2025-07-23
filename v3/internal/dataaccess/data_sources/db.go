@@ -1,7 +1,6 @@
 package data_sources
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -15,6 +14,8 @@ import (
 	// This brings in the driver
 	_ "github.com/ClickHouse/clickhouse-go/v2"
 	_ "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -89,5 +90,3 @@ func (dbType DatabaseType) getDriverName() string {
 	}
 	return ""
 }
-
-var ErrNotFound = errors.New("not found")

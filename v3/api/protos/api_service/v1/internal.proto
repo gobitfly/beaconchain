@@ -8,6 +8,9 @@ package api_service.v1;
 option go_package = "github.com/gobitfly/beaconchain-backend/model";
 
 import "google/api/annotations.proto";
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
 
 //////////////////////////////////////////////////
 /////////////// Service Definition ///////////////
@@ -40,6 +43,38 @@ service InternalService {
   rpc DeleteValidatorDashboard (DeleteValidatorDashboardRequest) returns (DeleteValidatorDashboardResponse) {
     option (google.api.http) = {
       delete: "/api/i/validatorDashboard/{dashboard_id}"
+    };
+  }
+
+
+  rpc CreateAPIKey (CreateAPIKeyRequest) returns (CreateAPIKeyResponse) {
+    option (google.api.http) = {
+      post: "/api-keys"
+    };
+  }
+  rpc DeleteAPIKey (DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse) {
+    option (google.api.http) = {
+      delete: "/api-keys/{name}"
+    };
+  }
+  rpc DisableAPIKey (DisableAPIKeyRequest) returns (DisableAPIKeyResponse) {
+    option (google.api.http) = {
+      post: "/api-keys/{name}/disable"
+    };
+  }
+  rpc EnableAPIKey (EnableAPIKeyRequest) returns (EnableAPIKeyResponse) {
+    option (google.api.http) = {
+      post: "/api-keys/{name}/enable"
+    };
+  }
+  rpc GetAPIKeys (GetAPIKeysRequest) returns (GetAPIKeysResponse) {
+    option (google.api.http) = {
+      get: "/api-keys"
+    };
+  }
+  rpc GetAPIKey (GetAPIKeyRequest) returns (GetAPIKeyResponse) {
+    option (google.api.http) = {
+      get: "/api-keys/{name}"
     };
   }
 
@@ -99,6 +134,84 @@ message DeleteValidatorDashboardResponse {
 }
 
 
+// == API Key Management ==
+
+// API Key names must follow specific rules to ensure consistency and security.
+// The 'name' field must be a string matching the pattern: ^[A-Za-z0-9_.-]{3,30}$
+// This regex enforces that the name is 3 to 30 characters long and contains only
+// uppercase and lowercase letters, digits, underscores (_), periods (.), or hyphens (-).
+// Additionally, the name cannot be any of the following reserved words:
+// "create", "delete", "admin", "root", "null", "true", "false".
+
+message CreateAPIKeyRequest {
+  string name = 1 [
+    (buf.validate.field).string = {
+      pattern: "^[A-Za-z0-9_.-]{3,35}$",
+    }
+  ];
+}
+
+
+message CreateAPIKeyResponse {
+  string raw_api_key = 1; 
+  APIKey api_key = 2;
+}
+
+message DeleteAPIKeyRequest {
+  string name = 1 [
+    (buf.validate.field).string = {
+      pattern: "^[A-Za-z0-9_.-]{3,35}$",
+    }
+  ];
+}
+
+message DeleteAPIKeyResponse {
+  // nil; no response
+}
+
+message DisableAPIKeyRequest {
+  string name = 1 [
+    (buf.validate.field).string = {
+      pattern: "^[A-Za-z0-9_.-]{3,35}$",
+    }
+  ];
+}
+
+message DisableAPIKeyResponse {
+  APIKey api_key = 1;
+}
+
+message EnableAPIKeyRequest {
+  string name = 1 [
+    (buf.validate.field).string = {
+      pattern: "^[A-Za-z0-9_.-]{3,35}$",
+    }
+  ];
+}
+
+message EnableAPIKeyResponse {
+  APIKey api_key = 1;
+}
+
+message GetAPIKeysRequest {
+}
+
+message GetAPIKeysResponse {
+  repeated APIKey api_keys = 1;
+}
+
+message GetAPIKeyRequest {
+  string name = 1 [
+    (buf.validate.field).string = {
+      pattern: "^[A-Za-z0-9_.-]{3,35}$",
+    }
+  ];
+}
+
+message GetAPIKeyResponse {
+  APIKey api_key = 1;
+}
+
 
 //////////////////////////////////////////////////
 /////////////// Message Definition ///////////////
@@ -109,5 +222,10 @@ message ValidatorDashboard {
   bool is_public = 2;
 }
 
-
-
+message APIKey {
+  string name = 1;
+  string short_key = 2;
+  google.protobuf.Timestamp created_at = 3;
+  optional google.protobuf.Timestamp last_used_at = 4;
+  optional google.protobuf.Timestamp disabled_at = 5;
+}

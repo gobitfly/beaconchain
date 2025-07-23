@@ -6,10 +6,13 @@ import (
 	"net"
 	"strings"
 
+	"buf.build/go/protovalidate"
+	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/app/internal_api/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
@@ -27,16 +30,19 @@ type ApiService struct {
 	model.UnimplementedInternalServiceServer
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
+	authRepository      dataaccess.AuthRepository
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
-	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
+	dashboardRepository dataaccess.ValidatorDashboardRepository,
+	authRepository dataaccess.AuthRepository) (*ApiService, error) {
 	return &ApiService{
 		userRepository:      userRepository,
 		dashboardRepository: dashboardRepository,
+		authRepository:      authRepository,
 	}, nil
 }
 
@@ -52,23 +58,39 @@ func Run(
 		log.Infof("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer() // Unsecured on application level, authenticated via gcp access management
+	validator, err := protovalidate.New()
+	if err != nil {
+		log.Fatalf("failed to create validator: %v", err)
+	}
 
+	var unaryInterceptors []grpc.UnaryServerInterceptor
+	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
+	unaryInterceptors = append(unaryInterceptors, middleware.StripErrorMessageMiddleware())
+
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(unaryInterceptors...),
+	)
+
+	// Unsecured on application level, authenticated via gcp access management
 	if config.ExposeSchema {
 		reflection.Register(grpcServer)
 	}
 
 	var userRepoI dataaccess.UserRepository
 	var vdbRepoI dataaccess.ValidatorDashboardRepository
+	var authRepoI dataaccess.AuthRepository
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &dataaccess.DummyUserRepository{}
 		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
+		authRepoI = &dataaccess.MockAuthRepository{}
 	} else {
 		userDbRepo := &dataaccess.DBUserRepository{}
 		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
+		authDbRepo := &dataaccess.DBAuthRepository{}
 		userRepoI = userDbRepo
 		vdbRepoI = vbdDbRepo
+		authRepoI = authDbRepo
 
 		// init async
 		go func() {
@@ -76,9 +98,10 @@ func Run(
 			dataSources.InitApiConnections(&config)
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
+			authDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 		}()
 	}
-	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
+	apiService, _ := InitDependencies(userRepoI, vdbRepoI, authRepoI)
 	model.RegisterInternalServiceServer(grpcServer, apiService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
 

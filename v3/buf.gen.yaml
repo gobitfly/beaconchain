@@ -10,6 +10,11 @@ managed:
       file_option: go_package_prefix
     - module: buf.build/grpc-ecosystem/grpc-gateway
       file_option: go_package_prefix
+    # Don't modify any file option or field option for protovalidate. Without
+    # this, generated Go will fail to compile.
+    - file_option: go_package
+      module: buf.build/bufbuild/protovalidate
+
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: api/gen

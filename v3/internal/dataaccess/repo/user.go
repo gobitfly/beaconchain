@@ -3,11 +3,12 @@ package dataaccess
 import (
 	"context"
 	"database/sql"
-	"errors"
+
 	"fmt"
 
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/jmoiron/sqlx"
+	"github.com/pkg/errors"
 )
 
 type DBUserRepository struct {
@@ -46,7 +47,7 @@ func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*User, e
 
 func (r *DBUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
 	user := User{}
-	err := r.roConnectionAdminDb.GetContext(ctx, &user, `SELECT * FROM users WHERE id IN (SELECT user_id FROM api_keys WHERE api_key = $1) LIMIT 1`, apikey)
+	err := r.roConnectionAdminDb.GetContext(ctx, &user, `SELECT * FROM users WHERE id = (SELECT user_id FROM api_keys WHERE api_key = $1) LIMIT 1`, apikey)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // No error and nothing returned means the User was not found
 	}
