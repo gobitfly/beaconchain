@@ -4,10 +4,12 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/gobitfly/beaconchain-backend/internal/subscription_products"
+	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,7 +17,7 @@ import (
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 )
 
-// TODO: embed the Lua script for rate limiting
+//go:embed ratelimit_script.lua
 var scriptStr string
 
 // GetRateLimitMiddleware returns a gRPC middleware that applies rate limiting based on the caller's tier and endpoint.
@@ -23,8 +25,8 @@ var scriptStr string
 func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(fullMethod string, tier subscription_products.Tier) (*model.RateLimitSettings, error)) grpc.UnaryServerInterceptor {
 	script := redis.NewScript(scriptStr)
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		callerID := "caller123"                    // TODO: Replace with actual caller ID
-		tier := subscription_products.TierHobbyist // TODO: Replace with actual tier
+		callerID := "caller123"                 // TODO: Replace with actual caller ID
+		tier := subscription_products.TierScale // TODO: Replace with actual tier
 		globalRatelimit := subscription_products.SubscriptionPerksMap[tier].GlobalRateLimit
 		endpointRatelimit, err := getEndpointRatelimit(info.FullMethod, tier)
 		if err != nil {
@@ -34,30 +36,56 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 		if endpointRatelimit == nil { // no rate limit defined for this endpoint, fallback to global rate limit
 			endpointRatelimit = globalRatelimit
 		}
-		err = limit(ctx, client, script,
+		isWithinRateLimit := isWithinRateLimit(ctx, client, script,
+			time.Now(),
 			callerID,
 			info.FullMethod,
 			globalRatelimit,
 			endpointRatelimit,
 		)
-		if err != nil {
-			return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded: %v", err)
+		if !isWithinRateLimit {
+			return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded")
 		}
 		return handler(ctx, req)
 	}
 }
 
-// limit applies the rate limit for the given caller and endpoint using Redis.
-func limit(
+// isWithinRateLimit checks if the caller is allowed to make a request based on the rate limit settings.
+func isWithinRateLimit(
 	ctx context.Context,
 	client redis.Scripter,
 	script *redis.Script,
+	now time.Time,
 	callerID string,
 	endpointID string,
 	globalRateLimit *model.RateLimitSettings,
 	endpointRateLimit *model.RateLimitSettings,
-) error {
-	// allow all requests for now
-	// TODO: Implement actual rate limiting logic
-	return nil
+) bool {
+	globalRefillInterval := calcRefillInterval(globalRateLimit.SteadyRate)
+	endpointRefillInterval := calcRefillInterval(endpointRateLimit.SteadyRate)
+	val, err := script.Run(ctx, client, []string{getCallerKey(callerID)},
+		now.UnixMilli(),
+		globalRateLimit.BucketCapacity,
+		globalRefillInterval.Milliseconds(),
+		endpointRateLimit.BucketCapacity,
+		endpointRefillInterval.Milliseconds(),
+		endpointID,
+	).Int() // returns 1 if allowed, 0 if not allowed
+	if err != nil {
+		log.Error(fmt.Errorf("error executing rate limit script: %w", err))
+		return true // In case of a redis outage, we do not want to block the request
+	}
+
+	return val != 0
+}
+
+func getCallerKey(callerID string) string {
+	return "ratelimit:" + callerID
+}
+
+func calcRefillInterval(steadyRate float32) time.Duration {
+	if steadyRate <= 0 {
+		return 0
+	}
+	return time.Duration(decimal.NewFromInt(time.Second.Nanoseconds()).Div(decimal.NewFromFloat32(steadyRate)).InexactFloat64())
 }
