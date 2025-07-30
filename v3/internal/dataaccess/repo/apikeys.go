@@ -21,7 +21,7 @@ func (r *DBAuthRepository) Initialize(roConnectionAdminDb data_sources.AdminRoCo
 }
 
 func (r *DBAuthRepository) CreateAPIKey(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
-	ds := goqu.Dialect("postgres").Insert("api_keys").
+	ds := goqu.Dialect("postgres").Insert("api_keys_v2").
 		Cols("user_id", "api_key", "short_key", "name").
 		Vals(goqu.Vals{userID, key.Value, key.ShortKey, key.Name}).
 		Returning("api_key_id", "api_key", "short_key", "name", "created_at")
@@ -34,7 +34,7 @@ func (r *DBAuthRepository) CreateAPIKey(ctx context.Context, userID uint64, key 
 }
 
 func (r *DBAuthRepository) DeleteAPIKey(ctx context.Context, userID uint64, name string) error {
-	ds := goqu.Dialect("postgres").Update("api_keys").
+	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Set(goqu.Record{"deleted_at": goqu.L("NOW()")}).
 		Where(
 			goqu.Ex{
@@ -50,7 +50,7 @@ func (r *DBAuthRepository) DeleteAPIKey(ctx context.Context, userID uint64, name
 }
 
 func (r *DBAuthRepository) DisableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	ds := goqu.Dialect("postgres").Update("api_keys").
+	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Set(goqu.Record{
 			"disabled_at": goqu.L("NOW()"),
 		}).
@@ -75,7 +75,7 @@ func (r *DBAuthRepository) DisableAPIKey(ctx context.Context, userID uint64, nam
 }
 
 func (r *DBAuthRepository) EnableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	ds := goqu.Dialect("postgres").Update("api_keys").
+	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Prepared(true).
 		Set(goqu.Record{"disabled_at": nil}).
 		Where(
@@ -96,7 +96,7 @@ func (r *DBAuthRepository) EnableAPIKey(ctx context.Context, userID uint64, name
 }
 
 func (r *DBAuthRepository) GetAPIKeys(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
-	ds := goqu.Dialect("postgres").From("api_keys").
+	ds := goqu.Dialect("postgres").From("api_keys_v2").
 		Select("api_key_id", "api_key", "short_key", "name", "created_at", "last_used_at", "disabled_at").
 		Where(goqu.Ex{"user_id": userID, "deleted_at": nil})
 
