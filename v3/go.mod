@@ -5,6 +5,7 @@ go 1.23.5
 require (
 	cloud.google.com/go/bigtable v1.38.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.32.2
+	github.com/alicebob/miniredis/v2 v2.35.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.0
 	github.com/jackc/pgx/v5 v5.7.2
@@ -70,6 +71,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.5.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zeebo/errs v1.4.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
