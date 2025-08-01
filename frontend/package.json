@@ -36,7 +36,7 @@
         "nuxt": "^3.16.2",
         "postcss": "^8.5.3",
         "sass": "^1.87.0",
-        "typescript": "^5.8.2",
+        "typescript": "^5.9.2",
         "vue-tsc": "^2.2.8"
     },
     "engines": {
