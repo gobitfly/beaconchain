@@ -76,7 +76,6 @@ func (*DataAccessService) registerNotificationInterfaceTypes() {
 		gob.Register(&n.NetworkNotification{})
 		gob.Register(&n.RocketpoolNotification{})
 		gob.Register(&n.MonitorMachineNotification{})
-		gob.Register(&n.TaxReportNotification{})
 		gob.Register(&n.EthClientNotification{})
 		gob.Register(&n.SyncCommitteeSoonNotification{})
 		gob.Register(&n.GasAboveThresholdNotification{})
@@ -604,8 +603,7 @@ func (d *DataAccessService) GetValidatorDashboardNotificationDetails(ctx context
 				types.MonitoringMachineOfflineEventName,
 				types.MonitoringMachineDiskAlmostFullEventName,
 				types.MonitoringMachineCpuLoadEventName,
-				types.MonitoringMachineMemoryUsageEventName,
-				types.TaxReportEventName:
+				types.MonitoringMachineMemoryUsageEventName:
 				// not vdb notifications, skip
 			case types.ValidatorDidSlashEventName:
 			case types.RocketpoolCommissionThresholdEventName,

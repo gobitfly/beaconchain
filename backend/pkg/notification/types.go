@@ -6,13 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net/url"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 )
@@ -516,69 +513,6 @@ func (n *MonitorMachineNotification) GetLegacyTitle() string {
 
 func (n *MonitorMachineNotification) GetEventFilter() string {
 	return n.MachineName
-}
-
-type TaxReportNotification struct {
-	types.NotificationBaseImpl
-}
-
-func (n *TaxReportNotification) GetEntitiyId() string {
-	return ""
-}
-
-func (n *TaxReportNotification) GetEmailAttachment() *types.EmailAttachment {
-	tNow := time.Now()
-	lastDay := time.Date(tNow.Year(), tNow.Month(), 1, 0, 0, 0, 0, time.UTC)
-	firstDay := lastDay.AddDate(0, -1, 0)
-
-	q, err := url.ParseQuery(n.EventFilter)
-
-	if err != nil {
-		log.Warnf("Failed to parse rewards report eventfilter: %v", err)
-		return nil
-	}
-
-	currency := q.Get("currency")
-
-	validators := []uint64{}
-	valSlice := strings.Split(q.Get("validators"), ",")
-	if len(valSlice) > 0 {
-		for _, val := range valSlice {
-			v, err := strconv.ParseUint(val, 10, 64)
-			if err != nil {
-				continue
-			}
-			validators = append(validators, v)
-		}
-	} else {
-		log.Warnf("Validators Not found in rewards report eventfilter")
-		return nil
-	}
-
-	pdf := services.GetPdfReport(validators, currency, uint64(firstDay.Unix()), uint64(lastDay.Unix()))
-
-	return &types.EmailAttachment{Attachment: pdf, Name: fmt.Sprintf("income_history_%v_%v.pdf", firstDay.Format("20060102"), lastDay.Format("20060102"))}
-}
-
-func (n *TaxReportNotification) GetInfo(format types.NotificationFormat) string {
-	return n.GetLegacyInfo()
-}
-
-func (n *TaxReportNotification) GetTitle() string {
-	return n.GetLegacyTitle()
-}
-
-func (n *TaxReportNotification) GetLegacyInfo() string {
-	generalPart := `Please find attached the income history of your selected validators.`
-	return generalPart
-}
-
-func (n *TaxReportNotification) GetLegacyTitle() string {
-	return "Income Report"
-}
-
-func (n *TaxReportNotification) GetEventFilter() string {
-	return n.EventFilter
 }
 
 type NetworkNotification struct {

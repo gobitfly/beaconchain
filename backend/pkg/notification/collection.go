@@ -61,7 +61,6 @@ func notificationCollector() {
 		gob.Register(&NetworkNotification{})
 		gob.Register(&RocketpoolNotification{})
 		gob.Register(&MonitorMachineNotification{})
-		gob.Register(&TaxReportNotification{})
 		gob.Register(&EthClientNotification{})
 		gob.Register(&SyncCommitteeSoonNotification{})
 		gob.Register(&GasAboveThresholdNotification{})
@@ -470,13 +469,6 @@ func collectUserDbNotifications(epoch uint64) (types.NotificationsPerUserId, err
 	if err != nil {
 		metrics.Errors.WithLabelValues("notifications_collect_eth_client").Inc()
 		return nil, fmt.Errorf("error collecting Eth client notifications: %v", err)
-	}
-
-	//Tax Report
-	err = collectTaxReportNotificationNotifications(notificationsByUserID)
-	if err != nil {
-		metrics.Errors.WithLabelValues("notifications_collect_tax_report").Inc()
-		return nil, fmt.Errorf("error collecting tax report notifications: %v", err)
 	}
 
 	return notificationsByUserID, nil
@@ -1721,59 +1713,6 @@ func collectMonitoringMachine(
 	if eventName == types.MonitoringMachineOfflineEventName {
 		// Notifications will be sent, reset the flag
 		isFirstNotificationCheck = true
-	}
-
-	return nil
-}
-
-func collectTaxReportNotificationNotifications(notificationsByUserID types.NotificationsPerUserId) error {
-	lastStatsDay, err := cache.LatestExportedStatisticDay.GetOrDefault(db.GetLastExportedStatisticDay)
-
-	if err != nil {
-		return err
-	}
-	//Check that the last day of the month is already exported
-	tNow := time.Now()
-	firstDayOfMonth := time.Date(tNow.Year(), tNow.Month(), 1, 0, 0, 0, 0, time.UTC)
-	if utils.TimeToDay(uint64(firstDayOfMonth.Unix())) > lastStatsDay {
-		return nil
-	}
-
-	// err = db.FrontendWriterDB.Select(&dbResult, `
-	// 		SELECT us.id, us.user_id, us.created_epoch, us.event_filter, ENCODE(us.unsubscribe_hash, 'hex') AS unsubscribe_hash
-	// 		FROM users_subscriptions AS us
-	// 		WHERE us.event_name=$1 AND (us.last_sent_ts < $2 OR (us.last_sent_ts IS NULL AND us.created_ts < $2));
-	// 		`,
-	// 	name, firstDayOfMonth)
-
-	dbResults, err := GetSubsForEventFilter(
-		types.TaxReportEventName,
-		"(last_sent_ts < ? OR (last_sent_ts IS NULL AND created_ts < ?))",
-		[]interface{}{firstDayOfMonth, firstDayOfMonth},
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, subs := range dbResults {
-		for _, sub := range subs {
-			n := &TaxReportNotification{
-				NotificationBaseImpl: types.NotificationBaseImpl{
-					SubscriptionID:     *sub.ID,
-					UserID:             *sub.UserID,
-					Epoch:              sub.CreatedEpoch,
-					EventFilter:        sub.EventFilter,
-					EventName:          sub.EventName,
-					DashboardId:        sub.DashboardId,
-					DashboardName:      sub.DashboardName,
-					DashboardGroupId:   sub.DashboardGroupId,
-					DashboardGroupName: sub.DashboardGroupName,
-				},
-			}
-			notificationsByUserID.AddNotification(n)
-			metrics.NotificationsCollected.WithLabelValues(string(n.GetEventName())).Inc()
-		}
 	}
 
 	return nil
