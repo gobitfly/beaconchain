@@ -74,7 +74,6 @@ const (
 	NetworkValidatorExitQueueFullEventName          EventName = "network_validator_exit_queue_full"
 	NetworkValidatorExitQueueNotFullEventName       EventName = "network_validator_exit_queue_not_full"
 	NetworkLivenessIncreasedEventName               EventName = "network_liveness_increased"
-	TaxReportEventName                              EventName = "user_tax_report"
 	//nolint:misspell
 	RocketpoolCommissionThresholdEventName EventName = "rocketpool_commision_threshold"
 
@@ -132,7 +131,6 @@ var EventSortOrder = []EventName{
 	ValidatorReceivedWithdrawalEventName,
 	NetworkLivenessIncreasedEventName,
 	EthClientUpdateEventName,
-	TaxReportEventName,
 	RocketpoolCommissionThresholdEventName,
 	RocketpoolNewClaimRoundStartedEventName,
 	RocketpoolCollateralMinReachedEventName,
@@ -189,7 +187,6 @@ var LegacyEventLabel map[EventName]string = map[EventName]string{
 	MonitoringMachineDiskAlmostFullEventName: "Your machine(s) disk space is running low",
 	MonitoringMachineCpuLoadEventName:        "Your machine(s) has a high CPU load",
 	MonitoringMachineMemoryUsageEventName:    "Your machine(s) has a high memory load",
-	TaxReportEventName:                       "You have an available tax report",
 	RocketpoolCommissionThresholdEventName:   "Your configured Rocket Pool commission threshold is reached",
 	RocketpoolNewClaimRoundStartedEventName:  "Your Rocket Pool claim from last round is available",
 	RocketpoolCollateralMinReachedEventName:  "You reached the Rocket Pool min RPL collateral",
@@ -216,7 +213,6 @@ var EventLabel map[EventName]string = map[EventName]string{
 	MonitoringMachineDiskAlmostFullEventName: "Machine low disk space",
 	MonitoringMachineCpuLoadEventName:        "Machine high CPU load",
 	MonitoringMachineMemoryUsageEventName:    "Machine high memory load",
-	TaxReportEventName:                       "Tax report available",
 	RocketpoolCommissionThresholdEventName:   "Rocket pool commission threshold is reached",
 	RocketpoolNewClaimRoundStartedEventName:  "Rocket pool claim from last round is available",
 	RocketpoolCollateralMinReachedEventName:  "Rocket pool node min RPL collateral reached",
@@ -252,7 +248,6 @@ var EventNames = []EventName{
 	MonitoringMachineDiskAlmostFullEventName,
 	MonitoringMachineCpuLoadEventName,
 	MonitoringMachineMemoryUsageEventName,
-	TaxReportEventName,
 	RocketpoolCommissionThresholdEventName,
 	RocketpoolNewClaimRoundStartedEventName,
 	RocketpoolCollateralMinReachedEventName,
