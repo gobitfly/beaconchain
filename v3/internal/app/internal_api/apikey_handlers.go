@@ -6,6 +6,7 @@ import (
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/app/io"
+	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 
@@ -14,14 +15,14 @@ import (
 )
 
 func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPIKeyRequest) (*model.CreateAPIKeyResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
 	key, rawKey, err := apikey.NewAPIKey(in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create API key: %v", err)
 	}
 
-	dbKey, err := service.authRepository.CreateAPIKey(ctx, dummyUserId, key)
+	dbKey, err := service.authRepository.CreateAPIKey(ctx, user.ID, key)
 	if err != nil {
 		if errors.Is(err, domain.ErrDuplicate) {
 			return nil, status.Errorf(codes.AlreadyExists, "API key with name '%s' already exists", in.Name)
@@ -36,9 +37,9 @@ func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPI
 }
 
 func (service *ApiService) DeleteAPIKey(ctx context.Context, in *model.DeleteAPIKeyRequest) (*model.DeleteAPIKeyResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
-	if err := service.authRepository.DeleteAPIKey(ctx, dummyUserId, in.Name); err != nil {
+	if err := service.authRepository.DeleteAPIKey(ctx, user.ID, in.Name); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "API key not found: %s", in.Name)
 		}
@@ -49,9 +50,9 @@ func (service *ApiService) DeleteAPIKey(ctx context.Context, in *model.DeleteAPI
 }
 
 func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableAPIKeyRequest) (*model.DisableAPIKeyResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
-	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, dummyUserId, &in.Name)
+	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}
@@ -66,7 +67,7 @@ func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableA
 		}, nil
 	}
 
-	updatedKey, err := service.authRepository.DisableAPIKey(ctx, dummyUserId, in.Name)
+	updatedKey, err := service.authRepository.DisableAPIKey(ctx, user.ID, in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to disable API key: %v", err)
 	}
@@ -77,9 +78,9 @@ func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableA
 }
 
 func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPIKeyRequest) (*model.EnableAPIKeyResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
-	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, dummyUserId, &in.Name)
+	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}
@@ -94,7 +95,7 @@ func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPI
 		}, nil
 	}
 
-	updatedKey, err := service.authRepository.EnableAPIKey(ctx, dummyUserId, in.Name)
+	updatedKey, err := service.authRepository.EnableAPIKey(ctx, user.ID, in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to enable API key: %v", err)
 	}
@@ -105,9 +106,9 @@ func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPI
 }
 
 func (service *ApiService) GetAPIKeys(ctx context.Context, in *model.GetAPIKeysRequest) (*model.GetAPIKeysResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
-	keys, err := service.authRepository.GetAPIKeys(ctx, dummyUserId, nil)
+	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API keys: %v", err)
 	}
@@ -118,9 +119,9 @@ func (service *ApiService) GetAPIKeys(ctx context.Context, in *model.GetAPIKeysR
 }
 
 func (service *ApiService) GetAPIKey(ctx context.Context, in *model.GetAPIKeyRequest) (*model.GetAPIKeyResponse, error) {
-	dummyUserId := uint64(1337) // For testing so that I dont have to wire up correct UserId handling for this PoC
+	user := auth.MustUserFromContext(ctx)
 
-	keys, err := service.authRepository.GetAPIKeys(ctx, dummyUserId, &in.Name)
+	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}

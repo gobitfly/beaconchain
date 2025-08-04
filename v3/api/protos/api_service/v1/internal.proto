@@ -137,11 +137,9 @@ message DeleteValidatorDashboardResponse {
 // == API Key Management ==
 
 // API Key names must follow specific rules to ensure consistency and security.
-// The 'name' field must be a string matching the pattern: ^[A-Za-z0-9_.-]{3,30}$
-// This regex enforces that the name is 3 to 30 characters long and contains only
+// The 'name' field must be a string matching the pattern: ^[A-Za-z0-9_.-]{3,35}$
+// This regex enforces that the name is 3 to 35 characters long and contains only
 // uppercase and lowercase letters, digits, underscores (_), periods (.), or hyphens (-).
-// Additionally, the name cannot be any of the following reserved words:
-// "create", "delete", "admin", "root", "null", "true", "false".
 
 message CreateAPIKeyRequest {
   string name = 1 [
@@ -229,3 +227,4 @@ message APIKey {
   optional google.protobuf.Timestamp last_used_at = 4;
   optional google.protobuf.Timestamp disabled_at = 5;
 }
+

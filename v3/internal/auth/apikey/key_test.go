@@ -2,6 +2,7 @@ package apikey
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -44,7 +45,7 @@ func TestRawKeyCredential_ToBase62_And_FromBase62(t *testing.T) {
 	if encoded == "" {
 		t.Error("ToBase62() returned empty string")
 	}
-	decoded, err := FromBase62(encoded)
+	decoded, err := RawFromBase62(encoded)
 	if err != nil {
 		t.Fatalf("FromBase62() error: %v", err)
 	}
@@ -139,4 +140,34 @@ func TestHashedKeyCredential_Equal(t *testing.T) {
 	raw2[0]++
 	cred3 := NewHashedKeyCredential(raw2)
 	assert.False(t, cred1.Equal(cred3))
+}
+
+func TestFromBase62_ValidAndInvalid(t *testing.T) {
+	// Valid case: encode a raw key, then decode and hash
+	raw, err := NewRawAPIKey()
+	assert.NoError(t, err)
+	encoded := raw.ToBase62()
+	hashed, err := FromBase62(encoded)
+	assert.NoError(t, err)
+	expected := raw.GetAPIKeyCredential()
+	assert.True(t, hashed.Equal(expected), "Hashed credential should match expected")
+
+	// Invalid case: input not base62
+	_, err = FromBase62("not_base62!!")
+	assert.Error(t, err)
+
+	// Invalid case: input wrong length
+	short := "abc"
+	_, err = FromBase62(short)
+	assert.Error(t, err)
+}
+
+func TestLogFormat(t *testing.T) {
+	raw := "TDbUML7MRn7PbYBbfLRJebfFWOtYad2CcEt6UIBc4km"
+	hashed := "Cvc4Sb5ijkEAWdae2m5gnnZhllQSqm18hdBu1exiJbx"
+	key, err := FromBase62(raw)
+	assert.NoError(t, err)
+
+	formattedErr := fmt.Errorf("example error with key: %s", key)
+	assert.Contains(t, formattedErr.Error(), hashed, "Formatted error should contain the hashed key")
 }

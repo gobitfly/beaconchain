@@ -10,17 +10,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type DBAuthRepository struct {
+type DBAPIKeyRepository struct {
 	roConnectionAdminDb data_sources.AdminRoConnection
 	rwConnectionAdminDb data_sources.AdminRwConnection
 }
 
-func (r *DBAuthRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
+func (r *DBAPIKeyRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
 	r.roConnectionAdminDb = roConnectionAdminDb
 	r.rwConnectionAdminDb = rwConnectionAdminDb
 }
 
-func (r *DBAuthRepository) CreateAPIKey(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
+func (r *DBAPIKeyRepository) CreateAPIKey(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
 	ds := goqu.Dialect("postgres").Insert("api_keys_v2").
 		Cols("user_id", "api_key", "short_key", "name").
 		Vals(goqu.Vals{userID, key.Value, key.ShortKey, key.Name}).
@@ -33,7 +33,7 @@ func (r *DBAuthRepository) CreateAPIKey(ctx context.Context, userID uint64, key 
 	return createdKey, nil
 }
 
-func (r *DBAuthRepository) DeleteAPIKey(ctx context.Context, userID uint64, name string) error {
+func (r *DBAPIKeyRepository) DeleteAPIKey(ctx context.Context, userID uint64, name string) error {
 	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Set(goqu.Record{"deleted_at": goqu.L("NOW()")}).
 		Where(
@@ -49,7 +49,7 @@ func (r *DBAuthRepository) DeleteAPIKey(ctx context.Context, userID uint64, name
 	return nil
 }
 
-func (r *DBAuthRepository) DisableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
+func (r *DBAPIKeyRepository) DisableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
 	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Set(goqu.Record{
 			"disabled_at": goqu.L("NOW()"),
@@ -74,7 +74,7 @@ func (r *DBAuthRepository) DisableAPIKey(ctx context.Context, userID uint64, nam
 	return disabledKey, nil
 }
 
-func (r *DBAuthRepository) EnableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
+func (r *DBAPIKeyRepository) EnableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
 	ds := goqu.Dialect("postgres").Update("api_keys_v2").
 		Prepared(true).
 		Set(goqu.Record{"disabled_at": nil}).
@@ -95,7 +95,7 @@ func (r *DBAuthRepository) EnableAPIKey(ctx context.Context, userID uint64, name
 	return enabledKey, nil
 }
 
-func (r *DBAuthRepository) GetAPIKeys(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
+func (r *DBAPIKeyRepository) GetAPIKeys(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
 	ds := goqu.Dialect("postgres").From("api_keys_v2").
 		Select("api_key_id", "api_key", "short_key", "name", "created_at", "last_used_at", "disabled_at").
 		Where(goqu.Ex{"user_id": userID, "deleted_at": nil})
@@ -108,4 +108,38 @@ func (r *DBAuthRepository) GetAPIKeys(ctx context.Context, userID uint64, keyNam
 		return nil, errors.Wrap(err, "failed to get user API keys")
 	}
 	return keys, nil
+}
+
+func (r *DBAPIKeyRepository) UpdateLastUsedAt(ctx context.Context, key apikey.HashedKeyCredential) error {
+	ds := goqu.Dialect("postgres").Update("api_keys_v2").
+		Set(goqu.Record{"last_used_at": goqu.L("NOW()")}).
+		Where(
+			goqu.And(
+				goqu.C("api_key").Eq(key.Bytes()),
+			),
+		)
+
+	if err := execAndCheckRows(ctx, r.rwConnectionAdminDb, ds); err != nil {
+		return errors.Wrap(err, "failed to update last used at for user API key")
+	}
+	return nil
+}
+
+func (r *DBAPIKeyRepository) GetAPIKey(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
+	ds := goqu.Dialect("postgres").From("api_keys_v2").
+		Select("api_key_id", "api_key", "short_key", "name", "created_at", "last_used_at", "disabled_at", "user_id").
+		Where(
+			goqu.And(
+				goqu.C("api_key").Eq(key.Bytes()),
+				goqu.C("deleted_at").IsNull(),
+				goqu.C("disabled_at").IsNull(),
+			),
+		).
+		Limit(1)
+
+	enabledKey, err := runQuery[apikey.APIKey](ctx, r.rwConnectionAdminDb, ds)
+	if err != nil {
+		return apikey.APIKey{}, errors.Wrap(err, "failed to enable user API key")
+	}
+	return enabledKey, nil
 }

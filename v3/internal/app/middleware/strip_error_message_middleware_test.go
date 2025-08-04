@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/gobitfly/beaconchain-backend/internal/common"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -21,7 +23,7 @@ func TestStripErrorMessageInterceptor(t *testing.T) {
 			name:         "internal error stripped",
 			inputError:   status.Errorf(codes.Internal, "failed to connect to DB"),
 			expectedCode: codes.Internal,
-			expectedMsg:  "internal server error",
+			expectedMsg:  common.GenericErrMsg,
 		},
 		{
 			name:         "not found error stripped",
@@ -39,7 +41,19 @@ func TestStripErrorMessageInterceptor(t *testing.T) {
 			name:         "non-status error becomes internal",
 			inputError:   context.DeadlineExceeded,
 			expectedCode: codes.Internal,
-			expectedMsg:  "internal server error. please try again later.",
+			expectedMsg:  common.GenericErrMsg,
+		},
+		{
+			name:         "external error passed through",
+			inputError:   common.NewExternalError(codes.Internal, "trusted error message"),
+			expectedCode: codes.Internal,
+			expectedMsg:  "trusted error message",
+		},
+		{
+			name:         "wrapped external error passed through",
+			inputError:   errors.Wrap(common.NewExternalError(codes.InvalidArgument, "invalid input provided"), "additional context"),
+			expectedCode: codes.InvalidArgument,
+			expectedMsg:  "invalid input provided",
 		},
 	}
 

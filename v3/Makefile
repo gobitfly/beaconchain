@@ -5,11 +5,13 @@ all:
 	go build -o ./bin/beaconchain-api-service ./cmd/main.go
 generate-proto:
 	rm -rf api/gen
+	rm -rf domain/gen
 	buf dep update
 	buf build
-	# Uses buf.gen.yaml and /api/protos/* to generate the api/gen proto files.
-	# Can be rate-limited, so don't spam it
-	buf generate
+	# Generate api protos
+	buf generate --template buf.gen.api.yaml
+	# Generate domain protos
+	buf generate --template buf.gen.domain.yaml
 build-service:
 	mkdir -p bin
 	go build -o bin/beaconchain-api-service ./cmd/main.go

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/app/external_api/middleware"
+	globalmiddleware "github.com/gobitfly/beaconchain-backend/internal/app/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
@@ -63,35 +65,54 @@ func Run(
 
 	dataSources := data_sources.ApiDataSources{}
 	dataSources.InitApiConnections(&config)
-	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit),
-		),
-	) // Unsecured
-
-	if config.ExposeSchema {
-		reflection.Register(grpcServer)
-	}
 
 	var userRepoI dataaccess.UserRepository
 	var vdbRepoI dataaccess.ValidatorDashboardRepository
+	var cachedUserRepoI dataaccess.UserAuthRepository
+	var cachedAPIKeyAuthRepoI dataaccess.APIKeyAuthRepository
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
-		userRepoI = &dataaccess.DummyUserRepository{}
+		userRepoI = &dataaccess.MockUserRepository{}
 		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
+		cachedUserRepoI = &dataaccess.MockUserRepository{}
+		cachedAPIKeyAuthRepoI = &dataaccess.MockAPIKeyRepository{}
 	} else {
 		userDbRepo := &dataaccess.DBUserRepository{}
 		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
+		apikeyAuthRepo := &dataaccess.DBAPIKeyRepository{}
+		cachedUserRepo := &dataaccess.CachedUserRepository{}
+		cachedAPIKeyAuthRepo := &dataaccess.CachedAPIKeyRepository{}
+
 		userRepoI = userDbRepo
 		vdbRepoI = vbdDbRepo
+		cachedUserRepoI = cachedUserRepo
+		cachedAPIKeyAuthRepoI = cachedAPIKeyAuthRepo
 
 		// init async
 		go func() {
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
+			apikeyAuthRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			cachedUserRepo.Initialize(dataSources.Redis, userDbRepo)
+			cachedAPIKeyAuthRepo.Initialize(dataSources.Redis, apikeyAuthRepo)
 		}()
 	}
 	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
+
+	var unaryInterceptors []grpc.UnaryServerInterceptor
+	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
+	unaryInterceptors = append(unaryInterceptors, globalmiddleware.RecoveryMiddleware())
+	unaryInterceptors = append(unaryInterceptors, ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit))
+	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(cachedUserRepoI, cachedAPIKeyAuthRepoI))
+
+	grpcServer := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(unaryInterceptors...),
+	)
+
+	if config.ExposeSchema {
+		reflection.Register(grpcServer)
+	}
+
 	model.RegisterExternalServiceServer(grpcServer, apiService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
 
@@ -164,7 +185,7 @@ func Run(
 // Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
 func HeaderMatcher(key string) (string, bool) {
 	switch key {
-	case string(auth.ApiKeyHeader):
+	case string(auth.APIKeyHeader):
 		return key, true
 	default:
 		return runtime.DefaultHeaderMatcher(key)

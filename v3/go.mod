@@ -13,6 +13,7 @@ require (
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/doug-martin/goqu/v9 v9.19.0
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/go-redis/redismock/v8 v8.11.5
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.0
@@ -73,6 +74,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/onsi/gomega v1.25.0 // indirect
 	github.com/paulmach/orb v0.11.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect

@@ -7,8 +7,35 @@ package api_service.v1;
 
 option go_package = "github.com/gobitfly/beaconchain-backend/model";
 
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "External Service API"
+    version: "1.0"
+  }
+  security_definitions: {
+    security: {
+      key: "ApiKeyAuth"
+      value: {
+        type: TYPE_API_KEY
+        name: "authorization"
+        in: IN_HEADER
+        description: "Authorization header with value: Bearer <token>"
+      }
+    }
+  }
+  security: {
+    security_requirement: {
+      key: "ApiKeyAuth"
+      value: {}  // apply to all endpoints
+    }
+  }
+};
+
+
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
 
 //////////////////////////////////////////////////
 /////////////// Service Definition ///////////////
@@ -30,6 +57,8 @@ message RateLimitsPerTier {
 extend google.protobuf.MethodOptions {
   RateLimitsPerTier rate_limits_per_tier = 50001;
 }
+
+
 
 
 service ExternalService {

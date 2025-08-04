@@ -44,6 +44,7 @@ func NewAPIKey(name string) (APIKey, RawKeyCredential, error) {
 
 type APIKey struct {
 	ID         *uuid.UUID `db:"api_key_id"`
+	UserID     uint64     `db:"user_id"`
 	Value      []byte     `db:"api_key"`
 	Name       string     `db:"name"`
 	ShortKey   string     `db:"short_key"`
@@ -71,10 +72,13 @@ func NewRawAPIKey() (RawKeyCredential, error) {
 	return RawKeyCredential(b), nil
 }
 
-func FromBase62(encoded string) (RawKeyCredential, error) {
+func RawFromBase62(encoded string) (RawKeyCredential, error) {
 	decoded, err := base62.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return RawKeyCredential{}, err
+	}
+	if len(decoded) != RawKeyCredentialLength {
+		return RawKeyCredential{}, fmt.Errorf("invalid raw key length: expected %d, got %d", RawKeyCredentialLength, len(decoded))
 	}
 	return RawKeyCredential(decoded), nil
 }
@@ -120,6 +124,14 @@ func NewHashedKeyCredential(raw [HashedKeyCredentialLength]byte) HashedKeyCreden
 	return HashedKeyCredential(raw)
 }
 
+func FromBase62(encoded string) (HashedKeyCredential, error) {
+	raw, err := RawFromBase62(encoded)
+	if err != nil {
+		return HashedKeyCredential{}, err
+	}
+	return raw.GetAPIKeyCredential(), nil
+}
+
 func (k HashedKeyCredential) IsEmpty() bool {
 	return k.Equal(HashedKeyCredential{})
 }
@@ -130,6 +142,10 @@ func (k HashedKeyCredential) Equal(other HashedKeyCredential) bool {
 
 func (k HashedKeyCredential) Bytes() []byte {
 	return k[:]
+}
+
+func (k HashedKeyCredential) String() string {
+	return base62.StdEncoding.EncodeToString(k.Bytes())
 }
 
 const (

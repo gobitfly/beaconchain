@@ -2,11 +2,13 @@ package dataaccess
 
 import (
 	"context"
-	"database/sql"
 
 	"fmt"
 
+	"github.com/doug-martin/goqu/v9"
+	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
@@ -14,6 +16,10 @@ import (
 type DBUserRepository struct {
 	roConnectionAdminDb *sqlx.DB
 	rwConnectionAdminDb *sqlx.DB
+}
+
+type dbUser struct {
+	ID uint64 `db:"id"`
 }
 
 func (r *DBUserRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
@@ -38,24 +44,43 @@ func (r *DBUserRepository) Ping() error {
 	return nil
 }
 
-func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*User, error) {
-	user := User{}
-
-	_ = r.roConnectionAdminDb.GetContext(ctx, &user, "SELECT * FROM users WHERE id=$1 LIMIT 1", id)
-	return &user, nil
+func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*domain.User, error) {
+	return queryUser(ctx, r.roConnectionAdminDb, id)
 }
 
-func (r *DBUserRepository) GetUserByApiKey(ctx context.Context, apikey string) (*User, error) {
-	user := User{}
-	err := r.roConnectionAdminDb.GetContext(ctx, &user, `SELECT * FROM users WHERE id = (SELECT user_id FROM api_keys WHERE api_key = $1) LIMIT 1`, apikey)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil // No error and nothing returned means the User was not found
+func (r *DBUserRepository) GetUserByAPIKey(ctx context.Context, key apikey.HashedKeyCredential) (*domain.User, error) {
+	subQuery := goqu.Dialect("postgres").From("api_keys_v2").
+		Select("user_id").
+		Where(
+			goqu.And(
+				goqu.C("api_key").Eq(key.Bytes()),
+				goqu.C("deleted_at").IsNull(),
+				goqu.C("disabled_at").IsNull(),
+			),
+		).
+		Limit(1)
+
+	return queryUser(ctx, r.roConnectionAdminDb, subQuery)
+}
+
+func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB, id T) (*domain.User, error) {
+	// todo: authz
+	ds := goqu.Dialect("postgres").From("users").
+		Select("id").
+		Where(goqu.C("id").Eq(id)).
+		Limit(1)
+
+	user, err := runQuery[dbUser](ctx, db, ds)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to query user")
 	}
-	return &user, nil
+	return &domain.User{
+		ID: user.ID,
+	}, nil
 }
 
-func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*User, error) {
-	user := User{}
+func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*domain.User, error) {
+	user := domain.User{}
 
 	err := r.rwConnectionAdminDb.GetContext(ctx, &user, `
 	    	INSERT INTO users (password, email, register_ts, api_key)
