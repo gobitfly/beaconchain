@@ -1,5 +1,5 @@
 #
-name: Backend docker image
+name: Backend docker image deploy
 
 # Configures this workflow to run every time a change is pushed to the branch called `release`.
 on:
