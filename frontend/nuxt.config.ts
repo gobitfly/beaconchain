@@ -27,15 +27,18 @@ const maxDaysForCookies = 400
 export default defineNuxtConfig({
   /* eslint-disable perfectionist/sort-objects  -- as there is a conflict with `nuxt specific eslint rules` */
   modules: [
-    '@nuxtjs/i18n',
+    '@nuxt/eslint',
     '@nuxtjs/color-mode',
+    '@nuxtjs/i18n',
     [
       '@pinia/nuxt',
-      { storesDirs: [ './stores/**' ] },
+      {
+        storesDirs: [ './stores/**' ],
+      },
     ],
     'pinia-plugin-persistedstate/nuxt',
     '@primevue/nuxt-module',
-    '@nuxt/eslint',
+    '@vee-validate/nuxt',
     '@vueuse/nuxt',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',

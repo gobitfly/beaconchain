@@ -57,6 +57,20 @@ const openManageNotifications = () => {
     manageNotificationsModalVisisble.value = true
   }
 }
+// const schema = validation.numberRange({
+//   max: 100,
+//   min: 0,
+// })
+const schema = validation
+  .number()
+  .positive()
+  .transform(value => Number.isNaN(value) ? undefined : value)
+  // .nullable()
+
+const {
+  errorMessage,
+  value,
+} = useField('input', toTypedSchema(schema))
 </script>
 
 <template>
@@ -78,6 +92,15 @@ const openManageNotifications = () => {
           @click="openManageNotifications"
         />
       </div>
+      <!-- start -->
+      <pre>
+        value: {{ value }}
+        errorMessage: {{ errorMessage }}
+      </pre>
+      <input
+        v-model="value" type="number" autocomplete="off"
+        <!-- end --
+      >
       <BcTabList
         :tabs
         default-tab="dashboards"
