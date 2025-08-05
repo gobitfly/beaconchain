@@ -32,7 +32,7 @@ export interface Address {
   label?: string;
 }
 export interface LuckItem {
-  percent: number /* float64 */;
+  percent?: number /* float64 */;
   expected_timestamp: number /* uint64 */;
   average_interval_seconds: number /* uint64 */;
 }

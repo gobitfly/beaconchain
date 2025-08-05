@@ -39,9 +39,9 @@ type Address struct {
 }
 
 type LuckItem struct {
-	Percent                float64 `json:"percent"`
-	ExpectedTimestamp      uint64  `json:"expected_timestamp"`
-	AverageIntervalSeconds uint64  `json:"average_interval_seconds"`
+	Percent                *float64 `json:"percent"`
+	ExpectedTimestamp      uint64   `json:"expected_timestamp"`
+	AverageIntervalSeconds uint64   `json:"average_interval_seconds"`
 }
 
 type Luck struct {

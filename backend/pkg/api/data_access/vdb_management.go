@@ -377,49 +377,86 @@ func (d *DataAccessService) GetValidatorDashboardOverview(ctx context.Context, d
 		return nil
 	})
 
-	retrieveRewardsAndEfficiency := func(timeFrame enums.TimePeriod, rewards *t.ClElValue[decimal.Decimal], apr *t.ClElValue[float64], efficiency *float64) {
-		// Rewards + APR
-		eg.Go(func() error {
-			incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
-			if err != nil {
-				return err
-			}
-			*rewards = incomeInfo.Rewards
-			*apr = incomeInfo.Apr
-			return nil
-		})
-
-		// Efficiency
-		eg.Go(func() error {
-			table, err := timeFrame.Table()
-			if err != nil {
-				return err
-			}
-			ds := goqu.Dialect("postgres").
-				From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
-				With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
-				Select(
-					goqu.L("COALESCE(SUM(efficiency_dividend::Int256) / NULLIF(SUM(efficiency_divisor::Int256), 0), 0)").As("efficiency"),
-				)
-
-			if len(dashboardId.Validators) == 0 {
-				ds = ds.
-					InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
-					Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
-			} else {
-				ds = ds.
-					Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
-			}
-
-			*efficiency, err = runQuery[float64](ctx, d.clickhouseReader, ds)
-			return err
-		})
+	retrieveRewards := func(timeFrame enums.TimePeriod) (rewards t.ClElValue[decimal.Decimal], apr t.ClElValue[*float64], err error) {
+		incomeInfo, err := d.getElClAPR(ctx, dashboardId, -1, timeFrame)
+		rewards = incomeInfo.Rewards
+		apr = incomeInfo.Apr
+		return
 	}
 
-	retrieveRewardsAndEfficiency(enums.Last24h, &data.Rewards.Last24h, &data.Apr.Last24h, &data.Efficiency.Last24h)
-	retrieveRewardsAndEfficiency(enums.Last7d, &data.Rewards.Last7d, &data.Apr.Last7d, &data.Efficiency.Last7d)
-	retrieveRewardsAndEfficiency(enums.Last30d, &data.Rewards.Last30d, &data.Apr.Last30d, &data.Efficiency.Last30d)
-	retrieveRewardsAndEfficiency(enums.AllTime, &data.Rewards.AllTime, &data.Apr.AllTime, &data.Efficiency.AllTime)
+	retrieveEfficiency := func(timeFrame enums.TimePeriod) (efficiency *float64, err error) {
+		table, err := timeFrame.Table()
+		if err != nil {
+			return
+		}
+		ds := goqu.Dialect("postgres").
+			From(goqu.L(fmt.Sprintf(`%s AS r`, table))).
+			With("validators", goqu.L("(SELECT dashboard_id, validator_index FROM users_val_dashboards_validators WHERE dashboard_id = ?)", dashboardId.Id)).
+			Select(
+				goqu.L("SUM(efficiency_dividend::decimal)").As("efficiency_dividend"),
+				goqu.L("SUM(efficiency_divisor::decimal)").As("efficiency_divisor"),
+			)
+
+		if len(dashboardId.Validators) == 0 {
+			ds = ds.
+				InnerJoin(goqu.L("validators v"), goqu.On(goqu.L("r.validator_index = v.validator_index"))).
+				Where(goqu.L("r.validator_index IN (SELECT validator_index FROM validators)"))
+		} else {
+			ds = ds.
+				Where(goqu.L("r.validator_index IN ?", dashboardId.Validators))
+		}
+
+		type dbResult struct {
+			EfficiencyDividend decimal.Decimal `db:"efficiency_dividend"`
+			EfficiencyDivisor  decimal.Decimal `db:"efficiency_divisor"`
+		}
+		dbRes, err := runQuery[dbResult](ctx, d.clickhouseReader, ds)
+		if !dbRes.EfficiencyDivisor.IsZero() {
+			eff := dbRes.EfficiencyDividend.Div(dbRes.EfficiencyDivisor).InexactFloat64()
+			efficiency = &eff
+		}
+		return
+	}
+
+	// last 24h
+	eg.Go(func() error {
+		data.Rewards.Last24h, data.Apr.Last24h, err = retrieveRewards(enums.Last24h)
+		return err
+	})
+	eg.Go(func() error {
+		data.Efficiency.Last24h, err = retrieveEfficiency(enums.Last24h)
+		return err
+	})
+
+	// last 7d
+	eg.Go(func() error {
+		data.Rewards.Last7d, data.Apr.Last7d, err = retrieveRewards(enums.Last7d)
+		return err
+	})
+	eg.Go(func() error {
+		data.Efficiency.Last7d, err = retrieveEfficiency(enums.Last7d)
+		return err
+	})
+
+	// last 30d
+	eg.Go(func() error {
+		data.Rewards.Last30d, data.Apr.Last30d, err = retrieveRewards(enums.Last30d)
+		return err
+	})
+	eg.Go(func() error {
+		data.Efficiency.Last30d, err = retrieveEfficiency(enums.Last30d)
+		return err
+	})
+
+	// all time
+	eg.Go(func() error {
+		data.Rewards.AllTime, data.Apr.AllTime, err = retrieveRewards(enums.AllTime)
+		return err
+	})
+	eg.Go(func() error {
+		data.Efficiency.AllTime, err = retrieveEfficiency(enums.AllTime)
+		return err
+	})
 
 	err = eg.Wait()
 

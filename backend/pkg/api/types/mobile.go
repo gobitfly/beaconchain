@@ -13,11 +13,11 @@ type MobileWidgetData struct {
 	ValidatorStateCounts ValidatorStateCounts       `json:"validator_state_counts"`
 	Last24hIncome        ClElValue[decimal.Decimal] `json:"last_24h_income" faker:"eth"`
 	Last7dIncome         ClElValue[decimal.Decimal] `json:"last_7d_income" faker:"eth"`
-	Last30dApr           float64                    `json:"last_30d_apr"`
-	Last30dEfficiency    float64                    `json:"last_30d_efficiency"`
-	NetworkEfficiency    float64                    `json:"network_efficiency"`
+	Last30dApr           *float64                   `json:"last_30d_apr"`
+	Last30dEfficiency    *float64                   `json:"last_30d_efficiency"`
+	NetworkEfficiency    *float64                   `json:"network_efficiency"`
 	RplPrice             decimal.Decimal            `json:"rpl_price" faker:"eth"`
-	RplApr               float64                    `json:"rpl_apr"`
+	RplApr               *float64                   `json:"rpl_apr"`
 	ELCLPrice            float64                    `json:"el_cl_price"`
 }
 
