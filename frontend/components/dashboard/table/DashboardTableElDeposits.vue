@@ -1,33 +1,13 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type {
-  GetValidatorDashboardExecutionLayerDepositsResponse,
-  GetValidatorDashboardTotalExecutionDepositsResponse,
-  VDBExecutionDepositsTableRow,
-} from '~/types/api/validator_dashboard'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
+import type { VDBExecutionDepositsTableRow } from '~/types/api/validator_dashboard'
 
-const {
-  elDeposits,
-  elDepositsTotalAmount,
-} = defineProps<{
-  elDeposits?: GetValidatorDashboardExecutionLayerDepositsResponse,
-  elDepositsTotalAmount?: GetValidatorDashboardTotalExecutionDepositsResponse,
-  isLoading: boolean,
-}>()
-
-const {
-  isGuestDashboard,
-} = useDashboardKey()
-
-const { t: $t } = useTranslation()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasValidators,
-} = storeToRefs(validatorDashboardOverviewStore)
+  key,
+  variant,
+} = useDashboard()
+
+const { t: $t } = useTranslation()
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -40,42 +20,33 @@ const colsVisible = computed(() => {
   }
 })
 
-const elDepositsWithIdentifiers = computed(() =>
-  addIdentifier(elDeposits, 'block', 'block_index'),
-)
+const query = useDefaultQuery({
+  sort: 'timestamp:desc',
+})
+const {
+  data: elDeposits,
+  status,
+} = useApi(`/api/validator-dashboards/${key.value}/execution-layer-deposits`, {
+  immediate: key.value !== undefined,
+  query,
+})
+
 const tableData = computed(() => {
-  if (!elDepositsWithIdentifiers.value?.data?.length) {
-    return
+  if (!elDeposits.value?.data.length) {
+    return null
   }
 
   return {
     data: [
       {
-        amount: elDepositsTotalAmount?.data.total_amount,
+        amount: elDeposits.value?.total_amount,
         isTotalAmountRow: true,
       },
-      ...elDepositsWithIdentifiers.value.data,
+      ...elDeposits.value.data,
     ],
-    paging: elDepositsWithIdentifiers.value.paging,
+    paging: elDeposits.value.paging,
   }
 })
-
-const query = defineModel<TableQueryParams>('query')
-
-const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
-}
-const setCursor = (cursor: Cursor) => {
-  query.value = setQueryCursor(cursor, query.value)
-}
-const setPageSize = (limit: number) => {
-  query.value = setQueryPageSize(limit, query.value)
-}
-const setSearch = (value?: string) => {
-  query.value = {
-    ...query.value, search: value,
-  }
-}
 
 const { groups } = useValidatorDashboardGroups()
 const getGroupName = (groupId: number) => {
@@ -94,19 +65,20 @@ const emit = defineEmits<{
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :title="$t('dashboard.validator.el_deposits.title')"
     :search-placeholder="$t(
-      isGuestDashboard
+      variant === 'guest-dashboard'
         ? 'dashboard.validator.el_deposits.search_placeholder_guest_dashboard'
         : 'dashboard.validator.el_deposits.search_placeholder_private_dashboard',
     )
     "
-    @set-search="setSearch"
   >
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
           :data="tableData"
+          :query
           data-key="identifier"
           expandable
           table-class="dashboard-table-el-deposits"
@@ -115,10 +87,7 @@ const emit = defineEmits<{
           :page-size="query?.limit"
           :row-class="(row: VDBExecutionDepositsTableRow) => row.index === undefined ? 'total-row' : ''"
           :is-row-expandable="(row: VDBExecutionDepositsTableRow) => row.index !== undefined"
-          :is-loading
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             field="timestamp"

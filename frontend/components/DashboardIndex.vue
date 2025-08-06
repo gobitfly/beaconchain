@@ -171,18 +171,6 @@ const tabs: HashTab[] = [
 //   { immediate: true },
 // )
 
-// Execution Layer Deposits data
-
-// Consensus Layer Deposits data
-
-// Execution Layer Withdrawals data
-
-// Consensus Layer Withdrawals data
-
-// Execution Layer Consolidations data
-
-// Consensus Layer Consolidations data
-
 // const activeTab = computed(() => route.hash)
 
 // const refreshActiveTab = () => {
@@ -306,62 +294,40 @@ const emit = defineEmits<{
         />
       </template>
       <template #tab-panel-deposits>
-        <!-- <DashboardTableElDeposits
-            v-model:query="elDepositsQueryParams"
-            :el-deposits
-            :el-deposits-total-amount
-            :is-loading="elDepositsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableElDeposits
+          @add-validator="onAddValidator"
+        />
         <BcIcon
           name="arrow-down"
           class="down_icon"
         />
-      <!-- <DashboardTableClDeposits
-            v-model:query="clDepositsQueryParams"
-            :cl-deposits
-            :cl-deposits-total-amount
-            :is-loading="clDepositsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableClDeposits
+          @add-validator="onAddValidator"
+        />
       </template>
       <template #tab-panel-withdrawals>
-        <!-- <DashboardTableElWithdrawals
-            v-model:query="elWithdrawalsQueryParams"
-            :el-withdrawals
-            :el-withdrawals-total-amount
-            :is-loading="elWithdrawalsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableElWithdrawals
+          @add-validator="onAddValidator"
+        />
         <BcIcon
           name="arrow-down"
           class="down_icon"
         />
-      <!-- <DashboardTableClWithdrawals
-            v-model:query="clWithdrawalsQueryParams"
-            :cl-withdrawals
-            :cl-withdrawals-total-amount
-            :is-loading="clWithdrawalsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableClWithdrawals
+          @add-validator="onAddValidator"
+        />
       </template>
       <template #tab-panel-consolidations>
-        <!-- <DashboardTableElConsolidations
-            v-model:query="elConsolidationsQueryParams"
-            :el-consolidations
-            :is-loading="elConsolidationsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableElConsolidations
+          @add-validator="onAddValidator"
+        />
         <BcIcon
           name="arrow-down"
           class="down_icon"
         />
-      <!-- <DashboardTableClConsolidations
-            v-model:query="clConsolidationsQueryParams"
-            :cl-consolidations
-            :is-loading="clConsolidationsDataStatus === 'pending'"
-            @add-validator="onAddValidator"
-          /> -->
+        <DashboardTableClConsolidations
+          @add-validator="onAddValidator"
+        />
       </template>
     </BcTabList>
   </NuxtLayout>

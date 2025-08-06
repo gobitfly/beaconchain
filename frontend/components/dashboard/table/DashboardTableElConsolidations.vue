@@ -1,47 +1,29 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type {
-  GetValidatorDashboardExecutionLayerConsolidationsResponse,
-  VDBConsolidationsElTableRow,
-} from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
+import type { VDBConsolidationsElTableRow } from '~/types/api/validator_dashboard'
 
 const {
-  elConsolidations,
-} = defineProps<{
-  elConsolidations?: GetValidatorDashboardExecutionLayerConsolidationsResponse,
-  isLoading: boolean,
-}>()
+  hasValidators,
+  key,
+} = useDashboard()
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+const query = useDefaultQuery({
+  sort: 'timestamp:desc',
+})
+
 const {
-  hasValidators,
-} = storeToRefs(validatorDashboardOverviewStore)
+  data: elConsolidations,
+  status,
+} = useApi(
+  `/api/validator-dashboards/${key.value}/execution-layer-consolidations`, {
+    immediate: key.value !== undefined,
+    query,
+  })
 
-const query = defineModel<TableQueryParams>('query')
-
-const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
-}
-const setCursor = (cursor: Cursor) => {
-  query.value = setQueryCursor(cursor, query.value)
-}
-const setPageSize = (limit: number) => {
-  query.value = setQueryPageSize(limit, query.value)
-}
-const setSearch = (value?: string) => {
-  query.value = {
-    ...query.value,
-    search: value,
-  }
-}
 const v1Domain = useV1Domain()
 const emit = defineEmits<{
   (e: 'add-validator'): void,
@@ -50,15 +32,16 @@ const emit = defineEmits<{
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :title="$t('dashboard.validator.el_consolidations.title')"
     :search-placeholder="$t('dashboard.validator.el_consolidations.search_placeholder')
     "
-    @set-search="setSearch"
   >
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
-          :data="addIdentifier(elConsolidations, 'block_queued', 'tx_index_queued', 'itx_index_queued')"
+          :data="elConsolidations"
+          :query
           expandable
           :row-class="(row: VDBConsolidationsElTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           data-key="identifier"
@@ -66,9 +49,7 @@ const emit = defineEmits<{
           :cursor="query?.cursor"
           :page-size="query?.limit"
           table-class="dashboard-table-el-consolidations"
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             sortable
