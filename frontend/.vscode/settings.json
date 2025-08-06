@@ -78,6 +78,7 @@
         "useFeatureFlag",
         "useNotificationsOverviewStore",
         "useSettingsStore",
+        "useStripeProvider",
         "useWindowSize",
         "variables.scss",
         "vscode"

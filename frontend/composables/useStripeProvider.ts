@@ -59,7 +59,7 @@ export function useStripeProvider() {
       },
     )
 
-    window.open(res?.url, '_blank')
+    await navigateTo(res?.url, { external: true })
 
     isStripeProcessing.value = false
   }
