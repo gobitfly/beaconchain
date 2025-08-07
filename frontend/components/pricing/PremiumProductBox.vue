@@ -35,36 +35,6 @@ const productPrice = computed(() => {
     : product.price_per_month_eur
 })
 
-const getOldMaxEffectiveBalance = (
-  hasCurrencyDisplay: boolean = false,
-  targetUnit: CryptoUnit = 'wei',
-) => formatAmount('32', {
-  hasCurrencyDisplay,
-  maximumFractionDigits: 0,
-  minimumFractionDigits: 0,
-  sourceUnit: 'base',
-  targetCurrency: displayCurrencyDefault.main,
-  targetUnit,
-  useGrouping: false,
-})
-
-const oldMaxEffectiveBalance = Number(getOldMaxEffectiveBalance())
-const oldMaxEffectiveBalanceWithUnit = getOldMaxEffectiveBalance(true, 'base')
-
-// This is used to show users that the price they used to pay per Validator
-// hasn't changed now that we charge by Effective Balance
-const pricePerOldMaxEffectiveBalance = computed(() => {
-  const pricePerDashboard = divide(
-    (productPrice.value * oldMaxEffectiveBalance),
-    product.premium_perks.validator_dashboards,
-  )
-
-  return divide(
-    pricePerDashboard,
-    product.premium_perks.effective_balance_per_dashboard,
-  )
-})
-
 const totalYearlyPricePerMonth = computed(() => {
   return product.price_per_year_eur / 12
 })
@@ -203,12 +173,6 @@ const mainFeatures = computed<Feature[]>(() => {
         ? $t('pricing.premium_product.max_effective_balance', { amount: maxDashboardEffectiveBalance })
         : $t('pricing.premium_product.max_effective_balance_per_dashboard', { amount: maxDashboardEffectiveBalance }),
       percentage: percentages.value.effectiveBalancePerDashboard,
-      subtext: $t('pricing.per_min_validator_deposit', {
-        amount: formatFiatCurrency(Number(pricePerOldMaxEffectiveBalance.value), {
-          minimumFractionDigits: 6,
-        }),
-        old_validator_max_effective_balance: oldMaxEffectiveBalanceWithUnit,
-      }),
       tooltip: $t('pricing.premium_product.max_effective_balance_tooltip', {
         amount: maxDashboardEffectiveBalance,
       }),
