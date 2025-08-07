@@ -22,9 +22,7 @@ export function useDashboardKeyProvider(
   const dashboardType = ref(type)
   const dashboardKey = ref(mockKey)
   const dashboardKeyCookie = useBcCookie(
-    dashboardType.value === 'account'
-      ? 'bc-account-dashboard-key'
-      : 'bc-validator-dashboard-key',
+    'bc-validator-dashboard-key',
   )
   const { isLoggedIn } = useUserStore()
 
@@ -40,7 +38,7 @@ export function useDashboardKeyProvider(
     dashboardKey.value = key
     if (isClientSide) {
       // we only want to change the url in the browser and don't want to trigger a page refresh
-      history.replaceState({}, '', newRoute.fullPath)
+      // history.replaceState({}, '', newRoute.fullPath)
     }
     dashboardKeyCookie.value = dashboardKey.value
   }

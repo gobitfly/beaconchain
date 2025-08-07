@@ -1,21 +1,22 @@
 <script setup lang="ts">
-interface Props {
+const props = defineProps<{
   chartDisabled?: boolean,
   disabledFilter?: boolean,
   searchPlaceholder?: string,
   title?: string,
-}
-const props = defineProps<Props>()
+}>()
 
-const emit = defineEmits<{ (e: 'setSearch', value?: string): void }>()
+// const emit = defineEmits<{ (e: 'setSearch', value?: string): void }>()
 
-const tableIsShown = ref(true)
-
-const useAbsoluteValues = defineModel<boolean | null>({ default: null })
-
-const onInput = (value: string) => {
-  emit('setSearch', value)
-}
+const search = defineModel<string>('search', {
+  default: '',
+})
+const tabView = defineModel<'chart' | 'table'>('tabView', {
+  default: 'table',
+})
+const isTable = computed(() => {
+  return tabView.value === 'table'
+})
 </script>
 
 <template>
@@ -24,7 +25,9 @@ const onInput = (value: string) => {
       <div class="side left">
         <BcToggleIcon
           v-if="$slots.chart"
-          v-model="tableIsShown"
+          v-model="tabView"
+          :true-value="'table'"
+          :false-value="'chart'"
           :disabled="chartDisabled"
         >
           <template #trueIcon>
@@ -40,29 +43,17 @@ const onInput = (value: string) => {
             />
           </template>
         </BcToggleIcon>
-        <BcToggleIcon
-          v-if="useAbsoluteValues !== null && tableIsShown"
-          v-model="useAbsoluteValues"
-        >
-          <template #trueIcon>
-            <BcIcon
-              size="sm"
-              name="hashtag"
-            />
-          </template>
-          <template #falseIcon>
-            <BcIcon
-              size="sm"
-              name="percent"
-            />
-          </template>
-        </BcToggleIcon>
+        <slot
+          v-if="isTable"
+          name="value-format"
+        />
+
         <slot name="header-left" />
       </div>
 
       <slot
         name="header-center"
-        :table-is-shown
+        :is-table
       >
         <div
           v-if="props.title"
@@ -74,26 +65,27 @@ const onInput = (value: string) => {
       <div class="side right">
         <slot
           name="header-right"
-          :table-is-shown
+          :is-table
         />
         <BcContentFilter
-          v-if="props.searchPlaceholder && tableIsShown"
+          v-if="props.searchPlaceholder && isTable"
+          v-model="search"
           :search-placeholder="props.searchPlaceholder"
           :disabled-filter
           class="search"
-          @filter-changed="onInput"
         />
       </div>
     </div>
   </slot>
   <slot name="bc-table-sub-header" />
   <slot
-    v-if="tableIsShown"
+    v-if="isTable"
     name="table"
   />
   <slot
     v-else
     name="chart"
+    v-bind="{ isTable }"
   />
 </template>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { NuxtLinkProps } from '#app'
 
-defineProps<{
+const { to } = defineProps<{
   to: NuxtLinkProps['to'],
 }>()
 </script>
@@ -9,7 +9,6 @@ defineProps<{
 <template>
   <NuxtLink
     :to
-    :no-prefetch="true"
   >
     <template #default>
       <slot />

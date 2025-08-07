@@ -190,11 +190,8 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
     saveToCookie(dashboards.value)
   }
 
-  function getDashboardLabel(key: DashboardKey, type: DashboardType): string {
-    const isValidatorDashboard = type === 'validator'
-    const list = isValidatorDashboard
-      ? dashboards.value?.validator_dashboards
-      : dashboards.value?.account_dashboards
+  function getDashboardLabel(key: DashboardKey): string {
+    const list = dashboards.value?.validator_dashboards
     const id = parseInt(key ?? '')
     if (!isNaN(id)) {
       const userDb = list?.find(db => db.id === id)
@@ -204,12 +201,10 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
 
       // in production we should not get here, but with our public api key we
       // can also view dashboards that are not part of our list
-      return `${isValidatorDashboard ? $t('dashboard.validator_dashboard') : $t('dashboard.account_dashboard')} ${id}`
+      return `${$t('dashboard.validator_dashboard')} ${id}`
     }
 
-    return isValidatorDashboard
-      ? $t('dashboard.public_validator_dashboard')
-      : $t('dashboard.public_account_dashboard')
+    return $t('dashboard.public_validator_dashboard')
   }
 
   return {

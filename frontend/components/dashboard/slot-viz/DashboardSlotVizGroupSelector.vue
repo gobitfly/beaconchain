@@ -7,9 +7,10 @@ const props = defineProps<{ validatorGroups: VDBOverviewGroup[] }>()
 
 const { t: $t } = useTranslation()
 
-const selectedGroupIds = ref<number[]>([])
+const selectedGroupIds = defineModel<number[]>({
+})
 
-const emit = defineEmits<{ (e: 'updateSelectedGroupIds', value: number[]): void }>()
+// const emit = defineEmits<{ (e: 'updateSelectedGroupIds', value: number[]): void }>()
 
 const groups = computed(() => {
   return orderBy(
@@ -18,19 +19,20 @@ const groups = computed(() => {
     'asc',
   )
 })
-const selectedLabel = computed(() => {
-  if (
-    selectedGroupIds.value.length === 0
-    || selectedGroupIds.value.length === groups.value.length
-  ) {
-    return $t('dashboard.group.selection.all')
-  }
-  return orderBy(
-    selectedGroupIds.value.map(id => getGroupLabel($t, id, groups.value)),
-    [ g => g.toLowerCase() ],
-    'asc',
-  ).join(', ')
-})
+
+// const selectedLabel = computed(() => {
+//   if (
+//     selectedGroupIds.value.length === 0
+//     || selectedGroupIds.value.length === groups.value.length
+//   ) {
+//     return $t('dashboard.group.selection.all')
+//   }
+//   return orderBy(
+//     selectedGroupIds.value.map(id => getGroupLabel($t, id, groups.value)),
+//     [ g => g.toLowerCase() ],
+//     'asc',
+//   ).join(', ')
+// })
 
 const selectAll = () => {
   selectedGroupIds.value = groups.value.map(g => g.id)

@@ -75,6 +75,10 @@ const { groups } = useValidatorDashboardGroups()
 const getGroupName = (groupId: number) => {
   return groups.value.find(group => group.id === groupId)?.name
 }
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
@@ -136,7 +140,7 @@ const getGroupName = (groupId: number) => {
               />
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/validator/${slotProps.data.index}`"
+                :to="`${v1Domain}/validator/${slotProps.data.index}`"
                 target="_blank"
                 class="link"
               >
@@ -238,7 +242,7 @@ const getGroupName = (groupId: number) => {
                       class="dashboard-table-el-withdrawals__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.index}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.index}`"
                       target="_blank"
                       class="link"
                     >
@@ -273,7 +277,7 @@ const getGroupName = (groupId: number) => {
                   </div>
                   <BcLink
                     v-if="slotProps.data.block_queued !== undefined"
-                    :to="`/block/${slotProps.data.block_queued}`"
+                    :to="`${v1Domain}/block/${slotProps.data.block_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -290,7 +294,7 @@ const getGroupName = (groupId: number) => {
                   <div class="dashboard-table-el-withdrawals__details-value">
                     <BcLink
                       v-if="slotProps.data.block_processed !== undefined"
-                      :to="`/block/${slotProps.data.block_processed}`"
+                      :to="`${v1Domain}/block/${slotProps.data.block_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -360,7 +364,10 @@ const getGroupName = (groupId: number) => {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

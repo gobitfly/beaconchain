@@ -86,6 +86,10 @@ const {
   displayCurrencyDefault,
   selectedCurrencyMain,
 } = useCurrency()
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
@@ -146,7 +150,7 @@ const {
               />
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/validator/${slotProps.data.index}`"
+                :to="`${v1Domain}/validator/${slotProps.data.index}`"
                 target="_blank"
                 class="link"
               >
@@ -176,7 +180,7 @@ const {
             <template #body="slotProps">
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/block/${slotProps.data.block}`"
+                :to="`${v1Domain}/block/${slotProps.data.block}`"
                 target="_blank"
                 class="link"
               >
@@ -271,7 +275,7 @@ const {
                     class="dashboard-table-el-deposits__desktop-icon"
                   />
                   <BcLink
-                    :to="`/validator/${slotProps.data.index}`"
+                    :to="`${v1Domain}/validator/${slotProps.data.index}`"
                     target="_blank"
                     class="link"
                   >
@@ -311,7 +315,7 @@ const {
                   {{ $t("common.block") }}
                 </div>
                 <BcLink
-                  :to="`/block/${slotProps.data.block}`"
+                  :to="`${v1Domain}/block/${slotProps.data.block}`"
                   target="_blank"
                   class="link"
                 >
@@ -370,7 +374,10 @@ const {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

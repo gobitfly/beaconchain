@@ -37,6 +37,7 @@ const tooltipEmail = computed(() => {
 const emit = defineEmits<{
   (e: 'openDialog'): void,
 }>()
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -74,7 +75,7 @@ const emit = defineEmits<{
           <BcTranslation
             keypath="notifications.overview.notifications_activate_premium.template"
             linkpath="notifications.overview.notifications_activate_premium._link"
-            to="https://discord.com/developers/docs/resources/webhook"
+            :to="LINK.discordWebhookDocumentation"
           >
             <template #_link>
               <BcButtonText
@@ -102,7 +103,7 @@ const emit = defineEmits<{
           <BcTranslation
             keypath="notifications.overview.notifications_download_app.template"
             linkpath="notifications.overview.notifications_download_app._link"
-            to="/mobile"
+            :to="`${v1Domain}/mobile`"
           />
         </div>
       </section>

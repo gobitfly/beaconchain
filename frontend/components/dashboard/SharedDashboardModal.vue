@@ -5,7 +5,7 @@ const cookiePreference = useBcCookie<CookiesPreference>(
   'bc-cookies-preference',
   { default: () => undefined },
 )
-const { isSharedDashboard } = useDashboardKey()
+const { variant } = useDashboard()
 const { dashboards } = storeToRefs(useUserDashboardStore())
 const { t: $t } = useTranslation()
 const route = useRoute()
@@ -13,7 +13,7 @@ const route = useRoute()
 const dismissed = ref(false)
 const visible = computed(
   () =>
-    isSharedDashboard.value && !dismissed.value && cookiePreference.value !== undefined,
+    variant.value === 'shared-dashboard' && !dismissed.value && cookiePreference.value !== undefined,
 )
 
 const text = computed(() => {

@@ -30,3 +30,18 @@ export type GetObjectPaths<T extends object> = {
       : K
     : never;
 }[keyof T]
+
+/**
+ * Get autocompletion for T while beeing able to also add a string
+ * */
+export type LooseAutocomplete<T> = (string & {}) | T
+
+/**
+ * Check if an object has a specific key in a type-safe way.
+ */
+export function hasKey<T, K extends PropertyKey>(
+  obj: T,
+  key: K,
+): obj is Record<K, unknown> & T {
+  return typeof obj === 'object' && obj !== null && key in obj
+}

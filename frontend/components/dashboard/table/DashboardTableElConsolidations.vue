@@ -42,6 +42,10 @@ const setSearch = (value?: string) => {
     search: value,
   }
 }
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
@@ -95,7 +99,7 @@ const setSearch = (value?: string) => {
                 class="dashboard-table-el-consolidations__desktop-icon"
               />
               <BcLink
-                :to="`/validator/${slotProps.data.source}`"
+                :to="`${v1Domain}/validator/${slotProps.data.source}`"
                 target="_blank"
                 class="link"
               >
@@ -116,7 +120,7 @@ const setSearch = (value?: string) => {
                 class="dashboard-table-el-consolidations__desktop-icon"
               />
               <BcLink
-                :to="`/validator/${slotProps.data.target}`"
+                :to="`${v1Domain}/validator/${slotProps.data.target}`"
                 target="_blank"
                 class="link"
               >
@@ -166,7 +170,7 @@ const setSearch = (value?: string) => {
             <template #body="slotProps">
               <BcLink
                 v-if="slotProps.data.block_processed !== undefined"
-                :to="`/block/${slotProps.data.block_processed}`"
+                :to="`${v1Domain}/block/${slotProps.data.block_processed}`"
                 target="_blank"
                 class="link"
               >
@@ -205,7 +209,7 @@ const setSearch = (value?: string) => {
                   </div>
                   <BcLink
                     v-if="slotProps.data.block_queued !== undefined"
-                    :to="`/block/${slotProps.data.block_queued}`"
+                    :to="`${v1Domain}/block/${slotProps.data.block_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -223,7 +227,7 @@ const setSearch = (value?: string) => {
                   <div class="dashboard-table-el-consolidations__details-value">
                     <BcLink
                       v-if="slotProps.data.block_processed !== undefined"
-                      :to="`/block/${slotProps.data.block_processed}`"
+                      :to="`${v1Domain}/block/${slotProps.data.block_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -260,7 +264,7 @@ const setSearch = (value?: string) => {
                       class="dashboard-table-el-consolidations__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.source}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.source}`"
                       target="_blank"
                       class="link"
                     >
@@ -282,7 +286,7 @@ const setSearch = (value?: string) => {
                       class="dashboard-table-el-consolidations__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.target}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.target}`"
                       target="_blank"
                       class="link"
                     >
@@ -336,7 +340,10 @@ const setSearch = (value?: string) => {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

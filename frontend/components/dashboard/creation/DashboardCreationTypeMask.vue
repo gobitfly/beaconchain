@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { Icon } from '~/components/bc/icon/BcIcon.vue'
-import type { DashboardType } from '~/types/dashboard'
 
 const { t: $t } = useTranslation()
 const { isLoggedIn } = useUserStore()
@@ -9,8 +8,6 @@ interface Props {
   validatorsDisabled: boolean,
 }
 const props = defineProps<Props>()
-
-const type = defineModel<'' | DashboardType>('type', { required: true })
 
 const typeButtons = [
   {
@@ -34,8 +31,7 @@ const emit = defineEmits<{ (e: 'next'): void }>()
 
 const continueDisabled = computed(() => {
   return (
-    type.value === ''
-    || name.value === ''
+    name.value === ''
     || name.value.length > 32
     || !REGEXP_VALID_NAME.test(name.value)
   )
@@ -49,6 +45,7 @@ const next = () => {
 
   emit('next')
 }
+const type = 'validator'
 </script>
 
 <template>

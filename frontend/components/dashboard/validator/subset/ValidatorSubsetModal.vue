@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { uniqBy } from 'lodash-es'
-import type {
-  DashboardValidatorContext,
-  SummaryTimeFrame,
-} from '~/types/dashboard/summary'
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import type { DashboardKey } from '~/types/dashboard'
 import type {
   ValidatorSubset,
@@ -12,17 +9,17 @@ import type {
 import { sortSummaryValidators } from '~/utils/dashboard/validator'
 
 import type {
-  GetValidatorDashboardSummaryValidatorsResponse,
   VDBGroupSummaryData,
   VDBSummaryTableRow,
   VDBSummaryValidator,
-  VDBSummaryValidatorsData,
 } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useTranslation()
-const { fetch } = useCustomFetch()
 
-interface Props {
+const {
+  props,
+  setHeader,
+} = useBcDialog<{
   context: DashboardValidatorContext,
   dashboardKey?: DashboardKey,
   dashboardName?: string,
@@ -32,76 +29,47 @@ interface Props {
     data?: VDBGroupSummaryData,
     row: VDBSummaryTableRow,
   },
-  timeFrame?: SummaryTimeFrame,
-}
-const {
-  props,
-  setHeader,
-} = useBcDialog<Props>(undefined)
+  timeFrame?: Query['period'],
+}>(undefined)
 
 const isLoading = ref(false)
 const filter = ref('')
-const data = ref<VDBSummaryValidatorsData[]>([])
+const duty = ref()
 
-watch(
-  props,
-  async (p) => {
-    if (p) {
-      let text = 'Validators'
-      switch (p.context) {
-        case 'attestation':
-          text = $t('dashboard.validator.summary.row.attestations')
-          break
-        case 'group':
-          text = $t('dashboard.validator.col.validators')
-          break
-        case 'proposal':
-          text = $t('dashboard.validator.summary.row.proposals')
-          break
-        case 'slashings':
-          text = $t('dashboard.validator.summary.row.slashings')
-          break
-        case 'sync':
-          text = $t('dashboard.validator.summary.row.sync_committee')
-          break
-      }
+if (props.value) {
+  let text = 'Validators'
+  switch (props.value.context) {
+    case 'attestation':
+      text = $t('dashboard.validator.summary.row.attestations')
+      break
+    case 'group':
+      text = $t('dashboard.validator.col.validators')
+      break
+    case 'proposal':
+      text = $t('dashboard.validator.summary.row.proposals')
+      duty.value = 'proposal'
+      break
+    case 'slashings':
+      text = $t('dashboard.validator.summary.row.slashings')
+      duty.value = 'slashed'
+      break
+    case 'sync':
+      text = $t('dashboard.validator.summary.row.sync_committee')
+      duty.value = 'sync'
+      break
+  }
+  setHeader(text)
+}
 
-      setHeader(text)
-
-      isLoading.value = true
-      let duty = ''
-      switch (p.context) {
-        case 'proposal':
-          duty = 'proposal'
-          break
-        case 'slashings':
-          duty = 'slashed'
-          break
-        case 'sync':
-          duty = 'sync'
-          break
-      }
-
-      const res
-        = await fetch<GetValidatorDashboardSummaryValidatorsResponse>(
-          'DASHBOARD_VALIDATOR_INDICES',
-          {
-            query: {
-              duty,
-              group_id: p?.groupId,
-              period: p?.timeFrame,
-            },
-          },
-          { dashboardKey: `${p?.dashboardKey}` },
-        )
-      data.value = res.data
-      isLoading.value = false
-    }
+const { data } = useApi(`/api/validator-dashboards/${props.value?.dashboardKey}/summary/validators`, {
+  query: {
+    duty: duty.value,
+    group_id: props.value?.groupId,
+    period: props.value?.timeFrame,
   },
-  { immediate: true },
-)
+})
 
-const subsets = computed<ValidatorSubset[]>(() => {
+const subsets = computed<undefined | ValidatorSubset[]>(() => {
   const sortAndFilter = (
     validators: VDBSummaryValidator[],
   ): VDBSummaryValidator[] => {
@@ -121,15 +89,15 @@ const subsets = computed<ValidatorSubset[]>(() => {
     return []
   }
 
-  const filtered: ValidatorSubset[] = data.value
-    .map(sub => ({
+  const filtered: undefined | ValidatorSubset[] = data.value
+    ?.map(sub => ({
       category: sub.category,
       validators: sortAndFilter(sub.validators),
     }))
-    .filter(s => !!s.validators.length)
+    ?.filter(s => !!s.validators.length)
 
   // Let's combine what needs to be combined
-  if (filtered.length > 1) {
+  if (filtered?.length) {
     if (
       props.value?.context === 'group'
       || props.value?.context === 'dashboard'

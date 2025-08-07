@@ -5,10 +5,10 @@ const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
 const { isLoggedIn } = useUserStore()
 const { overview } = useNotificationsDashboardOverviewStore()
-
+const v1Domain = useV1Domain()
 const handleClick = () => {
   if (!isLoggedIn.value) {
-    return navigateTo('/login')
+    return navigateTo(`${v1Domain}/login`)
   }
   if (!hasDashboards.value) {
     return navigateTo('/dashboard')

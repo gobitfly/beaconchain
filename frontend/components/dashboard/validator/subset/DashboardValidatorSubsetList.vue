@@ -73,6 +73,7 @@ function createDutyLabels(dutyObjects?: number[]) {
       return $t('common.slot', dutyObjects.length) + ':'
   }
 }
+const v1Domain = useV1Domain()
 function createDutyLinksData(
   dutyObjects?: number[],
 ): {
@@ -87,14 +88,14 @@ function createDutyLinksData(
   switch (props.category) {
     case 'got_slashed':
     case 'has_slashed':
-      path = '/validator/'
+      path = `${v1Domain}/validator/`
       formatValue = false
       break
     case 'proposal_missed':
-      path = '/slot/'
+      path = `${v1Domain}/slot/`
       break
     case 'proposal_proposed':
-      path = '/slot/'
+      path = `${v1Domain}/slot/`
       break
   }
 
@@ -128,7 +129,7 @@ function createDutyLinksData(
         :key="v.index"
       >
         <BcLink
-          :to="`/validator/${v.index}`"
+          :to="`${v1Domain}/validator/${v.index}`"
           target="_blank"
           class="link"
         >

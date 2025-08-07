@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
+    'nuxt-echarts',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
@@ -119,6 +120,15 @@ export default defineNuxtConfig({
     },
   },
   postcss: { plugins: { autoprefixer: {} } },
+  echarts: {
+    // charts: [ 'BarChart' ],
+    // components: [
+    //   'TooltipComponent',
+    //   'DataZoomComponent',
+    //   'GridComponent',
+    //   'LegendComponent',
+    // ],
+  },
   eslint: { config: { stylistic: true } },
   i18n: {
     // can probably be removed with @nuxtjs/i18n@10

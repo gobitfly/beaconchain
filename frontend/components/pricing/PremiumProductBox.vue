@@ -193,7 +193,7 @@ const mainFeatures = computed<Feature[]>(() => {
     },
   ]
 })
-
+const v1Domain = useV1Domain()
 const minorFeatures = computed<Feature[]>(() => {
   return [
     {
@@ -206,7 +206,7 @@ const minorFeatures = computed<Feature[]>(() => {
     },
     {
       available: product?.premium_perks.mobile_app_widget,
-      link: '/mobile',
+      link: `${v1Domain}/mobile`,
       name: $t('pricing.premium_product.mobile_app_widget'),
     },
     {

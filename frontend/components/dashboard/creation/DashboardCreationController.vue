@@ -21,14 +21,7 @@ const {
 } = useUserStore()
 const { currentNetwork } = useNetwork()
 
-interface Props {
-  displayMode: DashboardCreationDisplayMode,
-  initiallyVisible?: boolean,
-}
-const props = defineProps<Props>()
-
 const visible = ref<boolean>(false)
-const state = ref<DashboardCreationState>('')
 const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
 const network = ref<ChainId>(0)
@@ -52,26 +45,6 @@ const validatorsDisabled = computed(() => {
     || (!!forcedDashboardType.value && forcedDashboardType.value !== 'validator')
   )
 })
-
-function show(
-  forcedType: '' | DashboardType = '',
-) {
-  visible.value = true
-  type.value = forcedDashboardType.value = forcedType
-  if (!type.value) {
-    if (!validatorsDisabled.value) {
-      type.value = 'validator'
-    }
-  }
-  network.value = currentNetwork.value ?? 1
-  state.value = 'type'
-  name.value = isLoggedIn.value ? '' : 'cookie'
-}
-
-defineExpose({ show })
-if (props.initiallyVisible) {
-  show()
-}
 
 async function createDashboard() {
   visible.value = false
@@ -107,24 +80,36 @@ async function createDashboard() {
   }
   await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
 }
+
+// defineExpose({ show })
+// if (props.initiallyVisible) {
+//   show()
+// }
+
+function show(
+  forcedType: '' | DashboardType = '',
+) {
+  visible.value = true
+  type.value = forcedDashboardType.value = forcedType
+  if (!type.value) {
+    if (!validatorsDisabled.value) {
+      type.value = 'validator'
+    }
+  }
+  network.value = currentNetwork.value ?? 1
+  name.value = isLoggedIn.value ? '' : 'cookie'
+}
 </script>
 
 <template>
-  <BcDialog
-    v-if="visible && props.displayMode === 'modal'"
-    v-model="visible"
-  >
-    <DashboardCreationTypeMask
-      v-if="state === 'type'"
-      v-model:state="state"
-      v-model:type="type"
-      v-model:name="name"
-      :validators-disabled
-      accounts-disabled
-      @next="createDashboard"
-    />
-  </BcDialog>
-  <div v-else-if="visible && props.displayMode === 'panel'">
+  <DashboardCreationTypeMask
+    v-model:type="type"
+    v-model:name="name"
+    :validators-disabled
+    accounts-disabled
+    @next="createDashboard"
+  />
+  <!-- <div v-else-if="visible && props.displayMode === 'panel'">
     <div class="panel-container">
       <DashboardCreationTypeMask
         v-if="state === 'type'"
@@ -135,7 +120,7 @@ async function createDashboard() {
         @next=" createDashboard"
       />
     </div>
-  </div>
+  </div> -->
 </template>
 
 <style lang="scss" scoped>

@@ -3,20 +3,26 @@ import { DashboardValidatorEpochDutiesModal } from '#components'
 import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 
-interface Props {
+const props = defineProps<{
   groupName?: string,
   row: VDBRewardsTableRow,
-}
-const props = defineProps<Props>()
+}>()
 
-const { dashboardKey } = useDashboardKey()
+const { key } = useDashboard()
 
 const { t: $t } = useTranslation()
-const { details } = useValidatorDashboardRewardsDetailsStore(
-  dashboardKey.value,
-  props.row.group_id,
-  props.row.epoch,
-)
+
+const {
+  data: details,
+} = useApi(`/api/validator-dashboards/${key.value}/groups/${props.row.group_id}/rewards/${props.row.epoch}`, {
+  getCachedData(key, nuxtApp) {
+    // Due to `<ClientOnly>` wrapping `<BcTable>`, which is necessary currently for responsive tables,
+    // every open `expanded` row will rerender when any of the `rows` get `expanded` or `collapsed`,
+    // which results in fetching all expanded rows again.
+    // To prevent this, we pull the data from the cache
+    return nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
+  },
+})
 
 const dialog = useDialog()
 
@@ -138,20 +144,19 @@ const data = computed(() => {
 const openDuties = () => {
   dialog.open(DashboardValidatorEpochDutiesModal, {
     data: {
-      dashboardKey: dashboardKey.value,
+      dashboardKey: key.value,
       epoch: props.row.epoch,
       groupId: props.row.group_id,
       groupName: props.groupName,
     },
   })
 }
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
 </script>
 
 <template>
   <div class="background">
     <div
-      v-if="details"
       class="details-container"
     >
       <div>
@@ -305,13 +310,13 @@ const { getTimestampFromEpoch } = useNetworkStore()
         </div>
       </div>
     </div>
-    <div v-else>
+    <!-- <div v-else>
       <BcLoadingSpinner
         class="spinner"
         :loading="true"
         alignment="center"
       />
-    </div>
+    </div> -->
   </div>
 </template>
 

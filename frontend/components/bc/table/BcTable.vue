@@ -1,27 +1,27 @@
-<script setup lang="ts">
+<script setup lang="ts" generic="T extends ApiPagingResponse<Record<string, any>> | null">
+import type { DataTableSortEvent } from 'primevue/datatable'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { Cursor } from '~/types/datatable'
 
-interface Props {
+const props = defineProps<{
   addSpacer?: boolean,
   cursor?: Cursor,
-  data?: ApiPagingResponse<any>,
+  data: T,
   dataKey: string, // Required Unique identifier for a data row
   expandable?: boolean,
   hidePager?: boolean,
   isLoading?: boolean,
   isRowExpandable?: (item: any) => boolean,
-  pageSize?: number,
-  selectedSort?: string,
+  // pageSize?: number,
+  // selectedSort?: string,
   selectionMode?: 'multiple' | 'single',
   tableClass?: string,
-}
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void,
-  (e: 'setPageSize', value: number): void,
 }>()
+
+// const emit = defineEmits<{
+//   // (e: 'changeCursor', value: Cursor): void,
+//   (e: 'setPageSize', value: number): void,
+// }>()
 
 const expandedRows = ref<Record<any, boolean>>({})
 
@@ -38,73 +38,80 @@ const allExpanded = computed(() => {
 })
 
 const toggleAll = (forceClose = false) => {
-  if (!props.dataKey) {
-    return
-  }
-  const wasExpanded = allExpanded.value
-  props.data?.data?.forEach((item) => {
-    if (wasExpanded || forceClose) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete expandedRows.value[item[props.dataKey!]]
-    }
-    else if (!props.isRowExpandable || props.isRowExpandable(item)) {
-      expandedRows.value[item[props.dataKey!]] = true
-    }
-  })
-  expandedRows.value = { ...expandedRows.value }
+// Todo toggle all
+  console.log('Todo', forceClose)
+  return
+  // if (!props.dataKey) {
+  //   return
+  // }
+  // const wasExpanded = allExpanded.value
+  // props.data?.data?.forEach((item) => {
+  //   if (wasExpanded || forceClose) {
+  //     // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+  //     delete expandedRows.value[item[props.dataKey!]]
+  //   }
+  //   else if (!props.isRowExpandable || props.isRowExpandable(item)) {
+  //     expandedRows.value[item[props.dataKey!]] = true
+  //   }
+  // })
+  // expandedRows.value = { ...expandedRows.value }
 }
 
-const toggleItem = (item: any) => {
-  if (!props.dataKey) {
-    return
-  }
-  if (expandedRows.value[item[props.dataKey]]) {
-    if (expandedRows.value) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete expandedRows.value[item[props.dataKey]]
-    }
-  }
-  else {
-    expandedRows.value[item[props.dataKey]] = true
-  }
-  expandedRows.value = { ...expandedRows.value }
+// const toggleItem = (item: any) => {
+//   if (!props.dataKey) {
+//     return
+//   }
+//   if (expandedRows.value[item[props.dataKey]]) {
+//     if (expandedRows.value) {
+//       // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+//       delete expandedRows.value[item[props.dataKey]]
+//     }
+//   }
+//   else {
+//     expandedRows.value[item[props.dataKey]] = true
+//   }
+//   expandedRows.value = { ...expandedRows.value }
+// }
+
+const changeCursor = (value: string | undefined) => {
+  // toggleAll(true)
+  query.value.cursor = value
 }
 
-const setCursor = (value: Cursor) => {
-  toggleAll(true)
-  emit('setCursor', value)
-}
+// const setPageSize = (value: number) => {
+//   // toggleAll(true)
+//   emit('setPageSize', value)
+// }
 
-const setPageSize = (value: number) => {
-  toggleAll(true)
-  emit('setPageSize', value)
-}
-
-watch(
-  () => props.expandable,
-  (expandable) => {
-    if (!expandable) {
-      toggleAll(true)
-    }
-  },
-)
-watch(
-  () => props.data,
-  () => {
-    toggleAll(true)
-  },
-)
-
-const sort = computed(() => {
-  if (!props.selectedSort?.includes(':')) {
-    return
-  }
-  const split = props.selectedSort?.split(':')
-  return {
-    field: split[0],
-    order: split[1] === 'asc' ? -1 : 1,
-  }
+// watch(
+//   () => props.expandable,
+//   (expandable) => {
+//     if (!expandable) {
+//       // toggleAll(true)
+//     }
+//   },
+// )
+// watch(
+//   () => props.data,
+//   () => {
+//     // toggleAll(true)
+//   },
+// )
+/**
+ * Use useDefaultQuery in parent component to set the right defaults
+ */
+const query = defineModel<Query>('query', {
+  required: true,
 })
+const onSort = (event: DataTableSortEvent) => {
+  const {
+    sortField,
+    sortOrder,
+  } = event
+  if (query.value) {
+    query.value.sort = `${sortField}:${sortOrder === -1 ? 'asc' : 'desc'}`
+  }
+}
 </script>
 
 <template>
@@ -113,12 +120,11 @@ const sort = computed(() => {
     class="bc-table"
     sort-mode="single"
     lazy
-    :sort-field="sort?.field"
-    :sort-order="sort?.order"
     :value="data?.data"
     :data-key
     :loading="isLoading"
     :table-class
+    @sort="onSort"
   >
     <Column
       v-if="selectionMode"
@@ -140,7 +146,7 @@ const sort = computed(() => {
         />
       </template>
 
-      <template #body="slotProps">
+      <!-- <template #body="slotProps">
         <BcButtonIcon
           v-if="!isRowExpandable || isRowExpandable(slotProps.data)"
           screenreader-text="dashboard.table.action.toggle_row_detail"
@@ -153,7 +159,7 @@ const sort = computed(() => {
           "
           @click.stop.prevent="toggleItem(slotProps.data)"
         />
-      </template>
+      </template> -->
     </Column>
     <slot />
     <Column
@@ -166,17 +172,22 @@ const sort = computed(() => {
       </template>
     </Column>
     <template #empty>
-      <slot
-        v-if="!isLoading"
-        name="empty"
-      >
-        <DashboardTableEmpty />
-      </slot>
+      <div class="empty">
+        <slot name="empty">
+          <DashboardTableEmpty
+            v-if="!isLoading"
+          />
+        </slot>
+      </div>
     </template>
 
     <template #expansion="slotProps">
-      <slot
+      <!-- <slot
         v-if="dataKey && expandedRows[slotProps.data[dataKey]]"
+        name="expansion"
+        v-bind="slotProps"
+      /> -->
+      <slot
         name="expansion"
         v-bind="slotProps"
       />
@@ -192,11 +203,9 @@ const sort = computed(() => {
     <template #footer>
       <BcTablePager
         v-if="!hidePager && data?.paging"
-        :page-size="pageSize ?? 0"
+        v-model:limit="query.limit"
         :paging="data?.paging"
-        :cursor
-        @set-cursor="setCursor"
-        @set-page-size="setPageSize"
+        @change-cursor="changeCursor"
       >
         <template #bc-table-footer-left>
           <slot name="bc-table-footer-left" />
@@ -233,6 +242,9 @@ const sort = computed(() => {
 
   :deep(.p-datatable-column-header-content) {
     text-wrap: balance;
+  }
+  .empty {
+    min-height: 400px;
   }
 }
 

@@ -1,50 +1,54 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import { useStorage } from '@vueuse/core'
+// import type { DataTableSortEvent } from 'primevue/datatable'
+// import { useStorage } from '@vueuse/core'
 import type { VDBSummaryTableRow } from '~/types/api/validator_dashboard'
 import type {
-  Cursor, TableQueryParams,
+  Cursor,
+  //  TableQueryParams,
 } from '~/types/datatable'
 import { DAHSHBOARDS_ALL_GROUPS_ID } from '~/types/dashboard'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import {
-  type SummaryChartFilter,
-  type SummaryTableVisibility,
-  type SummaryTimeFrame,
-  SummaryTimeFrames,
+import type {
+  SummaryChartFilter,
+  SummaryTableVisibility,
+  // type SummaryTimeFrame,
+  // SummaryTimeFrames,
 } from '~/types/dashboard/summary'
 
-type ShowAbsoluteValuesStorage = {
-  [dashboardId: string]: boolean,
-}
+// type ShowAbsoluteValuesStorage = {
+//   [dashboardId: string]: boolean,
+// }
 
 const {
-  dashboardKey,
-  isGuestDashboard,
-  isSharedDashboard,
-} = useDashboardKey()
-const {
-  getSummary,
-  isLoading,
-  query: lastQuery,
-  summary,
-} = useValidatorDashboardSummaryStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
   hasValidators,
-  isLargeDashboard,
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
+  key,
+  variant,
+} = useDashboard()
+// const {
+// getSummary,
+// isLoading,
+// query: lastQuery,
+// summary,
+// } = useValidatorDashboardSummaryStore()
+// const {
+//   bounce: setQuery,
+//   temp: tempQuery,
+//   value: query,
+// } = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+// const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+// const {
+// hasValidators,
+// isLargeDashboard,
+// overview,
+// } = storeToRefs(validatorDashboardOverviewStore)
 const { groups } = useValidatorDashboardGroups()
 const { width } = useWindowSize()
-const storageDashboardKey = computed(() => {
-  return dashboardKey.value || 'guest-dashboard'
-})
+// const storageDashboardKey = computed(() => {
+//   if (variant.value === 'guest-dashboard') {
+//     return 'guest-dashboard'
+//   }
+//   return key.value
+// })
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
@@ -54,15 +58,29 @@ const chartFilter = ref<SummaryChartFilter>({
   efficiency: 'all',
   groupIds: [],
 })
-const selectedTimeFrame = ref<SummaryTimeFrame>('last_24h')
-const showAbsoluteValuesPersisted = useStorage<ShowAbsoluteValuesStorage>('bc-dashboard-table-summary-show-absolute-values', {})
 
-const timeFrames = computed(() =>
-  SummaryTimeFrames.map(t => ({
-    id: t,
-    name: $t(`time_frames.${t}`),
-  })),
-)
+const timeFrames: { id: Query['period'], name: string }[] = [
+  {
+    id: 'last_1h',
+    name: $t('time_frames.last_1h'),
+  },
+  {
+    id: 'last_24h',
+    name: $t('time_frames.last_24h'),
+  },
+  {
+    id: 'last_7d',
+    name: $t('time_frames.last_7d'),
+  },
+  {
+    id: 'last_30d',
+    name: $t('time_frames.last_30d'),
+  },
+  {
+    id: 'all_time',
+    name: $t('time_frames.all_time'),
+  },
+]
 
 const colsVisible = computed<SummaryTableVisibility>(() => {
   return {
@@ -75,124 +93,113 @@ const colsVisible = computed<SummaryTableVisibility>(() => {
 })
 const searchPlaceholder = computed(() =>
   $t(
-    isGuestDashboard.value && (groups.value?.length ?? 0) <= 1
+    variant.value === 'guest-dashboard' && (groups.value?.length ?? 0) <= 1
       ? 'dashboard.validator.summary.search_placeholder_public'
       : 'dashboard.validator.summary.search_placeholder',
   ),
 )
-const loadData = (q?: TableQueryParams) => {
-  if (!q) {
-    q = query.value
-      ? { ...query.value }
-      : {
-          limit: pageSize.value,
-          sort: 'efficiency:desc',
-        }
-  }
-  setQuery(q, true, true)
-}
+
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
 }
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery?.value))
-}
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery?.value))
-}
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery?.value))
-}
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery?.value))
-}
+
 const getRowClass = (row: VDBSummaryTableRow) => {
   if (row.group_id === DAHSHBOARDS_ALL_GROUPS_ID) {
     return 'total-row'
   }
 }
 
-onMounted(() => {
-  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
-    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
-  }
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
+
+const id = computed(() => {
+  if (variant.value === 'guest-dashboard') return 'guest-dashboard'
+  if (variant.value === 'shared-dashboard') return 'shared-dashboard'
+  return key.value as string
 })
 
-watch(() => overview.value, () => {
-  if (!(storageDashboardKey.value in showAbsoluteValuesPersisted.value)) {
-    showAbsoluteValuesPersisted.value[storageDashboardKey.value] = !isSharedDashboard.value || !isLargeDashboard.value
-  }
-})
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-watch(
-  [
-    query,
-    selectedTimeFrame,
-  ],
-  ([
-    q,
-    timeFrame,
-  ]) => {
-    if (q) {
-      getSummary(dashboardKey.value, timeFrame, q)
+const summaryTableNumberFormat = useBcCookie<Record<string, 'absolute' | 'relative'>>('bc-summary-table-number-format', {
+  default() {
+    return {
+      [id.value]: 'absolute',
     }
   },
-  { immediate: true },
-)
+})
+const summaryTabView = useBcCookie<'chart' | 'table'>('bc-summary-tab-view', {
+  default() {
+    return 'table'
+  },
+})
+const query = useDefaultQuery({ period: 'last_24h' })
+
+const {
+  data,
+  status,
+} = useApi(() => `/api/validator-dashboards/${key.value}/summary`, {
+  immediate: !!key.value,
+  query,
+})
 </script>
 
 <template>
   <div>
     <BcTableControl
-      v-model:="showAbsoluteValuesPersisted[storageDashboardKey]"
+      v-model:search="query.search"
+      v-model:tab-view="summaryTabView"
       :search-placeholder
-      @set-search="setSearch"
     >
-      <template #header-center="{ tableIsShown }">
+      <template #header-center="{ isTable }">
         <h1 class="summary_title">
           {{ $t("dashboard.validator.summary.title") }}
         </h1>
         <BcDropdown
-          v-if="tableIsShown"
-          v-model="selectedTimeFrame"
+          v-if="isTable"
+          v-model="query.period"
           :options="timeFrames"
           option-value="id"
           option-label="name"
           class="small"
           :placeholder="$t('dashboard.group.selection.placeholder')"
         />
-        <DashboardChartSummaryFilter
+        <LazyDashboardChartSummaryFilter
           v-else
           v-model="chartFilter"
         />
       </template>
+      <template #value-format>
+        <BcToggleIcon
+          v-model="summaryTableNumberFormat[id]"
+          true-value="absolute"
+          false-value="relative"
+        >
+          <template #trueIcon>
+            <BcIcon
+              size="sm"
+              name="hashtag"
+            />
+          </template>
+          <template #falseIcon>
+            <BcIcon
+              size="sm"
+              name="percent"
+            />
+          </template>
+        </BcToggleIcon>
+      </template>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="summary"
+            :query
+            :data
             data-key="group_id"
             :expandable="true"
             class="summary_table"
             :cursor
             :page-size
             :row-class="getRowClass"
-            :selected-sort="tempQuery?.sort"
-            :is-loading
+            :is-loading="status === 'pending'"
             :hide-pager="true"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
           >
             <Column
               field="group_id"
@@ -240,14 +247,14 @@ watch(
                   </BcTooltip>
                 </div>
               </template>
-              <template #body="{ data }">
+              <template #body="slotProps">
                 <DashboardTableSummaryValidators
-                  :validators="data.validators"
-                  :is-absolute="showAbsoluteValuesPersisted[storageDashboardKey]"
-                  :row="data"
-                  :group-id="data.group_id"
-                  :dashboard-key
-                  :time-frame="selectedTimeFrame"
+                  :validators="slotProps.data.validators"
+                  :is-absolute="summaryTableNumberFormat[id] === 'absolute'"
+                  :row="slotProps.data"
+                  :group-id="slotProps.data.group_id"
+                  :dashboard-key="key"
+                  :time-frame="query.period"
                   context="group"
                 />
               </template>
@@ -263,7 +270,7 @@ watch(
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="efficiency"
-                  :time-frame="selectedTimeFrame"
+                  :time-frame="query.period"
                   :row="slotProps.data"
                 />
               </template>
@@ -278,8 +285,8 @@ watch(
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
                   property="attestations"
-                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :is-absolute="summaryTableNumberFormat[id] === 'absolute'"
+                  :time-frame="query.period"
                   :row="slotProps.data"
                 />
               </template>
@@ -295,8 +302,8 @@ watch(
                   :class="slotProps.data.className"
                   property="proposals"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :is-absolute="summaryTableNumberFormat[id] === 'absolute'"
+                  :time-frame="query.period"
                   :row="slotProps.data"
                 />
               </template>
@@ -312,8 +319,8 @@ watch(
                   :class="slotProps.data.className"
                   property="reward"
                   class="no-space-between-value"
-                  :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
-                  :time-frame="selectedTimeFrame"
+                  :is-absolute="summaryTableNumberFormat[id] === 'absolute'"
+                  :time-frame="query.period"
                   :row="slotProps.data"
                 />
               </template>
@@ -322,19 +329,26 @@ watch(
               <DashboardTableSummaryDetails
                 :table-visibility="colsVisible"
                 :row="slotProps.data"
-                :time-frame="selectedTimeFrame"
-                :absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? true"
+                :time-frame="query.period"
+                :is-absolute="summaryTableNumberFormat[id] === 'absolute'"
               />
             </template>
             <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
+              <LazyDashboardTableAddValidator
+                v-if="!hasValidators"
+                @add-validator="emit('add-validator')"
+              />
             </template>
           </BcTable>
-        </ClientOnly>
+          <!-- </ClientOnly> -->
+        </clientonly>
       </template>
-      <template #chart>
+      <template #chart="{ isTable }">
         <div class="chart-container">
-          <DashboardChartSummary :filter="chartFilter" />
+          <LazyDashboardChartSummary
+            v-if="!isTable"
+            :filter="chartFilter"
+          />
         </div>
       </template>
     </BcTableControl>

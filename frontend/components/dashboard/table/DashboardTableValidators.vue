@@ -48,6 +48,7 @@ const openValidatorModal = () => {
 const groupName = computed(() => {
   return getGroupLabel($t, props.groupId, groups.value, $t('common.total'))
 })
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -61,7 +62,7 @@ const groupName = computed(() => {
         :key="validator"
       >
         <BcLink
-          :to="`/validator/${validator}`"
+          :to="`${v1Domain}/validator/${validator}`"
           target="_blank"
           class="link validator_link"
         >

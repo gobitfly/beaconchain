@@ -1,111 +1,77 @@
 <script setup lang="ts">
 import type { Paging } from '~/types/api/common'
-import type { Cursor } from '~/types/datatable'
 
-interface Props {
-  cursor: Cursor,
-  pageSize: number,
-  paging?: Paging,
-  stepperOnly?: boolean,
-}
-const props = defineProps<Props>()
-
-const emit = defineEmits<{
-  (e: 'setCursor', value: Cursor): void,
-  (e: 'setPageSize', value: number): void,
+const props = defineProps<{
+  paging: Paging,
 }>()
 
-const pageSizes = [
-  5,
-  10,
-  25,
-  50,
-  100,
-]
+const emit = defineEmits<{
+  (e: 'changeCursor', value: string | undefined): void,
+}>()
 
-const currentOffset = computed<number>(() =>
-  typeof props.cursor === 'number' ? props.cursor : 0,
-)
+// const currentOffset = computed<number>(() =>
+//   typeof props.cursor === 'number' ? props.cursor : 0,
+// )
 
-const data = computed(() => {
-  if (!props.paging) {
-    return { mode: 'waiting' }
-  }
-  if (props.paging.total_count === undefined) {
-    return {
-      mode: 'cursor',
-      next_cursor: props.paging.next_cursor,
-      prev_cursor: props.paging.prev_cursor,
-    }
-  }
-  const page
-    = props.paging.total_count > 0
-      ? 1 + Math.floor(currentOffset.value / props.pageSize)
-      : 0
-  const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
-  const to = Math.min(
-    currentOffset.value + props.pageSize,
-    props.paging.total_count,
-  )
-  const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
+// const data = computed(() => {
+//   if (!props.paging) {
+//     return { mode: 'waiting' }
+//   }
+//   if (props.paging.total_count === undefined) {
+//     return {
+//       mode: 'cursor',
+//       next_cursor: props.paging.next_cursor,
+//       prev_cursor: props.paging.prev_cursor,
+//     }
+//   }
+//   const page
+//     = props.paging.total_count > 0
+//       ? 1 + Math.floor(currentOffset.value / props.pageSize)
+//       : 0
+//   const from = props.paging.total_count > 0 ? currentOffset.value + 1 : 0
+//   const to = Math.min(
+//     currentOffset.value + props.pageSize,
+//     props.paging.total_count,
+//   )
+//   const lastPage = Math.ceil(props.paging.total_count / props.pageSize)
 
-  return {
-    from,
-    lastPage,
-    mode: 'offset',
-    page,
-    to,
-  }
-})
+//   return {
+//     from,
+//     lastPage,
+//     mode: 'offset',
+//     page,
+//     to,
+//   }
+// })
 
-const next = () => {
-  emit(
-    'setCursor',
-    Math.min(
-      currentOffset.value + props.pageSize,
-      ((data.value.lastPage ?? 1) - 1) * props.pageSize,
-    ),
-  )
-}
+// const next = () => {
+//   emit(
+//     'setCursor',
+//     Math.min(
+//       currentOffset.value + props.pageSize,
+//       ((data.value.lastPage ?? 1) - 1) * props.pageSize,
+//     ),
+//   )
+// }
 
-const prev = () => {
-  emit('setCursor', Math.max(0, currentOffset.value - props.pageSize))
-}
+// const setPageSize = (size: number) => {
+//   if (data.value.mode === 'offset') {
+//     // in case we increase the page size we must adjust the offset
+//     const off = currentOffset.value % size
+//     if (off > 0) {
+//       emit('setCursor', currentOffset.value - off)
+//     }
+//   }
+//   emit('setPageSize', size)
+// }
 
-const first = () => {
-  emit('setCursor', undefined)
-}
-
-const last = () => {
-  emit('setCursor', (data.value.lastPage! - 1) * props.pageSize)
-}
-
-const setPageSize = (size: number) => {
-  if (data.value.mode === 'offset') {
-    // in case we increase the page size we must adjust the offset
-    const off = currentOffset.value % size
-    if (off > 0) {
-      emit('setCursor', currentOffset.value - off)
-    }
-  }
-  emit('setPageSize', size)
-}
-
-// in case the totalCount decreased
-watch(
-  () => data.value.lastPage && data.value.lastPage < data.value.page,
-  (match) => {
-    if (data.value.lastPage !== undefined && match) {
-      last()
-    }
-  },
-)
+const limit = defineModel<Query['limit']>('limit')
 </script>
 
 <template>
   <div class="bc-pageinator">
     <div class="pager">
-      <template v-if="data.mode === 'offset'">
+      <!-- <template v-if="data.mode === 'offset'">
         <div
           class="item button"
           :disabled="!currentOffset"
@@ -143,50 +109,48 @@ watch(
         >
           {{ $t("table.last") }}
         </div>
-      </template>
-      <template v-else-if="data.mode === 'cursor'">
-        <div
-          class="item button"
-          :disabled="!data.prev_cursor"
-          @click="first"
-        >
-          {{ $t("table.first") }}
-        </div>
-        <div
-          class="item button"
-          :disabled="!data.prev_cursor"
-          @click="emit('setCursor', data.prev_cursor)"
-        >
-          <BcIcon
-            name="chevron-left"
-            class="toggle"
-          />
-        </div>
-        <div
-          class="item button"
-          :disabled="!data.next_cursor"
-          @click="emit('setCursor', data.next_cursor)"
-        >
-          <BcIcon
-            name="chevron-right"
-            class="toggle"
-          />
-        </div>
-      </template>
-      <Select
-        v-if="props.pageSize && !stepperOnly"
-        :model-value="props.pageSize"
-        :options="pageSizes"
+      </template> -->
+      <!-- <template v-else-if="data.mode === 'cursor'"> -->
+      <BcButtonIcon
+        name="chevrons-left"
+        screenreader-text="table.navigation.first"
+        class="item button"
+        :disabled="!props.paging?.prev_cursor"
+        @click="emit('changeCursor', undefined)"
+      />
+      <BcButtonIcon
+        screenreader-text="table.navigation.previous"
+        name="chevron-left"
+        class="item button"
+        :disabled="!props.paging?.prev_cursor"
+        @click="emit('changeCursor', props.paging?.prev_cursor ?? '')"
+      />
+
+      <BcButtonIcon
+        screenreader-text="table.navigation.next"
+        name="chevron-right"
+        class="item button"
+        :disabled="!props.paging?.next_cursor"
+        @click="emit('changeCursor', props.paging?.next_cursor ?? '')"
+      />
+      <!-- </template> -->
+      <!-- <Select
+        v-model="limit"
+        :options="[...limits]"
         class="table small"
-        @change="(event) => setPageSize(event.value)"
+        @update:model-value="emit('setLimit', $event)"
+      /> -->
+      <Select
+        v-model="limit"
+        :options="[...limits]"
+        class="table small"
       />
     </div>
     <div
-      v-if="!stepperOnly"
       class="left-info"
     >
       <slot name="bc-table-footer-left">
-        <span v-if="props.paging?.total_count">
+        <!-- <span v-if="props.paging?.total_count">
           {{
             $t("table.showing", {
               from: data.from,
@@ -194,7 +158,7 @@ watch(
               total: props.paging?.total_count,
             })
           }}
-        </span>
+        </span> -->
       </slot>
     </div>
     <div
@@ -212,7 +176,7 @@ watch(
 .bc-pageinator {
   margin-block-start: 20px;
   display: grid;
-  gap: 10px;
+  gap: var(--padding-small);
   justify-items: center;
   font-weight: var(--standard_text_medium_font_weight);
 
@@ -252,7 +216,8 @@ watch(
 
   .pager {
     display: flex;
-    gap: 3px;
+    align-items: center;
+    gap: var(--padding-small, 3px);
 
     .table {
       @include main.container;
@@ -280,16 +245,10 @@ watch(
       }
 
       &.button {
-        &:not([disabled="true"]) {
-          cursor: pointer;
-        }
-
-        &[disabled="true"] {
-          pointer-events: none;
-        }
-
-        &[disabled="true"] {
+        margin: 0;
+        &[disabled] {
           color: var(--text-color-disabled);
+          cursor: not-allowed;
         }
       }
 

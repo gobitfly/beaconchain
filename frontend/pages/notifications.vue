@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
-import type { HashTabs } from '~/types/hashTabs'
+import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
 
 const { isLoggedIn } = useUserStore()
 const dialog = useDialog()
@@ -14,7 +14,7 @@ const tabKey = {
   machines: 'machines',
   networks: 'networks',
 }
-const tabs: HashTabs = [
+const tabs: HashTab[] = [
   {
     icon: 'gauge-simple-max',
     key: tabKey.dashboards,
@@ -61,52 +61,48 @@ const openManageNotifications = () => {
 
 <template>
   <div>
-    <BcPageWrapper>
-      <template #top>
-        <div class="overview">
-          <NotificationsOverview
-            @open-dialog="openManageNotifications"
-          />
-        </div>
-      </template>
-      <NotificationsManagementModal
-        v-model="manageNotificationsModalVisisble"
+    <div class="overview">
+      <NotificationsOverview
+        @open-dialog="openManageNotifications"
       />
-      <div class="button-row">
-        <Button
-          :label="$t('notifications.manage')"
-          @click="openManageNotifications"
+    </div>
+    <NotificationsManagementModal
+      v-model="manageNotificationsModalVisisble"
+    />
+    <div class="button-row">
+      <Button
+        :label="$t('notifications.manage')"
+        @click="openManageNotifications"
+      />
+    </div>
+    <BcTabList
+      :tabs
+      default-tab="dashboards"
+      :use-route-hash="true"
+      class="notifications-tab-view"
+      panels-class="notifications-tab-panels"
+    >
+      <template #[getSlotName(tabKey.dashboards)]>
+        <NotificationsDashboardsTable
+          @open-dialog="openManageNotifications"
         />
-      </div>
-      <BcTabList
-        :tabs
-        default-tab="dashboards"
-        :use-route-hash="true"
-        class="notifications-tab-view"
-        panels-class="notifications-tab-panels"
-      >
-        <template #[getSlotName(tabKey.dashboards)]>
-          <NotificationsDashboardsTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.clients)]>
-          <NotificationsClientsTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.networks)]>
-          <NotificationsNetworkTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.machines)]>
-          <NotificationsMachinesTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-      </BcTabList>
-    </BcPageWrapper>
+      </template>
+      <template #[getSlotName(tabKey.clients)]>
+        <NotificationsClientsTable
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+      <template #[getSlotName(tabKey.networks)]>
+        <NotificationsNetworkTable
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+      <template #[getSlotName(tabKey.machines)]>
+        <NotificationsMachinesTable
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+    </BcTabList>
   </div>
 </template>
 

@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type {
-  DashboardValidatorContext,
-  SummaryTimeFrame,
-} from '~/types/dashboard/summary'
+import type { DashboardValidatorContext } from '~/types/dashboard/summary'
 import { LazyDashboardValidatorSubsetModal } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type { DashboardKey } from '~/types/dashboard'
@@ -16,7 +13,7 @@ const props = defineProps<{
   groupId?: number,
   isAbsolute: boolean,
   row: VDBSummaryTableRow,
-  timeFrame?: SummaryTimeFrame,
+  timeFrame?: Query['period'],
   validators: VDBSummaryValidators,
 }>()
 

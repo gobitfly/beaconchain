@@ -16,6 +16,7 @@ export type Icon =
   | 'chevron-down'
   | 'chevron-left'
   | 'chevron-right'
+  | 'chevrons-left'
   | 'circle-info'
   | 'circle-plus'
   | 'circle-user'
@@ -122,6 +123,7 @@ const is = computed(() => {
     <LazyBcIconChevronDown v-else-if="name === 'chevron-down'" />
     <LazyBcIconChevronLeft v-else-if="name === 'chevron-left'" />
     <LazyBcIconChevronRight v-else-if="name === 'chevron-right'" />
+    <LazyBcIconChevronsLeft v-else-if="name === 'chevrons-left'" />
     <LazyBcIconCircleInfo v-else-if="name === 'circle-info'" />
     <LazyBcIconCirclePlus v-else-if="name === 'circle-plus'" />
     <LazyBcIconCircleUser v-else-if="name === 'circle-user'" />

@@ -1,17 +1,40 @@
 <script setup lang="ts">
-import type { HashTabs } from '~/types/hashTabs'
+import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
-interface Props {
+export type HashTab = {
+  component?: Component,
+  disabled?: boolean,
+  icon?: Icon,
+  key: string,
+  placeholder?: string,
+  title?: string,
+}
+
+const props = defineProps<{
   defaultTab: string,
   panelsClass?: string,
-  tabs: HashTabs,
-  useRouteHash?: boolean,
-}
-const props = defineProps<Props>()
+  queryParameterKey?: string,
+  tabs: HashTab[],
+}>()
 
-const {
-  activeTab,
-} = useHashTabs(props.tabs, props.defaultTab, props.useRouteHash)
+const router = useRouter()
+const route = useRoute()
+const currentTabQueryValue = computed(() => {
+  const queryValue = route.query[props.queryParameterKey ?? 'tab']
+  // if query parameters are added more than once
+  if (Array.isArray(queryValue)) return queryValue[0]
+  return queryValue
+})
+const activeTab = ref(currentTabQueryValue.value ?? props.defaultTab)
+const onUpdateValue = () => {
+  if (!props.queryParameterKey) return
+  router.push({
+    query: {
+      ...route.query,
+      [props.queryParameterKey]: activeTab.value,
+    },
+  })
+}
 </script>
 
 <template>
@@ -20,6 +43,7 @@ const {
     lazy
     scrollable
     class="dashboard-tab-view"
+    @update:value="onUpdateValue"
   >
     <TabList>
       <Tab

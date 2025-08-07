@@ -10,8 +10,7 @@ export const useCurrency = () => {
     selectedCurrencyMain,
   } = storeToRefs(settingsStore)
 
-  const { latestState } = storeToRefs(useLatestStateStore())
-  const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])
+  const exchangeRates = useExchangeRates()
 
   const convertCurrency = ({
     sourceCurrency,

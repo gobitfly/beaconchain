@@ -2,10 +2,11 @@
 const props = defineProps<{
   disabledFilter?: boolean,
   isLoading?: boolean,
+  modelValue: string,
   searchPlaceholder?: string,
 }>()
 
-const emit = defineEmits<{ (e: 'filter-changed', value: string): void }>()
+const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
 
 const isFilterVisible = ref(false)
 const filter = ref('')
@@ -33,7 +34,7 @@ const handleClick = () => {
   }
 }
 watchDebounced(filter, () => {
-  emit('filter-changed', filter.value)
+  emit('update:modelValue', filter.value)
 })
 </script>
 
@@ -43,7 +44,6 @@ watchDebounced(filter, () => {
       ref="input"
       v-model.trim="filter"
       type="search"
-      aria-busy="true"
       :placeholder="props.searchPlaceholder"
       :disabled="!isFilterVisible"
       :class="{ visible: isFilterVisible }"

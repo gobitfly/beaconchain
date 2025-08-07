@@ -106,6 +106,7 @@ export default withNuxt({
       rules: {
       // disable the rules as there are conflicts
         'perfectionist/sort-imports': 'off',
+        'perfectionist/sort-modules': 'off', // types get reorderd although they depend on each other
         'perfectionist/sort-vue-attributes': 'off',
       },
     },

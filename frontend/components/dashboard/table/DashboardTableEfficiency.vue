@@ -2,8 +2,8 @@
 import BcTooltip from '~/components/bc/BcTooltip.vue'
 
 interface Props {
-  absolute?: boolean,
   failed: number,
+  isAbsolute?: boolean,
   isTooltip?: boolean,
   success: number,
 }
@@ -32,12 +32,12 @@ const data = computed(() => {
       <slot name="tooltip">
         <DashboardTableEfficiency
           v-bind="props"
-          :absolute="!absolute"
+          :absolute="!isAbsolute"
           :is-tooltip="true"
         />
       </slot>
     </template>
-    <span v-if="absolute">
+    <span v-if="isAbsolute">
       <BcFormatNumber
         class="positive"
         :value="props.success"

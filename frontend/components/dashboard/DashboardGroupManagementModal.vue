@@ -15,10 +15,10 @@ const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const dialog = useDialog()
 
-const {
-  dashboardKey,
-  isGuestDashboard,
-} = useDashboardKey()
+// const {
+//   dashboardKey,
+//   isGuestDashboard,
+// } = useDashboardKey()
 
 const {
   width,
@@ -90,7 +90,10 @@ const onClose = () => {
   visible.value = false
   resetData()
 }
-
+const {
+  key,
+  variant,
+} = useDashboard()
 const addGroup = async () => {
   newGroupName.value = newGroupName.value.trim()
   if (newGroupDisabled.value) {
@@ -108,9 +111,9 @@ const addGroup = async () => {
       body: { name: newGroupName.value },
       method: 'POST',
     },
-    { dashboardKey: dashboardKey.value },
+    { dashboardKey: key.value },
   )
-  await refreshOverview(dashboardKey.value)
+  await refreshOverview(key.value)
   newGroupName.value = ''
 }
 
@@ -122,11 +125,11 @@ const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
       method: 'PUT',
     },
     {
-      dashboardKey: dashboardKey.value,
+      dashboardKey: key.value,
       groupId: row.id,
     },
   )
-  refreshOverview(dashboardKey.value)
+  refreshOverview(key.value)
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
@@ -134,11 +137,11 @@ const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
     'DASHBOARD_VALIDATOR_GROUP_MODIFY',
     { method: 'DELETE' },
     {
-      dashboardKey: dashboardKey.value,
+      dashboardKey: key.value,
       groupId: row.id,
     },
   )
-  refreshOverview(dashboardKey.value)
+  refreshOverview(key.value)
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
@@ -178,13 +181,13 @@ const setSearch = (value?: string) => {
 const dashboardName = computed(() => {
   return (
     dashboards.value?.validator_dashboards?.find(
-      d => `${d.id}` === dashboardKey.value,
+      d => `${d.id}` === key.value,
     )?.name || $t('dashboard.validator.group_management.your_dashboard')
   )
 })
 
 const maxGroupsPerDashboard = computed(() =>
-  isGuestDashboard.value || !user.value?.premium_perks?.validator_groups_per_dashboard
+  variant.value === 'guest-dashboard' || !user.value?.premium_perks?.validator_groups_per_dashboard
     ? 1
     : user.value.premium_perks.validator_groups_per_dashboard,
 )
@@ -220,7 +223,7 @@ const isMobile = computed(() => {
       :search-placeholder="
         $t('dashboard.validator.group_management.search_placeholder')
       "
-      :disabled-filter="isGuestDashboard"
+      :disabled-filter="variant === 'guest-dashboard'"
       @set-search="setSearch"
     >
       <template #header-left>
@@ -286,7 +289,7 @@ const isMobile = computed(() => {
                       : ''
                   "
                   :can-be-empty="slotProps.data.id === 0"
-                  :disabled="isGuestDashboard"
+                  :disabled="variant === 'guest-dashboard'"
                   :pattern="REGEXP_VALID_NAME"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"

@@ -1,28 +1,26 @@
 <script setup lang="ts">
-const manageValidatorsModalVisisble = ref(false)
-
-const addValidator = () => {
-  manageValidatorsModalVisisble.value = true
-}
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
-  <div
+  <BcButtonText
     class="empty delayed-fadein-animation"
-    @click="addValidator"
+    @click="emit('add-validator')"
   >
-    <span class="big_text">{{
+    {{
       $t("dashboard.validator.summary.add_validator")
-    }}</span>
+    }}
     <BcIcon name="circle-plus" />
-    <DashboardValidatorManagementModal
-      v-model="manageValidatorsModalVisisble"
-    />
-  </div>
+  </BcButtonText>
 </template>
 
 <style lang="scss" scoped>
 .empty {
+  font-family: var(--big_text_font_family);
+  font-size: var(--big_text_font_size);
+  font-weight: var(--big_text_font_weight);
   width: 100%;
   height: 400px;
   display: flex;

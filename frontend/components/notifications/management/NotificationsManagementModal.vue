@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import type { HashTabs } from '~/types/hashTabs'
+import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
 
 const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 
-const tabs: HashTabs = [
+const tabs: HashTab[] = [
   {
     icon: 'gear',
     key: 'general',

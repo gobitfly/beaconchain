@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { Target } from '~/types/links'
-
 const { t: $t } = useTranslation()
 const { fetch } = useCustomFetch()
 const toast = useBcToast()
@@ -118,6 +116,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
 }, {
   deep: true,
 })
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -212,8 +211,8 @@ watchDebounced(() => store.settings.general_settings, async () => {
       <div v-else>
         {{ tOf($t, "notifications.general.download_app", 0) }}
         <BcLink
-          to="/mobile"
-          :target="Target.External"
+          :to="`${v1Domain}/mobile`"
+          target="_blank"
           class="link"
         >
           {{ tOf($t, "notifications.general.download_app", 1) }}

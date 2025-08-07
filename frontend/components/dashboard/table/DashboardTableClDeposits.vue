@@ -95,6 +95,10 @@ const {
   displayCurrencyDefault,
   selectedCurrencyMain,
 } = useCurrency()
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
@@ -156,7 +160,7 @@ const {
               />
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/validator/${slotProps.data.index}`"
+                :to="`${v1Domain}/validator/${slotProps.data.index}`"
                 target="_blank"
                 class="link"
               >
@@ -269,7 +273,7 @@ const {
                       class="dashboard-table-cl-deposits__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.index}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.index}`"
                       target="_blank"
                       class="link"
                     >
@@ -294,7 +298,7 @@ const {
                   </div>
                   <BcLink
                     v-if="slotProps.data.slot_queued !== undefined"
-                    :to="`/slot/${slotProps.data.slot_queued}`"
+                    :to="`${v1Domain}/slot/${slotProps.data.slot_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -309,7 +313,7 @@ const {
                   <div class="dashboard-table-cl-deposits__details-value">
                     <BcLink
                       v-if="slotProps.data.slot_processed !== undefined"
-                      :to="`/slot/${slotProps.data.slot_processed}`"
+                      :to="`${v1Domain}/slot/${slotProps.data.slot_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -405,7 +409,10 @@ const {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

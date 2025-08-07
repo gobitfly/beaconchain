@@ -1,24 +1,28 @@
 <script setup lang="ts">
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 import { DashboardValidatorSubsetModal } from '#components'
+import type { VDBOverviewData } from '~/types/api/validator_dashboard'
 
 const { t: $t } = useTranslation()
 
-const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
-const { overview } = storeToRefs(validatorDashoboardOverviewStore)
+// const validatorDashoboardOverviewStore = useValidatorDashboardOverviewStore()
+// const { overview } = storeToRefs(validatorDashoboardOverviewStore)
+const props = defineProps<{
+  overview: null | VDBOverviewData,
+}>()
 
-const validatorsOffline = computed(() => overview.value?.validators.offline ?? 0)
-const validatorsOnline = computed(() => overview.value?.validators.online ?? 0)
+const validatorsOffline = computed(() => props.overview?.validators.offline ?? 0)
+const validatorsOnline = computed(() => props.overview?.validators.online ?? 0)
 
 const dialog = useDialog()
-const { dashboardKey } = useDashboardKey()
+// const { dashboardKey } = useDashboardKey()
+const { key } = useDashboard()
 const { getDashboardLabel } = useUserDashboardStore()
 const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: 'dashboard',
-      dashboardKey: dashboardKey.value,
-      dashboardName: getDashboardLabel(dashboardKey.value, 'validator'),
+      dashboardKey: key.value,
+      dashboardName: getDashboardLabel(key.value ?? ''),
       timeFrame: 'last_24h',
     },
   })
@@ -27,32 +31,37 @@ const openValidatorModal = () => {
 const efficiencyInfos = [
   {
     label: $t('statistics.last_24h'),
-    value: formatPercent(overview.value?.efficiency.last_24h ?? 0, {
+    value: formatPercent(props.overview?.efficiency.last_24h ?? 0, {
+      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.last_7d'),
-    value: formatPercent(overview.value?.efficiency.last_7d ?? 0, {
+    value: formatPercent(props.overview?.efficiency.last_7d ?? 0, {
+      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.last_30d'),
-    value: formatPercent(overview.value?.efficiency.last_30d ?? 0, {
+    value: formatPercent(props.overview?.efficiency.last_30d ?? 0, {
+      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
   {
     label: $t('statistics.all_time'),
-    value: formatPercent(overview.value?.efficiency.all_time ?? 0, {
+    value: formatPercent(props.overview?.efficiency.all_time ?? 0, {
+      isFraction: false,
       maximumFractionDigits: 2,
     }),
   },
 ]
 
 const apr = computed(
-  () => formatPercent((overview.value?.apr.last_30d.el ?? 0) + (overview.value?.apr.last_30d.cl ?? 0), {
+  () => formatPercent((props.overview?.apr.last_30d.el ?? 0) + (props.overview?.apr.last_30d.cl ?? 0), {
+    isFraction: false,
     maximumFractionDigits: 2,
   }),
 )
@@ -66,19 +75,19 @@ const getText = (value: undefined | { cl: number, el: number }) => `${formatPerc
 const aprInfos = [
   {
     label: $t('statistics.last_24h'),
-    value: getText(overview.value?.apr.last_24h),
+    value: getText(props.overview?.apr.last_24h),
   },
   {
     label: $t('statistics.last_7d'),
-    value: getText(overview.value?.apr.last_7d),
+    value: getText(props.overview?.apr.last_7d),
   },
   {
     label: $t('statistics.last_30d'),
-    value: getText(overview.value?.apr.last_30d),
+    value: getText(props.overview?.apr.last_30d),
   },
   {
     label: $t('statistics.all_time'),
-    value: getText(overview.value?.apr.all_time),
+    value: getText(props.overview?.apr.all_time),
   },
 ]
 </script>

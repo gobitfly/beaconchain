@@ -64,13 +64,13 @@ export type SummaryRow = {
   title: string,
 }
 
-export const SummaryTimeFrames = [
-  'last_1h',
-  'last_24h',
-  'last_7d',
-  'last_30d',
-  'all_time',
-] as const
+// export const SummaryTimeFrames = [
+//   'last_1h',
+//   'last_24h',
+//   'last_7d',
+//   'last_30d',
+//   'all_time',
+// ] as const
 export type SummaryTableVisibility = {
   attestations: boolean,
   efficiency: boolean,
@@ -79,7 +79,7 @@ export type SummaryTableVisibility = {
   validatorsSortable: boolean,
 }
 
-export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
+// export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
 // export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2

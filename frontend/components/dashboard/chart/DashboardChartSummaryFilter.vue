@@ -12,11 +12,16 @@ import {
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const { t: $t } = useTranslation()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+// const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+// const {
+//   hasAbilityCharthistory,
+//   overview,
+// } = storeToRefs(validatorDashboardOverviewStore)
+
 const {
-  hasAbilityCharthistory,
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
+  chartHistorySeconds,
+  groups: dashboardGroups,
+} = useDashboard()
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
@@ -24,11 +29,14 @@ const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
-  return AggregationTimeframes.map(timeframe => ({
-    disabled: !hasAbilityCharthistory.value[timeframe],
-    id: timeframe,
-    label: $t(`time_frames.${timeframe}`),
-  }))
+  return AggregationTimeframes.map((timeframe) => {
+    const hasAbilityCharthistory = Boolean(chartHistorySeconds.value[timeframe])
+    return {
+      disabled: !hasAbilityCharthistory,
+      id: timeframe,
+      label: $t(`time_frames.${timeframe}`),
+    }
+  })
 })
 
 watch(aggregation, (a) => {
@@ -57,11 +65,11 @@ const total = ref(
 //   || chartFilter.value.groupIds.includes(SUMMARY_CHART_GROUP_NETWORK_AVERAGE),
 // )
 const groups = computed(() => {
-  if (!overview.value?.groups) {
+  if (!dashboardGroups.value) {
     return []
   }
   return orderBy(
-    overview.value.groups.filter(g => !!g.count),
+    dashboardGroups.value.filter(g => !!g.count),
     [ g => g.name.toLowerCase() ],
     'asc',
   )
@@ -148,12 +156,14 @@ const selectedLabel = computed(() => {
       class="small"
     >
       <template #option="slotProps">
-        <span>{{ slotProps.label }}</span>
-        <BcPremiumGem
-          v-if="slotProps.disabled"
-          class="premium-gem"
-          @click.stop="() => undefined"
-        />
+        <div class="option">
+          <span>{{ slotProps.label }}</span>
+          <BcPremiumGem
+            v-if="slotProps.disabled"
+            class="premium-gem"
+            @click.stop="() => undefined"
+          />
+        </div>
       </template>
     </BcDropdown>
     <BcDropdown
@@ -226,6 +236,12 @@ const selectedLabel = computed(() => {
   @media (max-width: 1000px) {
     gap: var(--padding-small);
   }
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--padding);
 }
 
 .special-groups {

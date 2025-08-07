@@ -147,6 +147,12 @@
         "empty": {
             "empty_table": "Nothing to see here... yet"
         },
+        "error": {
+            "400": {
+                "description": "The validator list contains one or more invalid indices or public keys.",
+                "title": "Invalid validator list"
+            }
+        },
         "group": {
             "selection": {
                 "all": "All groups",
@@ -560,8 +566,15 @@
         "validator_dashboard": "Validator Dashboard"
     },
     "error": {
+        "404": {
+            "description": "It might have been orphaned, reorged, or never proposed.",
+            "title": "Oops, this Page Never Made It to Finality."
+        },
         "multiple_times": "The error {error} happened {count} times",
+        "read_more_about_how_to_upgrade": "Read more about how to upgrade your plan",
+        "we_are_sorry_error_occurred": "We're sorry, but an error occurred",
         "ws_error": "Webservice error"
+
     },
     "filter": {
         "close": "Open Filter.",
@@ -652,7 +665,7 @@
         "choose_password": "Choose a password",
         "confirm_password": "Confirm your password",
         "dont_have_account": "Don't have an account?",
-        "email": "Email address",
+        "email": "Email",
         "error_login_group": "Cannot log in",
         "error_login_message": "your email or your password is unknown.",
         "error_register_group": "Cannot sign up",
@@ -670,6 +683,7 @@
     },
     "navigation": {
         "back": "Back",
+        "back_to_home": "Back to home",
         "cancel": "Cancel",
         "continue": "Continue",
         "delete": "Delete",
@@ -1222,9 +1236,12 @@
         "amount": "Amount",
         "consolidation_request_fee": "Consolidation Request Fee",
         "consolidator": "Consolidator",
-        "first": "First",
         "from": "From",
-        "last": "Last",
+        "navigation": {
+            "first": "First page",
+            "next": "Next page",
+            "previous": "Previous page"
+        },
         "of": "of",
         "showing": "Showing {from} to {to} of {total}",
         "source": "Source",

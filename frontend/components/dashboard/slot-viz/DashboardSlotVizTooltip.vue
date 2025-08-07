@@ -51,6 +51,7 @@ const data = computed(() => {
   let maxCount = 0
   let hasScheduledDuty = false
 
+  const v1Domain = useV1Domain()
   if (hasDuties) {
     if (slot.proposal) {
       const dutyText = $t(`slot_viz.tooltip.proposal.${slot.status}.main`)
@@ -77,8 +78,8 @@ const data = computed(() => {
           ...slot.proposal,
           dutySubLink:
                 slot.status === 'proposed'
-                  ? `/block/${slot.proposal.duty_object}`
-                  : `/slot/${slot.proposal.duty_object}`,
+                  ? `${v1Domain}/block/${slot.proposal.duty_object}`
+                  : `${v1Domain}/slot/${slot.proposal.duty_object}`,
           dutySubText,
         } ],
         dutyText,
@@ -99,7 +100,7 @@ const data = computed(() => {
         count: slot.slashing.failed.total_count,
         duties: slot.slashing.failed.slashings?.map(slash => ({
           ...slash,
-          dutySubLink: `/validator/${slash.duty_object}`,
+          dutySubLink: `${v1Domain}/validator/${slash.duty_object}`,
           dutySubText,
         })),
         dutyText,
@@ -235,6 +236,7 @@ const data = computed(() => {
     stateLabel,
   }
 })
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -255,7 +257,7 @@ const data = computed(() => {
             >
               <template #slot>
                 <BcLink
-                  :to="`/slot/${props.data.slot}`"
+                  :to="`${v1Domain}/slot/${props.data.slot}`"
                   target="_blank"
                   class="link"
                 >
@@ -302,7 +304,7 @@ const data = computed(() => {
                   :key="validator"
                 >
                   <BcLink
-                    :to="`/validator/${validator}`"
+                    :to="`${v1Domain}/validator/${validator}`"
                     target="_blank"
                     class="link"
                   >
@@ -324,7 +326,7 @@ const data = computed(() => {
                   :key="d_index"
                 >
                   <BcLink
-                    :to="`/validator/${duty.validator}`"
+                    :to="`${v1Domain}/validator/${duty.validator}`"
                     target="_blank"
                     class="link"
                   >

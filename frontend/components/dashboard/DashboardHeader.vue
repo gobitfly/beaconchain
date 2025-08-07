@@ -14,12 +14,6 @@ const { has } = useFeatureFlag()
 
 const { isLoggedIn } = useUserStore()
 const { dashboards } = storeToRefs(useUserDashboardStore())
-const {
-  dashboardKey,
-  dashboardType,
-  isSharedDashboard,
-  setDashboardKey,
-} = useDashboardKey()
 
 const emit = defineEmits<{ (e: 'showCreation'): void }>()
 
@@ -33,9 +27,13 @@ const getDashboardName = (db: Dashboard): string => {
       : $t('dashboard.validator_dashboard')
   }
 }
-
+const {
+  key,
+  navigateToDashboard,
+  variant,
+} = useDashboard()
 const items = computed<MenuBarEntry[]>(() => {
-  if (dashboards.value === undefined || isSharedDashboard.value) {
+  if (dashboards.value === undefined || variant.value === 'shared-dashboard') {
     return []
   }
 
@@ -44,7 +42,7 @@ const items = computed<MenuBarEntry[]>(() => {
   // if we are in a public dashboard and change the validators then the route does not get updated
   const fixedRoute = router.resolve({
     name: route.name!,
-    params: { id: dashboardKey.value },
+    params: { id: key.value },
   })
 
   const addToSortedItems = (label: string, items?: MenuBarButton[]) => {
@@ -68,24 +66,11 @@ const items = computed<MenuBarEntry[]>(() => {
     label: string,
     id: DashboardKey,
   ): MenuBarButton => {
-    if (type === dashboardType.value) {
-      return {
-        active: id === dashboardKey.value,
-        command: () => setDashboardKey(id),
-        label,
-        route: `/dashboard/${id}`,
-      }
-    }
-
-    if (type === 'validator') {
-      return {
-        label,
-        route: `/dashboard/${id}`,
-      }
-    }
     return {
+      active: id === key.value,
+      command: () => navigateToDashboard(id),
       label,
-      route: `/account-dashboard/${id}`,
+      route: `/dashboard/${id}`,
     }
   }
   addToSortedItems($t('dashboard.header.validator'), dashboards.value?.validator_dashboards?.map((db) => {
@@ -110,7 +95,7 @@ const items = computed<MenuBarEntry[]>(() => {
       :buttons="items"
     />
     <BcButtonIcon
-      v-if="!isSharedDashboard"
+      v-if="variant !== 'shared-dashboard'"
       name="plus"
       screenreader-text="dashboard.title"
       variant="flat"
