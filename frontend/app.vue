@@ -5,6 +5,11 @@ const { locale } = useTranslation()
 useHead(
   {
     htmlAttrs: { lang: locale.value },
+    link: [ {
+      href: '/assets-2usdf/favicon.ico',
+      rel: 'icon',
+      type: 'image/x-icon',
+    } ],
   },
 )
 useBcToastProvider()
