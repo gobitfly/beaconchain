@@ -77,9 +77,9 @@ const v1Domain = useV1Domain()
 function createDutyLinksData(
   dutyObjects?: number[],
 ): {
-    label: string,
-    to?: string,
-  }[] {
+  label: string,
+  to?: string,
+}[] {
   if (!dutyObjects) {
     return []
   }

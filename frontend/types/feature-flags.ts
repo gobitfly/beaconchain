@@ -1,3 +1,3 @@
-export type FeatureFlag =
-  | 'feature-account_dashboards'
-  | 'feature-user_settings'
+export type FeatureFlag
+  = | 'feature-account_dashboards'
+    | 'feature-user_settings'

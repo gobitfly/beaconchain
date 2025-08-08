@@ -4,8 +4,12 @@ import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
 
 import withNuxt from './.nuxt/eslint.config.mjs'
+import stylistic from '@stylistic/eslint-plugin'
 
 export default withNuxt({
+  plugins: {
+    '@stylistic': stylistic,
+  },
   rules: {
     '@stylistic/array-bracket-newline': [
       'error',
