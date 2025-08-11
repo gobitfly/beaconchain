@@ -136,7 +136,7 @@ const query = useDefaultQuery({ period: 'last_24h' })
 const {
   data,
   status,
-} = useApi(() => `/api/validator-dashboards/${key.value}/summary`, {
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/summary`, {
   immediate: !!key.value,
   query,
 })

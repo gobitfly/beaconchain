@@ -14,7 +14,7 @@ const { t: $t } = useTranslation()
 
 const {
   data: details,
-} = useApi(`/api/validator-dashboards/${key.value}/groups/${props.row.group_id}/rewards/${props.row.epoch}`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/groups/${props.row.group_id}/rewards/${props.row.epoch}`, {
   getCachedData(key, nuxtApp) {
     // Due to `<ClientOnly>` wrapping `<BcTable>`, which is necessary currently for responsive tables,
     // every open `expanded` row will rerender when any of the `rows` get `expanded` or `collapsed`,

@@ -30,7 +30,7 @@ const {
   data: overview,
   error: overviewError,
   // refresh: refreshOverview,
-} = useApi(() => `/api/validator-dashboards/${dashboardId.value}`, {
+} = useApi(() => `/api/bff/validator-dashboards/${dashboardId.value}`, {
   immediate: validators.value.length > 0,
   key: 'dashboardOverview',
   lazy: true,
@@ -41,7 +41,7 @@ const {
   data: slotVizEpochs,
   // error: slotVizError,
   // refresh: refreshSlotViz,
-} = await useApi(() => `/api/validator-dashboards/${dashboardId.value}/slot-viz`, {
+} = await useApi(() => `/api/bff/validator-dashboards/${dashboardId.value}/slot-viz`, {
   key: 'slotViz',
   transform: (response) => {
     if (validators.value.length) return response

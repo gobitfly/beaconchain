@@ -17,7 +17,7 @@ const query = useDefaultQuery({
 const {
   data: blocks,
   status,
-} = useApi(() => `/api/validator-dashboards/${key.value}/blocks`, {
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/blocks`, {
   immediate: key.value !== undefined,
   query,
 })

@@ -166,11 +166,11 @@ const dashboardId = computed(() => {
 const {
   data: overview,
   refresh: refreshOverview,
-} = useApi(`/api/validator-dashboards/${dashboardId.value}`)
+} = useApi(`/api/bff/validator-dashboards/${dashboardId.value}`)
 const {
   data: slotVizEpochs,
   refresh: refreshSlotViz,
-} = useApi(`/api/validator-dashboards/${dashboardId.value}/slot-viz`)
+} = useApi(`/api/bff/validator-dashboards/${dashboardId.value}/slot-viz`)
 
 const onChangeValidators = (validators: string[]) => {
   // const encodedValidators = encodeBase64Url(validators.join(','))

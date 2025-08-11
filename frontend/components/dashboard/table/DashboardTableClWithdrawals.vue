@@ -21,7 +21,7 @@ const query = useDefaultQuery({
 const {
   data: clWithdrawals,
   status,
-} = useApi(`/api/validator-dashboards/${key.value}/consensus-layer-withdrawals`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-withdrawals`, {
   immediate: key.value !== undefined,
   query,
 })

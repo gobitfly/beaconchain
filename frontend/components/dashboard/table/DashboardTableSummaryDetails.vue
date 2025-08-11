@@ -19,7 +19,7 @@ const { t: $t } = useTranslation()
 
 const {
   data: summary,
-} = useApi(`/api/validator-dashboards/${key.value}/groups/${props.row.group_id}/summary`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/groups/${props.row.group_id}/summary`, {
   query: {
     period: props.timeFrame,
   },

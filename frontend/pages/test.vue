@@ -49,7 +49,7 @@ const {
   error,
   refresh,
 // } = useApi(() => `/api/validator-dashboards/${key.value}`, {
-} = useApi(() => '/api/validator-dashboards/22', {
+} = useApi(() => 'api/bff/validator-dashboards/MQ', {
   // getCachedData: key => nuxtApp.payload.state[key] ?? nuxtApp.payload.data[key],
   // body: {
   //   dashboardKey: key.value,
@@ -58,7 +58,7 @@ const {
   // immediate: true,
   // key: 'dashboardSummaryDetails',
   query: {
-    period: 'last_24h',
+    // period: 'last_24h',
   },
 })
 // const v1Domain = useV1Domain()
@@ -69,7 +69,7 @@ const onClick = async () => {
   //     test: counter.value,
   //   },
   // })
-  // refresh()
+  refresh()
   // await navigateTo({
   //   external: true,
   //   path: `${v1Domain}/login`,

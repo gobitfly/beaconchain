@@ -19,7 +19,7 @@ const {
   data: elConsolidations,
   status,
 } = useApi(
-  `/api/validator-dashboards/${key.value}/execution-layer-consolidations`, {
+  `/api/bff/validator-dashboards/${key.value}/execution-layer-consolidations`, {
     immediate: key.value !== undefined,
     query,
   })

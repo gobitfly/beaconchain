@@ -3,7 +3,7 @@ export const useUser = () => {
   const isLoggedIn = computed(() => !!user.value)
   const { $api } = useNuxtApp()
   const logout = async () => {
-    await $api('/api/auth/logout', {
+    await $api('/api/bff/auth/logout', {
       method: 'POST',
     }).then(() => {
       user.value = null

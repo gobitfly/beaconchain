@@ -40,7 +40,7 @@ const query = useDefaultQuery({
 const {
   data,
   status,
-} = useApi(`/api/validator-dashboards/${props.value?.dashboardKey}/duties/${props.value?.epoch}`, {
+} = useApi(`/api/bff/validator-dashboards/${props.value?.dashboardKey}/duties/${props.value?.epoch}`, {
   query,
 })
 

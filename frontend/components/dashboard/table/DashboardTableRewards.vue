@@ -22,7 +22,7 @@ query.value.sort = 'epoch:desc'
 const {
   data: rewards,
   status,
-} = useApi(() => `/api/validator-dashboards/${key.value}/rewards`, {
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/rewards`, {
   immediate: key.value !== undefined,
   query,
 })

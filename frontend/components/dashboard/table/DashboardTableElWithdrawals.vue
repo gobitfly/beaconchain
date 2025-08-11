@@ -21,7 +21,7 @@ const query = useDefaultQuery({
 const {
   data: elWithdrawals,
   status,
-} = useApi(`/api/validator-dashboards/${key.value}/execution-layer-withdrawals`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/execution-layer-withdrawals`, {
   immediate: key.value !== undefined,
   query,
 })

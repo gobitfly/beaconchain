@@ -26,7 +26,7 @@ const query = useDefaultQuery({
 const {
   data: elDeposits,
   status,
-} = useApi(`/api/validator-dashboards/${key.value}/execution-layer-deposits`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/execution-layer-deposits`, {
   immediate: key.value !== undefined,
   query,
 })

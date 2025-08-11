@@ -4,7 +4,7 @@ export const useProduct = () => {
   const { $api } = useNuxtApp()
   if (!hasData.value) {
     callOnce(async () => {
-      data.value = await $api('/api/product-summary')
+      data.value = await $api('/api/bff/product-summary')
     })
   }
 

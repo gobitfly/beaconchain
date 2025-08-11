@@ -171,7 +171,7 @@ const {
   data,
   // error,
   status,
-} = useApi(() => `/api/validator-dashboards/${key.value}/summary-chart`, {
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/summary-chart`, {
   immediate: key.value !== undefined,
   query,
 })

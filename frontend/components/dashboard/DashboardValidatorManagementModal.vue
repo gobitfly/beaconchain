@@ -264,7 +264,7 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
   })
 }
 
-// const overviewTest = useFetchedData(`/api/validator-dashboards/${validatorListEncoded.value}/validators`)
+// const overviewTest = useFetchedData(`/api/bff/validator-dashboards/${validatorListEncoded.value}/validators`)
 
 const overview = useFetchedData('dashboardOverview')
 
@@ -336,7 +336,7 @@ const handleSubmit = async (item: InternalPostSearchResponse['data'][number] | u
       const validatorListEncoded = encodeBase64Url([ ...newValidators ].join(','))
       // console.log('👉', validatorListEncoded, newValidators)
       try {
-        const response = await $api(`/api/validator-dashboards/${validatorListEncoded}/validators`)
+        const response = await $api(`/api/bff/validator-dashboards/${validatorListEncoded}/validators`)
         fetchedDataValidators.value = response
         // emit('change-validators', [ ...newValidators ])
         setValidators([ ...newValidators ])
@@ -352,7 +352,7 @@ const handleSubmit = async (item: InternalPostSearchResponse['data'][number] | u
             })
           }
       }
-      // await $api(`/api/validator-dashboards/${validatorListEncoded}/validators`)
+      // await $api(`/api/bff/validator-dashboards/${validatorListEncoded}/validators`)
       //   .then((response) => {
       //     setValidators([ ...newValidators ])
       //     fetchedDataValidators.value = response
@@ -394,7 +394,7 @@ const inputValidator = ref('')
 const {
   data,
   status,
-} = useApi(`/api/validator-dashboards/${validatorListEncoded.value}/validators`, {
+} = useApi(`/api/bff/validator-dashboards/${validatorListEncoded.value}/validators`, {
   immediate: validatorListEncoded.value.length > 0,
   key: 'validators',
   query,
@@ -407,12 +407,12 @@ const {
 // const {
 //   data,
 //   status,
-// } = useApi(() => `/api/validator-dashboards/${test.value}/validators`, {
+// } = useApi(() => `/api/bff/validator-dashboards/${test.value}/validators`, {
 //   immediate: validatorListEncoded.value.length > 0,
 //   // key: 'validators',
 //   query,
 // })
-// watchEffect(() => console.log(useFetchedData(`/api/validator-dashboards/${validatorListEncoded.value}/validators`)))
+// watchEffect(() => console.log(useFetchedData(`/api/bff/validator-dashboards/${validatorListEncoded.value}/validators`)))
 </script>
 
 <template>

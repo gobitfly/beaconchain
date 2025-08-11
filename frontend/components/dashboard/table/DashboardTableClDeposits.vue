@@ -25,7 +25,7 @@ const query = useDefaultQuery({
 const {
   data: clDeposits,
   status,
-} = useApi(`/api/validator-dashboards/${key.value}/consensus-layer-deposits`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-deposits`, {
   immediate: key.value !== undefined,
   query,
 })

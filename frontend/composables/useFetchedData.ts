@@ -5,6 +5,8 @@ import type {
 } from 'nitropack'
 import type { FetchResult } from '#app'
 
+// Todo think about removing `/api/bff/` from every request
+// export type RemovePrefix<T extends string> = T extends `/api/${infer Rest}` ? Rest : T
 export type ServerUrl = Extract<Exclude<NitroFetchRequest, object>, `/api/${string}`>
 
 // export type ServerResponse<T extends ServerUrl> = InternalApi[T] extends { default: infer R }
@@ -39,9 +41,9 @@ export type ServerUrl = Extract<Exclude<NitroFetchRequest, object>, `/api/${stri
 // export type Key = keyof Response
 
 // type Response = {
-//   'latestState': InternalApi['/api/latest-state']['default'],
-//   'users/:id': InternalApi['/api/users/me']['default'],
-//   'users/me': InternalApi['/api/users/me']['default'],
+//   'latestState': InternalApi['/api/bff/latest-state']['default'],
+//   'users/:id': InternalApi['/api/bff/users/:id']['default'],
+//   'users/me': InternalApi['/api/bff/users/me']['default'],
 // }
 
 // type ReplaceColonsWithTemplate<Path extends string> =
@@ -60,10 +62,10 @@ type GetReturnTypeFromServerUrl<T extends ServerUrl> = FetchResult<T, AvailableR
  * This enables `type inference` for useFetchedData for `endpoint aliases`
  */
 type ReturnType = {
-  dashboardOverview: GetReturnTypeFromServerUrl<'/api/validator-dashboards/:dashboardId'>,
-  productSummary: GetReturnTypeFromServerUrl<'/api/product-summary'>,
-  user: GetReturnTypeFromServerUrl<'/api/users/me'>,
-  validators: GetReturnTypeFromServerUrl<'/api/validator-dashboards/:dashboardId/validators'>,
+  dashboardOverview: GetReturnTypeFromServerUrl<'/api/bff/validator-dashboards/:dashboardId'>,
+  productSummary: GetReturnTypeFromServerUrl<'/api/bff/product-summary'>,
+  user: GetReturnTypeFromServerUrl<'/api/bff/users/me'>,
+  validators: GetReturnTypeFromServerUrl<'/api/bff/validator-dashboards/:dashboardId/validators'>,
 }
 export type Key = keyof ReturnType
 export const useFetchedData = <T extends Key | LooseAutocomplete<ServerUrl>>(key: T) => {

@@ -61,7 +61,7 @@ if (props.value) {
   setHeader(text)
 }
 
-const { data } = useApi(`/api/validator-dashboards/${props.value?.dashboardKey}/summary/validators`, {
+const { data } = useApi(`/api/bff/validator-dashboards/${props.value?.dashboardKey}/summary/validators`, {
   query: {
     duty: duty.value,
     group_id: props.value?.groupId,

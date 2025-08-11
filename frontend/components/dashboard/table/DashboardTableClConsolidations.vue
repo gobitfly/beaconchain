@@ -23,7 +23,7 @@ const query = useDefaultQuery({
 const {
   data: clConsolidations,
   status,
-} = useApi(`/api/validator-dashboards/${key.value}/consensus-layer-consolidations`, {
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-consolidations`, {
   immediate: key.value !== undefined,
   query,
 })

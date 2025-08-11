@@ -13,13 +13,13 @@ const {
 const { counter } = useInterval(secondsPerSlot)
 
 // Todo: decide if this is an antipattern or we should rather use watcher with callOnce
-useApi('/api/latest-state', {
+useApi('/api/bff/latest-state', {
   immediate: true,
   watch: [ counter ],
 })
 const {
   data: userData,
-} = await useApi('/api/users/me', {
+} = await useApi('/api/bff/users/me', {
   key: 'user',
 })
 
