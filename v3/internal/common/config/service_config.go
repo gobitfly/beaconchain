@@ -41,10 +41,12 @@ type DatabaseConfig struct {
 }
 
 type ServiceConfig struct {
-	Type         string
-	HttpPort     string `yaml:"httpPort"`
-	GrpcPort     string `yaml:"grpcPort"`
-	ExposeSchema bool   `yaml:"exposeSchema"`
+	Type               string
+	HttpPort           string `yaml:"httpPort"`
+	GrpcPort           string `yaml:"grpcPort"`
+	InternalServiceUri string `yaml:"internalServiceUri"`
+	ExternalServiceUri string `yaml:"externalServiceUri"`
+	ExposeSchema       bool   `yaml:"exposeSchema"`
 
 	IsCloudDeployment bool `yaml:"isCloudDeployment"` // temp flag, remove
 

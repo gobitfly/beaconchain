@@ -6,6 +6,8 @@
 
 isCloudDeployment: true
 exposeSchema: true
+internalServiceUri: your-internal-uri
+externalServiceUri: your-external-uri
 
 readerAdminDatabase:
   isCloudConnection: true
