@@ -2,10 +2,23 @@
 FROM golang:1.23 AS builder
 WORKDIR /app
 
+# Install buf
+ENV BIN=/usr/local/bin
+ENV VERSION=1.55.1
+RUN curl -sSL \
+    "https://github.com/bufbuild/buf/releases/download/v${VERSION}/buf-$(uname -s)-$(uname -m)" \
+    -o "${BIN}/buf" && \
+    chmod +x "${BIN}/buf"
+
 COPY go.mod go.sum ./
 RUN go mod download
 
+# TODO remove after config handling is implemented
+COPY configs/service/default.yaml.example configs/service/default.yaml
+COPY configs/service/personal_cloudrun.yaml.example configs/service/personal_cloudrun.yaml
+
 COPY . .
+RUN make generate-proto
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server cmd/main.go
 
 # Stage 2 — minimal runtime image
