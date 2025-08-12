@@ -187,7 +187,7 @@ func serveSwaggerStatics(mux *http.ServeMux) {
 func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	resp := grpc_health_v1.HealthCheckResponse_SERVING
 
-	if s.userRepository.Ping() != nil {
+	if s.userRepository.Ping() != nil || s.dashboardRepository.Ping() != nil {
 		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
 	}
 
@@ -209,6 +209,9 @@ func getEndpointRatelimit(fullMethod string, tier subscription_products.Tier) (*
 	service := model.File_api_service_v1_external_proto.Services().ByName("ExternalService")
 	methodName := strings.TrimPrefix(fullMethod, "/"+string(service.FullName())+"/")
 	method := service.Methods().ByName(protoreflect.Name(methodName))
+	if fullMethod == "/grpc.health.v1.Health/Check" || fullMethod == "/grpc.health.v1.Health/List" || fullMethod == "/grpc.health.v1.Health/Watch" {
+		return nil, nil
+	}
 	if method == nil {
 		return nil, fmt.Errorf("method not found: %s", methodName)
 	}

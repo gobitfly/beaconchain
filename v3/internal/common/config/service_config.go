@@ -1,8 +1,11 @@
 package config
 
 import (
+	"context"
 	"flag"
+	"fmt"
 
+	"cloud.google.com/go/storage"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/spf13/viper"
 )
@@ -44,14 +47,19 @@ type ServiceConfig struct {
 	Type               string
 	HttpPort           string `yaml:"httpPort"`
 	GrpcPort           string `yaml:"grpcPort"`
-	InternalServiceUri string `yaml:"internalServiceUri"`
-	ExternalServiceUri string `yaml:"externalServiceUri"`
 	ExposeSchema       bool   `yaml:"exposeSchema"`
+	InternalServiceUri string `yaml:"internalServiceUri"` // output only
+	ExternalServiceUri string `yaml:"externalServiceUri"` // output only
 
 	IsCloudDeployment bool `yaml:"isCloudDeployment"` // temp flag, remove
 
-	ReaderChainDatabase DatabaseConfig `yaml:"readerChainDatabase"`
-	WriterChainDatabase DatabaseConfig `yaml:"writerChainDatabase"`
+	ReaderChainDatabaseMainnet DatabaseConfig `yaml:"readerChainDatabaseMainnet"`
+	WriterChainDatabaseMainnet DatabaseConfig `yaml:"writerChainDatabaseMainnet"`
+	ReaderChainDatabaseGnosis  DatabaseConfig `yaml:"readerChainDatabaseGnosis"`
+	WriterChainDatabaseGnosis  DatabaseConfig `yaml:"writerChainDatabaseGnosis"`
+	ReaderChainDatabaseHoodi   DatabaseConfig `yaml:"readerChainDatabaseHoodi"`
+	WriterChainDatabaseHoodi   DatabaseConfig `yaml:"writerChainDatabaseHoodi"`
+
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`
 	WriterAdminDatabase DatabaseConfig `yaml:"writerAdminDatabase"`
 	ReaderClickhouse    DatabaseConfig `yaml:"readerClickhouse"`
@@ -70,6 +78,8 @@ func LoadServiceConfig() *ServiceConfig {
 	// using standard library "flag" package
 	env := flag.String("environment", "Development", "Name of the environment")
 	apiType := flag.String("type", "external", "api to launch (internal or external)")
+	gcsBucket := flag.String("gcs-bucket", "", "GCS bucket name")
+	gcsObject := flag.String("gcs-object", "beaconchain-config.yaml", "GCS object name")
 	flag.Parse()
 
 	log.Infof("Found flag environment: %s", *env)
@@ -92,6 +102,35 @@ func LoadServiceConfig() *ServiceConfig {
 	err = viper.MergeInConfig()
 	if err != nil {
 		log.Fatalf("Error reading %s config: %v", *env, err)
+	}
+
+	// load config from gcs
+	if gcsBucket != nil && *gcsBucket != "" {
+		log.Infof("Reading config from gcs bucket: %s", *gcsBucket)
+		ctx := context.Background()
+		client, err := storage.NewClient(ctx)
+		if err != nil {
+			log.Fatalf("failed to create GCS client: %v", err)
+		}
+		defer func() {
+			if cerr := client.Close(); cerr != nil {
+				log.Fatalf("failed to close GCS client: %v", cerr)
+			}
+		}()
+
+		rc, err := client.Bucket(*gcsBucket).Object(*gcsObject).NewReader(ctx)
+		if err != nil {
+			log.Error(fmt.Errorf("failed to read object: %v", err))
+		}
+		defer func() {
+			if cerr := rc.Close(); cerr != nil {
+				log.Fatalf("failed to close GCS object reader: %v", cerr)
+			}
+		}()
+		// override
+		if err := viper.ReadConfig(rc); err != nil {
+			log.Error(fmt.Errorf("failed to read config: %v", err))
+		}
 	}
 
 	// Optionally read from environment variables (e.g., override with ENV vars)

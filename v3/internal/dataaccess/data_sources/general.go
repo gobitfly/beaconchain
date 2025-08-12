@@ -34,8 +34,9 @@ type ApiDataSources struct {
 }
 
 func (dataSources *ApiDataSources) InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
-	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabase, Postgres)
-	dataSources.RwChainDb = InitDB(&config.WriterChainDatabase, Postgres)
+	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabaseMainnet, Postgres)
+	dataSources.RwChainDb = InitDB(&config.WriterChainDatabaseMainnet, Postgres)
+	// TODO hoodi, gnosis
 
 	dataSources.RoAdminDb = InitDB(&config.ReaderAdminDatabase, Postgres)
 	dataSources.RwAdminDb = InitDB(&config.WriterAdminDatabase, Postgres)
