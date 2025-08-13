@@ -113,7 +113,7 @@ func (c NotificationMachinesColumn) ToExpr() OrderableSortable {
 	case NotificationMachineName:
 		return goqu.C("machine_name")
 	case NotificationMachineThreshold:
-		return goqu.C("threshold")
+		return goqu.C("event_threshold")
 	case NotificationMachineEventType:
 		return goqu.C("event_type")
 	case NotificationMachineTimestamp:
