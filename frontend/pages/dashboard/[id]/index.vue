@@ -168,7 +168,10 @@ definePageMeta({
 //   return (route.params.id as string)
 // })
 
-const { key } = useDashboard()
+const {
+  key,
+  updateGroups,
+} = useDashboard()
 const {
   data: overview,
   refresh: refreshOverview,
@@ -203,6 +206,7 @@ const onChangeValidators = (validators: string[]) => {
   // refreshOverview()
   // refreshSlotViz()
   console.log('👉', validators)
+
   refreshOverview()
 }
 </script>
@@ -214,6 +218,7 @@ const onChangeValidators = (validators: string[]) => {
       :slot-viz-epochs
       :validator-dashboards="privateDashboards?.validator_dashboards ?? null"
       @change-validators="onChangeValidators($event)"
+      @change-groups="updateGroups($event)"
     />
   </div>
 </template>

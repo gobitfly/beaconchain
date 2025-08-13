@@ -223,6 +223,7 @@ const sortOrder = computed(() => query.value.sort?.split(':')[1] === 'desc' ? 1 
           <slot name="bc-table-footer-right" />
         </template>
       </BcTablePager>
+      <slot name="bc-table-footer-bottom" />
     </template>
   </DataTable>
 </template>

@@ -24,7 +24,7 @@ export const limits = [
 export type Limit = (typeof limits)[number]
 
 export const useDefaultQuery = (query?: Query) => {
-  return ref({
+  return ref<Query>({
     limit: 25,
     ...query,
   })

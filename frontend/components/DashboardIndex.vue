@@ -6,7 +6,11 @@
 import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
-import type { VDBOverviewData } from '~/types/api/validator_dashboard'
+import type {
+  VDBOverviewData,
+  VDBOverviewGroup,
+} from '~/types/api/validator_dashboard'
+
 // import type { TableQueryParams } from '~/types/datatable'
 
 // const route = useRoute()
@@ -222,6 +226,7 @@ const onAddValidator = () => {
 
 const emit = defineEmits<{
   (e: 'change-validators', validators: string[]): void,
+  (e: 'change-groups', value: VDBOverviewGroup[]): void,
 }>()
 
 // const tab = ref('summary')
@@ -265,7 +270,9 @@ const { key } = useDashboard()
     <DashboardControls
       v-model:is-visible-management-modal="isVisibleManagementModal"
       :validator-dashboards
-      @change-validators=" emit('change-validators', $event)"
+      :dashboard-title="overview?.name ?? ''"
+      @change-validators="emit('change-validators', $event)"
+      @change-groups="emit('change-groups', $event)"
     />
     <DashboardValidatorOverview
       :overview

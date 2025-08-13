@@ -359,6 +359,11 @@
                     "name": "Name"
                 },
                 "edit_group_name": "Edit group name: {groupName}",
+                "errors": {
+                    "add": "Failed to add the group. Please try again.",
+                    "edit": "Failed to edit the group. Please try again.",
+                    "remove": "Failed to remove the group. Please try again."
+                },
                 "new_group_placeholder": "New group name",
                 "remove_text": "Do you want to remove group {group} from your dashboard?",
                 "remove_title": "Remove Groups",

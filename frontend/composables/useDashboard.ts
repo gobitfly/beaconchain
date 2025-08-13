@@ -1,4 +1,5 @@
 import type { NumberOrString } from '~/types/value'
+import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 
 export const useDashboard = () => {
   const route = useRoute()
@@ -97,6 +98,11 @@ export const useDashboard = () => {
     // currently only one public id is supported
     return currentDashboard.value?.public_ids?.[0]?.name
   })
+  const updateGroups = (newGroups: VDBOverviewGroup[]) => {
+    if (!overview.value) return
+
+    overview.value.groups = newGroups
+  }
 
   return {
     /**
@@ -123,6 +129,7 @@ export const useDashboard = () => {
     publicName,
     setValidators,
     totalValidators,
+    updateGroups,
     validatorIds,
     //   /**
     //  * List of `validator-id`s or `validator public key`s from the `?validators=` query parameter

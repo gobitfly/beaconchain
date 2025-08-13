@@ -7,7 +7,7 @@ const headers = {
 /**
  * Executes a `put request`, while it forwards headers and cookies to our external API
  */
-export const put = <T>(
+export const put = <T extends { data: any }>(
   event: H3Event,
   endpoint: string,
   options?: Parameters<H3Event['$fetch']>[1],
@@ -18,4 +18,8 @@ export const put = <T>(
     headers,
     method: 'put',
   })
+    .then((response) => {
+      if (response.data) return response.data
+      return response
+    })
 }

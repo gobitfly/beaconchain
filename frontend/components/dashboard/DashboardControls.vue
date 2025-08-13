@@ -10,9 +10,11 @@ import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
 import type { Icon } from '~/components/bc/icon/BcIcon.vue'
+import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
 const props = defineProps<{
+  dashboardTitle: string,
   validatorDashboards: null | ValidatorDashboard[],
 }>()
 
@@ -314,12 +316,14 @@ const editDashboard = () => {
 }
 const emit = defineEmits<{
   (e: 'change-validators', value: string[]): void,
+  (e: 'change-groups', value: VDBOverviewGroup[]): void,
 }>()
 </script>
 
 <template>
   <DashboardGroupManagementModal
     v-model="manageGroupsModalVisisble"
+    @change-groups="emit('change-groups', $event)"
   />
   <LazyDashboardValidatorManagementModal
     v-if="isVisibleManagementModal"
