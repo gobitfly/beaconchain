@@ -6,6 +6,7 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250717165733-d22d418d82d8.1
 	buf.build/go/protovalidate v0.14.0
 	cloud.google.com/go/bigtable v1.38.0
+	cloud.google.com/go/secretmanager v1.14.7
 	cloud.google.com/go/storage v1.53.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.32.2
 	github.com/alicebob/miniredis/v2 v2.35.0
