@@ -2,9 +2,6 @@
 
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_hourly
-    COMMENT COLUMN epoch_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_min 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
     ADD COLUMN IF NOT EXISTS _is_backfill SimpleAggregateFunction(max, bool) DEFAULT 0 COMMENT 'if the row is part of a backfill insert',
     ADD COLUMN IF NOT EXISTS _botched_epoch_start_backfill_revision SimpleAggregateFunction(max, Int64) DEFAULT 0 COMMENT 'revision of the "botched epoch start" backfill. incrementing this will cause _staging_{epoch_start|balance_start|balance_min} to be replaced with whatever the _legacy columns are set to in the same row.',
     ADD COLUMN IF NOT EXISTS _staging_epoch_start AggregateFunction(minSimpleStateArgMax, Int64, Int64) Materialized initializeAggregation('minSimpleStateArgMaxState', epoch_start::Int64, _botched_epoch_start_backfill_revision::Int64),
@@ -18,9 +15,6 @@ settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_daily
-    COMMENT COLUMN epoch_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_min 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
     ADD COLUMN IF NOT EXISTS _is_backfill SimpleAggregateFunction(max, bool) DEFAULT 0 COMMENT 'if the row is part of a backfill insert',
     ADD COLUMN IF NOT EXISTS _botched_epoch_start_backfill_revision SimpleAggregateFunction(max, Int64) DEFAULT 0 COMMENT 'revision of the "botched epoch start" backfill. incrementing this will cause _staging_{epoch_start|balance_start|balance_min} to be replaced with whatever the _legacy columns are set to in the same row.',
     ADD COLUMN IF NOT EXISTS _staging_epoch_start AggregateFunction(minSimpleStateArgMax, Int64, Int64) Materialized initializeAggregation('minSimpleStateArgMaxState', epoch_start::Int64, _botched_epoch_start_backfill_revision::Int64),
@@ -34,9 +28,6 @@ settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_weekly
-    COMMENT COLUMN epoch_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_min 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
     ADD COLUMN IF NOT EXISTS _is_backfill SimpleAggregateFunction(max, bool) DEFAULT 0 COMMENT 'if the row is part of a backfill insert',
     ADD COLUMN IF NOT EXISTS _botched_epoch_start_backfill_revision SimpleAggregateFunction(max, Int64) DEFAULT 0 COMMENT 'revision of the "botched epoch start" backfill. incrementing this will cause _staging_{epoch_start|balance_start|balance_min} to be replaced with whatever the _legacy columns are set to in the same row.',
     ADD COLUMN IF NOT EXISTS _staging_epoch_start AggregateFunction(minSimpleStateArgMax, Int64, Int64) Materialized initializeAggregation('minSimpleStateArgMaxState', epoch_start::Int64, _botched_epoch_start_backfill_revision::Int64),
@@ -50,9 +41,6 @@ settings mutations_sync=2, alter_sync=1;
 -- +goose StatementEnd
 -- +goose StatementBegin
 ALTER TABLE _final_validator_dashboard_data_monthly
-    COMMENT COLUMN epoch_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_start 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
-    COMMENT COLUMN balance_min 'legacy column, used by ingestion. consumers of data should use the aliased variant instead',
     ADD COLUMN IF NOT EXISTS _is_backfill SimpleAggregateFunction(max, bool) DEFAULT 0 COMMENT 'if the row is part of a backfill insert',
     ADD COLUMN IF NOT EXISTS _botched_epoch_start_backfill_revision SimpleAggregateFunction(max, Int64) DEFAULT 0 COMMENT 'revision of the "botched epoch start" backfill. incrementing this will cause _staging_{epoch_start|balance_start|balance_min} to be replaced with whatever the _legacy columns are set to in the same row.',
     ADD COLUMN IF NOT EXISTS _staging_epoch_start AggregateFunction(minSimpleStateArgMax, Int64, Int64) Materialized initializeAggregation('minSimpleStateArgMaxState', epoch_start::Int64, _botched_epoch_start_backfill_revision::Int64),
