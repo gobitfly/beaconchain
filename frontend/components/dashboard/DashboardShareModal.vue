@@ -129,8 +129,8 @@ const shareGroupTooltip = computed(() => {
       />
       <div class="share-setting">
         <Checkbox
-          id="shareGroup"
-          v-model="shareGroups"
+                    v-model="shareGroups"
+input-id="shareGroup"
           :binary="true"
           :disabled="!isPremiumUser"
         />

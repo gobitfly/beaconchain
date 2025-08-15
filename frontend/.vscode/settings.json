@@ -18,6 +18,7 @@
         "DashboardChartSummaryFilter",
         "DashboardChartSummaryTooltip",
         "DashboardGroupManagementModal",
+        "DashboardShareModal",
         "DashboardSlotViz",
         "DashboardTableClDeposits",
         "DashboardTableElConsolidations",
