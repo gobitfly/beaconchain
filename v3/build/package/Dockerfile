@@ -20,6 +20,7 @@ COPY configs/service/personal_cloudrun.yaml.example configs/service/personal_clo
 COPY . .
 RUN make generate-proto
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test -c -o tests ./test
 
 # Stage 2 — minimal runtime image
 FROM gcr.io/distroless/static-debian11
@@ -30,6 +31,10 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/api/gen ./api/gen
 COPY --from=builder /app/web ./web
+
+# Tests
+COPY --from=builder /app/tests .
+COPY --from=builder /app/test/.env.example /test/.env.example
 
 # Cloud Run expects the service to listen on PORT (8080 by default)
 ENV PORT=8080
