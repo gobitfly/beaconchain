@@ -27,19 +27,19 @@ defineProps<Props>()
   position: relative;
 
   input {
-    height: 24px;
     color: var(--text-color-disabled);
     background-color: var(--container-background);
     border: 1px solid var(--container-border-color);
     border-radius: var(--border-radius);
     width: 100%;
-    padding-right: 21px;
+    padding: var(--padding);
+    padding-right: 2rem;
   }
 
   .copy-icon {
     position: absolute;
-    right: 3px;
-    top: 3px;
+    right: var(--padding);
+    bottom: var(--padding);
   }
 }
 </style>

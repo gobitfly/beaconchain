@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "BcButton",
+        "BcCopyLabel",
         "BcDataWrapper",
         "BcFormatAmount",
         "BcHeaderMegaMenu",
@@ -82,7 +83,7 @@
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode"
+        "vscode" 
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"
