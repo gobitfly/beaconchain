@@ -75,11 +75,10 @@ const unpublish = async () => {
 <template>
   <div class="share-dashboard-code-modal-container">
     <div class="content">
-      <qrcode-vue
+      <Qrcode
         class="qr-code"
+        variant="rounded"
         :value="path"
-        :size="330"
-        level="L"
       />
       <label class="title">{{
         $t("dashboard.share_dialog.public_dashboard_url")
@@ -153,6 +152,7 @@ const unpublish = async () => {
 
     .qr-code {
       border: 5px solid white;
+      border-radius: var(--border-radius);
     }
 
     .copy_label {

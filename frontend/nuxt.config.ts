@@ -38,6 +38,7 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@vueuse/nuxt',
     'nuxt-echarts',
+    'nuxt-qrcode',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
