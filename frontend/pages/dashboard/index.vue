@@ -3,48 +3,45 @@ import { ERROR_CODE } from '~/shared/utils/helper'
 
 definePageMeta({
   layout: false,
-  middleware: [ 'dashboard' ],
+  // middleware: [ 'dashboard' ],
 })
 
 const route = useRoute()
-onBeforeMount(() => {
-  const validatorListFromIndexQueryParameter = route.query.index
-  if (validatorListFromIndexQueryParameter) {
-    navigateTo({
-      query: {
-        validators: validatorListFromIndexQueryParameter,
-      },
-      replace: true,
-    })
-  }
-})
+const validatorListFromIndexQueryParameter = route.query.index
+if (validatorListFromIndexQueryParameter) {
+  await navigateTo({
+    query: {
+      validators: validatorListFromIndexQueryParameter,
+    },
+    replace: true,
+  })
+}
 
-const { validators } = useDashboard()
-
-const dashboardId = computed(() => {
-  if (validators.value.length) return encodeBase64Url(validators.value.join(','))
-  return encodeBase64Url('1')
-})
+const {
+  key,
+  setValidators,
+  validatorIds,
+} = useDashboard()
 
 const {
   data: overview,
   error: overviewError,
   // refresh: refreshOverview,
-} = useApi(() => `/api/bff/validator-dashboards/${dashboardId.value}`, {
-  immediate: validators.value.length > 0,
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}`, {
+  immediate: !!key.value,
   key: 'dashboardOverview',
   lazy: true,
-  watch: [ dashboardId ],
+  watch: [ key ],
 })
 
 const {
   data: slotVizEpochs,
   // error: slotVizError,
   // refresh: refreshSlotViz,
-} = await useApi(() => `/api/bff/validator-dashboards/${dashboardId.value}/slot-viz`, {
+} = await useApi(() => `/api/bff/validator-dashboards/${key.value || encodeBase64Url('1')}/slot-viz`, {
   key: 'slotViz',
   transform: (response) => {
-    if (validators.value.length) return response
+    if (validatorIds.value.length) return response
     // We use this hacky solution as we don't have an api endpoint to load a slot viz without validators
     // So we load it for a small guest dashboard and then remove the validator informations from it.
     const filteredSlotVizEpochs = response.map(epoch => ({
@@ -59,8 +56,24 @@ const {
     }))
     return filteredSlotVizEpochs
   },
-  watch: [ dashboardId ],
+  watch: [ key ],
 })
+
+// using useFetch instead of useApi here, as transform() is altering the return type of `data`
+// which currently results in an `typescript error`
+const {
+  data: privateDashboards,
+} = await useApi('/api/bff/users/me/dashboards', {
+  getCachedData: (key, nuxtApp) => nuxtApp.payload[key] ?? nuxtApp.payload.data[key],
+  key: 'privateDashboards',
+  // transform: response => response.validator_dashboards,
+})
+// const {
+//   data: validatorDashboards,
+// } = await useApi('/api/bff/users/me/dashboards', {
+//   getCachedData: (key, nuxtApp) => nuxtApp.payload[key] ?? nuxtApp.payload.data[key],
+//   transform: response => response.validator_dashboards,
+// })
 
 onMounted(() => {
   if (overviewError.value?.statusMessage === ERROR_CODE.EFFECTIVE_BALANCE_EXCEEDS_LIMIT) {
@@ -82,8 +95,6 @@ onMounted(() => {
     })
   }
 })
-
-const { setValidators } = useDashboard()
 
 const onChangeValidators = async (newValidators: string[]) => {
   await setValidators(newValidators)
@@ -137,6 +148,7 @@ const onChangeValidators = async (newValidators: string[]) => {
     <DashboardIndex
       :overview
       :slot-viz-epochs
+      :validator-dashboards="privateDashboards?.validator_dashboards ?? null"
       @change-validators="onChangeValidators($event)"
     />
   </div>

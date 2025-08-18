@@ -133,6 +133,7 @@ const summaryTabView = useBcCookie<'chart' | 'table'>('bc-summary-tab-view', {
 })
 const query = useDefaultQuery({ period: 'last_24h' })
 
+// const abortController = new AbortController()
 const {
   data,
   status,

@@ -85,18 +85,19 @@ const onClose = () => {
 }
 
 const {
-  // id,
+  key,
   setValidators,
   totalValidators,
-  validatorListEncoded,
-  // validators,
+  validatorIds,
   variant,
 } = useDashboard()
 
-const { validators } = defineProps<{
-  validators: string[],
-}>()
-
+const {
+  add,
+  // refresh: refreshValidators,
+  remove,
+  validators,
+} = useValidators()
 const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupId?: number) => {
   if (
     !body.validators?.length
@@ -108,6 +109,19 @@ const changeGroup = async (body: PostValidatorDashboardValidatorsRequest, groupI
     return
   }
   body.group_id = groupId && groupId !== -1 ? groupId : 0
+
+  if (key.value !== undefined) {
+    await add(key.value, body)
+      .then(() => {
+        emit('change-validators', [])
+      })
+  }
+  // await $api(`/api/bff/validator-dashboards/${key.value}/validators`, {
+  //   body,
+  //   method: 'post',
+  // }).then(() => {
+  //   refreshValidators()
+  // })
 
   // await fetch<VDBPostValidatorsData>(
   //   'DASHBOARD_VALIDATOR_MANAGEMENT',
@@ -209,7 +223,6 @@ const switchValidatorGroup = (
     group,
   )
 }
-const fetchedDataValidators = useFetchedData('validators')
 const removeRow = (row: VDBManageValidatorsTableRow) => {
   selection.value = [ ...new Set([
     row,
@@ -229,14 +242,19 @@ const removeRow = (row: VDBManageValidatorsTableRow) => {
     onClose: (response) => {
       const shouldRemove = response?.data
       if (shouldRemove) {
-        if (fetchedDataValidators.value?.data) {
-          fetchedDataValidators.value.data = fetchedDataValidators.value.data.filter(
-            validator => !selectedValidators.value.includes(`${validator.index}`),
-          )
+        if (variant.value === 'guest-dashboard') {
+          if (validators.value?.data) {
+            validators.value.data = validators.value.data.filter(
+              validator => !selectedValidators.value.includes(`${validator.index}`),
+            )
+          }
+          emit('change-validators', validatorIds.value.filter(validatorId => !selectedValidators.value.includes(validatorId)))
+          selection.value = []
+          return
         }
-        emit('change-validators', validators.filter(validator => !selectedValidators.value.includes(validator)))
-        selection.value = []
-        return
+        if (key.value) {
+          remove(key.value, selectedValidators.value.map(Number))
+        }
       }
       // selection.value = []
       // hasNoOpenDialogs.value = true
@@ -323,7 +341,7 @@ const handleSubmit = async (item: InternalPostSearchResponse['data'][number] | u
   }
   if (!variant.value || variant.value === 'guest-dashboard') {
     if (item.type === 'validator' || item.type === 'validator_list') {
-      const newValidators = new Set(validators)
+      const newValidators = new Set(validatorIds.value)
 
       if ('index' in item.value) {
         newValidators.add(`${item.value.index}`)
@@ -337,7 +355,7 @@ const handleSubmit = async (item: InternalPostSearchResponse['data'][number] | u
       // console.log('👉', validatorListEncoded, newValidators)
       try {
         const response = await $api(`/api/bff/validator-dashboards/${validatorListEncoded}/validators`)
-        fetchedDataValidators.value = response
+        validators.value = response
         // emit('change-validators', [ ...newValidators ])
         setValidators([ ...newValidators ])
         resetInput()
@@ -394,11 +412,17 @@ const inputValidator = ref('')
 const {
   data,
   status,
-} = useApi(`/api/bff/validator-dashboards/${validatorListEncoded.value}/validators`, {
-  immediate: validatorListEncoded.value.length > 0,
+} = useFetch(`/api/bff/validator-dashboards/${key.value}/validators`, {
+  immediate: !!key.value,
   key: 'validators',
   query,
 })
+
+// const { data }
+//  = useFetch(`/api/bff/validator-dashboards/${key.value}/validators`, {
+//    method: 'post',
+//  })
+
 // const test = ref(encodeBase64Url('1,2'))
 // const onClick = () => {
 //   console.log('Button clicked!')
@@ -412,7 +436,6 @@ const {
 //   // key: 'validators',
 //   query,
 // })
-// watchEffect(() => console.log(useFetchedData(`/api/bff/validator-dashboards/${validatorListEncoded.value}/validators`)))
 </script>
 
 <template>

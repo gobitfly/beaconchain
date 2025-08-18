@@ -1,26 +1,17 @@
 <script lang="ts" setup>
-import type { CookiesPreference } from '~/types/cookie'
-
-const cookiePreference = useBcCookie<CookiesPreference>(
-  'bc-cookies-preference',
-  { default: () => undefined },
-)
 const { variant } = useDashboard()
-const { dashboards } = storeToRefs(useUserDashboardStore())
+const { validatorDashboards } = usePrivateDashboards()
 const { t: $t } = useTranslation()
 const route = useRoute()
 
 const dismissed = ref(false)
 const visible = computed(
   () =>
-    variant.value === 'shared-dashboard' && !dismissed.value && cookiePreference.value !== undefined,
+    variant.value === 'shared-dashboard' && !dismissed.value,
 )
 
 const text = computed(() => {
-  const userHasOwnDashboard
-    = (dashboards.value?.validator_dashboards?.length || 0)
-      + (dashboards.value?.account_dashboards?.length || 0)
-      > 0
+  const userHasOwnDashboard = validatorDashboards.value?.length > 0
   const textRoot = userHasOwnDashboard
     ? 'dashboard.shared_modal_with_own'
     : 'dashboard.shared_modal_without_own'

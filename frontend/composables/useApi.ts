@@ -1,6 +1,6 @@
 import type {
   AvailableRouterMethod,
-  // NitroFetchRequest,
+  // NitroFetchOptions,
   // NitroFetchRequest,
 } from 'nitropack'
 import type {
@@ -18,11 +18,11 @@ type UseApiOptions<U> = {
   lazy?: boolean,
   query?: UseFetchOptions<U>['query'],
   transform?: UseFetchOptions<U>['transform'],
+  watch?: UseFetchOptions<U>['watch'],
   /**
    * Time to live for the cached data in seconds.
    */
-  ttl?: number,
-  watch?: UseFetchOptions<U>['watch'],
+  // ttl?: number,
 }
 
 // type UseFetch = typeof useFetch
@@ -33,19 +33,27 @@ type UseApiOptions<U> = {
 export const useApi = function useApi<T extends LooseAutocomplete<ServerUrl>>(
   url: (() => T) | T,
   options?: UseApiOptions<FetchResult<T, AvailableRouterMethod<T>>>,
+  // options?: UseApiOptions<GetReturnTypeFromServerUrl<T>>,
 ) {
-  // const lastFetchedAt = Date.now()
   return useFetch(url, {
-    // getCachedData: (key, nuxtApp) => nuxtApp.payload[key] ?? nuxtApp.payload.data[key],
-    // getCachedData: (key, nuxtApp) => {
-    //   // lastFetchedAt = Date.now()
-    //   const now = Date.now()
-    //   console.log('getCachedData', lastFetchedAt, now, lastFetchedAt - now)
-    //   // lastFetchedAt = Date.now()
-    //   return nuxtApp.payload[key] ?? nuxtApp.payload.data[key]
-    // },
-    // key: typeof url === 'function' ? () => url() : url,
     key: url,
+    onRequest: ({
+      options,
+      request: requestUrl,
+    }) => {
+      const abortController = new AbortController()
+      const hasEmptyParameter = `${requestUrl}`.includes('//')
+      const hasUndefinedParameter = `${requestUrl}`.includes('undefined')
+      options.signal = abortController.signal
+      if (hasEmptyParameter || hasUndefinedParameter) abortController.abort()
+      if (isDevEnvironment && abortController?.signal.aborted) {
+        // eslint-disable-next-line no-console
+        console.log('ℹ️', 'request aborted', {
+          hasEmptyParameter, hasUndefinedParameter, requestUrl,
+        })
+      }
+      return
+    },
     ...options,
     $fetch: useNuxtApp().$api as typeof $fetch,
   })

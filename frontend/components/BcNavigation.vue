@@ -17,13 +17,9 @@ useApi('/api/bff/latest-state', {
   immediate: true,
   watch: [ counter ],
 })
-const {
-  data: userData,
-} = await useApi('/api/bff/users/me', {
-  key: 'user',
-})
 
 const {
+  isLoggedIn,
   logout,
 } = useUser()
 
@@ -144,7 +140,7 @@ const loginUrl = useLoginUrl()
           :show-currency-icon="!isMobileScreen"
         />
         <div
-          v-if="!userData"
+          v-if="!isLoggedIn"
           class="logged-out"
         >
           <BcLink

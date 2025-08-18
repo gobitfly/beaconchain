@@ -67,9 +67,13 @@ const onUpdateValue = () => {
       <TabPanel
         v-for="tab in tabs"
         :key="tab.key"
+        class="tab-panel"
         :value="tab.key"
       >
-        <slot :name="`tab-panel-${tab.key}`">
+        <slot
+          :name="`tab-panel-${tab.key}`"
+          v-bind="{ isActive: activeTab === tab.key }"
+        >
           <component
             :is="tab.component"
             v-if="tab.component"
@@ -77,11 +81,21 @@ const onUpdateValue = () => {
           <div v-else-if="tab.placeholder">
             {{ tab.placeholder }}
           </div>
-          <div v-else>
+          <slot
+            v-else
+            name="empty"
+          >
             tab-panel-{{ tab.key }}
-          </div>
+          </slot>
         </slot>
       </TabPanel>
     </TabPanels>
   </Tabs>
 </template>
+
+<style lang="scss" scoped>
+:deep(.tab-panel) {
+  min-height: inherit;
+  display: grid;
+}
+</style>

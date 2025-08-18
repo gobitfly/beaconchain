@@ -26,29 +26,39 @@ const id = computed(() => {
   return key.value as string
 })
 
-const cookie = useBcCookie<Record<string, SlotVizCategories[]>>('bc-slotviz-categories', {
-  default() {
-    const selectedCategories: SlotVizCategories[] = [
-      'attestation',
-      'proposal',
-      'slashing',
-      'sync',
-    ]
-    if ((variant.value !== 'shared-dashboard' || !isLargeDashboard.value)) {
-      selectedCategories.push('visible')
-    }
-    return {
-      [id.value]: selectedCategories,
-    }
-  },
+const slotVizCategories = useBcCookie<Record<string, SlotVizCategories[]>>('bc-slotviz-categories', {
+  // default() {
+  //   const selectedCategories: SlotVizCategories[] = [
+  //     'attestation',
+  //     'proposal',
+  //     'slashing',
+  //     'sync',
+  //   ]
+  //   if ((variant.value !== 'shared-dashboard' || !isLargeDashboard.value)) {
+  //     selectedCategories.push('visible')
+  //   }
+  //   return {
+  //     [id.value]: selectedCategories,
+  //   }
+  // },
 })
 
-const selectedCategories = ref<SlotVizCategories[]>(cookie.value[id.value])
+if (!slotVizCategories.value[id.value]) {
+  slotVizCategories.value[id.value] = [
+    'attestation',
+    'proposal',
+    'slashing',
+    'sync',
+  ]
+  if ((variant.value !== 'shared-dashboard' || !isLargeDashboard.value)) {
+    slotVizCategories.value[id.value].push('visible')
+  }
+}
 
 const onUpdateCategories = (categories: SlotVizCategories[]) => {
   if (id.value) {
-    cookie.value = {
-      ...cookie.value,
+    slotVizCategories.value = {
+      ...slotVizCategories.value,
       [id.value]: categories,
     }
   }
@@ -115,10 +125,6 @@ const currentSlotId = computed(() => {
 
 <template>
   <section class="dashboard-slot-viz">
-    <!-- <pre>
-      {{ id }}
-      {{ variant }}
-    </pre> -->
     <div class="dashboard-slot-viz-header">
       <BcTooltip
         class="dashboard-slot-viz-info"
@@ -134,7 +140,7 @@ const currentSlotId = computed(() => {
         </BcLink>
       </BcTooltip>
       <DashboardSlotVizDutyVisibilityToggle
-        v-model="selectedCategories"
+        v-model="slotVizCategories[id]"
         class="dashboard-slot-viz-toggle"
         @update:model-value="onUpdateCategories"
       />
@@ -183,7 +189,7 @@ const currentSlotId = computed(() => {
             v-for="slot in row.slots"
             :key="slot.slot"
             :data="slot"
-            :selected-categories
+            :selected-categories="slotVizCategories[id]"
             :current-slot-id
           />
         </div>

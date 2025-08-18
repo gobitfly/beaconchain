@@ -103,6 +103,7 @@ const changeCursor = (value: string | undefined) => {
 const query = defineModel<Query>('query', {
   required: true,
 })
+
 const onSort = (event: DataTableSortEvent) => {
   const {
     sortField,
@@ -112,6 +113,10 @@ const onSort = (event: DataTableSortEvent) => {
     query.value.sort = `${sortField}:${sortOrder === -1 ? 'asc' : 'desc'}`
   }
 }
+
+// to correctly display the initial sort order
+const sortField = computed(() => query.value.sort?.split(':')[0] ?? '')
+const sortOrder = computed(() => query.value.sort?.split(':')[1] === 'desc' ? 1 : -1)
 </script>
 
 <template>
@@ -119,11 +124,12 @@ const onSort = (event: DataTableSortEvent) => {
     v-model:expanded-rows="expandedRows"
     class="bc-table"
     sort-mode="single"
-    lazy
     :value="data?.data"
     :data-key
     :loading="isLoading"
     :table-class
+    :sort-field
+    :sort-order
     @sort="onSort"
   >
     <Column

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core'
+// import { useStorage } from '@vueuse/core'
 import type { MultiBarItem } from '~/types/multiBar'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 

@@ -192,8 +192,7 @@
                     ]
                 },
                 "name": {
-                    "label": "Dashboard name",
-                    "placeholder": "Shared Dashboard name"
+                    "label": "What should be the name of the shared dashboard?"
                 }
             },
             "share_public_disclaimer": "Sharing this link will share the validator indices from your dashboard. Any modifications made by those who open the link will not affect your dashboard.",

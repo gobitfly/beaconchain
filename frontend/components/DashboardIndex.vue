@@ -4,6 +4,7 @@
 //   isGuestDashboardKey, isSharedDashboardKey,
 // } from '~/utils/dashboard/key'
 import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
+import type { ValidatorDashboard } from '~/types/api/dashboard'
 import type { SlotVizEpoch } from '~/types/api/slot_viz'
 import type { VDBOverviewData } from '~/types/api/validator_dashboard'
 // import type { TableQueryParams } from '~/types/datatable'
@@ -207,6 +208,7 @@ const tabs: HashTab[] = [
 defineProps<{
   overview: null | VDBOverviewData,
   slotVizEpochs: null | SlotVizEpoch[],
+  validatorDashboards: null | ValidatorDashboard[],
 }>()
 const visible = ref(false)
 const onShowCreation = () => {
@@ -227,40 +229,42 @@ const emit = defineEmits<{
 // const onTabChange = (value: string) => {
 //   tab.value = value
 // }
+const { key } = useDashboard()
 </script>
 
 <template>
   <!-- <NuxtLayout v-if="!dashboardKey && !dashboards?.validator_dashboards?.length">
-      <DashboardCreationController
-        class="panel-controller"
-        :display-mode="'panel'"
-        :initially-visible="true"
-      />
-    </NuxtLayout> -->
+    <DashboardCreationController
+      class="panel-controller"
+      :display-mode="'panel'"
+      :initially-visible="true"
+    />
+  </NuxtLayout> -->
   <NuxtLayout name="default">
     <BcDialog v-model="visible">
-      <DashboardCreationController
+      <LazyDashboardCreationController
         v-if="visible"
         ref="dashboardCreationControllerModal"
         class="modal-controller"
       />
     </BcDialog>
     <template #banner>
-      <BcNotificationBanner
+      <LazyBcNotificationBanner
         v-if=" overview?.is_above_effective_balance_limit"
         :title="$t('dashboard.subsciprion_limit_reached_title')"
       >
-        <BcTranslation
+        <LazyBcTranslation
+          v-if=" overview?.is_above_effective_balance_limit"
           keypath="dashboard.subsciprion_limit_reached.template"
           linkpath="dashboard.subsciprion_limit_reached._link"
           to="/pricing"
         />
-      </BcNotificationBanner>
+      </LazyBcNotificationBanner>
     </template>
     <DashboardHeader @show-creation="onShowCreation()" />
     <DashboardControls
       v-model:is-visible-management-modal="isVisibleManagementModal"
-      :dashboard-title="overview?.name"
+      :validator-dashboards
       @change-validators=" emit('change-validators', $event)"
     />
     <DashboardValidatorOverview
@@ -278,54 +282,54 @@ const emit = defineEmits<{
       class="dashboard-tab-view"
       panels-class="dashboard-tab-panels"
     >
-      <template #tab-panel-summary>
-        <DashboardTableSummary
-          @add-validator="onAddValidator"
+      <template #tab-panel-summary="{ isActive }">
+        <LazyDashboardTableSummary
+          v-if="key && isActive"
         />
       </template>
-      <template #tab-panel-rewards>
-        <DashboardTableRewards
-          @add-validator="onAddValidator"
+      <template #tab-panel-rewards="{ isActive }">
+        <LazyDashboardTableRewards
+          v-if="key && isActive"
         />
       </template>
-      <template #tab-panel-blocks>
-        <DashboardTableBlocks
-          @add-validator="onAddValidator"
+      <template #tab-panel-blocks="{ isActive }">
+        <LazyDashboardTableBlocks
+          v-if="key && isActive"
         />
       </template>
-      <template #tab-panel-deposits>
-        <DashboardTableElDeposits
-          @add-validator="onAddValidator"
-        />
-        <BcIcon
-          name="arrow-down"
-          class="down_icon"
-        />
-        <DashboardTableClDeposits
-          @add-validator="onAddValidator"
-        />
+      <template #tab-panel-deposits="{ isActive }">
+        <div v-if="key && isActive">
+          <LazyDashboardTableElDeposits />
+          <LazyBcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <LazyDashboardTableClDeposits />
+        </div>
       </template>
-      <template #tab-panel-withdrawals>
-        <DashboardTableElWithdrawals
-          @add-validator="onAddValidator"
-        />
-        <BcIcon
-          name="arrow-down"
-          class="down_icon"
-        />
-        <DashboardTableClWithdrawals
-          @add-validator="onAddValidator"
-        />
+      <template #tab-panel-withdrawals="{ isActive }">
+        <div v-if="key && isActive">
+          <LazyDashboardTableElWithdrawals />
+          <LazyBcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <LazyDashboardTableClWithdrawals />
+        </div>
       </template>
-      <template #tab-panel-consolidations>
-        <DashboardTableElConsolidations
-          @add-validator="onAddValidator"
-        />
-        <BcIcon
-          name="arrow-down"
-          class="down_icon"
-        />
-        <DashboardTableClConsolidations
+      <template #tab-panel-consolidations="{ isActive }">
+        <div v-if="key && isActive">
+          <LazyDashboardTableElConsolidations />
+          <LazyBcIcon
+            name="arrow-down"
+            class="down_icon"
+          />
+          <LazyDashboardTableClConsolidations />
+        </div>
+      </template>
+      <template #empty>
+        <LazyDashboardTableAddValidator
+          v-if="!key"
           @add-validator="onAddValidator"
         />
       </template>

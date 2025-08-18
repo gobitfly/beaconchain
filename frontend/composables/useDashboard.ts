@@ -15,20 +15,25 @@ export const useDashboard = () => {
     return ''
   })
   const validatorListEncoded = computed(() => encodeBase64Url(validatorList.value))
+
+  // const data = useFetchedData('validators')
+
   /**
    * TODO: fix for private dashboards
    */
-  const validators = computed(() => {
+  const validatorIds = computed(() => {
     if (validatorList.value) return validatorList.value.split(',')
     return []
   })
+  const hasValidators = computed(() => validatorIds.value.length > 0)
+
   /**
    * Integer (private Dashboard) or base64url encoded list of `validator id`s or `validator public key`s
    */
   const key = computed(() => {
     const id = route.params.id as string | undefined
     if (id?.length) return id
-    if (validatorList.value) return encodeBase64Url(validatorList.value)
+    if (validatorList.value) return validatorListEncoded.value
     return undefined
   })
   // const isSharedDashboard = computed(() => id.value?.startsWith('v-'))
@@ -39,17 +44,15 @@ export const useDashboard = () => {
     })
   }
 
-  const hasValidators = computed(() => validators.value.length > 0)
-
   /**
-   * Pushes route to page with new query parameters for `?validators=`
+   * Pushes route to page with new query parameters for `?validatorIds=`
    */
   const setValidators = async (list: NumberOrString[]) => {
     const sortedList = list.sort((a, b) => `${a}`.localeCompare(`${b}`, 'en', { numeric: true }))
     await router.push({
       query: {
         ...route.query,
-        validators: sortedList.join(','),
+        validators: sortedList.length ? sortedList.join(',') : undefined,
       },
     })
   }
@@ -79,11 +82,26 @@ export const useDashboard = () => {
   })
 
   const groups = computed(() => overview.value?.groups ?? [])
+  const { t: $t } = useTranslation()
+  const name = computed(() => overview.value?.name ?? $t('dashboard.public_validator_dashboard'))
+
+  const { validatorDashboards } = usePrivateDashboards()
+  const currentDashboard = computed(() => {
+    return validatorDashboards.value.find(dashboard => `${dashboard.id}` === key.value)
+  })
+  const publicId = computed(() => {
+    // currently only one public id is supported
+    return currentDashboard.value?.public_ids?.[0]?.public_id
+  })
+  const publicName = computed(() => {
+    // currently only one public id is supported
+    return currentDashboard.value?.public_ids?.[0]?.name
+  })
 
   return {
     /**
      * number of seconds the user is allowed to query the chart history
-     * in the past (depending on user's tier)
+     * into the past (depending on the user's tier)
      */
     chartHistorySeconds,
     groups,
@@ -93,11 +111,19 @@ export const useDashboard = () => {
      */
     isLargeDashboard: computed(() => totalValidators.value > 64),
     key,
+    name,
     // isPrivateDashboard,
     // isSharedDashboard,
     navigateToDashboard,
+    /**
+     * A string starting with `v-`, which is basically an alias for the private dashboard id
+     * it belongs to.
+     */
+    publicId,
+    publicName,
     setValidators,
     totalValidators,
+    validatorIds,
     //   /**
     //  * List of `validator-id`s or `validator public key`s from the `?validators=` query parameter
     //  */
@@ -107,7 +133,6 @@ export const useDashboard = () => {
      * @example 1,2 -> `MSwy`
      */
     validatorListEncoded,
-    validators,
     variant,
   }
 }

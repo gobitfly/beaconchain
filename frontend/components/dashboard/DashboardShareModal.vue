@@ -1,81 +1,58 @@
 <script lang="ts" setup>
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
-interface Props {
-  dashboard: ValidatorDashboard, // Currently only validator dashboards are supported
-}
 const {
   dialogRef,
   props,
-} = useBcDialog<Props>()
+} = useBcDialog<{
+  dashboard?: ValidatorDashboard,
+}>()
 const { t: $t } = useTranslation()
-const { refreshDashboards } = useUserDashboardStore()
-const { fetch } = useCustomFetch()
-
-const dashboardName = ref('')
+// const { refresh } = useUserDashboardStore()
+// const { fetch } = useCustomFetch()
+const {
+  name,
+  publicName,
+} = useDashboard()
+const dashboardName = ref(publicName.value ?? name.value ?? '')
 const shareGroups = ref(true)
 const isUpdating = ref(false)
-const isNew = ref(true)
-const { user } = useUserStore()
 
-const isPremiumUser = computed(
-  () => !!user.value?.premium_perks?.share_custom_dashboards,
-)
+const { hasShareCustomDashboard } = usePremiumPerks()
 
-watch(
-  props,
-  (p) => {
-    if (p) {
-      // We currently only want to use one public id
-      shareGroups.value
-        = isPremiumUser.value
-          && !!p.dashboard.public_ids?.[0]?.share_settings.share_groups
-      isNew.value = !p.dashboard.public_ids?.[0]
-      if (isNew.value) {
-        dashboardName.value = props.value?.dashboard?.name ?? ''
-      }
-      else {
-        dashboardName.value = p.dashboard.public_ids?.[0]?.name ?? ''
-      }
-    }
-  },
-  { immediate: true },
-)
-
+const { $api } = useNuxtApp()
+const { refresh } = usePrivateDashboards()
 const add = async () => {
   isUpdating.value = true
-  await fetch(
-    'DASHBOARD_VALIDATOR_CREATE_PUBLIC_ID',
+  await $api(
+    `/api/bff/validator-dashboards/${props.value?.dashboard?.id}/public-ids`,
     {
       body: {
         name: dashboardName.value,
         share_settings: { share_groups: shareGroups.value },
       },
+      method: 'post',
     },
-    { dashboardKey: `${props.value?.dashboard.id}` },
   )
-  await refreshDashboards()
+  await refresh()
   dialogRef?.value?.close(true)
   isUpdating.value = false
 }
 
 const edit = async () => {
   isUpdating.value = true
-  const publicId = `${props.value?.dashboard.public_ids?.[0]?.public_id}`
-  await fetch(
-    'DASHBOARD_VALIDATOR_EDIT_PUBLIC_ID',
+  const publicId = `${props.value?.dashboard?.public_ids?.[0]?.public_id}`
+  await $api(
+    `/api/bff/validator-dashboards/${props.value?.dashboard?.id}/public-ids/${publicId}`,
     {
       body: {
         name: dashboardName.value,
         share_settings: { share_groups: shareGroups.value },
       },
-    },
-    {
-      dashboardKey: `${props.value?.dashboard.id}`,
-      publicId,
+      method: 'put',
     },
   )
-  await refreshDashboards()
+  await refresh()
   dialogRef?.value?.close(true)
   isUpdating.value = false
 }
@@ -85,12 +62,11 @@ const publishDisabled = computed(() => {
 })
 
 const share = () => {
-  dashboardName.value = dashboardName.value.trim()
   if (publishDisabled.value) {
     return
   }
 
-  if (props.value?.dashboard.public_ids?.[0]?.public_id) {
+  if (props.value?.dashboard?.public_ids?.[0]?.public_id) {
     edit()
   }
   else {
@@ -122,21 +98,20 @@ const shareGroupTooltip = computed(() => {
       }}</label>
       <InputText
         id="dashboardName"
-        v-model="dashboardName"
-        :placeholder="$t('dashboard.share_dialog.setting.name.placeholder')"
+        v-model.trim="dashboardName"
         class="input-field"
         @keypress.enter="share"
       />
       <div class="share-setting">
         <Checkbox
-                    v-model="shareGroups"
-input-id="shareGroup"
+          v-model="shareGroups"
+          input-id="shareGroup"
           :binary="true"
-          :disabled="!isPremiumUser"
+          :disabled="!hasShareCustomDashboard"
         />
         <label
           for="shareGroup"
-          :class="{ 'text-disabled': !isPremiumUser }"
+          :class="{ 'text-disabled': !hasShareCustomDashboard }"
         >{{
           $t("dashboard.share_dialog.setting.group.label")
         }}</label>
@@ -149,7 +124,7 @@ input-id="shareGroup"
         >
           <BcIcon name="circle-info" />
         </BcTooltip>
-        <BcPremiumGem v-if="!isPremiumUser" />
+        <BcPremiumGem v-if="!hasShareCustomDashboard" />
       </div>
     </div>
     <div class="footer">
@@ -157,7 +132,7 @@ input-id="shareGroup"
         :disabled="publishDisabled"
         @click="share"
       >
-        {{ isNew ? $t("navigation.publish") : $t("navigation.update") }}
+        {{ publicName ? $t("navigation.update") : $t("navigation.publish") }}
       </Button>
     </div>
   </div>

@@ -1,22 +1,22 @@
 <script lang="ts" setup>
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import {
-  BcDialogConfirm,
-  DashboardRenameModal,
-  DashboardShareCodeModal,
-  DashboardShareModal,
+  LazyBcDialogConfirm,
+  LazyDashboardRenameModal,
+  LazyDashboardShareCodeModal,
+  LazyDashboardShareModal,
 } from '#components'
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
 import type { Icon } from '~/components/bc/icon/BcIcon.vue'
+import type { ValidatorDashboard } from '~/types/api/dashboard'
 
-interface Props {
-  dashboardTitle?: string,
-}
-const props = defineProps<Props>()
+const props = defineProps<{
+  validatorDashboards: null | ValidatorDashboard[],
+}>()
 
-const { isLoggedIn } = useUserStore()
+const { isLoggedIn } = useUser()
 // const {
 //   dashboardKey,
 //   dashboardType,
@@ -28,14 +28,6 @@ const { isLoggedIn } = useUserStore()
 // } = useDashboardKey()
 
 // const { refreshOverview } = useValidatorDashboardOverviewStore()
-const userDashboardStore = useUserDashboardStore()
-const {
-  getDashboardLabel,
-  refreshDashboards,
-  // updateGuestDashboardKey,
-} = userDashboardStore
-
-const { dashboards } = storeToRefs(userDashboardStore)
 
 const { t: $t } = useTranslation()
 const { width } = useWindowSize()
@@ -49,7 +41,10 @@ const isVisibleManagementModal = defineModel<boolean>('isVisibleManagementModal'
 const {
   hasValidators,
   key,
+  // validators,
+  name,
   navigateToDashboard,
+  publicId,
   variant,
 } = useDashboard()
 const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
@@ -91,7 +86,7 @@ const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
 })
 
 const shareDashboard = computed(() => {
-  return dashboards.value?.validator_dashboards?.find((d) => {
+  return props.validatorDashboards?.find((d) => {
     return (
       d.id === parseInt(key.value ?? '')
       || d.public_ids?.find(p => p.public_id === key.value)
@@ -155,7 +150,7 @@ const editButtons = computed<MenuBarEntry[]>(() => {
 
 const shareView = () => {
   const dashboardId = shareDashboard.value?.id
-  dialog.open(DashboardShareCodeModal, {
+  dialog.open(LazyDashboardShareCodeModal, {
     data: {
       dashboard: shareDashboard.value,
       dashboardKey: key.value,
@@ -174,7 +169,7 @@ const shareView = () => {
 }
 
 const shareEdit = () => {
-  dialog.open(DashboardShareModal, {
+  dialog.open(LazyDashboardShareModal, {
     data: { dashboard: shareDashboard.value },
     onClose: (options?: DynamicDialogCloseOptions) => {
       if (options?.data) {
@@ -203,8 +198,7 @@ const deleteButtonOptions = computed(() => {
 
   // we can only forward if there is something to forward to after a potential deletion
   const privateDashboardsCount = isLoggedIn.value
-    ? (dashboards.value?.validator_dashboards?.length ?? 0)
-    + (dashboards.value?.account_dashboards?.length ?? 0)
+    ? (props.validatorDashboards?.length ?? 0)
     : 0
   const forward = deleteDashboard
     ? privateDashboardsCount > 1
@@ -226,7 +220,7 @@ const onDelete = () => {
       isDelete
         ? 'dashboard.deletion.delete.text'
         : 'dashboard.deletion.clear.text',
-      { dashboard: getDashboardLabel(key.value ?? '') },
+      { dashboard: props.dashboardTitle },
     ),
     severity: isDelete ? 'danger' : undefined,
     title: $t(
@@ -237,7 +231,7 @@ const onDelete = () => {
     yesLabel: isDelete ? $t('dashboard.deletion.delete.yes_label') : undefined,
   }
 
-  dialog.open(BcDialogConfirm, {
+  dialog.open(LazyBcDialogConfirm, {
     data: dialogData,
     // onClose: response =>
     //   response?.data
@@ -301,26 +295,19 @@ const onDelete = () => {
 //   setDashboardKey('')
 // }
 
-const title = computed(() => {
-  return (
-    props?.dashboardTitle
-    || getDashboardLabel(key.value ?? '')
-  )
-})
-
 const editDashboard = () => {
-  const list = dashboards.value?.validator_dashboards
+  const list = props.validatorDashboards
   const dashboard = list?.find(d => `${d.id}` === key.value)
   if (!dashboard) {
     return
   }
-  dialog.open(DashboardRenameModal, {
+  dialog.open(LazyDashboardRenameModal, {
     data: {
       dashboard,
     },
     onClose: (value?: DynamicDialogCloseOptions | undefined) => {
       if (value?.data === true) {
-        refreshDashboards()
+        // refreshDashboards()
       }
     },
   })
@@ -328,20 +315,23 @@ const editDashboard = () => {
 const emit = defineEmits<{
   (e: 'change-validators', value: string[]): void,
 }>()
-const { validators } = useDashboard()
 </script>
 
 <template>
-  <DashboardGroupManagementModal v-model="manageGroupsModalVisisble" />
+  <DashboardGroupManagementModal
+    v-model="manageGroupsModalVisisble"
+  />
   <LazyDashboardValidatorManagementModal
     v-if="isVisibleManagementModal"
     v-model="isVisibleManagementModal"
-    :validators
     @change-validators="emit('change-validators', $event)"
   />
+  <pre>
+    {{ publicId }}
+  </pre>
   <div class="header-row">
     <div class="h1 dashboard-title">
-      {{ title }}
+      {{ name }}
     </div>
     <div class="action-button-container">
       <Button

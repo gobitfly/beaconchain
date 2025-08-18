@@ -44,12 +44,14 @@ const counter = ref(0)
 // })
 const nuxtApp = useNuxtApp()
 const key = ref('MSwyLDMsNCw1LDYsNyw4LDksMTAsMTEsMTIsMTMsMTQsMTUsMTYsMTcsMTgsMTk')
+key.value = undefined
 const {
   data,
   error,
-  refresh,
-// } = useApi(() => `/api/validator-dashboards/${key.value}`, {
-} = useApi(() => 'api/bff/validator-dashboards/MQ', {
+  // refresh,
+} = useFetch(() => `/api/bff/validator-dashboards/${key.value}/validators`, {
+  // key: 'privateDashboards',
+  // } = useApi(() => '/api/bff/validator-dashboards/MQ/validators', {
   // getCachedData: key => nuxtApp.payload.state[key] ?? nuxtApp.payload.data[key],
   // body: {
   //   dashboardKey: key.value,
@@ -69,7 +71,13 @@ const onClick = async () => {
   //     test: counter.value,
   //   },
   // })
-  refresh()
+  // refresh()
+  await navigateTo({
+    name: 'dashboard-id',
+    params: {
+      id: 22,
+    },
+  })
   // await navigateTo({
   //   external: true,
   //   path: `${v1Domain}/login`,
@@ -78,14 +86,52 @@ const onClick = async () => {
 }
 const expandedRows = ref({})
 const query = ref({})
+// const data = ref({
+//   data: [
+//     {
+//       epoch: 1, group_id: 'group1', index: 1, public_key: '0x123',
+//     },
+//     {
+//       epoch: 2, group_id: 'group1', index: 2, public_key: '0x456',
+//     },
+//     {
+//       epoch: 3, group_id: 'group2', index: 3, public_key: '0x789',
+//     },
+//   ],
+// })
+// const {
+//   dashboards,
+//   validatorDashboards,
+// } = usePrivateDashboards()
+// validatorDashboards[0].name = 'test'
+
+// const test = ref({
+//   one: 'value1',
+//   two: {
+//     four: 'value4',
+//     three: 'value3',
+//   },
+// })
+
+// const test2 = toRefs(test.value)
+// test2.two.value = {
+//   four: 'value5',
+//   three: 'value6',
+// }
+const { hasShareCustomDashboard } = usePremiumPerks()
+// hasShareCustomDashboard.value = false
 </script>
 
 <template>
   <div>
-    Page: test
-    {{ route.query.test }}
-    {{ data }}
-    {{ error }}
+    <pre>
+      {{ hasShareCustomDashboard }}
+      <!-- {{ dashboards }} -->
+      <!-- {{ validatorDashboards }} -->
+      <!-- {{ route.query.test }} -->
+      {{ data }}
+      {{ error }}
+    </pre>
     <button
       @click="onClick"
     >
@@ -104,9 +150,17 @@ const query = ref({})
         />
         <Column
           field="epoch"
+          header="Epoch"
+          sortable
         />
         <Column
+          header="Public Key"
+          field="public_key"
+        />
+        <Column
+          header="Group ID"
           field="group_id"
+          sortable
         />
         <template #expansion="slotProps">
           <TestComponent
