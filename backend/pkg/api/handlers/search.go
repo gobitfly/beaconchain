@@ -31,6 +31,12 @@ const (
 	validatorsByWithdrawalEns        searchTypeKey = "validators_by_withdrawal_ens_name"
 	validatorsByGraffiti             searchTypeKey = "validators_by_graffiti"
 	validatorsByGraffitiHex          searchTypeKey = "validators_by_graffiti_hex"
+
+	addressKey     searchTypeKey = "address"
+	transactionKey searchTypeKey = "transaction"
+	blockKey       searchTypeKey = "block"
+	epochKey       searchTypeKey = "epoch"
+	tokenKey       searchTypeKey = "token"
 )
 
 type searchType struct {
@@ -94,6 +100,31 @@ func init() {
 			regex:        types.ReGraffitiHex,
 			responseType: string(validatorsByGraffiti),
 			handlerFunc:  handleSearchValidatorsByGraffitiHex,
+		},
+		addressKey: {
+			regex:        types.ReEthereumAddress,
+			responseType: string(addressKey),
+			handlerFunc:  handleSearchAddress,
+		},
+		transactionKey: {
+			regex:        types.ReTransactionHash,
+			responseType: string(transactionKey),
+			handlerFunc:  handleSearchTransaction,
+		},
+		blockKey: {
+			regex:        types.ReInteger,
+			responseType: string(blockKey),
+			handlerFunc:  handleSearchBlock,
+		},
+		epochKey: {
+			regex:        types.ReInteger,
+			responseType: string(epochKey),
+			handlerFunc:  handleSearchEpoch,
+		},
+		tokenKey: {
+			regex:        types.ReEthereumAddress,
+			responseType: string(tokenKey),
+			handlerFunc:  handleSearchToken,
 		},
 	}
 }
@@ -284,6 +315,51 @@ func handleSearchValidatorsByGraffitiHex(ctx context.Context, h *HandlerService,
 	}
 	result, err := h.daService.GetSearchValidatorsByGraffitiHex(ctx, chainId, graffitiHex)
 	return asSearchResult(validatorsByGraffitiHex, chainId, result, err)
+}
+
+func handleSearchAddress(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	address, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchAddress(ctx, chainId, address)
+	return asSearchResult(addressKey, chainId, result, err)
+}
+
+func handleSearchTransaction(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	transactionHash, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchTransaction(ctx, chainId, transactionHash)
+	return asSearchResult(transactionKey, chainId, result, err)
+}
+
+func handleSearchBlock(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	blockNumber, err := strconv.ParseUint(input, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchBlock(ctx, chainId, blockNumber)
+	return asSearchResult(blockKey, chainId, result, err)
+}
+
+func handleSearchEpoch(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	epoch, err := strconv.ParseUint(input, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchEpoch(ctx, chainId, epoch)
+	return asSearchResult(epochKey, chainId, result, err)
+}
+
+func handleSearchToken(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	tokenAddress, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchToken(ctx, chainId, tokenAddress)
+	return asSearchResult(tokenKey, chainId, result, err)
 }
 
 // --------------------------------------

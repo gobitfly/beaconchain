@@ -2,11 +2,15 @@ package dataaccess
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"strings"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/pkg/errors"
 )
 
 type SearchRepository interface {
@@ -18,6 +22,11 @@ type SearchRepository interface {
 	GetSearchValidatorsByWithdrawalEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchValidatorsByWithdrawalCredential, error)
 	GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error)
 	GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error)
+	GetSearchAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchAddress, error)
+	GetSearchTransaction(ctx context.Context, chainId uint64, transactionHash []byte) (*t.SearchTransaction, error)
+	GetSearchBlock(ctx context.Context, chainId uint64, blockNumber uint64) (*t.SearchBlock, error)
+	GetSearchEpoch(ctx context.Context, chainId uint64, epoch uint64) (*t.SearchEpoch, error)
+	GetSearchToken(ctx context.Context, chainId uint64, address []byte) (*t.SearchToken, error)
 }
 
 func (d *DataAccessService) GetSearchValidatorByIndex(ctx context.Context, chainId, index uint64) (*t.SearchValidator, error) {
@@ -130,4 +139,92 @@ func (d *DataAccessService) GetSearchValidatorsByGraffitiHex(ctx context.Context
 		return nil, ErrNotFound
 	}
 	return ret, nil
+}
+
+func (d *DataAccessService) GetSearchAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchAddress, error) {
+	eth1AddressSearchItem, err := d.bigtable.SearchForAddress(address, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for address %s: %w", hexutil.Encode(address), err)
+	}
+	if len(eth1AddressSearchItem) == 0 || eth1AddressSearchItem[0] == nil {
+		return nil, ErrNotFound
+	}
+	foundAddress := *eth1AddressSearchItem[0]
+	return &t.SearchAddress{
+		Address: t.Address{
+			Hash: t.Hash("0x" + foundAddress.Address),
+			// TODO: implement finding contract status / name
+		},
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchTransaction(ctx context.Context, chainId uint64, transactionHash []byte) (*t.SearchTransaction, error) {
+	tx, err := db.BigtableClient.GetIndexedEth1Transaction(transactionHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for transaction %s: %w", hexutil.Encode(transactionHash), err)
+	}
+	if tx == nil {
+		return nil, ErrNotFound
+	}
+	return &t.SearchTransaction{
+		TransactionHash: t.Hash(hexutil.Encode(tx.Hash)),
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchBlock(ctx context.Context, chainId uint64, blockNumber uint64) (*t.SearchBlock, error) {
+	block, err := db.BigtableClient.GetBlockFromBlocksTable(blockNumber)
+	if err != nil {
+		if err == db.ErrBlockNotFound {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to search for block %d: %w", blockNumber, err)
+	}
+	if block == nil {
+		return nil, fmt.Errorf("nil block returned for block number %d", blockNumber)
+	}
+	return &t.SearchBlock{
+		BlockNumber: block.Number,
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchEpoch(ctx context.Context, chainId uint64, epoch uint64) (*t.SearchEpoch, error) {
+	ds := goqu.Dialect("postgres").
+		From("epochs").
+		Select(goqu.I("epoch")).
+		Where(goqu.I("epoch").Eq(epoch))
+
+	foundEpoch, err := runQuery[uint64](ctx, d.readerDb, ds)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchEpoch{
+		Epoch: foundEpoch,
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchToken(ctx context.Context, chainId uint64, address []byte) (*t.SearchToken, error) {
+	// TODO: find erc721 and erc1155 tokens
+	// currently only erc20 tokens supported
+	eth1AddressSearchItem, err := d.bigtable.SearchForAddress(address, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for address %s: %w", hexutil.Encode(address), err)
+	}
+	if len(eth1AddressSearchItem) == 0 || eth1AddressSearchItem[0] == nil {
+		return nil, ErrNotFound
+	}
+	foundAddress := *eth1AddressSearchItem[0]
+	if foundAddress.Token == "" {
+		return nil, ErrNotFound
+	}
+	return &t.SearchToken{
+		Address: t.Address{
+			Hash:       t.Hash("0x" + foundAddress.Address),
+			IsContract: true,
+			Label:      foundAddress.Name,
+		},
+		Token: foundAddress.Token,
+	}, nil
 }
