@@ -900,3 +900,23 @@ func (*DummyService) GetValidatorDashboardValidatorsOfList(ctx context.Context, 
 func (d *DummyService) GetEthpool(ctx context.Context, day time.Time, validators []t.VDBValidator) ([]t.EthpoolData, error) {
 	return getDummyData[[]t.EthpoolData](ctx)
 }
+
+func (d *DummyService) GetSearchAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchAddress, error) {
+	return getDummyStruct[t.SearchAddress](ctx)
+}
+
+func (d *DummyService) GetSearchTransaction(ctx context.Context, chainId uint64, transactionHash []byte) (*t.SearchTransaction, error) {
+	return getDummyStruct[t.SearchTransaction](ctx)
+}
+
+func (d *DummyService) GetSearchBlock(ctx context.Context, chainId uint64, blockNumber uint64) (*t.SearchBlock, error) {
+	return getDummyStruct[t.SearchBlock](ctx)
+}
+
+func (d *DummyService) GetSearchEpoch(ctx context.Context, chainId uint64, epoch uint64) (*t.SearchEpoch, error) {
+	return getDummyStruct[t.SearchEpoch](ctx)
+}
+
+func (d *DummyService) GetSearchToken(ctx context.Context, chainId uint64, address []byte) (*t.SearchToken, error) {
+	return getDummyStruct[t.SearchToken](ctx)
+}

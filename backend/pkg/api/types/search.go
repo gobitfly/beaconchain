@@ -1,6 +1,10 @@
 package types
 
-// search types to be used between the data access layer and the api layer, shouldn't be exported to typescript
+type PostSearchRequest struct {
+	Input    string        `json:"input"`
+	Networks []interface{} `json:"networks,omitempty" tstype:"(number | string)[]"`
+	Types    []string      `json:"types,omitempty"`
+}
 
 type SearchValidator struct {
 	Index     uint64 `json:"index"`
@@ -29,6 +33,27 @@ type SearchValidatorsByGraffiti struct {
 	Count    uint64 `json:"count"`
 }
 
+type SearchAddress struct {
+	Address Address `json:"address"`
+}
+
+type SearchTransaction struct {
+	TransactionHash Hash `json:"transaction_hash"`
+}
+
+type SearchBlock struct {
+	BlockNumber uint64 `json:"block_number"`
+}
+
+type SearchEpoch struct {
+	Epoch uint64 `json:"epoch"`
+}
+
+type SearchToken struct {
+	Address Address `json:"address"`
+	Token   string  `json:"token" tstype:"'ERC20' | 'ERC721' | 'ERC1155'"` // currently only erc20 tokens can be found
+}
+
 type SearchResult struct {
 	Type    string      `json:"type"`
 	ChainId uint64      `json:"chain_id"`
@@ -36,5 +61,5 @@ type SearchResult struct {
 }
 
 type InternalPostSearchResponse struct {
-	Data []SearchResult `json:"data" tstype:"({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti })[]"`
+	Data []SearchResult `json:"data" tstype:"({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti } | { type: 'address'; chain_id: number; value: SearchAddress } | { type: 'transaction'; chain_id: number; value: SearchTransaction } | { type: 'block'; chain_id: number; value: SearchBlock } | { type: 'epoch'; chain_id: number; value: SearchEpoch } | { type: 'token'; chain_id: number; value: SearchToken })[]"`
 }
