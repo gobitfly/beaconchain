@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/doug-martin/goqu/v9"
@@ -433,6 +434,9 @@ func (d *DataAccessService) GetUserDashboards(ctx context.Context, userId uint64
 
 		result.ValidatorDashboards = append(result.ValidatorDashboards, *validatorDashboard)
 	}
+	slices.SortFunc(result.ValidatorDashboards, func(a, b t.ValidatorDashboard) int {
+		return int(a.Id) - int(b.Id)
+	})
 
 	// Get the account dashboards
 	err = d.readerDb.SelectContext(ctx, &result.AccountDashboards, `
