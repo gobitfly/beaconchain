@@ -86,7 +86,7 @@ func copyIfMissing(envFile string) {
 			}
 		}
 
-		exampleFile := ".env.example"
+		exampleFile := "test/.env.example"
 		input, err := os.Open(exampleFile)
 		if err != nil {
 			log.Fatalf("❌ Example env file not found: %s", exampleFile)
