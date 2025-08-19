@@ -24,7 +24,7 @@ writerAdminDatabase:
   password: "postgres"
   useSSL: false
 
-readerChainDatabase:
+readerChainDatabaseMainnet:
   isCloudConnection: true
   username: "postgres"
   dbName: "postgres"
@@ -32,7 +32,7 @@ readerChainDatabase:
   port: "5432"
   password: "postgres"
   useSSL: false
-writerChainDatabase:
+writerChainDatabaseMainnet:
   isCloudConnection: true
   username: "postgres"
   dbName: "postgres"

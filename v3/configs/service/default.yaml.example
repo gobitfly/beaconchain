@@ -5,14 +5,14 @@ grpcPort: 9090
 exposeSchema: false
 
 # Network (i.e. Chain) Database Connection
-readerChainDatabase:
+readerChainDatabaseMainnet:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
   port: "REPLACE_WITH_ENV"
   password: "REPLACE_WITH_ENV"
   useSSL: "REPLACE_WITH_ENV"
-writerChainDatabase:
+writerChainDatabaseMainnet:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
@@ -76,6 +76,7 @@ consensusClient:
 
 # Redis
 redis:
+  endpoint: "REPLACE_WITH_ENV"
   cacheEndpoint: "REPLACE_WITH_ENV"
   sessionStoreEndpoint: "REPLACE_WITH_ENV"
 

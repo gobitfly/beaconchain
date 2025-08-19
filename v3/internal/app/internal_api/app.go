@@ -171,7 +171,7 @@ func HeaderMatcher(key string) (string, bool) {
 func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	resp := grpc_health_v1.HealthCheckResponse_SERVING
 
-	if s.userRepository.Ping() != nil {
+	if s.userRepository.Ping() != nil || s.dashboardRepository.Ping() != nil {
 		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
 	}
 
