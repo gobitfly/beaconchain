@@ -4,11 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"strings"
 
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
-	"cloud.google.com/go/secretmanager/apiv1/secretmanagerpb"
 	"cloud.google.com/go/storage"
+	"github.com/gobitfly/beaconchain-backend/internal/common/secrets"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/spf13/viper"
 )
@@ -140,8 +138,12 @@ func LoadServiceConfig() *ServiceConfig {
 	viper.AutomaticEnv()
 
 	// resolve secrets
-	if err := replaceNestedSecrets(context.Background(), "", viper.AllSettings()); err != nil {
+	keysToChange := make(map[string]string)
+	if err := secrets.ReplaceNestedSecrets("", viper.AllSettings(), keysToChange); err != nil {
 		log.Error("failed to resolve secrets", err)
+	}
+	for k, v := range keysToChange {
+		viper.Set(k, v)
 	}
 
 	serviceConfig := &ServiceConfig{}
@@ -154,51 +156,6 @@ func LoadServiceConfig() *ServiceConfig {
 	logDebugConfigKeys()
 
 	return serviceConfig
-}
-
-func fetchSecret(ctx context.Context, secretName string) (string, error) {
-	client, err := secretmanager.NewClient(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to create secretmanager client: %w", err)
-	}
-	defer func() {
-		if cerr := client.Close(); cerr != nil {
-			log.Fatalf("failed to close secretmanager client: %v", cerr)
-		}
-	}()
-
-	req := &secretmanagerpb.AccessSecretVersionRequest{
-		Name: secretName,
-	}
-	result, err := client.AccessSecretVersion(ctx, req)
-	if err != nil {
-		return "", fmt.Errorf("failed to access secret version: %w", err)
-	}
-	return string(result.Payload.Data), nil
-}
-
-func replaceNestedSecrets(ctx context.Context, parentKey string, data map[string]interface{}) error {
-	for k, v := range data {
-		fullKey := k
-		if parentKey != "" {
-			fullKey = fmt.Sprintf("%s.%s", parentKey, k)
-		}
-		switch val := v.(type) {
-		case string:
-			if strings.HasPrefix(val, "gsm:") {
-				secretVal, err := fetchSecret(ctx, strings.TrimPrefix(val, "gsm:"))
-				if err != nil {
-					return err
-				}
-				viper.Set(fullKey, secretVal)
-			}
-		case map[string]interface{}:
-			if err := replaceNestedSecrets(ctx, fullKey, val); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func logDebugConfigKeys() {
