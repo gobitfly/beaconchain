@@ -6,6 +6,12 @@ type PostSearchRequest struct {
 	Types    []string      `json:"types,omitempty"`
 }
 
+type PostSearchRequest struct {
+	Input    string        `json:"input"`
+	Networks []interface{} `json:"networks,omitempty" tstype:"(number | string)[]"`
+	Types    []string      `json:"types,omitempty"`
+}
+
 type SearchValidator struct {
 	Index     uint64 `json:"index"`
 	PublicKey string `json:"public_key"`
