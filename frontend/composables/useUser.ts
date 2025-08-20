@@ -12,7 +12,8 @@ export const useUser = () => {
     }).then(async () => {
       clear()
       clearPrivateDashboards()
-      // await navigateTo({ name: 'dashboard' })
+      // e.g. when user clicks logout while being on a private dashboad
+      await navigateTo({ name: 'dashboard' })
     })
   }
 

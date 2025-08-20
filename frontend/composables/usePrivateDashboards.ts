@@ -1,6 +1,7 @@
 export const usePrivateDashboards = () => {
   const dashboards = useFetchedData('privateDashboards')
   const validatorDashboards = computed(() => dashboards.value?.validator_dashboards ?? [])
+  const totalValidatorDashboards = computed(() => validatorDashboards.value.length)
   const refresh = async () => {
     await refreshNuxtData('privateDashboards')
   }
@@ -10,6 +11,7 @@ export const usePrivateDashboards = () => {
   return {
     clear,
     refresh,
+    totalValidatorDashboards,
     validatorDashboards,
   }
 }

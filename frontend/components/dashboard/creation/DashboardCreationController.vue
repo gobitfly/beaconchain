@@ -1,104 +1,107 @@
 <script lang="ts" setup>
 import type { DashboardType } from '~/types/dashboard'
 import type {
-  DashboardCreationDisplayMode,
-  DashboardCreationState,
+// DashboardCreationDisplayMode,
+// DashboardCreationState,
 } from '~/types/dashboard/creation'
 import type { ChainId } from '~/types/network'
 
-const userDashboardStore = useUserDashboardStore()
-const {
-  createValidatorDashboard,
-} = userDashboardStore
+// const userDashboardStore = useUserDashboardStore()
+// const {
+//   createValidatorDashboard,
+// } = userDashboardStore
 
-const {
-  dashboards,
-} = storeToRefs(userDashboardStore)
+// const {
+//   dashboards,
+// } = storeToRefs(userDashboardStore)
 
-const {
-  isLoggedIn,
-  user,
-} = useUserStore()
+const { validatorDashboards } = usePrivateDashboards()
+
+// const {
+//   isLoggedIn,
+//   user,
+// } = useUserStore()
 const { currentNetwork } = useNetwork()
 
 const visible = ref<boolean>(false)
 const type = ref<'' | DashboardType>('')
 const name = ref<string>('')
 const network = ref<ChainId>(0)
-const forcedDashboardType = ref<'' | DashboardType>('')
-const {
-  dashboardKey,
-  publicEntities,
-} = useDashboardKey()
+// const forcedDashboardType = ref<'' | DashboardType>('')
+// const {
+//   dashboardKey,
+//   publicEntities,
+// } = useDashboardKey()
+
 const { fetch } = useCustomFetch()
 
-const maxDashboards = computed(() => {
-  // TODO: currently there is no value for "amount of account dashboards", using
-  //  "amount of validator dashboards" instead for now
-  return user.value?.premium_perks.validator_dashboards ?? 1
-})
+// const maxDashboards = computed(() => {
+//   // TODO: currently there is no value for "amount of account dashboards", using
+//   //  "amount of validator dashboards" instead for now
+//   return user.value?.premium_perks.validator_dashboards ?? 1
+// })
 
-const validatorsDisabled = computed(() => {
-  return (
-    (dashboards.value?.validator_dashboards?.length ?? 0)
-    >= maxDashboards.value
-    || (!!forcedDashboardType.value && forcedDashboardType.value !== 'validator')
-  )
-})
+// const validatorsDisabled = computed(() => {
+//   return (
+//     (dashboards.value?.validator_dashboards?.length ?? 0)
+//     >= maxDashboards.value
+//     || (!!forcedDashboardType.value && forcedDashboardType.value !== 'validator')
+//   )
+// })
 
-async function createDashboard() {
-  visible.value = false
+// async function createDashboard() {
+//   visible.value = false
 
-  const publicKey
-    = !isLoggedIn.value ? dashboardKey.value : undefined
+//   const publicKey
+//     = !isLoggedIn.value ? dashboardKey.value : undefined
 
-  if (!name.value || !network.value) {
-    return
-  }
+//   if (!name.value || !network.value) {
+//     return
+//   }
 
-  const response = await createValidatorDashboard(
-    name.value,
-    network.value,
-    publicKey,
-  )
-  if (
-    publicEntities.value?.length
-    && response?.id
-    && response.id > 0
-  ) {
-    await fetch(
-      'DASHBOARD_VALIDATOR_MANAGEMENT',
-      {
-        body: {
-          group_id: '0',
-          validators: publicEntities.value,
-        },
-        method: 'POST',
-      },
-      { dashboardKey: response.id },
-    )
-  }
-  await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
-}
+//   const response = await createValidatorDashboard(
+//     name.value,
+//     network.value,
+//     publicKey,
+//   )
+//   if (
+//     publicEntities.value?.length
+//     && response?.id
+//     && response.id > 0
+//   ) {
+//     await fetch(
+//       'DASHBOARD_VALIDATOR_MANAGEMENT',
+//       {
+//         body: {
+//           group_id: '0',
+//           validators: publicEntities.value,
+//         },
+//         method: 'POST',
+//       },
+//       { dashboardKey: response.id },
+//     )
+//   }
+//   await navigateTo(`/dashboard/${response?.key ?? response?.id ?? 1}`)
+// }
 
 // defineExpose({ show })
 // if (props.initiallyVisible) {
 //   show()
 // }
 
-function show(
-  forcedType: '' | DashboardType = '',
-) {
-  visible.value = true
-  type.value = forcedDashboardType.value = forcedType
-  if (!type.value) {
-    if (!validatorsDisabled.value) {
-      type.value = 'validator'
-    }
-  }
-  network.value = currentNetwork.value ?? 1
-  name.value = isLoggedIn.value ? '' : 'cookie'
-}
+// function show(
+//   forcedType: '' | DashboardType = '',
+// ) {
+//   visible.value = true
+//   type.value = forcedDashboardType.value = forcedType
+//   if (!type.value) {
+//     if (!validatorsDisabled.value) {
+//       type.value = 'validator'
+//     }
+//   }
+//   network.value = currentNetwork.value ?? 1
+//   name.value = isLoggedIn.value ? '' : 'cookie'
+// }
 </script>
 
 <template>

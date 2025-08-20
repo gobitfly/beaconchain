@@ -3,7 +3,7 @@ import type { MenuBarEntry } from '~/types/menuBar'
 
 interface Props {
   alignRight?: boolean,
-  buttons?: MenuBarEntry[],
+  buttons: MenuBarEntry[],
 }
 defineProps<Props>()
 </script>
@@ -21,15 +21,15 @@ defineProps<Props>()
         v-if="item.component"
         class="button-content"
       />
-      <BcTooltip
+      <!-- <BcTooltip
         v-else-if="item.disabledTooltip"
         :text="item.disabledTooltip"
         class="button-content"
         @click.stop.prevent="() => undefined"
       >
         <span class="text-disabled text">{{ item.label }}</span>
-      </BcTooltip>
-      <BcLink
+      </BcTooltip> -->
+      <!-- <BcLink
         v-else-if="item.route && !item.command"
         :to="item.route"
         class="pointer"
@@ -46,14 +46,13 @@ defineProps<Props>()
             class="toggle"
           />
         </span>
-      </BcLink>
+      </BcLink> -->
       <span
-        v-else
         class="button-content pointer"
         :class="[item.class, { 'p-active': item.active }]"
         :highlight="item.highlight || null"
       >
-        <BcIcon
+        <LazyBcIcon
           v-if="item.faIcon"
           :name="item.faIcon"
           class="icon"
@@ -62,7 +61,7 @@ defineProps<Props>()
           v-if="item.label"
           class="text"
         >{{ item.label }}</span>
-        <BcIcon
+        <LazyBcIcon
           v-if="item.dropdown && (!item.faIcon || item.label)"
           name="chevron-down"
           class="toggle"

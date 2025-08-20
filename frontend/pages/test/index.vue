@@ -72,10 +72,10 @@ const onClick = async () => {
   //   },
   // })
   // refresh()
-  await navigateTo({
-    name: 'dashboard-id',
+  navigateTo({
+    name: 'test-id',
     params: {
-      id: 22,
+      id: 27,
     },
   })
   // await navigateTo({

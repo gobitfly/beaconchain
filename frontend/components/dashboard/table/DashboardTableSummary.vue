@@ -139,6 +139,8 @@ const {
   status,
 } = useApi(() => `/api/bff/validator-dashboards/${key.value}/summary`, {
   immediate: !!key.value,
+  key: 'summary',
+  // lazy: true,
   query,
 })
 </script>

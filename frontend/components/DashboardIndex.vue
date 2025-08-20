@@ -246,13 +246,16 @@ const { key } = useDashboard()
     />
   </NuxtLayout> -->
   <NuxtLayout name="default">
-    <BcDialog v-model="visible">
+    <LazyBcDialog
+      v-if="visible"
+      v-model="visible"
+    >
       <LazyDashboardCreationController
         v-if="visible"
         ref="dashboardCreationControllerModal"
         class="modal-controller"
       />
-    </BcDialog>
+    </LazyBcDialog>
     <template #banner>
       <LazyBcNotificationBanner
         v-if=" overview?.is_above_effective_balance_limit"

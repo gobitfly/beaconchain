@@ -2,7 +2,7 @@
 import type { Icon } from '~/components/bc/icon/BcIcon.vue'
 
 const { t: $t } = useTranslation()
-const { isLoggedIn } = useUserStore()
+const { isLoggedIn } = useUser()
 
 interface Props {
   validatorsDisabled: boolean,
@@ -52,7 +52,12 @@ const type = 'validator'
   <div class="mask-container">
     <div class="element-container">
       <div class="big_text">
-        {{ $t("dashboard.creation.title") }}
+        <span>
+          {{ $t("dashboard.creation.title") }}
+        </span>
+        <!-- <span>
+          Keep your validators save
+        </span> -->
       </div>
       <div class="subtitle_text">
         {{ $t("dashboard.creation.type.subtitle") }}

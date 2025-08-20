@@ -37,23 +37,25 @@ export const useApi = function useApi<T extends LooseAutocomplete<ServerUrl>>(
 ) {
   return useFetch(url, {
     key: url,
-    onRequest: ({
-      options,
-      request: requestUrl,
-    }) => {
-      const abortController = new AbortController()
-      const hasEmptyParameter = `${requestUrl}`.includes('//')
-      const hasUndefinedParameter = `${requestUrl}`.includes('undefined')
-      options.signal = abortController.signal
-      if (hasEmptyParameter || hasUndefinedParameter) abortController.abort()
-      if (isDevEnvironment && abortController?.signal.aborted) {
-        // eslint-disable-next-line no-console
-        console.log('ℹ️', 'request aborted', {
-          hasEmptyParameter, hasUndefinedParameter, requestUrl,
-        })
-      }
-      return
-    },
+    // onRequest: ({
+    //   options,
+    //   request: requestUrl,
+    // }) => {
+    //   const abortController = new AbortController()
+    //   const hasEmptyParameter = `${requestUrl}`.includes('//')
+    //   const hasUndefinedParameter = `${requestUrl}`.includes('undefined')
+    //   options.signal = abortController.signal
+    //   if (hasEmptyParameter || hasUndefinedParameter) {
+    //     abortController.abort()
+    //     return null
+    //   }
+    //   if (isDevEnvironment && abortController?.signal.aborted) {
+    //     // eslint-disable-next-line no-console
+    //     console.log('ℹ️', 'request aborted', {
+    //       hasEmptyParameter, hasUndefinedParameter, requestUrl,
+    //     })
+    //   }
+    // },
     ...options,
     $fetch: useNuxtApp().$api as typeof $fetch,
   })

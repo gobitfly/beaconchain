@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import { ERROR_CODE } from '~/shared/utils/helper'
+
 definePageMeta({
   layout: false,
   // middleware: [ 'dashboard' ],
@@ -169,16 +171,42 @@ definePageMeta({
 // })
 
 const {
-  key,
+  // key,
   updateGroups,
 } = useDashboard()
+
+const route = useRoute()
+const key = computed(() => route.params.id as string)
+if (isServerSide) {
+  console.log('🚀 key', key.value)
+}
+// const url = computed(() => {
+//   return key.value ? `/api/bff/validator-dashboards/${key.value}` : ''
+// })
 const {
   data: overview,
+  error: dashboardOverviewError,
   refresh: refreshOverview,
 } = await useApi(() => `/api/bff/validator-dashboards/${key.value}`, {
-  key: 'dashboardOverview',
-  watch: [],
+// } = await useApi(url, {
+  immediate: !!key.value,
+  // key: 'dashboardOverview',
+  // watch: [ key ],
 })
+if (dashboardOverviewError.value) {
+  if (dashboardOverviewError.value.statusCode === 401) {
+    throw createError({
+      fatal: true,
+      statusCode: dashboardOverviewError.value.statusCode,
+      statusMessage: ERROR_CODE.UNAUTHORIZED_DASHBOARD,
+    })
+  }
+  // throw createError({
+  //   fatal: true,
+  //   statusCode: dashboardOverviewError.value.statusCode,
+  //   statusMessage: dashboardOverviewError.value.statusMessage,
+  // })
+}
 const {
   data: slotVizEpochs,
   // refresh: refreshSlotViz,

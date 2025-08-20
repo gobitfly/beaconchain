@@ -151,6 +151,10 @@
             "400": {
                 "description": "The validator list contains one or more invalid indices or public keys.",
                 "title": "Invalid validator list"
+            },
+            "401": {
+                "description": "You have to login first to access your private dashboards.",
+                "title": "Unauthorized"
             }
         },
         "group": {
@@ -168,7 +172,7 @@
         "header": {
             "account": "Accounts",
             "manage": "Manage",
-            "validator": "Validators"
+            "validator": "Validators | Validators | Validators ({count})"
         },
         "public_account_dashboard": "Dashboard",
         "public_validator_dashboard": "Dashboard",
@@ -574,6 +578,7 @@
             "description": "It might have been orphaned, reorged, or never proposed.",
             "title": "Oops, this Page Never Made It to Finality."
         },
+        "go_to_login_page": "Go to Login page",
         "multiple_times": "The error {error} happened {count} times",
         "read_more_about_how_to_upgrade": "Read more about how to upgrade your plan",
         "we_are_sorry_error_occurred": "We're sorry, but an error occurred",

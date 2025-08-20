@@ -46,12 +46,12 @@ const {
   // validators,
   name,
   navigateToDashboard,
-  publicId,
+  // publicId,
   variant,
 } = useDashboard()
-const manageButtons = computed<MenuBarEntry[] | undefined>(() => {
+const manageButtons = computed<MenuBarEntry[]>(() => {
   if (variant.value === 'shared-dashboard') {
-    return undefined
+    return []
   }
 
   const buttons: MenuBarEntry[] = []
@@ -330,9 +330,6 @@ const emit = defineEmits<{
     v-model="isVisibleManagementModal"
     @change-validators="emit('change-validators', $event)"
   />
-  <pre>
-    {{ publicId }}
-  </pre>
   <div class="header-row">
     <div class="h1 dashboard-title">
       {{ name }}

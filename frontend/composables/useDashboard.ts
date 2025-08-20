@@ -32,19 +32,18 @@ export const useDashboard = () => {
    * Integer (private Dashboard) or base64url encoded list of `validator id`s or `validator public key`s
    */
   const key = computed(() => {
-    const id = route.params.id as string | undefined
-    if (id?.length) return id
+    const id = computed(() => route.params.id as string | undefined)
+    if (id.value?.length) return id.value
     if (validatorList.value) return validatorListEncoded.value
     return undefined
   })
-  // const isSharedDashboard = computed(() => id.value?.startsWith('v-'))
-  const navigateToDashboard = async (id: string) => {
+
+  const navigateToDashboard = async (id: number | string) => {
     await navigateTo({
       name: 'dashboard-id',
       params: { id },
     })
   }
-
   /**
    * Pushes route to page with new query parameters for `?validatorIds=`
    */

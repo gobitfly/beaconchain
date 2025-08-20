@@ -9,6 +9,9 @@ defineProps({
 // onBeforeUnmount(() => {
 //   clearError()
 // })
+const { t: $t } = useTranslation()
+// const v1Domain = useDomain('v1')
+const loginUrl = useLoginUrl()
 </script>
 
 <template>
@@ -31,6 +34,19 @@ defineProps({
             class="link"
           >
             {{ $t('error.read_more_about_how_to_upgrade') }}
+          </BcLink>
+        </BcError>
+
+        <BcError
+          v-else-if="error?.statusMessage === ERROR_CODE.UNAUTHORIZED_DASHBOARD"
+          description="dashboard.error.401.description"
+          title="dashboard.error.401.title"
+        >
+          <BcLink
+            :to="loginUrl"
+            class="link"
+          >
+            {{ $t('error.go_to_login_page') }}
           </BcLink>
         </BcError>
 

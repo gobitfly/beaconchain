@@ -2,97 +2,52 @@
 import type {
   MenuBarButton, MenuBarEntry,
 } from '~/types/menuBar'
-import {
-  type Dashboard, type DashboardKey, type DashboardType, GUEST_DASHBOARD_ID, type GuestDashboard,
-} from '~/types/dashboard'
 
 const { t: $t } = useTranslation()
-const { width } = useWindowSize()
-const route = useRoute()
-const router = useRouter()
-const { has } = useFeatureFlag()
-
-const { isLoggedIn } = useUserStore()
-const { dashboards } = storeToRefs(useUserDashboardStore())
+const {
+  totalValidatorDashboards,
+  validatorDashboards,
+} = usePrivateDashboards()
 
 const emit = defineEmits<{ (e: 'showCreation'): void }>()
 
-const getDashboardName = (db: Dashboard): string => {
-  if (isLoggedIn.value) {
-    return db.name || `${$t('dashboard.title')} ${db.id}` // Just to be sure, we should not have dashboards without a name in prod
-  }
-  else {
-    return db.id === GUEST_DASHBOARD_ID.ACCOUNT
-      ? $t('dashboard.account_dashboard')
-      : $t('dashboard.validator_dashboard')
-  }
-}
 const {
   key,
-  navigateToDashboard,
+  // navigateToDashboard,
   variant,
 } = useDashboard()
-const items = computed<MenuBarEntry[]>(() => {
-  if (dashboards.value === undefined || variant.value === 'shared-dashboard') {
-    return []
-  }
 
-  const buttons: MenuBarEntry[] = []
-
-  // if we are in a public dashboard and change the validators then the route does not get updated
-  const fixedRoute = router.resolve({
-    name: route.name!,
-    params: { id: key.value },
-  })
-
-  const addToSortedItems = (label: string, items?: MenuBarButton[]) => {
-    if (items?.length) {
-      const active = items.find(i => i.active || i.route === fixedRoute.path)
-      const hasMoreItems = items.length > 1
-      const count = hasMoreItems && width.value >= 520 ? ` (${items.length})` : ''
-      buttons.push({
-        active: !!active,
-        command: !hasMoreItems ? items[0].command : undefined,
-        disabledTooltip: !hasMoreItems ? items[0].disabledTooltip : undefined,
-        dropdown: hasMoreItems,
-        items: hasMoreItems ? items : undefined,
-        label: label + count,
-        route: !hasMoreItems ? items[0].route : undefined,
-      })
-    }
+const items = computed<MenuBarButton[]>(() => {
+  if (totalValidatorDashboards.value) {
+    return validatorDashboards.value.map((dashboard) => {
+      return {
+        active: key.value === `${dashboard.id}`,
+        command: () => navigateTo({
+          name: 'dashboard-id',
+          params: {
+            id: dashboard.id,
+          },
+        }),
+        label: dashboard.name,
+      }
+    })
   }
-  const createMenuBarButton = (
-    type: DashboardType,
-    label: string,
-    id: DashboardKey,
-  ): MenuBarButton => {
-    return {
-      active: id === key.value,
-      command: () => navigateToDashboard(id),
-      label,
-      route: `/dashboard/${id}`,
-    }
-  }
-  addToSortedItems($t('dashboard.header.validator'), dashboards.value?.validator_dashboards?.map((db) => {
-    const gd = db as GuestDashboard
-    return createMenuBarButton('validator', getDashboardName(gd), `${gd.key !== undefined ? gd.key : gd.id}`)
-  }))
-  if (has('feature-account_dashboards')) {
-    addToSortedItems($t('dashboard.header.account'), dashboards.value?.validator_dashboards?.slice(0, 1).map((db) => {
-      const gd = db as GuestDashboard
-      return createMenuBarButton('account', getDashboardName(gd), `${gd.key ?? gd.id}`)
-    }))
-  }
-
-  return buttons
+  return []
 })
+
+const buttons: MenuBarEntry[] = [ {
+  dropdown: true,
+  items: items.value,
+  label: `${$t('dashboard.header.validator', items.value.length)}`,
+} ]
 </script>
 
 <template>
   <div class="header-container">
     <BcMenuBar
+      v-if="items.length"
       class="menu-bar"
-      :buttons="items"
+      :buttons
     />
     <BcButtonIcon
       v-if="variant !== 'shared-dashboard'"
