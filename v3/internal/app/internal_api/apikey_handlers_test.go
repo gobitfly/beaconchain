@@ -11,6 +11,7 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -42,11 +43,12 @@ var (
 	}
 )
 
-func newService(repo *dataaccess.MockAPIKeyRepository) *ApiService {
+func newService(apiKeyRepo *dataaccess.MockAPIKeyRepository) *ApiService {
 	return &ApiService{
 		userRepository:      &dataaccess.MockUserRepository{},
 		dashboardRepository: &dataaccess.DummyValidatorDashboardRepository{},
-		authRepository:      repo,
+		authRepository:      apiKeyRepo,
+		limiter:             limits.NewLimiter(),
 	}
 }
 
@@ -54,7 +56,7 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 	tests := []struct {
 		name         string
 		input        *model.CreateAPIKeyRequest
-		setupMock    func(*dataaccess.MockAPIKeyRepository)
+		setupMocks   func(*dataaccess.MockAPIKeyRepository)
 		expectErr    bool
 		expectCode   codes.Code
 		expectedName string
@@ -62,8 +64,10 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 		{
 			name:  "success",
 			input: &model.CreateAPIKeyRequest{Name: "test-key"},
-			setupMock: func(repo *dataaccess.MockAPIKeyRepository) {
-				repo.On("CreateAPIKey", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
+			setupMocks: func(apiKeyRepo *dataaccess.MockAPIKeyRepository) {
+				apiKeyRepo.On("GetAPIKeys", mock.Anything, uint64(1337), (*string)(nil)).
+					Return([]apikey.APIKey{}, nil)
+				apiKeyRepo.On("CreateAPIKey", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
 					Return(testKey, nil)
 			},
 			expectedName: "test-key",
@@ -71,23 +75,38 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 		{
 			name:  "duplicate",
 			input: &model.CreateAPIKeyRequest{Name: "dupe"},
-			setupMock: func(repo *dataaccess.MockAPIKeyRepository) {
-				repo.On("CreateAPIKey", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
+			setupMocks: func(apiKeyRepo *dataaccess.MockAPIKeyRepository) {
+				apiKeyRepo.On("GetAPIKeys", mock.Anything, uint64(1337), (*string)(nil)).
+					Return([]apikey.APIKey{}, nil)
+				apiKeyRepo.On("CreateAPIKey", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
 					Return(apikey.APIKey{}, domain.ErrDuplicate)
 			},
 			expectErr:  true,
 			expectCode: codes.AlreadyExists,
 		},
+		{
+			name:  "max keys reached",
+			input: &model.CreateAPIKeyRequest{Name: "max-key"},
+			setupMocks: func(apiKeyRepo *dataaccess.MockAPIKeyRepository) {
+				apiKeyRepo.On("GetAPIKeys", mock.Anything, uint64(1337), (*string)(nil)).
+					Return([]apikey.APIKey{testKey}, nil)
+				apiKeyRepo.On("CreateAPIKey", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
+					Return(apikey.APIKey{}, errors.New("should not be called"))
+			},
+			expectErr:  true,
+			expectCode: codes.ResourceExhausted,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(dataaccess.MockAPIKeyRepository)
-			tt.setupMock(mockRepo)
-			svc := newService(mockRepo)
+			apiKeyRepo := new(dataaccess.MockAPIKeyRepository)
 
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
-			resp, err := svc.CreateAPIKey(context, tt.input)
+			tt.setupMocks(apiKeyRepo)
+			svc := newService(apiKeyRepo)
+
+			ctx := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337, SubscriptionTier: domain.TierFree})
+			resp, err := svc.CreateAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
 				require.Error(t, err)

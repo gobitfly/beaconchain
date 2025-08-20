@@ -8,7 +8,8 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
-	"github.com/gobitfly/beaconchain-backend/internal/subscription_products"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,11 +21,13 @@ func rateLimitTestSetup(t *testing.T) (context.Context, *miniredis.Miniredis, *r
 	return context.Background(), mr, client, redis.NewScript(scriptStr)
 }
 
+var limiter = limits.NewLimiter()
+
 const testCallerA = "testCallerA"
 const testCallerB = "testCallerB"
 
-var testGlobalRateLimit = subscription_products.SubscriptionPerksMap[subscription_products.TierScale].GlobalRateLimit
-var testEndpointRateLimit = subscription_products.SubscriptionPerksMap[subscription_products.TierFree].GlobalRateLimit
+var testGlobalRateLimit, _ = limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: domain.TierScale})  // limits.SubscriptionPerksMap[domain.TierScale].GlobalRateLimit
+var testEndpointRateLimit, _ = limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: domain.TierFree}) // limits.SubscriptionPerksMap[domain.TierFree].GlobalRateLimit
 
 const testEndpointA = "/test/endpointA"
 const testEndpointB = "/test/endpointB"

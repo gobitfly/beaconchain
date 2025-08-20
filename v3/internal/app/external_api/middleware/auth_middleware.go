@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gobitfly/beaconchain-backend/internal/app/io"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/common"
@@ -27,6 +28,11 @@ func AuthUserInjectorInterceptor(userRepo dataaccess.UserAuthRepository, apiKeyR
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		// Bypass health check methods
+		if io.IsHealthCheckEndpoint(info.FullMethod) {
+			return handler(ctx, req)
+		}
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			return nil, common.NewExternalError(codes.Unauthenticated, "missing metadata")

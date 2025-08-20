@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
-	"github.com/gobitfly/beaconchain-backend/internal/subscription_products"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 )
 
 //go:embed ratelimit_script.lua
@@ -22,12 +23,13 @@ var scriptStr string
 
 // GetRateLimitMiddleware returns a gRPC middleware that applies rate limiting based on the caller's tier and endpoint.
 // The service must pass a function to get the rate limit settings for a specific endpoint and tier.
-func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(fullMethod string, tier subscription_products.Tier) (*model.RateLimitSettings, error)) grpc.UnaryServerInterceptor {
+func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error)) grpc.UnaryServerInterceptor {
 	script := redis.NewScript(scriptStr)
+	limiter := limits.NewLimiter()
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		callerID := "caller123"                 // TODO: Replace with actual caller ID
-		tier := subscription_products.TierScale // TODO: Replace with actual tier
-		globalRatelimit := subscription_products.SubscriptionPerksMap[tier].GlobalRateLimit
+		callerID := "caller123"                                                                                // TODO: Replace with actual caller ID
+		tier := domain.TierScale                                                                               // TODO: Replace with actual tier
+		globalRatelimit, _ := limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: tier}) // limits.SubscriptionPerksMap[tier].GlobalRateLimit
 		endpointRatelimit, err := getEndpointRatelimit(info.FullMethod, tier)
 		if err != nil {
 			log.Error(fmt.Errorf("error getting rate limit options: %w", err))

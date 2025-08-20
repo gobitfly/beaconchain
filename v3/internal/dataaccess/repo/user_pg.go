@@ -19,7 +19,8 @@ type DBUserRepository struct {
 }
 
 type dbUser struct {
-	ID uint64 `db:"id"`
+	ID       uint64 `db:"user_id"`
+	TierName string `db:"tier_name"`
 }
 
 func (r *DBUserRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
@@ -64,19 +65,45 @@ func (r *DBUserRepository) GetUserByAPIKey(ctx context.Context, key apikey.Hashe
 }
 
 func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB, id T) (*domain.User, error) {
-	// todo: authz
-	ds := goqu.Dialect("postgres").From("users").
-		Select("id").
-		Where(goqu.C("id").Eq(id)).
+	dialect := goqu.Dialect("postgres")
+
+	ds := dialect.From(goqu.T("users").As("u")).
+		Select(
+			goqu.I("u.id").As("user_id"),
+			goqu.COALESCE(goqu.I("pt.tier_name"), goqu.L("'FREE'")).As("tier_name"),
+		).
+		LeftJoin(
+			goqu.T("users_stripe_subscriptions").As("uss"),
+			goqu.On(goqu.I("u.stripe_customer_id").Eq(goqu.I("uss.customer_id"))),
+		).
+		LeftJoin(
+			goqu.T("subscription_tiers").As("pt"),
+			goqu.On(goqu.I("uss.price_id").Eq(goqu.I("pt.price_id"))),
+		).
+		Where(
+			goqu.I("u.id").Eq(id),
+			goqu.Or(
+				goqu.I("uss.purchase_group").Eq("api"), // filter out mobile subscriptions
+				goqu.I("uss.purchase_group").IsNull(),
+			),
+			goqu.Or(
+				goqu.I("uss.active").IsTrue(),
+				goqu.I("uss.active").IsNull(),
+			),
+		).
 		Limit(1)
 
-	user, err := runQuery[dbUser](ctx, db, ds)
+	dbUser, err := runQuery[dbUser](ctx, db, ds)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to query user")
 	}
-	return &domain.User{
-		ID: user.ID,
-	}, nil
+
+	user := &domain.User{
+		ID:               dbUser.ID,
+		SubscriptionTier: domain.Tier(dbUser.TierName),
+	}
+
+	return user, nil
 }
 
 func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*domain.User, error) {

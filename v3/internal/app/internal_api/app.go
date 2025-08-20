@@ -17,6 +17,7 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -30,6 +31,7 @@ type ApiService struct {
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
 	authRepository      dataaccess.APIKeyRepository
+	limiter             *limits.Limiter
 }
 
 // InitDependencies
@@ -37,11 +39,13 @@ type ApiService struct {
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
 	dashboardRepository dataaccess.ValidatorDashboardRepository,
-	authRepository dataaccess.APIKeyRepository) (*ApiService, error) {
+	authRepository dataaccess.APIKeyRepository,
+) (*ApiService, error) {
 	return &ApiService{
 		userRepository:      userRepository,
 		dashboardRepository: dashboardRepository,
 		authRepository:      authRepository,
+		limiter:             limits.NewLimiter(),
 	}, nil
 }
 
@@ -50,6 +54,7 @@ func InitDependencies(
 func Run(
 	config config.ServiceConfig,
 ) {
+
 	log.Info("Starting server...")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GrpcPort))
@@ -62,9 +67,11 @@ func Run(
 		log.Fatalf("failed to create validator: %v", err)
 	}
 
-	var userRepoI dataaccess.UserRepository
-	var vdbRepoI dataaccess.ValidatorDashboardRepository
-	var apikeyRepoI dataaccess.APIKeyRepository
+	var (
+		userRepoI   dataaccess.UserRepository
+		vdbRepoI    dataaccess.ValidatorDashboardRepository
+		apikeyRepoI dataaccess.APIKeyRepository
+	)
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &dataaccess.MockUserRepository{}
@@ -90,7 +97,6 @@ func Run(
 			apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
 		}()
 	}
-
 	apiService, _ := InitDependencies(userRepoI, vdbRepoI, apikeyRepoI)
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor

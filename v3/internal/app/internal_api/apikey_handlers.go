@@ -3,11 +3,13 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/app/io"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 
 	"google.golang.org/grpc/codes"
@@ -17,6 +19,21 @@ import (
 func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPIKeyRequest) (*model.CreateAPIKeyResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
+	// limit check
+	maxKeys, err := service.limiter.GetMaxAPIKeys(ctx, user)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get max API keys: %v", err)
+	}
+
+	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, nil)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get API keys: %v", err)
+	}
+	if len(keys) >= maxKeys {
+		return nil, common.NewExternalError(codes.ResourceExhausted, fmt.Sprintf("maximum number of API keys (%d) reached", maxKeys))
+	}
+
+	// create API key
 	key, rawKey, err := apikey.NewAPIKey(in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create API key: %v", err)

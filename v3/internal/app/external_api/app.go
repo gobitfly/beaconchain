@@ -15,9 +15,10 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/gobitfly/beaconchain-backend/internal/ratelimit"
-	"github.com/gobitfly/beaconchain-backend/internal/subscription_products"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,16 +34,19 @@ type ApiService struct {
 	model.UnimplementedExternalServiceServer
 	userRepository      dataaccess.UserRepository
 	dashboardRepository dataaccess.ValidatorDashboardRepository
+	limiter             *limits.Limiter
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
-	dashboardRepository dataaccess.ValidatorDashboardRepository) (*ApiService, error) {
+	dashboardRepository dataaccess.ValidatorDashboardRepository,
+) (*ApiService, error) {
 	return &ApiService{
 		userRepository:      userRepository,
 		dashboardRepository: dashboardRepository,
+		limiter:             limits.NewLimiter(),
 	}, nil
 }
 
@@ -51,7 +55,6 @@ func InitDependencies(
 func Run(
 	config config.ServiceConfig,
 ) {
-
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -64,12 +67,14 @@ func Run(
 	}
 
 	dataSources := data_sources.ApiDataSources{}
-	dataSources.InitApiConnections(&config)
 
-	var userRepoI dataaccess.UserRepository
-	var vdbRepoI dataaccess.ValidatorDashboardRepository
-	var cachedUserRepoI dataaccess.UserAuthRepository
-	var cachedAPIKeyAuthRepoI dataaccess.APIKeyAuthRepository
+	var (
+		userRepoI             dataaccess.UserRepository
+		vdbRepoI              dataaccess.ValidatorDashboardRepository
+		cachedUserRepoI       dataaccess.UserAuthRepository
+		cachedAPIKeyAuthRepoI dataaccess.APIKeyAuthRepository
+	)
+
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &dataaccess.MockUserRepository{}
@@ -90,6 +95,8 @@ func Run(
 
 		// init async
 		go func() {
+			dataSources.InitApiConnections(&config)
+
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
 			apikeyAuthRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
@@ -226,7 +233,7 @@ func (s *ApiService) Watch(*grpc_health_v1.HealthCheckRequest, grpc.ServerStream
 }
 
 // getEndpointRatelimit retrieves the rate limit for a specific endpoint and tier from the protobuf definition for the ExternalService.
-func getEndpointRatelimit(fullMethod string, tier subscription_products.Tier) (*model.RateLimitSettings, error) {
+func getEndpointRatelimit(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
 	service := model.File_api_service_v1_external_proto.Services().ByName("ExternalService")
 	methodName := strings.TrimPrefix(fullMethod, "/"+string(service.FullName())+"/")
 	method := service.Methods().ByName(protoreflect.Name(methodName))
@@ -241,13 +248,13 @@ func getEndpointRatelimit(fullMethod string, tier subscription_products.Tier) (*
 		return nil, fmt.Errorf("rate limit options not found for method: %s", methodName)
 	}
 	switch tier {
-	case subscription_products.TierFree:
+	case domain.TierFree:
 		return ratelimitOpts.Free, nil
-	case subscription_products.TierHobbyist:
+	case domain.TierHobbyist:
 		return ratelimitOpts.Hobbyist, nil
-	case subscription_products.TierBusiness:
+	case domain.TierBusiness:
 		return ratelimitOpts.Business, nil
-	case subscription_products.TierScale:
+	case domain.TierScale:
 		return ratelimitOpts.Scale, nil
 	}
 	return nil, fmt.Errorf("unknown subscription tier: %s", tier)
