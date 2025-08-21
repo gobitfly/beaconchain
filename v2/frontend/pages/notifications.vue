@@ -41,13 +41,14 @@ const getSlotName = (key: string) => `tab-panel-${key}`
 
 useBcSeo('notifications.title')
 
+const { navigateToV1Login } = useV1Login()
 const openManageNotifications = () => {
   if (!isLoggedIn.value) {
     dialog.open(BcDialogConfirm, {
       data: { question: $t('notifications.login_question') },
       onClose: async (response: DynamicDialogCloseOptions) => {
         if (response?.data) {
-          await navigateTo('/login')
+          await navigateToV1Login()
         }
       },
       props: { header: $t('notifications.title') },

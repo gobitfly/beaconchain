@@ -18,7 +18,6 @@ const {
 } = useProductsStore()
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
-const { promoCode } = usePromoCode()
 const {
   isStripeDisabled,
   stripeCustomerPortal,
@@ -79,6 +78,8 @@ const percentages = computed(() => {
   }
 })
 
+const { navigateToV1Login } = useV1Login()
+
 async function handleProductPurchase() {
   if (isLoggedIn.value) {
     if (currentPremiumSubscription.value) {
@@ -94,9 +95,7 @@ async function handleProductPurchase() {
     }
   }
   else {
-    await navigateTo({
-      path: '/login', query: { promoCode },
-    })
+    await navigateToV1Login()
   }
 }
 

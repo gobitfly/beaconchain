@@ -3,7 +3,6 @@
 // We can't load the data directly in the app.vue as this would conflict with some providers being initialized there.
 const {
   getUser,
-  isLoggedIn,
 } = useUserStore()
 const { networkInfo } = useNetworkStore()
 const { secondsPerSlot } = networkInfo.value
@@ -14,9 +13,10 @@ await useAsyncData('latest_state', () => refreshLatestState(), {
   immediate: true,
   watch: [ counter ],
 })
-if (isLoggedIn) {
-  await useAsyncData('get_user', () => getUser())
-}
+
+callOnce(async () => {
+  await getUser()
+})
 </script>
 
 <template>

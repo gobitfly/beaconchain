@@ -38,7 +38,6 @@ export type API_PATH
     | 'DASHBOARD_VALIDATOR_WITHDRAWALS'
     | 'GET_NOTIFICATIONS_SETTINGS_DASHBOARD'
     | 'LATEST_STATE'
-    | 'LOGIN'
     | 'LOGOUT'
     | 'NOTIFICATIONS_CLIENTS'
     | 'NOTIFICATIONS_DASHBOARDS'
@@ -306,11 +305,6 @@ export const mapping: Record<API_PATH, MappingData> = {
     mock: false,
     mockFunction: mockLatestState,
     path: '/latest-state',
-  },
-  LOGIN: {
-    method: 'POST',
-    mock: false,
-    path: '/login',
   },
   LOGOUT: {
     method: 'POST',
