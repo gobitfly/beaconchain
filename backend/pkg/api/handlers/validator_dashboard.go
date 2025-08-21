@@ -637,7 +637,7 @@ func (h *HandlerService) GetTruncatedGuestValidatorDashboard(ctx context.Context
 	var totalBalance decimal.Decimal
 	for _, index := range slices.Sorted(maps.Keys(effectiveBalancesMap)) { // iterate over ascending order of indices
 		totalBalance = totalBalance.Add(utils.GWeiToWei(big.NewInt(int64(effectiveBalancesMap[index]))))
-		if totalBalance.GreaterThanOrEqual(perks.EffectiveBalancePerDashboard) {
+		if totalBalance.GreaterThan(perks.EffectiveBalancePerDashboard) {
 			break
 		}
 		truncatedValidators = append(truncatedValidators, index)
