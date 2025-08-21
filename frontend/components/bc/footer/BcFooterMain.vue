@@ -55,7 +55,7 @@ const { t: $t } = useTranslation()
           <li>
             <BcLink
               class="link"
-              to="/pricing"
+              to="/premium"
             >
               {{ $t('footer.premium') }}
             </BcLink>

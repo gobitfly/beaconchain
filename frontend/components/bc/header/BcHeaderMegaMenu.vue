@@ -38,8 +38,8 @@ const items = computed(() => {
 
     },
     {
-      label: $t('header.megamenu.pricing'),
-      url: '/pricing',
+      label: $t('header.megamenu.premium'),
+      url: '/premium',
     },
     ...(hasV1Notifications.value
       ? [
