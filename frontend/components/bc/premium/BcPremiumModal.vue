@@ -50,7 +50,7 @@ onUnmounted(() => {
       {{ props?.dismissLabel || $t("navigation.dismiss") }}
     </BcButton>
     <BcLink
-      to="/pricing"
+      to="/premium"
       target="_blank"
       @click="hide()"
     >

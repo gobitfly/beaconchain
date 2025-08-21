@@ -12,7 +12,7 @@ defineProps<{
     :text="toolTipText ?? $t('premium.subscribe')"
   >
     <BcLink
-      to="/pricing"
+      to="/premium"
       target="_blank"
       class="link"
     >
