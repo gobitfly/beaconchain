@@ -12,16 +12,6 @@ export function useUserStore() {
   const { data } = storeToRefs(userStore())
   const router = useRouter()
 
-  async function doLogin(email: string, password: string) {
-    await fetch('LOGIN', {
-      body: {
-        email,
-        password,
-      },
-    })
-    await getUser()
-  }
-
   const setUser = (user?: UserInfo) => {
     data.value = user
   }
@@ -61,7 +51,6 @@ export function useUserStore() {
   const premium_perks = computed(() => user.value?.premium_perks)
 
   return {
-    doLogin,
     doLogout,
     getUser,
     hasV1Notifications,
