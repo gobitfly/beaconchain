@@ -63,7 +63,7 @@ const onSubmit = handleSubmit(async (values) => {
     }
     if (promoCode) {
       await navigateTo({
-        path: '/pricing', query: { promoCode },
+        path: '/premium', query: { promoCode },
       })
     }
     else {
