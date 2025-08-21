@@ -77,7 +77,6 @@ export default defineNuxtConfig({
       'resize-detector',
     ],
   },
-  routeRules: { '/': { redirect: '/dashboard' } },
   devServer: {
     host: 'local.beaconcha.in',
     https: {
