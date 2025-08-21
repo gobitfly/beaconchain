@@ -3,7 +3,7 @@ export function useDebounceValue<T>(initialValue: T, bounceMs: number = 100) {
   const value = readonly(valueRef)
   const tempRef = shallowRef<T>(initialValue)
   const temp = readonly(tempRef)
-  const timeout = ref<NodeJS.Timeout | null>(null)
+  const timeout = ref<null | ReturnType<typeof setTimeout>>(null)
 
   const removeTimeout = () => {
     if (timeout.value) {

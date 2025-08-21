@@ -25,7 +25,7 @@ const props = defineProps<Props>()
 const bcTooltipOwner = ref<HTMLElement | null>(null)
 const bcTooltip = ref<HTMLElement | null>(null)
 let scrollParents: HTMLElement[] = []
-const tooltipAddedTimeout = ref<NodeJS.Timeout | null>(null)
+const tooltipAddedTimeout = ref<null | ReturnType<typeof setTimeout>>(null)
 const {
   doSelect,
   selected,
