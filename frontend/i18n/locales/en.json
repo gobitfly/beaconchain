@@ -854,7 +854,7 @@
             },
             "webhook_notifications": "Webhook Notifications"
         },
-        "login_question": "Do you want to login to set notifications?",
+        "login_question": "Do you want to log in to set notifications?",
         "machine": {
             "col": {
                 "event_type": "Event",

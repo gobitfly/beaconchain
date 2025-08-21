@@ -116,13 +116,13 @@ const {
   stripeCustomerPortal,
   stripePurchase,
 } = useStripe()
-const { promoCode } = usePromoCode()
 
 const isDisabledSubmitButton = computed(() =>
   isStripeDisabled.value
   || quantity.value > maximumQuantity.value
   || quantity.value < 1,
 )
+const { navigateToV1Login } = useV1Login()
 
 const handleSubmitPurchase = async () => {
   if (isStripeDisabled.value) {
@@ -143,9 +143,7 @@ const handleSubmitPurchase = async () => {
     }
   }
   else {
-    await navigateTo({
-      path: '/login', query: { promoCode },
-    })
+    await navigateToV1Login()
   }
 }
 </script>

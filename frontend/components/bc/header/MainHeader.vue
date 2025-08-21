@@ -28,7 +28,6 @@ const {
 } = useCurrency()
 const { width } = useWindowSize()
 const { t: $t } = useTranslation()
-const { promoCode } = usePromoCode()
 
 const isSmallScreen = computed(() => width.value < smallHeaderThreshold)
 const isMobileScreen = computed(() => width.value < mobileHeaderThreshold)
@@ -82,6 +81,7 @@ const userMenu: UserMenuItem[] = [
 const handleUserMenuSelect = async (value: UserMenuItem) => {
   await value.command?.()
 }
+const { url } = useV1Login()
 </script>
 
 <template>
@@ -153,9 +153,7 @@ const handleUserMenuSelect = async (value: UserMenuItem) => {
           class="logged-out"
         >
           <BcLink
-            :to="{ path: '/login',
-                   query: { promoCode },
-            }"
+            :to="url"
           >
             <Button
               class="login"

@@ -5,13 +5,13 @@ const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
 const { isLoggedIn } = useUserStore()
 const { overview } = useNotificationsDashboardOverviewStore()
-
-const handleClick = () => {
+const { navigateToV1Login } = useV1Login()
+const handleClick = async () => {
   if (!isLoggedIn.value) {
-    return navigateTo('/login')
+    return await navigateToV1Login()
   }
   if (!hasDashboards.value) {
-    return navigateTo('/dashboard')
+    return await navigateTo('/dashboard')
   }
   emit('openDialog')
 }
