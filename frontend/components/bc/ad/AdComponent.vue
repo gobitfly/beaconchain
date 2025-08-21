@@ -8,7 +8,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const adComponent = ref<HTMLElement | null>(null)
-const interval = ref<NodeJS.Timeout | null>(null)
+const interval = ref<null | ReturnType<typeof setInterval>>(null)
 
 const containerId = computed(
   () => `${props.ad.key}-${props.ad.jquery_selector}-${props.ad.insert_mode}`,
