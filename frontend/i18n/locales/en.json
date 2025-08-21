@@ -215,6 +215,10 @@
             }
         },
         "title": "Dashboard",
+        "truncated_validators": {
+            "_link": "Learn more about how to upgrade and unlock full validator insights and premium features on our pricing page.",
+            "template": "This dashboard displays a truncated list of validators, as their total stake exceeds the free plan limit. {_link}"
+        },
         "validator": {
             "blocks": {
                 "cl_pending": "CL Pending",

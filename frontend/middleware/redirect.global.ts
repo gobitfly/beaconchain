@@ -3,7 +3,6 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 export default function ({
   name,
   params,
-  query,
 }: RouteLocationNormalizedLoaded) {
   const { has } = useFeatureFlag()
   const config = useRuntimeConfig()
@@ -30,22 +29,6 @@ export default function ({
       return redirect('https://x.com/beaconcha_in')
     case 'block':
       return redirectToV1(`/block/${params.id || params.slug?.[1]}`)
-    case 'dashboard':
-    case 'dashboard-id':
-      if (query.validators && typeof query.validators === 'string') {
-        const list = query.validators
-          .split(',')
-          .filter((v) => {
-            return isInt(v) || isPublicKey(v)
-          })
-          .slice(0, 20)
-          .join(',')
-        if (list.length) {
-          const hash = encodeBase64Url(list)
-          return navigateTo(`/dashboard/${hash}`)
-        }
-      }
-      break
     case 'epoch':
       return redirectToV1(`/epoch/${params.id || params.slug?.[1]}`)
     case 'imprint':

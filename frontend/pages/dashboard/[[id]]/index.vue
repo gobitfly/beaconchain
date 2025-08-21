@@ -9,6 +9,13 @@ import {
 import type { HashTabs } from '~/types/hashTabs'
 import type { TableQueryParams } from '~/types/datatable'
 
+definePageMeta({
+  middleware: [
+    'dashboard-max-eb-query',
+    'dashboard-max-eb-param',
+  ],
+})
+
 const {
   isLoggedIn,
 } = useUserStore()
@@ -393,6 +400,7 @@ watch([
   immediate: true,
 },
 )
+const isTruncated = computed(() => 'isTruncated' in route.query)
 </script>
 
 <template>
@@ -420,6 +428,16 @@ watch([
           <BcTranslation
             keypath="dashboard.subsciprion_limit_reached.template"
             linkpath="dashboard.subsciprion_limit_reached._link"
+            to="/pricing"
+          />
+        </BcNotificationBanner>
+        <BcNotificationBanner
+          v-if="isTruncated"
+          :title="$t('dashboard.subsciprion_limit_reached_title')"
+        >
+          <LazyBcTranslation
+            keypath="dashboard.truncated_validators.template"
+            linkpath="dashboard.truncated_validators._link"
             to="/pricing"
           />
         </BcNotificationBanner>

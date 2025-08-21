@@ -32,10 +32,19 @@ export function useDashboardKeyProvider(
     if (!route.name) {
       warn('route name missing', route)
     }
+    if ('isTruncated' in route.query && !isGuestDashboardKey(key)) {
+      router.push({
+        query: {
+          ...route.query,
+          isTruncated: undefined,
+        },
+      })
+    }
     const newRoute = router.resolve({
       hash: document?.location?.hash,
       name: route.name!,
       params: { id: key },
+      query: route.query,
     })
     dashboardKey.value = key
     if (isClientSide) {
@@ -91,6 +100,14 @@ export function useDashboardKeyProvider(
   const updateEntities = (list: string[]) => {
     const filtered = list.filter(s => !!s).join(',')
     const key = encodeBase64Url(filtered)
+    if ('isTruncated' in route.query) {
+      router.push({
+        query: {
+          ...route.query,
+          isTruncated: undefined,
+        },
+      })
+    }
     setDashboardKey(key)
   }
 
