@@ -79,7 +79,6 @@
         "useCurrency",
         "useCustomFetch",
         "useFeatureFlag",
-        "useNotificationsOverviewStore",
         "useSettingsStore",
         "useStripeProvider",
         "useWindowSize",

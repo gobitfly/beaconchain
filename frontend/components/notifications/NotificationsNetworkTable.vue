@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import type { NotificationNetworksTableRow } from '~/types/api/notifications'
-import type { Cursor } from '~/types/datatable'
+
+const { networksSubscriptionCount } = defineProps<{
+  networksSubscriptionCount?: number,
+}>()
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
 const { width } = useWindowSize()
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
+const query = useDefaultQuery({
+  limit: 10, sort: 'timestamp:desc',
+})
 const {
-  isLoading,
-  networkNotifications,
-  onSort,
+  data: networkNotifications,
+  status,
+} = useApi('/api/bff/users/me/notifications/networks', {
   query,
-  setCursor,
-  setPageSize,
-  setSearch,
-} = useNotificationsNetworkStore()
-const { overview } = useNotificationsDashboardOverviewStore()
+})
 
 const textNotifications = (eventType: NotificationNetworksTableRow['event_type']) => {
   if (eventType === 'gas_above') return $t('notifications.network.event_type.gas_above')
@@ -52,21 +52,15 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
   <div>
     <BcTableControl
       :title="$t('notifications.network.title')"
-      @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="networkNotifications"
+            :query
             data-key="notification_id"
-            :cursor
-            :page-size
-            :selected-sort="query?.sort"
-            :is-loading
+            :is-loading="status === 'pending'"
             :add-spacer="true"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
           >
             <Column
               field="chain_id"
@@ -110,7 +104,6 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
             </Column>
             <Column
               field="threshold"
-              sortable
               :header="$t('notifications.col.threshold')"
             >
               <template #body="slotProps">
@@ -125,7 +118,7 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
             </template>
             <template #bc-table-footer-right>
               <template v-if="width > 1024">
-                {{ $t('notifications.network.footer.subscriptions', { count: overview?.networks_subscription_count }) }}
+                {{ $t('notifications.network.footer.subscriptions', { count: networksSubscriptionCount }) }}
               </template>
             </template>
           </BcTable>

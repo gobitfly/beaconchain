@@ -1,8 +1,13 @@
 <script lang="ts" setup>
+import type { NotificationOverviewData } from '~/types/api/notifications'
+
+const { notifications } = defineProps<{
+  notifications?: NotificationOverviewData,
+}>()
+
 const { isLoggedIn } = useUserStore()
 const { t: $t } = useTranslation()
 const {
-  overview,
   refreshOverview,
 } = useNotificationsDashboardOverviewStore()
 
@@ -10,13 +15,13 @@ if (isLoggedIn.value) {
   refreshOverview()
 }
 
-const hasEmail = computed(() => overview.value?.is_email_notifications_enabled)
-const hasPushNotifications = computed(() => overview.value?.is_push_notifications_enabled)
-const vdbMostNotifiedGroups = computed(() => overview.value?.vdb_most_notified_groups || [])
-const adbMostNotifiedGroups = computed(() => overview.value?.adb_most_notified_groups || [])
-const last24hEmailsCount = computed(() => overview.value?.last_24h_email_count ?? 0)
-const last24hPushCount = computed(() => overview.value?.last_24h_push_count ?? 0)
-const last24hWebhookCount = computed(() => overview.value?.last_24h_webhook_count ?? 0)
+const hasEmail = computed(() => notifications?.is_email_notifications_enabled)
+const hasPushNotifications = computed(() => notifications?.is_push_notifications_enabled)
+const vdbMostNotifiedGroups = computed(() => notifications?.vdb_most_notified_groups || [])
+const adbMostNotifiedGroups = computed(() => notifications?.adb_most_notified_groups || [])
+const last24hEmailsCount = computed(() => notifications?.last_24h_email_count ?? 0)
+const last24hPushCount = computed(() => notifications?.last_24h_push_count ?? 0)
+const last24hWebhookCount = computed(() => notifications?.last_24h_webhook_count ?? 0)
 const notificationsTotal = computed(() => {
   return last24hEmailsCount.value + last24hWebhookCount.value + last24hPushCount.value
 })
@@ -25,7 +30,7 @@ const { user } = useUserStore()
 const mailLimit = computed(() => user.value?.premium_perks.email_notifications_per_day ?? 0)
 
 const resetHours = computed(
-  () => getRelativeTime(overview.value?.next_email_count_reset_timestamp ?? 0, { style: 'long' }),
+  () => getRelativeTime(notifications?.next_email_count_reset_timestamp ?? 0, { style: 'long' }),
 )
 
 const tooltipEmail = computed(() => {

@@ -31,6 +31,7 @@ export type GetReturnTypeFromServerUrl<T extends ServerUrl> = InternalApi[T] ext
  */
 type ReturnType = {
   dashboardOverview: GetReturnTypeFromServerUrl<'/api/bff/validator-dashboards/:dashboardId'>,
+  notificationsOverview: GetReturnTypeFromServerUrl<'/api/bff/users/me/notifications'>,
   privateDashboards: GetReturnTypeFromServerUrl<'/api/bff/users/me/dashboards'>,
   productSummary: GetReturnTypeFromServerUrl<'/api/bff/product-summary'>,
   user: GetReturnTypeFromServerUrl<'/api/bff/users/me'>,

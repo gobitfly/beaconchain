@@ -1,29 +1,17 @@
 <script setup lang="ts">
-import type { Cursor } from '~/types/datatable'
 import type { DashboardType } from '~/types/dashboard'
-import type { ChainId } from '~/types/network'
 import type { NotificationDashboardsTableRow } from '~/types/api/notifications'
 import { NotificationsDashboardDialogEntity } from '#components'
 
+const {
+  validatorDashboardSubscriptionCount,
+} = defineProps<{
+  validatorDashboardSubscriptionCount?: number,
+}>()
+
 defineEmits<{ (e: 'openDialog'): void }>()
 
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
-
-// TODO: replace currentNetwork with selection from NETWORK_SWITCHER_COMPONENT that has yet to be implemented
-const { currentNetwork } = useNetwork()
-const networkId = ref<ChainId>(currentNetwork.value ?? 1)
-
-const {
-  isLoading,
-  notificationsDashboards,
-  onSort,
-  query,
-  setCursor,
-  setPageSize,
-  setSearch,
-} = useNotificationsDashboardStore(networkId)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -34,8 +22,18 @@ const colsVisible = computed(() => {
   }
 })
 
+const query = useDefaultQuery({
+  limit: 10,
+  sort: 'epoch:desc',
+})
+const {
+  data: dashboardNotifications,
+  status,
+} = useApi('/api/bff/users/me/notifications/dashboards', {
+  query,
+})
+
 const getDashboardType = (isAccount: boolean): DashboardType => isAccount ? 'account' : 'validator'
-const { overview } = useNotificationsDashboardOverviewStore()
 const mapEventtypeToText = (eventType: NotificationDashboardsTableRow['event_types'][number]) => {
   switch (eventType) {
     case 'attestation_missed':
@@ -102,23 +100,18 @@ const { getTimestampFromEpoch } = useNetwork()
 <template>
   <div>
     <BcTableControl
+      v-model:search="query.search"
       :title="$t('notifications.dashboards.title')"
       :search-placeholder="$t('notifications.dashboards.search_placeholder')"
-      @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="addIdentifier(notificationsDashboards, 'is_account_dashboard', 'dashboard_id', 'group_id', 'epoch')"
+            :data="dashboardNotifications"
+            :query
             data-key="identifier"
             :expandable="!colsVisible.notifications"
-            :cursor
-            :page-size
-            :selected-sort="query?.sort"
-            :is-loading
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+            :is-loading="status === 'pending'"
           >
             <Column
               field="chain_id"
@@ -130,7 +123,6 @@ const { getTimestampFromEpoch } = useNetwork()
                 <div class="icon-wrapper">
                   <BcNetworkIcon
                     :id="slotProps.data.chain_id"
-                    class="icon-network"
                   />
                 </div>
               </template>
@@ -153,7 +145,7 @@ const { getTimestampFromEpoch } = useNetwork()
             <Column
               v-if="colsVisible.dashboard"
               field="dashboard_id"
-              :sortable="true"
+              sortable
               header-class="col-dashboard"
               body-class="col-dashboard"
               :header="$t('notifications.col.dashboard')"
@@ -224,7 +216,6 @@ const { getTimestampFromEpoch } = useNetwork()
                 </div>
               </template>
             </Column>
-
             <Column
               v-if="colsVisible.notifications"
               field="notification"
@@ -264,7 +255,7 @@ const { getTimestampFromEpoch } = useNetwork()
             </template>
             <template #empty>
               <NotificationsTableEmpty
-                v-if="!notificationsDashboards?.data.length"
+                v-if="!dashboardNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
             </template>
@@ -273,13 +264,8 @@ const { getTimestampFromEpoch } = useNetwork()
                 {{
                   $t(
                     "notifications.dashboards.footer.subscriptions.validators_shortened",
-                    { count: overview?.vdb_subscriptions_count })
-                }}
-                |
-                {{
-                  $t(
-                    "notifications.dashboards.footer.subscriptions.accounts_shortened",
-                    { count: overview?.adb_subscriptions_count })
+                    { count: validatorDashboardSubscriptionCount })
+
                 }}
               </template>
               <template v-else>
@@ -287,22 +273,10 @@ const { getTimestampFromEpoch } = useNetwork()
                   {{
                     $t(
                       "notifications.dashboards.footer.subscriptions.validators",
-                      { count: overview?.vdb_subscriptions_count })
+                      { count: validatorDashboardSubscriptionCount })
 
                   }}
                 </div>
-                <BcFeatureFlag
-                  feature="feature-account_dashboards"
-                >
-                  <div>
-                    {{
-                      $t(
-                        "notifications.dashboards.footer.subscriptions.accounts",
-                        { count: overview?.adb_subscriptions_count })
-
-                    }}
-                  </div>
-                </BcFeatureFlag>
               </template>
             </template>
           </BcTable>
@@ -380,14 +354,11 @@ $breakpoint-lg: 1024px;
 .icon-wrapper {
   text-align: center;
 
-  .icon-network {
-    height: 14px;
-    width: 14px;
-  }
 }
 svg {
   flex-shrink: 0;
 }
+
 .entity {
   display: flex;
   align-items: center;

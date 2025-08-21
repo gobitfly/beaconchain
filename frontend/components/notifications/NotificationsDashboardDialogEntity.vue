@@ -8,23 +8,20 @@ const {
   props,
 } = useBcDialog<Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id' | 'group_name'> & { identifier: string }>()
 
-const store = useNotificationsDashboardDetailsStore()
+const {
+  dashboard_id,
+  epoch,
+  group_id,
+} = props.value ?? {}
+const query = ref({ search: '' })
 
-const search = ref('')
 const {
   data: details,
   status,
-} = useAsyncData(
-  'notifications-dashboard-details',
-  () => store.getDetails({
-    dashboard_id: props.value?.dashboard_id ?? 0,
-    epoch: props.value?.epoch ?? 0,
-    group_id: props.value?.group_id ?? 0,
-    search: search.value.length ? search.value : undefined,
-  }).then(response => response.data),
-  {
-    watch: [ search ],
-  })
+} = useApi(`/api/bff/users/me/notifications/validator-dashboards/${dashboard_id}/groups/${group_id}/epochs/${epoch}`, {
+  query,
+})
+
 defineEmits<{ (e: 'filter-changed', value: string): void }>()
 const v1Domain = useV1Domain()
 </script>
@@ -50,9 +47,9 @@ const v1Domain = useV1Domain()
           {{ props?.group_name }} ({{ details?.dashboard_name }})
         </h3>
         <BcContentFilter
+          v-model="query.search"
           :search-placeholder="$t('common.index')"
           :is-loading="status=== 'pending'"
-          @filter-changed="search = $event"
         />
       </div>
     </header>

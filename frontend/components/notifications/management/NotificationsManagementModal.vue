@@ -38,9 +38,8 @@ const tabs: HashTab[] = [
     <div id="notifications-management-search-placholder" />
     <BcTabList
       :tabs
-      default-tab="summary"
+      default-tab="general"
       class="notifications-management-tab-view"
-      oanels-class="notifications-management-tab-panels"
     >
       <template #tab-panel-general>
         <NotificationsManagementGeneralTab />

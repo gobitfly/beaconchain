@@ -787,6 +787,9 @@
                 "accounts": "account | accounts",
                 "validators": "validator | validators"
             },
+            "error_group": "Notifications",
+            "error_message": "We could not save your preferences.",
+            "error_title": "Error",
             "event_type": {
                 "attestation_missed": "Attestation missed",
                 "group_efficiency_below": "Low group efficiency",

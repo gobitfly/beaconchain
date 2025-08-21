@@ -20,6 +20,8 @@ export const post = <T>(
     method: 'post',
   })
     .then((response) => {
-      return response.data
+      if (response && response.data) {
+        return response.data
+      }
     })
 }

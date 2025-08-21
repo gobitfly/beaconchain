@@ -1,22 +1,11 @@
 <script setup lang="ts">
-import { useNotificationsClientStore } from '~/stores/notifications/useNotificationsClientsStore'
-import type { Cursor } from '~/types/datatable'
+const { clientsSubscriptionCount } = defineProps<{
+  clientsSubscriptionCount?: number,
+}>()
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
-
-const {
-  clientsNotifications,
-  isLoading,
-  onSort,
-  query,
-  setCursor,
-  setPageSize,
-  setSearch,
-} = useNotificationsClientStore()
 
 const colsVisible = computed(() => {
   return {
@@ -24,30 +13,35 @@ const colsVisible = computed(() => {
   }
 })
 
-const { overview } = useNotificationsDashboardOverviewStore()
+const query = useDefaultQuery({
+  limit: 10, sort: 'timestamp:desc',
+})
+
+const {
+  data: clientNotifications,
+  status,
+} = useApi('/api/bff/users/me/notifications/clients', {
+  query,
+})
 </script>
 
 <template>
   <div>
     <BcTableControl
+      v-model:search="query.search"
       :title="$t('notifications.clients.title')"
       :search-placeholder="$t('notifications.clients.search_placeholder')"
-      @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
-            :data="clientsNotifications"
+            :data="clientNotifications"
+            :query
             data-key="client_name"
-            :cursor
-            :page-size
-            :selected-sort="query?.sort"
-            :is-loading
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+            :is-loading="status === 'pending'"
           >
             <Column
+              field="client_name"
               sortable
               header-class="col-client-name"
               body-class="col-client-name"
@@ -90,13 +84,13 @@ const { overview } = useNotificationsDashboardOverviewStore()
             </Column>
             <template #empty>
               <NotificationsTableEmpty
-                v-if="!clientsNotifications?.data.length"
+                v-if="!clientNotifications?.data.length"
                 @open-dialog="$emit('openDialog')"
               />
             </template>
             <template #bc-table-footer-right>
               <template v-if="colsVisible">
-                {{ $t('notifications.clients.footer.subscriptions', { count: overview?.clients_subscription_count }) }}
+                {{ $t('notifications.clients.footer.subscriptions', { count: clientsSubscriptionCount }) }}
               </template>
             </template>
           </BcTable>

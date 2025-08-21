@@ -1,5 +1,4 @@
-import type { ApiDataResponse } from '~/types/api/common'
-import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
+import type { PutUserNotificationSettingsValidatorDashboardResponse } from '~/types/api/notifications'
 
 export default defineEventHandler(async (event) => {
   const dashboardId = getRouterParam(event, 'dashboardId')
@@ -19,9 +18,9 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event)
 
-  return await put<ApiDataResponse<VDBOverviewGroup>>(
+  return await put<PutUserNotificationSettingsValidatorDashboardResponse>(
     event,
-    `/validator-dashboards/${dashboardId}/groups/${groupId}`,
+    `/users/me/notifications/settings/validator-dashboards/${dashboardId}/groups/${groupId}`,
     {
       body,
     },

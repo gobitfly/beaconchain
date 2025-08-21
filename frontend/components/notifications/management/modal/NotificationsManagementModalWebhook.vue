@@ -1,14 +1,14 @@
 <script lang="ts" setup>
 import { useForm } from 'vee-validate'
 import { warn } from 'vue'
-
 import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'
 
-type WebhookForm = Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>
+export type WebhookSettings = Pick<NotificationSettingsValidatorDashboard, 'is_webhook_discord_enabled' | 'webhook_url'>
+
 const {
   close,
   props,
-} = useBcDialog<WebhookForm>()
+} = useBcDialog<WebhookSettings>()
 
 const { t: $t } = useTranslation()
 
@@ -49,7 +49,8 @@ const isFormDirty = computed(() => meta.value.dirty)
 const isFormValid = computed(() => meta.value.valid)
 
 const toast = useBcToast()
-const { fetch } = useCustomFetch()
+const { $api } = useNuxtApp()
+
 const handleTestNotification = async () => {
   // 1. could not be implemented as a custom validation rule,
   // as they are always triggerd onMounted (at cast time)
@@ -68,7 +69,7 @@ const handleTestNotification = async () => {
   }
   try {
     if (is_webhook_discord_enabled.value) {
-      await fetch('NOTIFICATIONS_TEST_WEBHOOK', {
+      await $api('/api/bff/users/me/notifications/test-webhook', {
         body: {
           is_webhook_discord_enabled: is_webhook_discord_enabled.value,
           webhook_url: webhook_url.value,
@@ -76,13 +77,14 @@ const handleTestNotification = async () => {
         method: 'POST',
       })
       toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_discord') })
-      return
     }
-    await fetch('NOTIFICATIONS_TEST_WEBHOOK', {
-      body: { webhook_url: webhook_url.value },
-      method: 'POST',
-    })
-    toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
+    else {
+      await $api('/api/bff/users/me/notifications/test-webhook', {
+        body: { webhook_url: webhook_url.value },
+        method: 'POST',
+      })
+      toast.showSuccess({ summary: $t('notifications.dashboards.toast.success.test_webhook_url') })
+    }
   }
   catch {
     const summary = is_webhook_discord_enabled.value
@@ -93,7 +95,7 @@ const handleTestNotification = async () => {
   warn('Test notification sent', values)
 }
 const emit = defineEmits<{
-  (e: 'save', values: WebhookForm, closeCallback: () => void): void,
+  (e: 'save', values: WebhookSettings): void,
 }>()
 
 const onSubmit = handleSubmit((values) => {
@@ -101,7 +103,8 @@ const onSubmit = handleSubmit((values) => {
     close()
     return
   }
-  emit('save', values, close)
+  emit('save', values)
+  close()
 })
 
 const id = useId()

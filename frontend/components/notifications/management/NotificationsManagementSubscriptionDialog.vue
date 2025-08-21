@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import type { NotificationSettingsValidatorDashboard } from '~/types/api/notifications'
 
+export type SubscriptionSettings = Omit<
+NotificationSettingsValidatorDashboard,
+| 'is_webhook_discord_enabled'
+| 'webhook_url'
+>
+
 const {
-  dialogRef,
+  close,
   props,
 } = useBcDialog<NotificationSettingsValidatorDashboard>({ showHeader: false })
 const { t: $t } = useTranslation()
@@ -16,7 +22,7 @@ const hasPremiumPerkGroupEfficiency = computed(
   () => user.value?.premium_perks.notifications_validator_dashboard_group_efficiency,
 )
 function closeDialog(): void {
-  dialogRef?.value.close()
+  close()
 }
 
 const checkboxes = ref({
@@ -38,9 +44,7 @@ const thresholds = ref({
   min_collateral_threshold: formatFraction(props.value?.min_collateral_threshold ?? 0),
 })
 const emit = defineEmits<{
-  (e: 'change-settings', settings: Omit<NotificationSettingsValidatorDashboard,
-  | 'is_webhook_discord_enabled'
-  | 'webhook_url'>): void,
+  (e: 'change-settings', settings: SubscriptionSettings): void,
 }>()
 watchDebounced([
   checkboxes,
@@ -51,7 +55,8 @@ watchDebounced([
     group_efficiency_below_threshold: Number(formatToFraction(thresholds.value.group_efficiency_below_threshold)),
     max_collateral_threshold: Number(formatToFraction(thresholds.value.max_collateral_threshold)),
     min_collateral_threshold: Number(formatToFraction(thresholds.value.min_collateral_threshold)),
-  })
+  },
+  )
 }, {
   deep: true,
 })

@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 const { t: $t } = useTranslation()
-const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
 const store = useNotificationsManagementStore()
@@ -53,13 +52,20 @@ const muteNotifications = (seconds: number) => {
     .do_not_disturb_timestamp = getFutureTimestampInSeconds({ seconds })
 }
 
+const { $api } = useNuxtApp()
+
 const sendTestNotification = async (type: 'email' | 'push') => {
   try {
-    await fetch(
-      type === 'email'
-        ? 'NOTIFICATIONS_TEST_EMAIL'
-        : 'NOTIFICATIONS_TEST_PUSH',
-    )
+    if (type === 'email') {
+      await $api('/api/bff/users/me/notifications/test-email', {
+        method: 'POST',
+      })
+    }
+    else {
+      await $api('/api/bff/users/me/notifications/test-push', {
+        method: 'POST',
+      })
+    }
   }
   catch {
     toast.showError({
