@@ -32,11 +32,16 @@ const (
 	validatorsByGraffiti             searchTypeKey = "validators_by_graffiti"
 	validatorsByGraffitiHex          searchTypeKey = "validators_by_graffiti_hex"
 
-	addressKey     searchTypeKey = "address"
-	transactionKey searchTypeKey = "transaction"
-	blockKey       searchTypeKey = "block"
-	epochKey       searchTypeKey = "epoch"
-	tokenKey       searchTypeKey = "token"
+	addressKey          searchTypeKey = "address"
+	addressByEnsNameKey searchTypeKey = "address_by_ens_name"
+	ensNameKey          searchTypeKey = "ens_name"
+	transactionKey      searchTypeKey = "transaction"
+	slotKey             searchTypeKey = "slot"
+	slotByBlockRootKey  searchTypeKey = "slot_by_block_root"
+	slotByStateRootKey  searchTypeKey = "slot_by_state_root"
+	blockKey            searchTypeKey = "block"
+	epochKey            searchTypeKey = "epoch"
+	tokenKey            searchTypeKey = "token"
 )
 
 type searchType struct {
@@ -103,8 +108,18 @@ func init() {
 		},
 		addressKey: {
 			regex:        types.ReEthereumAddress,
-			responseType: string(addressKey),
+			responseType: "address",
 			handlerFunc:  handleSearchAddress,
+		},
+		addressByEnsNameKey: {
+			regex:        types.ReEnsName,
+			responseType: "address",
+			handlerFunc:  handleSearchAddressByEnsName,
+		},
+		ensNameKey: {
+			regex:        types.ReEnsName,
+			responseType: string(ensNameKey),
+			handlerFunc:  handleSearchEnsName,
 		},
 		transactionKey: {
 			regex:        types.ReTransactionHash,
@@ -115,6 +130,21 @@ func init() {
 			regex:        types.ReInteger,
 			responseType: string(blockKey),
 			handlerFunc:  handleSearchBlock,
+		},
+		slotKey: {
+			regex:        types.ReInteger,
+			responseType: "slot",
+			handlerFunc:  handleSearchSlot,
+		},
+		slotByBlockRootKey: {
+			regex:        types.Re64ByteHash,
+			responseType: "slot",
+			handlerFunc:  handleSearchSlotByBlockRoot,
+		},
+		slotByStateRootKey: {
+			regex:        types.Re64ByteHash,
+			responseType: "slot",
+			handlerFunc:  handleSearchSlotByStateRoot,
 		},
 		epochKey: {
 			regex:        types.ReInteger,
@@ -326,6 +356,16 @@ func handleSearchAddress(ctx context.Context, h *HandlerService, input string, c
 	return asSearchResult(addressKey, chainId, result, err)
 }
 
+func handleSearchAddressByEnsName(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	result, err := h.daService.GetSearchAddressByEnsName(ctx, chainId, input)
+	return asSearchResult(addressByEnsNameKey, chainId, result, err)
+}
+
+func handleSearchEnsName(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	result, err := h.daService.GetSearchEnsName(ctx, chainId, input)
+	return asSearchResult(ensNameKey, chainId, result, err)
+}
+
 func handleSearchTransaction(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
 	transactionHash, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
 	if err != nil {
@@ -342,6 +382,33 @@ func handleSearchBlock(ctx context.Context, h *HandlerService, input string, cha
 	}
 	result, err := h.daService.GetSearchBlock(ctx, chainId, blockNumber)
 	return asSearchResult(blockKey, chainId, result, err)
+}
+
+func handleSearchSlot(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	slot, err := strconv.ParseUint(input, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchSlot(ctx, chainId, slot)
+	return asSearchResult(slotKey, chainId, result, err)
+}
+
+func handleSearchSlotByBlockRoot(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	blockRoot, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchSlotByBlockRoot(ctx, chainId, blockRoot)
+	return asSearchResult(slotByBlockRootKey, chainId, result, err)
+}
+
+func handleSearchSlotByStateRoot(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	stateRoot, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.daService.GetSearchSlotByStateRoot(ctx, chainId, stateRoot)
+	return asSearchResult(slotByStateRootKey, chainId, result, err)
 }
 
 func handleSearchEpoch(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {

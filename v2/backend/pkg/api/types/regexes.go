@@ -11,7 +11,8 @@ var (
 	ReValidatorList                = regexp.MustCompile(`^(0x[0-9a-fA-F]{96}|[0-9]+)(,\s*(0x[0-9a-fA-F]{96}|[0-9]+)\s*)+$`)
 	ReEthereumAddress              = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{40}$`)
 	ReWithdrawalCredential         = regexp.MustCompile(`^(0x)?0[012][0-9a-fA-F]{62}$`)
-	ReTransactionHash              = regexp.MustCompile(`^0x[0-9a-fA-F]{64}$`)
+	Re64ByteHash                   = regexp.MustCompile(`^0x[0-9a-fA-F]{64}$`)
+	ReTransactionHash              = Re64ByteHash
 	ReEnsName                      = regexp.MustCompile(`^.+\.eth$`)
 	ReGraffiti                     = regexp.MustCompile(`^.{2,32}$`) // at least 2 characters, so that queries won't time out
 	ReGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){32}$`)
