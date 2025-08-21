@@ -920,3 +920,23 @@ func (d *DummyService) GetSearchEpoch(ctx context.Context, chainId uint64, epoch
 func (d *DummyService) GetSearchToken(ctx context.Context, chainId uint64, address []byte) (*t.SearchToken, error) {
 	return getDummyStruct[t.SearchToken](ctx)
 }
+
+func (d *DummyService) GetSearchAddressByEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchAddress, error) {
+	return nil, nil
+}
+
+func (d *DummyService) GetSearchSlot(ctx context.Context, chainId uint64, slot uint64) (*t.SearchSlot, error) {
+	return nil, nil
+}
+
+func (d *DummyService) GetSearchSlotByBlockRoot(ctx context.Context, chainId uint64, blockRoot []byte) (*t.SearchSlot, error) {
+	return nil, nil
+}
+
+func (d *DummyService) GetSearchSlotByStateRoot(ctx context.Context, chainId uint64, blockRoot []byte) (*t.SearchSlot, error) {
+	return nil, nil
+}
+
+func (d *DummyService) GetSearchEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchEnsName, error) {
+	return nil, nil
+}

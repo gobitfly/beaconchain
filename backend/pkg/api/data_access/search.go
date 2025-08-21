@@ -23,8 +23,13 @@ type SearchRepository interface {
 	GetSearchValidatorsByGraffiti(ctx context.Context, chainId uint64, graffiti string) (*t.SearchValidatorsByGraffiti, error)
 	GetSearchValidatorsByGraffitiHex(ctx context.Context, chainId uint64, graffiti []byte) (*t.SearchValidatorsByGraffiti, error)
 	GetSearchAddress(ctx context.Context, chainId uint64, address []byte) (*t.SearchAddress, error)
+	GetSearchAddressByEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchAddress, error)
+	GetSearchEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchEnsName, error)
 	GetSearchTransaction(ctx context.Context, chainId uint64, transactionHash []byte) (*t.SearchTransaction, error)
 	GetSearchBlock(ctx context.Context, chainId uint64, blockNumber uint64) (*t.SearchBlock, error)
+	GetSearchSlot(ctx context.Context, chainId uint64, slot uint64) (*t.SearchSlot, error)
+	GetSearchSlotByBlockRoot(ctx context.Context, chainId uint64, blockRoot []byte) (*t.SearchSlot, error)
+	GetSearchSlotByStateRoot(ctx context.Context, chainId uint64, stateRoot []byte) (*t.SearchSlot, error)
 	GetSearchEpoch(ctx context.Context, chainId uint64, epoch uint64) (*t.SearchEpoch, error)
 	GetSearchToken(ctx context.Context, chainId uint64, address []byte) (*t.SearchToken, error)
 }
@@ -158,6 +163,45 @@ func (d *DataAccessService) GetSearchAddress(ctx context.Context, chainId uint64
 	}, nil
 }
 
+func buildEnsDs(ensName string) *goqu.SelectDataset {
+	return goqu.Dialect("postgres").
+		From("ens").
+		Select(goqu.I("address")).
+		Where(goqu.I("ens_name").Eq(ensName)).
+		Where(goqu.I("valid_to").Gte("now()"))
+}
+
+func (d *DataAccessService) GetSearchAddressByEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchAddress, error) {
+	ds := buildEnsDs(ensName)
+	addressBytes, err := runQuery[[]byte](ctx, d.readerDb, ds)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchAddress{
+		Address: t.Address{
+			Hash: t.Hash("0x" + hexutil.Encode(addressBytes)),
+			Ens:  ensName,
+		},
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchEnsName(ctx context.Context, chainId uint64, ensName string) (*t.SearchEnsName, error) {
+	ds := buildEnsDs(ensName)
+	addressBytes, err := runQuery[[]byte](ctx, d.readerDb, ds)
+	if err != nil || addressBytes == nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchEnsName{
+		EnsName: ensName,
+	}, nil
+}
+
 func (d *DataAccessService) GetSearchTransaction(ctx context.Context, chainId uint64, transactionHash []byte) (*t.SearchTransaction, error) {
 	tx, err := db.BigtableClient.GetIndexedEth1Transaction(transactionHash)
 	if err != nil {
@@ -184,6 +228,60 @@ func (d *DataAccessService) GetSearchBlock(ctx context.Context, chainId uint64, 
 	}
 	return &t.SearchBlock{
 		BlockNumber: block.Number,
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchSlot(ctx context.Context, chainId uint64, slot uint64) (*t.SearchSlot, error) {
+	ds := goqu.Dialect("postgres").
+		Select(goqu.I("slot")).
+		From("blocks").
+		Where(goqu.I("slot").Eq(slot))
+	slot, err := runQuery[uint64](ctx, d.readerDb, ds)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchSlot{
+		Slot: slot,
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchSlotByBlockRoot(ctx context.Context, chainId uint64, blockRoot []byte) (*t.SearchSlot, error) {
+	ds := goqu.Dialect("postgres").
+		Select(goqu.I("slot")).
+		From("blocks").
+		Where(
+			goqu.I("blockroot").Eq(blockRoot),
+			goqu.I("status").Eq("1"), // only consider proposed blocks
+		)
+	slot, err := runQuery[uint64](ctx, d.readerDb, ds)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchSlot{
+		Slot: slot,
+	}, nil
+}
+
+func (d *DataAccessService) GetSearchSlotByStateRoot(ctx context.Context, chainId uint64, stateRoot []byte) (*t.SearchSlot, error) {
+	ds := goqu.Dialect("postgres").
+		Select(goqu.I("slot")).
+		From("blocks").
+		Where(goqu.I("stateroot").Eq(stateRoot))
+	slot, err := runQuery[uint64](ctx, d.readerDb, ds)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &t.SearchSlot{
+		Slot: slot,
 	}, nil
 }
 

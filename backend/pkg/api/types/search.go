@@ -37,12 +37,20 @@ type SearchAddress struct {
 	Address Address `json:"address"`
 }
 
+type SearchEnsName struct {
+	EnsName string `json:"ens_name"`
+}
+
 type SearchTransaction struct {
 	TransactionHash Hash `json:"transaction_hash"`
 }
 
 type SearchBlock struct {
 	BlockNumber uint64 `json:"block_number"`
+}
+
+type SearchSlot struct {
+	Slot uint64 `json:"slot"`
 }
 
 type SearchEpoch struct {
