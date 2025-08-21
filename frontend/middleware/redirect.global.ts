@@ -33,6 +33,8 @@ export default function ({
       return redirectToV1(`/epoch/${params.id || params.slug?.[1]}`)
     case 'imprint':
       return redirectToV1('/imprint')
+    case 'index':
+      return redirectToV1('/')
     case 'mobile':
       return redirectToV1('/mobile')
     case 'privacy':
