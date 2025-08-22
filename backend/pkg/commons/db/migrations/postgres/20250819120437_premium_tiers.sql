@@ -2,9 +2,9 @@
 -- +goose StatementBegin
 
 CREATE TABLE IF NOT EXISTS premium_tiers (
-    purchase_id VARCHAR(255) NOT NULL,
-    tier_id VARCHAR(255) NOT NULL,
-    PRIMARY KEY (purchase_id)
+    price_id VARCHAR(255) NOT NULL,
+    tier_name VARCHAR(255) NOT NULL,
+    PRIMARY KEY (price_id)
 );
 
 -- +goose StatementEnd
