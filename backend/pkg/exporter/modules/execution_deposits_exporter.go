@@ -50,6 +50,8 @@ type executionDepositsExporter struct {
 	LastExportedBlock                  uint64
 	LastExportedFinalizedBlock         uint64
 	LastExportedFinalizedBlockRedisKey string
+	LastCachedDashboardsHash           []byte
+	LastCachedDashboardsHashKey        string
 	CurrentHeadBlock                   atomic.Uint64
 	Signer                             gethtypes.Signer
 	DepositMethod                      abi.Method
@@ -69,6 +71,8 @@ func (d *executionDepositsExporter) Init() error {
 	d.Signer = gethtypes.NewCancunSigner(big.NewInt(0).SetUint64(utils.Config.Chain.ClConfig.DepositChainID))
 
 	d.LastExportedFinalizedBlockRedisKey = fmt.Sprintf("%d:execution_deposits_exporter:last_exported_finalized_block", utils.Config.Chain.ClConfig.DepositChainID)
+
+	d.LastCachedDashboardsHashKey = fmt.Sprintf("%d:execution_deposits_exporter:last_cached_view_dashboard_hash", utils.Config.Chain.ClConfig.DepositChainID)
 
 	rpcClient, err := gethrpc.Dial(utils.Config.Eth1GethEndpoint)
 	if err != nil {
@@ -136,6 +140,17 @@ func (d *executionDepositsExporter) Init() error {
 	// avoid fetching old bocks on a chain without deposits
 	if d.LastExportedFinalizedBlock > d.LastExportedBlock {
 		d.LastExportedBlock = d.LastExportedFinalizedBlock
+	}
+
+	hash, err := db.PersistentRedisDbClient.Get(context.Background(), d.LastCachedDashboardsHashKey).Bytes()
+	switch {
+	case err == redis.Nil:
+		log.Warnf("%v missing in redis, cached view will be built on next export", d.LastCachedDashboardsHashKey)
+	case err != nil:
+		log.Fatal(err, "error getting last cached view source hash from redis", 0)
+	default:
+		d.LastCachedDashboardsHash = hash
+		log.Infof("loaded last cached view source hash %v from redis", hex.EncodeToString(d.LastCachedDashboardsHash))
 	}
 
 	log.Infof("initialized execution deposits exporter with last exported block/finalizedBlock: %v/%v", d.LastExportedBlock, d.LastExportedFinalizedBlock)
@@ -234,6 +249,7 @@ func (d *executionDepositsExporter) export() (err error) {
 	depositsToSaveBatchSize := 10_000 // limit how much deposits we save in one go
 	blockBatchSize := uint64(10_000)  // limit how much blocks we fetch until updating the redis-key
 	depositsToSave := make([]*types.ELDeposit, 0, depositsToSaveBatchSize)
+	dirty := false
 	for blockOffset < blockTarget {
 		depositsToSave = depositsToSave[:0]
 		blockBatchStart := blockOffset
@@ -268,6 +284,7 @@ func (d *executionDepositsExporter) export() (err error) {
 		// update redis to keep track of last exported finalized block persistently
 		if prevLastExportedFinalizedBlock != d.LastExportedFinalizedBlock {
 			log.Infof("updating %v: %v", d.LastExportedFinalizedBlockRedisKey, d.LastExportedFinalizedBlock)
+			dirty = true
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
 			err := db.PersistentRedisDbClient.Set(ctx, d.LastExportedFinalizedBlockRedisKey, d.LastExportedFinalizedBlock, 0).Err()
@@ -277,14 +294,33 @@ func (d *executionDepositsExporter) export() (err error) {
 		}
 	}
 
-	start := time.Now()
-	// update cached view
-	err = d.updateCachedView()
+	// get current source hash
+	dashboardHash, err := db.GetTableHash("users_val_dashboards_validators")
 	if err != nil {
-		return err
+		// log error but continue and try to update cached view anyway
+		log.Error(err, "error getting source hash for cached deposits view", 0)
 	}
 
-	log.Debugf("updating cached deposits view took %v", time.Since(start))
+	if !bytes.Equal(dashboardHash, d.LastCachedDashboardsHash) || dirty {
+		start := time.Now()
+		// update cached view
+		err = d.updateCachedView()
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("updating cached deposits view took %v", time.Since(start))
+
+		d.LastCachedDashboardsHash = dashboardHash
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		err := db.PersistentRedisDbClient.Set(ctx, d.LastCachedDashboardsHashKey, d.LastCachedDashboardsHash, 0).Err()
+		if err != nil {
+			log.Error(err, fmt.Sprintf("error setting redis %v = %v", d.LastCachedDashboardsHashKey, hex.EncodeToString(d.LastCachedDashboardsHash)), 0)
+		} else {
+			log.Infof("updated last cached view source hash to %v", hex.EncodeToString(d.LastCachedDashboardsHash))
+		}
+	}
 
 	return nil
 }
