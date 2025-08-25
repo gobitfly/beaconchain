@@ -4,8 +4,12 @@ import perfectionist from 'eslint-plugin-perfectionist'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
 
 import withNuxt from './.nuxt/eslint.config.mjs'
+import stylistic from '@stylistic/eslint-plugin'
 
 export default withNuxt({
+  plugins: {
+    '@stylistic': stylistic,
+  },
   rules: {
     '@stylistic/array-bracket-newline': [
       'error',
@@ -106,6 +110,7 @@ export default withNuxt({
       rules: {
       // disable the rules as there are conflicts
         'perfectionist/sort-imports': 'off',
+        'perfectionist/sort-modules': 'off', // types get reorderd although they depend on each other
         'perfectionist/sort-vue-attributes': 'off',
       },
     },

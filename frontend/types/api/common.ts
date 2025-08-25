@@ -15,6 +15,7 @@ export interface ApiResponse {
 }
 export interface ApiErrorResponse {
   error: string;
+  code: 'MAX_EB_EXCEEDED' | 'INVALID_REQUEST' | 'NOT_FOUND' | 'INTERNAL_ERROR' | 'UNAUTHORIZED' | 'FORBIDDEN';
 }
 export interface ApiDataResponse<T extends any> {
   data: T;

@@ -7,12 +7,12 @@ export function useBcSeo(
 ) {
   const { t: $t } = useTranslation()
   const route = useRoute()
-  const { networkInfo } = useNetworkStore()
+  const { networkInfo } = useNetwork()
 
   const year = new Date().getFullYear()
 
   const url = 'https://beaconcha.in'
-  const logo = `${url}/img/logo.png`
+  const logo = `${url}/assets-2usdf/img/logo.png`
   const ogUrl = () => {
     const value
       = removeDynamicUrlValue

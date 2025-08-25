@@ -1,23 +1,24 @@
 <script setup lang="ts">
 import type { NotificationMachinesTableRow } from '~/types/api/notifications'
-import type { Cursor } from '~/types/datatable'
+
+const { machinesSubscriptionCount } = defineProps<{
+  machinesSubscriptionCount?: number,
+}>()
 
 defineEmits<{ (e: 'openDialog'): void }>()
 
 const { width } = useWindowSize()
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
+const query = useDefaultQuery({
+  limit: 10, sort: 'timestamp:desc',
+})
 const {
-  isLoading,
-  machineNotifications,
-  onSort,
+  data: machineNotifications,
+  status,
+} = useApi('/api/bff/users/me/notifications/machines', {
   query,
-  setCursor,
-  setPageSize,
-  setSearch,
-} = useNotificationsMachineStore()
+})
 
 const colsVisible = computed(() => {
   return {
@@ -25,7 +26,6 @@ const colsVisible = computed(() => {
     threshold: width.value > 830,
   }
 })
-const { overview } = useNotificationsDashboardOverviewStore()
 const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => {
   if (eventType === 'cpu') return $t('notifications.machine.event_type.cpu_overheated')
   if (eventType === 'memory') return $t('notifications.machine.event_type.high_memory_usage')
@@ -37,24 +37,19 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
 <template>
   <div>
     <BcTableControl
+      v-model:search="query.search"
       :title="$t('notifications.machine.title')"
       :search-placeholder="$t('notifications.machine.search_placeholder')"
-      @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data="machineNotifications"
+            :query
             data-key="machine_name"
-            :cursor
-            :page-size
-            :selected-sort="query?.sort"
-            :is-loading
+            :is-loading="status === 'pending'"
             :add-spacer="true"
             :expandable="!colsVisible.threshold"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
           >
             <Column
               field="machine_name"
@@ -137,7 +132,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
             </template>
             <template #bc-table-footer-right>
               <template v-if="colsVisible">
-                {{ $t('notifications.machine.footer.subscriptions', { count: overview?.machines_subscription_count }) }}
+                {{ $t('notifications.machine.footer.subscriptions', { count: machinesSubscriptionCount }) }}
               </template>
             </template>
           </BcTable>

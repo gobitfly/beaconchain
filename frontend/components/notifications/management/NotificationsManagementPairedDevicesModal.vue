@@ -23,6 +23,7 @@ const handleToggleNotifications = ({
     device.is_notifications_enabled = value
   }
 }
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -55,7 +56,7 @@ const handleToggleNotifications = ({
         <br>
         <BcLink
           class="link"
-          to="/mobile"
+          :to="`${v1Domain}/mobile`"
         >
           {{ $t('notifications.general.paired_devices.info_empty._link') }}
         </BcLink>

@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import type { HashTabs } from '~/types/hashTabs'
+import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
 
 const { t: $t } = useTranslation()
 
 const visible = defineModel<boolean>()
 
-const tabs: HashTabs = [
+const tabs: HashTab[] = [
   {
     icon: 'gear',
     key: 'general',
@@ -38,9 +38,8 @@ const tabs: HashTabs = [
     <div id="notifications-management-search-placholder" />
     <BcTabList
       :tabs
-      default-tab="summary"
+      default-tab="general"
       class="notifications-management-tab-view"
-      oanels-class="notifications-management-tab-panels"
     >
       <template #tab-panel-general>
         <NotificationsManagementGeneralTab />

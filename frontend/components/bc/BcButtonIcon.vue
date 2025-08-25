@@ -10,6 +10,7 @@ const { variant = 'plain' } = defineProps<{
    *
    * ♿️ screenreader text
    * every button with just an icon has to describe what it does
+   *
    */
   screenreaderText: TranslationInput,
   variant?: 'flat' | 'plain',

@@ -5,7 +5,7 @@ const { id } = defineProps<{
   id: ChainId,
 }>()
 
-const { getNetworkName } = useNetworkStore()
+const { getNetworkName } = useNetwork()
 
 const networkName = computed(() => getNetworkName(id))
 </script>

@@ -147,6 +147,16 @@
         "empty": {
             "empty_table": "Nothing to see here... yet"
         },
+        "error": {
+            "400": {
+                "description": "The validator list contains one or more invalid indices or public keys.",
+                "title": "Invalid validator list"
+            },
+            "401": {
+                "description": "You have to login first to access your private dashboards.",
+                "title": "Unauthorized"
+            }
+        },
         "group": {
             "selection": {
                 "all": "All groups",
@@ -162,7 +172,7 @@
         "header": {
             "account": "Accounts",
             "manage": "Manage",
-            "validator": "Validators"
+            "validator": "Validators | Validators | Validators ({count})"
         },
         "public_account_dashboard": "Dashboard",
         "public_validator_dashboard": "Dashboard",
@@ -186,8 +196,7 @@
                     ]
                 },
                 "name": {
-                    "label": "Dashboard name",
-                    "placeholder": "Shared Dashboard name"
+                    "label": "What should be the name of the shared dashboard?"
                 }
             },
             "share_public_disclaimer": "Sharing this link will share the validator indices from your dashboard. Any modifications made by those who open the link will not affect your dashboard.",
@@ -354,6 +363,11 @@
                     "name": "Name"
                 },
                 "edit_group_name": "Edit group name: {groupName}",
+                "errors": {
+                    "add": "Failed to add the group. Please try again.",
+                    "edit": "Failed to edit the group. Please try again.",
+                    "remove": "Failed to remove the group. Please try again."
+                },
                 "new_group_placeholder": "New group name",
                 "remove_text": "Do you want to remove group {group} from your dashboard?",
                 "remove_title": "Remove Groups",
@@ -560,8 +574,16 @@
         "validator_dashboard": "Validator Dashboard"
     },
     "error": {
+        "404": {
+            "description": "It might have been orphaned, reorged, or never proposed.",
+            "title": "Oops, this Page Never Made It to Finality."
+        },
+        "go_to_login_page": "Go to Login page",
         "multiple_times": "The error {error} happened {count} times",
+        "read_more_about_how_to_upgrade": "Read more about how to upgrade your plan",
+        "we_are_sorry_error_occurred": "We're sorry, but an error occurred",
         "ws_error": "Webservice error"
+
     },
     "filter": {
         "close": "Open Filter.",
@@ -652,7 +674,7 @@
         "choose_password": "Choose a password",
         "confirm_password": "Confirm your password",
         "dont_have_account": "Don't have an account?",
-        "email": "Email address",
+        "email": "Email",
         "error_login_group": "Cannot log in",
         "error_login_message": "your email or your password is unknown.",
         "error_register_group": "Cannot sign up",
@@ -670,6 +692,7 @@
     },
     "navigation": {
         "back": "Back",
+        "back_to_home": "Back to home",
         "cancel": "Cancel",
         "continue": "Continue",
         "delete": "Delete",
@@ -764,6 +787,9 @@
                 "accounts": "account | accounts",
                 "validators": "validator | validators"
             },
+            "error_group": "Notifications",
+            "error_message": "We could not save your preferences.",
+            "error_title": "Error",
             "event_type": {
                 "attestation_missed": "Attestation missed",
                 "group_efficiency_below": "Low group efficiency",
@@ -1222,9 +1248,12 @@
         "amount": "Amount",
         "consolidation_request_fee": "Consolidation Request Fee",
         "consolidator": "Consolidator",
-        "first": "First",
         "from": "From",
-        "last": "Last",
+        "navigation": {
+            "first": "First page",
+            "next": "Next page",
+            "previous": "Previous page"
+        },
         "of": "of",
         "showing": "Showing {from} to {to} of {total}",
         "source": "Source",

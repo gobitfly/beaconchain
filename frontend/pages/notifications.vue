@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import type { DynamicDialogCloseOptions } from 'primevue/dynamicdialogoptions'
 import { BcDialogConfirm } from '#components'
-import type { HashTabs } from '~/types/hashTabs'
+import type { HashTab } from '~/components/bc/tab/BcTabList.vue'
 
-const { isLoggedIn } = useUserStore()
+const { isLoggedIn } = useUser()
 const dialog = useDialog()
 const { t: $t } = useTranslation()
+const loginUrl = useLoginUrl()
+
+const { data: notificationsOverview } = await useApi('/api/bff/users/me/notifications', {
+  immediate: isLoggedIn.value,
+  key: 'notificationsOverview',
+})
+await useApi('/api/bff/users/me/dashboards', {
+  getCachedData: (key, nuxtApp) => nuxtApp.payload[key] ?? nuxtApp.payload.data[key],
+  key: 'privateDashboards',
+})
 
 const manageNotificationsModalVisisble = ref(false)
 const tabKey = {
@@ -14,7 +24,7 @@ const tabKey = {
   machines: 'machines',
   networks: 'networks',
 }
-const tabs: HashTabs = [
+const tabs: HashTab[] = [
   {
     icon: 'gauge-simple-max',
     key: tabKey.dashboards,
@@ -61,52 +71,70 @@ const openManageNotifications = () => {
 
 <template>
   <div>
-    <BcPageWrapper>
-      <template #top>
-        <div class="overview">
-          <NotificationsOverview
-            @open-dialog="openManageNotifications"
-          />
-        </div>
-      </template>
-      <NotificationsManagementModal
-        v-model="manageNotificationsModalVisisble"
+    <div class="overview">
+      <NotificationsOverview
+        :notifications="notificationsOverview || undefined"
+        @open-dialog="openManageNotifications"
       />
-      <div class="button-row">
-        <Button
-          :label="$t('notifications.manage')"
-          @click="openManageNotifications"
+    </div>
+    <NotificationsManagementModal
+      v-model="manageNotificationsModalVisisble"
+    />
+    <div class="button-row">
+      <Button
+        :label="$t('notifications.manage')"
+        @click="openManageNotifications"
+      />
+    </div>
+    <BcTabList
+      :tabs
+      query-parameter-key="tab"
+      default-tab="dashboards"
+      class="notifications-tab-view"
+      panels-class="notifications-tab-panels"
+    >
+      <template #[getSlotName(tabKey.dashboards)]>
+        <LazyNotificationsDashboardsTable
+          v-if="isLoggedIn"
+          :validator-dashboard-subscription-count="notificationsOverview?.vdb_subscriptions_count"
+          @open-dialog="openManageNotifications"
         />
-      </div>
-      <BcTabList
-        :tabs
-        default-tab="dashboards"
-        :use-route-hash="true"
-        class="notifications-tab-view"
-        panels-class="notifications-tab-panels"
-      >
-        <template #[getSlotName(tabKey.dashboards)]>
-          <NotificationsDashboardsTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.clients)]>
-          <NotificationsClientsTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.networks)]>
-          <NotificationsNetworkTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-        <template #[getSlotName(tabKey.machines)]>
-          <NotificationsMachinesTable
-            @open-dialog="openManageNotifications"
-          />
-        </template>
-      </BcTabList>
-    </BcPageWrapper>
+      </template>
+      <template #[getSlotName(tabKey.machines)]>
+        <LazyNotificationsMachinesTable
+          v-if="isLoggedIn"
+          :machines-subscription-count="notificationsOverview?.machines_subscription_count"
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+      <template #[getSlotName(tabKey.clients)]>
+        <LazyNotificationsClientsTable
+          v-if="isLoggedIn"
+          :clients-subscription-count="notificationsOverview?.clients_subscription_count"
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+      <template #[getSlotName(tabKey.networks)]>
+        <LazyNotificationsNetworkTable
+          v-if="isLoggedIn"
+          :networks-subscription-count="notificationsOverview?.networks_subscription_count"
+          @open-dialog="openManageNotifications"
+        />
+      </template>
+
+      <template #empty>
+        <BcLink :to="loginUrl">
+          <BcTableEmpty>
+            {{ $t('notifications.dashboards.empty.login') }}
+            <template #icon>
+              <BcIcon
+                name="right-from-bracket"
+              />
+            </template>
+          </BcTableEmpty>
+        </BcLink>
+      </template>
+    </BcTabList>
   </div>
 </template>
 

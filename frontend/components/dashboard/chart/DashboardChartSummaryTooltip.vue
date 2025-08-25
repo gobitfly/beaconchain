@@ -52,7 +52,7 @@ defineProps<Props>()
       <BaseFormatPercent
         v-else
         class="efficiency"
-        :value="entry.efficiency / 100"
+        :value="entry.efficiency"
       />
     </div>
   </div>

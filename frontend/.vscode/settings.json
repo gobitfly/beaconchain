@@ -1,6 +1,7 @@
 {
     "conventionalCommits.scopes": [
         "BcButton",
+        "BcCopyLabel",
         "BcDataWrapper",
         "BcFormatAmount",
         "BcHeaderMegaMenu",
@@ -17,6 +18,7 @@
         "DashboardChartSummaryFilter",
         "DashboardChartSummaryTooltip",
         "DashboardGroupManagementModal",
+        "DashboardShareModal",
         "DashboardSlotViz",
         "DashboardTableClDeposits",
         "DashboardTableElConsolidations",
@@ -65,6 +67,7 @@
         "format.ts",
         "git",
         "git-blame-ignore",
+        "git-ignore",
         "healthz",
         "i18n",
         "logger",
@@ -76,12 +79,11 @@
         "useCurrency",
         "useCustomFetch",
         "useFeatureFlag",
-        "useNotificationsOverviewStore",
         "useSettingsStore",
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode"
+        "vscode" 
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"

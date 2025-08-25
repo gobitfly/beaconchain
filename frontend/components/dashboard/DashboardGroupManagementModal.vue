@@ -1,89 +1,75 @@
 <script lang="ts" setup>
 import { orderBy } from 'lodash-es'
-import type { DataTableSortEvent } from 'primevue/datatable'
 import {
   BcDialogConfirm, BcPremiumModal,
 } from '#components'
 import type { ApiPagingResponse } from '~/types/api/common'
 import type { VDBOverviewGroup } from '~/types/api/validator_dashboard'
-import type {
-  Cursor, SortOrder,
-} from '~/types/datatable'
-import { getSortOrder } from '~/utils/table'
 
 const { t: $t } = useTranslation()
-const { fetch } = useCustomFetch()
-const dialog = useDialog()
-
-const {
-  dashboardKey,
-  isGuestDashboard,
-} = useDashboardKey()
-
 const {
   width,
 } = useWindowSize()
+const {
+  groups,
+  key,
+  variant,
+} = useDashboard()
 
 const visible = defineModel<boolean>()
 
-const { refreshOverview } = useValidatorDashboardOverviewStore()
-const { groups } = useValidatorDashboardGroups()
 const { dashboards } = storeToRefs(useUserDashboardStore())
-const { user } = useUserStore()
 
-const cursor = ref<Cursor>(0)
-const pageSize = ref<number>(25)
-const newGroupName = ref<string>('')
-const search = ref<string>()
-const sortField = ref<string>('name')
-const sortOrder = ref<SortOrder>(-1)
-const hasNoOpenDialogs = ref(true)
+const query = useDefaultQuery({
+  sort: 'name:asc',
+})
 
 const data = computed<ApiPagingResponse<VDBOverviewGroup>>(() => {
   let processedGroups = groups.value
-  if (search.value?.length) {
-    const s = search.value.toLowerCase()
+
+  if (query.value.search?.length) {
+    const search = query.value.search.toLowerCase()
     processedGroups = processedGroups.filter(
-      g => g.name.toLowerCase().includes(s) || parseInt(s) === g.id,
+      group => group.name.toLowerCase().includes(search) || parseInt(search) === group.id,
     )
   }
-  if (sortField.value?.length && sortOrder.value) {
-    if (sortField.value === 'name') {
-      // lodash needs some help when sorting strings alphabetically
-      processedGroups = orderBy(
-        processedGroups,
-        [ g => g.name.toLowerCase() ],
-        getSortOrder(sortOrder.value),
-      )
-    }
-    else {
-      processedGroups = orderBy(
-        processedGroups,
-        sortField.value,
-        getSortOrder(sortOrder.value),
-      )
-    }
+
+  const [
+    sortField,
+    sortOrder,
+  ] = (query.value.sort?.split(':') ?? []) as [string, 'asc' | 'desc']
+
+  if (sortField === 'name') {
+    // lodash needs some help when sorting strings alphabetically
+    processedGroups = orderBy(
+      processedGroups,
+      [ g => g.name.toLowerCase() ],
+      sortOrder,
+    )
   }
-  const totalCount = processedGroups.length
-  const index = cursor.value as number
+  else {
+    processedGroups = orderBy(
+      processedGroups,
+      sortField,
+      sortOrder,
+    )
+  }
+
   return {
-    data: processedGroups.slice(index, index + pageSize.value),
-    paging: { total_count: totalCount },
+    data: processedGroups,
+    paging: {
+      total_count: processedGroups.length,
+    },
   }
 })
 
-const size = computed(() => {
-  return { showSubTitle: width.value >= 760 }
+const showSubTitle = computed(() => {
+  return width.value >= 760
 })
-
-const newGroupDisabled = computed(
-  () => !REGEXP_VALID_NAME.test(newGroupName.value),
-)
 
 const resetData = () => {
-  search.value = ''
+  query.value.search = ''
   newGroupName.value = ''
-  cursor.value = 0
 }
 
 const onClose = () => {
@@ -91,65 +77,122 @@ const onClose = () => {
   resetData()
 }
 
+const dialog = useDialog()
+const toast = useBcToast()
+
+const emit = defineEmits<{
+  (e: 'change-groups', value: VDBOverviewGroup[]): void,
+}>()
+
+const newGroupName = ref<string>('')
+const hasOpenDialogs = ref(false)
+// Keep a local copy of the groups, which won't change when we optimistically update them,
+// so we can use them to revert changes if the API call fails.
+const oldGroups = ref<VDBOverviewGroup[]>([ ...groups.value ])
+
+const newGroupDisabled = computed(
+  () => !REGEXP_VALID_NAME.test(newGroupName.value),
+)
+
 const addGroup = async () => {
   newGroupName.value = newGroupName.value.trim()
-  if (newGroupDisabled.value) {
-    return
-  }
 
   if (premiumLimit.value) {
     dialog.open(BcPremiumModal, {})
     return
   }
 
-  await fetch(
-    'DASHBOARD_VALIDATOR_GROUPS',
+  const optimisticGroups: VDBOverviewGroup[] = [
+    ...groups.value,
     {
-      body: { name: newGroupName.value },
-      method: 'POST',
+      count: 0,
+      id: -1,
+      name: newGroupName.value,
     },
-    { dashboardKey: dashboardKey.value },
-  )
-  await refreshOverview(dashboardKey.value)
+  ]
+  // Optimistically update the dashboard groups to give immediate feedback
+  emit('change-groups', optimisticGroups)
+  // Keep a copy of the new group name and clear input field
+  const tempNewGroupName = newGroupName.value
   newGroupName.value = ''
+
+  await $api(`/api/bff/validator-dashboards/${key.value}/groups`, {
+    body: { name: tempNewGroupName },
+    method: 'POST',
+  }).then((res) => {
+    // We need to replace the optimistic group with the real one, as it contains the real ID
+    const newGroups = [
+      ...oldGroups.value,
+      res,
+    ]
+    oldGroups.value = newGroups
+    emit('change-groups', newGroups)
+  }).catch((error) => {
+    // If the API call fails, revert the optimistic response
+    emit('change-groups', oldGroups.value)
+    if (error.statusCode === 409) {
+      toast.showError({
+        summary: $t('dashboard.validator.group_management.errors.duplicate'),
+      })
+      return
+    }
+    toast.showError({
+      summary: $t('dashboard.validator.group_management.errors.add'),
+    })
+  })
 }
 
-const editGroup = async (row: VDBOverviewGroup, newName?: string) => {
-  await fetch(
-    'DASHBOARD_VALIDATOR_GROUP_MODIFY',
-    {
-      body: { name: newName },
-      method: 'PUT',
-    },
-    {
-      dashboardKey: dashboardKey.value,
-      groupId: row.id,
-    },
-  )
-  refreshOverview(dashboardKey.value)
+const editGroup = async (row: VDBOverviewGroup, newName: string) => {
+  const optimisticGroups: VDBOverviewGroup[] = groups.value.map((group) => {
+    if (group.id === row.id) {
+      return {
+        ...group, name: newName,
+      }
+    }
+    return group
+  })
+  // Optimistically update the dashboard groups to give immediate feedback
+  emit('change-groups', optimisticGroups)
+
+  await $api(`/api/bff/validator-dashboards/${key.value}/groups/${row.id}`, {
+    body: { name: newName },
+    method: 'PUT',
+  }).catch(() => {
+    // If the API call fails, revert the optimistic response
+    emit('change-groups', oldGroups.value)
+    toast.showError({
+      summary: $t('dashboard.validator.group_management.errors.edit'),
+    })
+  })
 }
 
 const removeGroupConfirmed = async (row: VDBOverviewGroup) => {
-  await fetch(
-    'DASHBOARD_VALIDATOR_GROUP_MODIFY',
-    { method: 'DELETE' },
-    {
-      dashboardKey: dashboardKey.value,
-      groupId: row.id,
-    },
-  )
-  refreshOverview(dashboardKey.value)
+  const optimisticGroups: VDBOverviewGroup[] = groups.value.filter((group) => {
+    return group.id !== row.id
+  })
+  // Optimistically update the dashboard groups to give immediate feedback
+  emit('change-groups', optimisticGroups)
+  await $api(`/api/bff/validator-dashboards/${key.value}/groups/${row.id}`, {
+    method: 'DELETE',
+  }).then(() => oldGroups.value = optimisticGroups,
+  ).catch(() => {
+    // If the API call fails, revert the optimistic response
+    emit('change-groups', oldGroups.value)
+    toast.showError({
+      summary: $t('dashboard.validator.group_management.errors.remove'),
+    })
+  })
 }
 
 const removeGroup = (row: VDBOverviewGroup) => {
-  hasNoOpenDialogs.value = false
+  hasOpenDialogs.value = true
   dialog.open(BcDialogConfirm, {
     data: {
       question: $t('dashboard.validator.group_management.remove_text', { group: row.name }),
       title: $t('dashboard.validator.group_management.remove_title'),
     },
     onClose: (response) => {
-      hasNoOpenDialogs.value = true
+      hasOpenDialogs.value = false
       if (response?.data) {
         removeGroupConfirmed(row)
       }
@@ -157,34 +200,20 @@ const removeGroup = (row: VDBOverviewGroup) => {
   })
 }
 
-const onSort = (sort: DataTableSortEvent) => {
-  sortField.value = sort.sortField as string
-  sortOrder.value = sort.sortOrder
-}
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-}
-
-const setPageSize = (value: number) => {
-  cursor.value = 0
-  pageSize.value = value
-}
-
-const setSearch = (value?: string) => {
-  search.value = value
-}
+const { $api } = useNuxtApp()
 
 const dashboardName = computed(() => {
   return (
     dashboards.value?.validator_dashboards?.find(
-      d => `${d.id}` === dashboardKey.value,
+      d => `${d.id}` === key.value,
     )?.name || $t('dashboard.validator.group_management.your_dashboard')
   )
 })
 
+const user = useFetchedData('user')
+
 const maxGroupsPerDashboard = computed(() =>
-  isGuestDashboard.value || !user.value?.premium_perks?.validator_groups_per_dashboard
+  variant.value === 'guest-dashboard' || !user.value?.premium_perks?.validator_groups_per_dashboard
     ? 1
     : user.value.premium_perks.validator_groups_per_dashboard,
 )
@@ -192,11 +221,6 @@ const premiumLimit = computed(
   () => (data.value?.paging?.total_count ?? 0) >= maxGroupsPerDashboard.value,
 )
 
-const selectedSort = computed(() =>
-  sortOrder.value
-    ? `${sortField.value}:${getSortOrder(sortOrder.value)}`
-    : undefined,
-)
 const isMobile = computed(() => {
   return (width.value ?? 0) <= 800
 })
@@ -205,40 +229,46 @@ const isMobile = computed(() => {
 <template>
   <BcDialog
     v-model="visible"
-    :close-on-escape="hasNoOpenDialogs"
+    :close-on-escape="!hasOpenDialogs"
     :header="$t('dashboard.validator.group_management.title')"
     class="validator-group-managment-modal-container"
     @update:visible="(visible: boolean) => !visible && resetData()"
   >
     <template
-      v-if="!size.showSubTitle"
+      v-if="!showSubTitle"
       #header
     >
       <span />
     </template>
     <BcTableControl
+      v-model:search="query.search"
       :search-placeholder="
         $t('dashboard.validator.group_management.search_placeholder')
       "
-      :disabled-filter="isGuestDashboard"
-      @set-search="setSearch"
+      :disabled-filter="variant === 'guest-dashboard'"
     >
       <template #header-left>
-        <span v-if="size.showSubTitle">
+        <span v-if="showSubTitle">
           {{
             $t("dashboard.validator.group_management.sub_title", {
               dashboardName,
             })
-          }}</span>
+          }}
+        </span>
         <span
           v-else
           class="small-title"
-        >{{
-          $t("dashboard.validator.group_management.title")
-        }}</span>
+        >
+          {{
+            $t("dashboard.validator.group_management.title")
+          }}
+        </span>
       </template>
       <template #bc-table-sub-header>
-        <div class="add-row">
+        <form
+          class="add-row"
+          @submit.prevent="addGroup"
+        >
           <InputText
             v-model="newGroupName"
             class="search-input"
@@ -246,29 +276,24 @@ const isMobile = computed(() => {
             :placeholder="
               $t('dashboard.validator.group_management.new_group_placeholder')
             "
-            @keypress.enter="addGroup"
           />
           <Button
             style="display: inline"
+            type="submit"
             :disabled="newGroupDisabled"
-            @click="addGroup"
           >
             <BcIcon name="plus" />
           </Button>
-        </div>
+        </form>
       </template>
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
             :data
             class="management-table"
-            :cursor
-            :page-size
-            :selected-sort
+            :query
+            hide-pager
             data-key="id"
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
           >
             <Column
               field="name"
@@ -285,8 +310,8 @@ const isMobile = computed(() => {
                       ? $t('dashboard.group.selection.default')
                       : ''
                   "
-                  :can-be-empty="slotProps.data.id === 0"
-                  :disabled="isGuestDashboard"
+                  :can-be-empty="false"
+                  :disabled="variant === 'guest-dashboard'"
                   :pattern="REGEXP_VALID_NAME"
                   :maxlength="20"
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
@@ -333,30 +358,29 @@ const isMobile = computed(() => {
               </template>
             </Column>
 
-            <template #bc-table-footer-left>
-              <div class="left">
-                <div
-                  class="labels"
-                  :class="{ premiumLimit }"
-                >
-                  <span>
-                    <BcFormatNumber
-                      :value="data.paging.total_count"
-                      default="0"
-                    />
-                    /
-                    <BcFormatNumber :value="maxGroupsPerDashboard" />
-                  </span>
+            <template #bc-table-footer-bottom>
+              <div class="validator-group-managment-modal__footer">
+                <div class="left">
+                  <div
+                    class="labels"
+                    :class="{ premiumLimit }"
+                  >
+                    <span>
+                      <BcFormatNumber
+                        :value="groups.length"
+                        default="0"
+                      />
+                      /
+                      <BcFormatNumber :value="maxGroupsPerDashboard" />
+                    </span>
+                  </div>
+                  <BcPremiumGem />
                 </div>
-                <BcPremiumGem />
+                <Button
+                  :label="$t('navigation.done')"
+                  @click="onClose"
+                />
               </div>
-            </template>
-
-            <template #bc-table-footer-right>
-              <Button
-                :label="$t('navigation.done')"
-                @click="onClose"
-              />
             </template>
           </BcTable>
         </ClientOnly>
@@ -490,5 +514,12 @@ const isMobile = computed(() => {
   .action-col {
     width: 33px;
   }
+}
+
+:global(.validator-group-managment-modal__footer) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--padding-medium);
 }
 </style>

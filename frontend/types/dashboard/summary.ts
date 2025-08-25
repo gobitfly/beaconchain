@@ -7,27 +7,27 @@ export const SummaryDetailsEfficiencyProps = [
   'slashings',
   'sync',
 ] as const
-export type SummaryDetailsEfficiencyProp =
-  (typeof SummaryDetailsEfficiencyProps)[number]
+export type SummaryDetailsEfficiencyProp
+  = (typeof SummaryDetailsEfficiencyProps)[number]
 
 export const SummaryDetailsEfficiencyValidatorProps = [
   'validators_sync',
   'validators_proposal',
   'validators_slashings',
 ] as const
-export type SummaryDetailsEfficiencyValidatorProp =
-  (typeof SummaryDetailsEfficiencyValidatorProps)[number]
+export type SummaryDetailsEfficiencyValidatorProp
+  = (typeof SummaryDetailsEfficiencyValidatorProps)[number]
 
 export const SummaryDetailsEfficiencyLuckProps = [
   'proposal_luck',
   'sync_luck',
 ] as const
-export type SummaryDetailsEfficiencyLuckProp =
-  (typeof SummaryDetailsEfficiencyLuckProps)[number]
+export type SummaryDetailsEfficiencyLuckProp
+  = (typeof SummaryDetailsEfficiencyLuckProps)[number]
 
 export const SummaryDetailsEfficiencyCustomProps = [ 'attestations' ] as const
-export type SummaryDetailsEfficiencyCustomProp =
-  (typeof SummaryDetailsEfficiencyCustomProps)[number]
+export type SummaryDetailsEfficiencyCustomProp
+  = (typeof SummaryDetailsEfficiencyCustomProps)[number]
 
 export const SummaryDetailsEfficiencySpecialProps = [
   'reward',
@@ -41,36 +41,36 @@ export const SummaryDetailsEfficiencySpecialProps = [
   'proposals',
   'missed_rewards',
 ] as const
-export type DashboardValidatorContext =
-  | 'attestation'
-  | 'dashboard'
-  | 'group'
-  | 'proposal'
-  | 'slashings'
-  | 'sync'
+export type DashboardValidatorContext
+  = | 'attestation'
+    | 'dashboard'
+    | 'group'
+    | 'proposal'
+    | 'slashings'
+    | 'sync'
 
-export type SummaryDetailsEfficiencyCombinedProp =
-  | SummaryDetailsEfficiencyCustomProp
-  | SummaryDetailsEfficiencyLuckProp
-  | SummaryDetailsEfficiencyProp
-  | SummaryDetailsEfficiencySpecialProp
-  | SummaryDetailsEfficiencyValidatorProp
+export type SummaryDetailsEfficiencyCombinedProp
+  = | SummaryDetailsEfficiencyCustomProp
+    | SummaryDetailsEfficiencyLuckProp
+    | SummaryDetailsEfficiencyProp
+    | SummaryDetailsEfficiencySpecialProp
+    | SummaryDetailsEfficiencyValidatorProp
 
-export type SummaryDetailsEfficiencySpecialProp =
-  (typeof SummaryDetailsEfficiencySpecialProps)[number]
+export type SummaryDetailsEfficiencySpecialProp
+  = (typeof SummaryDetailsEfficiencySpecialProps)[number]
 
 export type SummaryRow = {
   property?: SummaryDetailsEfficiencyCombinedProp,
   title: string,
 }
 
-export const SummaryTimeFrames = [
-  'last_1h',
-  'last_24h',
-  'last_7d',
-  'last_30d',
-  'all_time',
-] as const
+// export const SummaryTimeFrames = [
+//   'last_1h',
+//   'last_24h',
+//   'last_7d',
+//   'last_30d',
+//   'all_time',
+// ] as const
 export type SummaryTableVisibility = {
   attestations: boolean,
   efficiency: boolean,
@@ -79,7 +79,7 @@ export type SummaryTableVisibility = {
   validatorsSortable: boolean,
 }
 
-export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
+// export type SummaryTimeFrame = (typeof SummaryTimeFrames)[number]
 
 export const SUMMARY_CHART_GROUP_TOTAL = -1
 // export const SUMMARY_CHART_GROUP_NETWORK_AVERAGE = -2

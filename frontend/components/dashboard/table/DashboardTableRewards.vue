@@ -1,45 +1,35 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
+import type { Cursor } from '~/types/datatable'
 import {
   DAHSHBOARDS_ALL_GROUPS_ID,
   DAHSHBOARDS_NEXT_EPOCH_ID,
 } from '~/types/dashboard'
-import { useValidatorDashboardRewardsStore } from '~/stores/dashboard/useValidatorDashboardRewardsStore'
 import { getGroupLabel } from '~/utils/dashboard/group'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
 
 const {
-  dashboardKey,
-  isGuestDashboard,
-} = useDashboardKey()
+  hasValidators,
+  key,
+  variant,
+} = useDashboard()
 
 const cursor = ref<Cursor>()
 const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
+const query = useDefaultQuery()
+query.value.sort = 'epoch:desc'
 const {
-  getRewards,
-  isLoading,
-  query: lastQuery,
-  rewards,
-} = useValidatorDashboardRewardsStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+  data: rewards,
+  status,
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/rewards`, {
+  immediate: key.value !== undefined,
+  query,
+})
+
 const { slotViz } = useValidatorSlotVizStore()
 
 const { groups } = useValidatorDashboardGroups()
-const validatorDashboardsOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators,
-  overview,
-} = storeToRefs(validatorDashboardsOverviewStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -51,57 +41,8 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'epoch:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getRewards(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
-}
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
-}
-
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
-}
-
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
 }
 
 const getRowClass = (row: VDBRewardsTableRow) => {
@@ -138,26 +79,31 @@ const findNextEpochDuties = (epoch: number) => {
 
   return list.join(', ')
 }
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
   <div>
-    <BcTableControl
-      :title="$t('dashboard.validator.rewards.title')"
-      :search-placeholder="
-        $t(
-          isGuestDashboard
-            ? 'dashboard.validator.rewards.search_placeholder_public'
-            : 'dashboard.validator.rewards.search_placeholder',
-        )
-      "
-      @set-search="setSearch"
-    >
-      <template #table>
-        <ClientOnly fallback-tag="span">
+    <ClientOnly>
+      <BcTableControl
+        v-model:search="query.search"
+        :title="$t('dashboard.validator.rewards.title')"
+        :search-placeholder="
+          $t(
+            variant === 'guest-dashboard'
+              ? 'dashboard.validator.rewards.search_placeholder_public'
+              : 'dashboard.validator.rewards.search_placeholder',
+          )
+        "
+      >
+        <template #table>
           <BcTable
-            :data="addIdentifier(rewards, 'epoch', 'group_id')"
+            :query
+            :data="addIdentifier(rewards ?? { data: [], paging: {} }, 'epoch', 'group_id')"
             data-key="identifier"
             :expandable="true"
             class="rewards-table"
@@ -166,11 +112,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             :row-class="getRowClass"
             :add-spacer="colsVisible.age"
             :is-row-expandable
-            :selected-sort="tempQuery?.sort"
-            :is-loading
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+            :is-loading="status === 'pending'"
           >
             <Column
               field="epoch"
@@ -181,7 +123,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             >
               <template #body="slotProps">
                 <BcLink
-                  :to="`/epoch/${slotProps.data.epoch}`"
+                  :to="`${v1Domain}/epoch/${slotProps.data.epoch}`"
                   class="link"
                   target="_blank"
                 >
@@ -369,23 +311,29 @@ const { getTimestampFromEpoch } = useNetworkStore()
               </template>
             </Column>
             <template #expansion="slotProps">
+              <!-- <pre>
+                {{ slotProps.data }}
+              </pre> -->
               <DashboardTableRewardsDetails
                 :row="slotProps.data"
                 :group-name="groupNameLabel(slotProps.data.group_id)"
               />
             </template>
             <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
+              <DashboardTableAddValidator
+                v-if="!hasValidators"
+                @add-validator="emit('add-validator')"
+              />
             </template>
           </BcTable>
-        </ClientOnly>
-      </template>
-      <template #chart>
-        <div class="chart-container">
-          <DashboardChartRewards />
-        </div>
-      </template>
-    </BcTableControl>
+        </template>
+        <template #chart>
+          <div class="chart-container">
+            <DashboardChartRewards />
+          </div>
+        </template>
+      </BcTableControl>
+    </ClientOnly>
   </div>
 </template>
 

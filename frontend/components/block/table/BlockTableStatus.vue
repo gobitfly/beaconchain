@@ -13,11 +13,8 @@ const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
 
-const store = useLatestStateStore()
-const { latestState } = storeToRefs(store)
-
 // we don't want to be reactive to the current_slot
-const currentSlot = latestState.value?.current_slot || 0
+const currentSlot = useCurrentSlot()
 
 const mapped = computed(() => {
   if (!props.status) {
@@ -28,7 +25,7 @@ const mapped = computed(() => {
   const status
     = props.status === 'scheduled'
       && props.blockSlot
-      && props.blockSlot < currentSlot
+      && props.blockSlot < currentSlot.value
       ? 'probably_missed'
       : props.status
   const tStatus = $t(`block.status.${status}`)

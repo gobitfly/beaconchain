@@ -123,7 +123,7 @@ const isDisabledSubmitButton = computed(() =>
   || quantity.value > maximumQuantity.value
   || quantity.value < 1,
 )
-
+const v1Domain = useV1Domain()
 const handleSubmitPurchase = async () => {
   if (isStripeDisabled.value) {
     return
@@ -143,9 +143,10 @@ const handleSubmitPurchase = async () => {
     }
   }
   else {
-    await navigateTo({
-      path: '/login', query: { promoCode },
-    })
+    await navigateTo(
+      `${v1Domain}/login?promoCode=${promoCode}`, {
+        external: true,
+      })
   }
 }
 </script>
@@ -261,7 +262,7 @@ const handleSubmitPurchase = async () => {
             v-if="isQuantityLimitReached"
             keypath="pricing.addons.contact_support.template"
             linkpath="pricing.addons.contact_support._link"
-            to="https://dsc.gg/beaconchain"
+            :to="LINK.discord"
           />
         </span>
 

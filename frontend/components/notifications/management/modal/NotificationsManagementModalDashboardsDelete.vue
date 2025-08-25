@@ -26,7 +26,6 @@ const emit = defineEmits<{
       | 'dashboard_id'
       | 'group_id'
       | 'is_account_dashboard'
-      | 'settings'
     >
   ): void,
 }>()
@@ -39,7 +38,6 @@ const handleDelete = () => {
       dashboard_id: props.value.dashboard_id,
       group_id: props.value.group_id,
       is_account_dashboard: props.value.is_account_dashboard,
-      settings: props.value.settings,
     })
   }
   close()

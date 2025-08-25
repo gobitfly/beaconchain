@@ -1,64 +1,50 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type {
-  GetValidatorDashboardConsensusLayerConsolidationsResponse,
-  VDBConsolidationsClTableRow,
-} from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
+import type { VDBConsolidationsClTableRow } from '~/types/api/validator_dashboard'
 import BcTableControl from '~/components/bc/table/BcTableControl.vue'
 
 const {
-  clConsolidations,
-} = defineProps<{
-  clConsolidations?: GetValidatorDashboardConsensusLayerConsolidationsResponse,
-  isLoading: boolean,
-}>()
+  hasValidators,
+  key,
+} = useDashboard()
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators,
-} = storeToRefs(validatorDashboardOverviewStore)
-
 const {
   getTimestampFromSlot,
-} = useNetworkStore()
+} = useNetwork()
 
-const query = defineModel<TableQueryParams>('query')
+const query = useDefaultQuery({
+  sort: 'timestamp:desc',
+})
 
-const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
-}
-const setCursor = (cursor: Cursor) => {
-  query.value = setQueryCursor(cursor, query.value)
-}
-const setPageSize = (limit: number) => {
-  query.value = setQueryPageSize(limit, query.value)
-}
-const setSearch = (value?: string) => {
-  query.value = {
-    ...query.value,
-    search: value,
-  }
-}
+const {
+  data: clConsolidations,
+  status,
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-consolidations`, {
+  immediate: key.value !== undefined,
+  query,
+})
+
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :title="$t('dashboard.validator.cl_consolidations.title')"
     :search-placeholder="$t('dashboard.validator.cl_consolidations.search_placeholder')"
-    @set-search="setSearch"
   >
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
           :data="clConsolidations"
+          :query
           expandable
           :row-class="(row: VDBConsolidationsClTableRow) =>
             row.status === 'queued' ? 'dashboard-table-cl-consolidations__row--grayed-out' : ''"
@@ -67,9 +53,7 @@ const setSearch = (value?: string) => {
           :cursor="query?.cursor"
           :page-size="query?.limit"
           table-class="dashboard-table-cl-consolidations"
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             sortable
@@ -99,7 +83,7 @@ const setSearch = (value?: string) => {
                 class="dashboard-table-cl-consolidations__desktop-icon"
               />
               <BcLink
-                :to="`/validator/${slotProps.data.source}`"
+                :to="`${v1Domain}/validator/${slotProps.data.source}`"
                 target="_blank"
                 class="link"
               >
@@ -119,7 +103,7 @@ const setSearch = (value?: string) => {
                 class="dashboard-table-cl-consolidations__desktop-icon"
               />
               <BcLink
-                :to="`/validator/${slotProps.data.target}`"
+                :to="`${v1Domain}/validator/${slotProps.data.target}`"
                 target="_blank"
                 class="link"
               >
@@ -169,7 +153,7 @@ const setSearch = (value?: string) => {
                   </div>
                   <BcLink
                     v-if="slotProps.data.slot_queued !== undefined"
-                    :to="`/slot/${slotProps.data.slot_queued}`"
+                    :to="`${v1Domain}/slot/${slotProps.data.slot_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -186,7 +170,7 @@ const setSearch = (value?: string) => {
                   <div class="dashboard-table-cl-consolidations__details-value">
                     <BcLink
                       v-if="slotProps.data.slot_processed !== undefined"
-                      :to="`/slot/${slotProps.data.slot_processed}`"
+                      :to="`${v1Domain}/slot/${slotProps.data.slot_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -225,7 +209,7 @@ const setSearch = (value?: string) => {
                       class="dashboard-table-cl-consolidations__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.source}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.source}`"
                       target="_blank"
                       class="link"
                     >
@@ -247,7 +231,7 @@ const setSearch = (value?: string) => {
                       class="dashboard-table-cl-consolidations__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.target}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.target}`"
                       target="_blank"
                       class="link"
                     >
@@ -273,7 +257,10 @@ const setSearch = (value?: string) => {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

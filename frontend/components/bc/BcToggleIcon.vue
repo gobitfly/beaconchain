@@ -1,17 +1,33 @@
-<script setup lang="ts">
-interface Props {
-  disabled?: boolean,
-}
+<script setup lang="ts" generic="T extends string, F extends string">
+const {
+  disabled,
+  falseValue,
+  trueValue,
+} = defineProps<
+  {
+    disabled?: boolean,
+  }
+  & ({
+    falseValue: F,
+    trueValue: T,
+  }
+  | {
+    falseValue?: never,
+    trueValue?: never,
+  })
+>()
 
-const props = defineProps<Props>()
-
-const selected = defineModel<boolean>({ required: true })
+const selected = defineModel<boolean | F | T>({ required: true })
 
 const toggle = () => {
-  if (props.disabled) {
+  if (disabled) {
     return
   }
   if (selected.value === undefined) {
+    return
+  }
+  if (trueValue && falseValue) {
+    selected.value = selected.value === trueValue ? falseValue : trueValue
     return
   }
   selected.value = !selected.value
@@ -21,7 +37,7 @@ const toggle = () => {
 <template>
   <div
     class="bc-toggle"
-    :class="{ selected }"
+    :class="{ selected: selected === trueValue || selected === true }"
     :disabled="disabled || null"
     @click="toggle"
   >

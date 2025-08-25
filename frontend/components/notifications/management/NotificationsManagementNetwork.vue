@@ -61,7 +61,7 @@ watchDebounced([
 { deep: true },
 )
 
-const { hasRocketPool } = useNetworkStore()
+const { hasRocketPool } = useNetwork()
 </script>
 
 <template>

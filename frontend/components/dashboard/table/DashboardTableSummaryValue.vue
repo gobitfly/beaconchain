@@ -6,7 +6,6 @@ import {
   SummaryDetailsEfficiencyProps,
   type SummaryDetailsEfficiencyValidatorProp,
   SummaryDetailsEfficiencyValidatorProps,
-  type SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
 import type {
@@ -18,17 +17,17 @@ import type { StatusCount } from '~/types/api/common'
 import { DashboardValidatorSubsetModal } from '#components'
 
 interface Props {
-  absolute?: boolean,
   data?: VDBGroupSummaryData,
   inDetailView?: boolean,
+  isAbsolute?: boolean,
   property: SummaryDetailsEfficiencyCombinedProp,
   row: VDBSummaryTableRow,
-  timeFrame: SummaryTimeFrame,
+  timeFrame: Query['period'],
 }
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
-const { dashboardKey } = useDashboardKey()
+const { key } = useDashboard()
 const dialog = useDialog()
 const { groups } = useValidatorDashboardGroups()
 
@@ -174,7 +173,7 @@ const openValidatorModal = () => {
   dialog.open(DashboardValidatorSubsetModal, {
     data: {
       context: data.value?.context,
-      dashboardKey: dashboardKey.value,
+      dashboardKey: key.value,
       groupId: props.row.group_id,
       groupName: groupName.value,
       summary: {
@@ -219,7 +218,7 @@ const openValidatorModal = () => {
     class="info_row"
   >
     <DashboardTableEfficiency
-      :absolute
+      :is-absolute
       :success="data.efficiency.status_count.success"
       :failed="data.efficiency.status_count.failed"
     >
@@ -231,14 +230,14 @@ const openValidatorModal = () => {
           <div class="row">
             <b>{{ $t("dashboard.validator.summary.row.sync_committee") }}: </b>
             <DashboardTableEfficiency
-              :absolute="true"
+              :is-absolute="true"
               :is-tooltip="true"
               :success="data.efficiency.status_count.success"
               :failed="data.efficiency.status_count.failed"
             />
             (
             <DashboardTableEfficiency
-              :absolute="false"
+              :is-absolute="false"
               :is-tooltip="true"
               :success="data.efficiency.status_count.success"
               :failed="data.efficiency.status_count.failed"
@@ -297,7 +296,7 @@ const openValidatorModal = () => {
     :validator-count="data?.validatorCount"
     :time-frame="props.timeFrame"
     :context="data.context"
-    :dashboard-key
+    :dashboard-key="key"
     :group-id="props.row.group_id"
     :data="props.data"
     :row="props.row"

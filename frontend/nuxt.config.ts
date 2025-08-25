@@ -37,6 +37,8 @@ export default defineNuxtConfig({
     '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
+    'nuxt-echarts',
+    'nuxt-qrcode',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
@@ -80,6 +82,7 @@ export default defineNuxtConfig({
   routeRules: { '/': { redirect: '/dashboard' } },
   devServer: {
     host: 'local.beaconcha.in',
+    // https://web.dev/articles/how-to-use-local-https
     https: {
       cert: 'local.beaconcha.in.pem',
       key: 'local.beaconcha.in-key.pem',
@@ -118,6 +121,15 @@ export default defineNuxtConfig({
     },
   },
   postcss: { plugins: { autoprefixer: {} } },
+  echarts: {
+    // charts: [ 'BarChart' ],
+    // components: [
+    //   'TooltipComponent',
+    //   'DataZoomComponent',
+    //   'GridComponent',
+    //   'LegendComponent',
+    // ],
+  },
   eslint: { config: { stylistic: true } },
   i18n: {
     // can probably be removed with @nuxtjs/i18n@10

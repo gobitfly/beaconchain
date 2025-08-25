@@ -8,24 +8,22 @@ const {
   props,
 } = useBcDialog<Pick<NotificationDashboardsTableRow, 'dashboard_id' | 'epoch' | 'group_id' | 'group_name'> & { identifier: string }>()
 
-const store = useNotificationsDashboardDetailsStore()
+const {
+  dashboard_id,
+  epoch,
+  group_id,
+} = props.value ?? {}
+const query = ref({ search: '' })
 
-const search = ref('')
 const {
   data: details,
   status,
-} = useAsyncData(
-  'notifications-dashboard-details',
-  () => store.getDetails({
-    dashboard_id: props.value?.dashboard_id ?? 0,
-    epoch: props.value?.epoch ?? 0,
-    group_id: props.value?.group_id ?? 0,
-    search: search.value.length ? search.value : undefined,
-  }).then(response => response.data),
-  {
-    watch: [ search ],
-  })
+} = useApi(`/api/bff/users/me/notifications/validator-dashboards/${dashboard_id}/groups/${group_id}/epochs/${epoch}`, {
+  query,
+})
+
 defineEmits<{ (e: 'filter-changed', value: string): void }>()
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -49,9 +47,9 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
           {{ props?.group_name }} ({{ details?.dashboard_name }})
         </h3>
         <BcContentFilter
+          v-model="query.search"
           :search-placeholder="$t('common.index')"
           :is-loading="status=== 'pending'"
-          @filter-changed="search = $event"
         />
       </div>
     </header>
@@ -74,7 +72,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: validatorIndex }">
           <BcLink
-            :to="`/validator/${validatorIndex}`"
+            :to="`${v1Domain}/validator/${validatorIndex}`"
             class="link"
           >
             {{ validatorIndex }}
@@ -98,7 +96,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         <template #item="{ item: proposal }">
           <BcLink
             class="link"
-            :to="`/validator/${proposal.index}`"
+            :to="`${v1Domain}/validator/${proposal.index}`"
           >
             {{ proposal.index }}
           </BcLink>
@@ -106,7 +104,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
             [<BcLink
               v-for="block in proposal.slots"
               :key="block"
-              :to="`/block/${block}`"
+              :to="`${v1Domain}/block/${block}`"
               class="notifications-dashboard-dialog-entity__list-item link"
             >
               {{ block }}
@@ -130,7 +128,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: proposalDone }">
           <BcLink
-            :to="`/validator/${proposalDone.index}`"
+            :to="`${v1Domain}/validator/${proposalDone.index}`"
             class="link"
           >
             {{ proposalDone.index }}
@@ -139,7 +137,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
             [<BcLink
               v-for="block in proposalDone.blocks"
               :key="block"
-              :to="`/block/${block}`"
+              :to="`${v1Domain}/block/${block}`"
               class="notifications-dashboard-dialog-entity__list-item link"
             >
               {{ block }}
@@ -163,7 +161,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: slashedValidatorIndex }">
           <BcLink
-            :to="`/validator/${slashedValidatorIndex}`"
+            :to="`${v1Domain}/validator/${slashedValidatorIndex}`"
             class="link"
           >
             {{ slashedValidatorIndex }}
@@ -186,7 +184,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: syncCommitteIndex }">
           <BcLink
-            :to="`/validator/${syncCommitteIndex}`"
+            :to="`${v1Domain}/validator/${syncCommitteIndex}`"
             class="link"
           >
             {{ syncCommitteIndex }}
@@ -209,13 +207,13 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: attestation }">
           <BcLink
-            :to="`/validator/${attestation.index}`"
+            :to="`${v1Domain}/validator/${attestation.index}`"
             class="link"
           >
             {{ attestation.index }}
           </BcLink>
           (<BcLink
-            :to="`/epoch/${attestation.epoch}`"
+            :to="`${v1Domain}/epoch/${attestation.epoch}`"
             class="link"
           >
             {{ $t('common.epoch') }}
@@ -239,7 +237,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: withdrawalItem }">
           <BcLink
-            :to="`/validator/${withdrawalItem.index}`"
+            :to="`${v1Domain}/validator/${withdrawalItem.index}`"
             class="link"
           >
             {{ withdrawalItem.index }}
@@ -268,7 +266,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: validator }">
           <BcLink
-            :to="`/validator/{{ validator.index }}`"
+            :to="`${v1Domain}/validator/{{ validator.index }}`"
             class="link"
           >
             {{ validator.index }}
@@ -319,7 +317,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         </template>
         <template #item="{ item: validatorOfflineReminderIndex }">
           <BcLink
-            :to="`/validator/${validatorOfflineReminderIndex}`"
+            :to="`${v1Domain}/validator/${validatorOfflineReminderIndex}`"
             class="link"
           >
             {{ validatorOfflineReminderIndex }}
@@ -343,7 +341,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
         <template #item="{ item: upcomingProposal }">
           <BcLink
             class="link"
-            :to="`/validator/${upcomingProposal.index}`"
+            :to="`${v1Domain}/validator/${upcomingProposal.index}`"
           >
             {{ upcomingProposal.index }}
           </BcLink>
@@ -351,7 +349,7 @@ defineEmits<{ (e: 'filter-changed', value: string): void }>()
             [<BcLink
               v-for="block in upcomingProposal.slots"
               :key="block"
-              :to="`/block/${block}`"
+              :to="`${v1Domain}/block/${block}`"
               class="notifications-dashboard-dialog-entity__list-item link"
             >
               {{ block }}

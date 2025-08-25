@@ -1,82 +1,51 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type {
-  GetValidatorDashboardConsensusLayerDepositsResponse,
-  GetValidatorDashboardTotalConsensusDepositsResponse,
-  VDBConsensusDepositsTableRow,
-} from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
-import { useValidatorDashboardOverviewStore } from '~/stores/dashboard/useValidatorDashboardOverviewStore'
-import { useNetworkStore } from '~/stores/useNetworkStore'
+import type { VDBConsensusDepositsTableRow } from '~/types/api/validator_dashboard'
 
 const {
-  clDeposits,
-  clDepositsTotalAmount,
-} = defineProps<{
-  clDeposits?: GetValidatorDashboardConsensusLayerDepositsResponse,
-  clDepositsTotalAmount?: GetValidatorDashboardTotalConsensusDepositsResponse,
-  isLoading: boolean,
-}>()
-
-const {
-  isGuestDashboard,
-} = useDashboardKey()
+  hasValidators,
+  key,
+  variant,
+} = useDashboard()
 
 const { t: $t } = useTranslation()
 
 const {
   getTimestampFromSlot,
-} = useNetworkStore()
-
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators,
-} = storeToRefs(validatorDashboardOverviewStore)
+} = useNetwork()
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
 
-const clDepositsWithIdentifiers = computed(() =>
-  addIdentifier(clDeposits, 'slot', 'slot_index'),
-)
+const query = useDefaultQuery({
+  sort: 'timestamp:desc',
+})
+
+const {
+  data: clDeposits,
+  status,
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-deposits`, {
+  immediate: key.value !== undefined,
+  query,
+})
+
 const tableData = computed(() => {
-  if (!clDepositsWithIdentifiers.value?.data?.length) {
-    return
+  if (!clDeposits.value?.data?.length) {
+    return null
   }
 
   return {
     data: [
       {
-        amount: clDepositsTotalAmount?.data.total_amount,
+        amount: clDeposits.value.total_amount,
         isTotalAmountRow: true,
       },
-      ...clDepositsWithIdentifiers.value.data,
+      ...clDeposits.value.data,
     ],
-    paging: clDepositsWithIdentifiers.value.paging,
+    paging: clDeposits.value.paging,
   }
 })
-
-const query = defineModel<TableQueryParams>('query')
-
-const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
-}
-const setCursor = (cursor: Cursor) => {
-  query.value = setQueryCursor(cursor, query.value)
-}
-const setPageSize = (limit: number) => {
-  query.value = setQueryPageSize(limit, query.value)
-}
-const setSearch = (value?: string) => {
-  query.value = {
-    ...query.value,
-    search: value,
-  }
-}
 
 const getRowClass = (row: VDBConsensusDepositsTableRow) => {
   if (row.index === undefined) {
@@ -96,24 +65,29 @@ const {
   displayCurrencyDefault,
   selectedCurrencyMain,
 } = useCurrency()
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :title="$t('dashboard.validator.cl_deposits.title')"
     :search-placeholder="
       $t(
-        isGuestDashboard
+        variant === 'guest-dashboard'
           ? 'dashboard.validator.cl_deposits.search_placeholder_guest_dashboard'
           : 'dashboard.validator.cl_deposits.search_placeholder_private_dashboard',
       )
     "
-    @set-search="setSearch"
   >
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
           :data="tableData"
+          :query
           data-key="identifier"
           expandable
           table-class="dashboard-table-cl-deposits"
@@ -122,10 +96,7 @@ const {
           :page-size="query?.limit"
           :row-class="getRowClass"
           :is-row-expandable="(row: VDBConsensusDepositsTableRow) => row.index !== undefined"
-          :is-loading
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             field="timestamp"
@@ -157,7 +128,7 @@ const {
               />
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/validator/${slotProps.data.index}`"
+                :to="`${v1Domain}/validator/${slotProps.data.index}`"
                 target="_blank"
                 class="link"
               >
@@ -270,7 +241,7 @@ const {
                       class="dashboard-table-cl-deposits__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.index}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.index}`"
                       target="_blank"
                       class="link"
                     >
@@ -295,7 +266,7 @@ const {
                   </div>
                   <BcLink
                     v-if="slotProps.data.slot_queued !== undefined"
-                    :to="`/slot/${slotProps.data.slot_queued}`"
+                    :to="`${v1Domain}/slot/${slotProps.data.slot_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -310,7 +281,7 @@ const {
                   <div class="dashboard-table-cl-deposits__details-value">
                     <BcLink
                       v-if="slotProps.data.slot_processed !== undefined"
-                      :to="`/slot/${slotProps.data.slot_processed}`"
+                      :to="`${v1Domain}/slot/${slotProps.data.slot_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -406,7 +377,10 @@ const {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

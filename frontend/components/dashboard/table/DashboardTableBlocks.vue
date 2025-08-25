@@ -1,40 +1,28 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
 import type { VDBBlocksTableRow } from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
-import { useValidatorDashboardBlocksStore } from '~/stores/dashboard/useValidatorDashboardBlocksStore'
 import { BcFormatHash } from '#components'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
 const {
-  dashboardKey,
-  isGuestDashboard,
-} = useDashboardKey()
+  hasValidators,
+  key,
+  variant,
+} = useDashboard()
 
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(10)
 const { t: $t } = useTranslation()
 
+const query = useDefaultQuery({
+  sort: 'slot:desc',
+})
 const {
-  blocks,
-  getBlocks,
-  isLoading,
-  query: lastQuery,
-} = useValidatorDashboardBlocksStore()
-const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<TableQueryParams | undefined>(undefined, 500)
+  data: blocks,
+  status,
+} = useApi(() => `/api/bff/validator-dashboards/${key.value}/blocks`, {
+  immediate: key.value !== undefined,
+  query,
+})
 
 const { groups } = useValidatorDashboardGroups()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators,
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
 
 const { width } = useWindowSize()
 const colsVisible = computed(() => {
@@ -51,57 +39,8 @@ const colsVisible = computed(() => {
   }
 })
 
-const loadData = (query?: TableQueryParams) => {
-  if (!query) {
-    query = {
-      limit: pageSize.value,
-      sort: 'slot:desc',
-    }
-  }
-  setQuery(query, true, true)
-}
-
-watch(
-  [
-    dashboardKey,
-    overview,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
-
-watch(
-  query,
-  (q) => {
-    if (q) {
-      getBlocks(dashboardKey.value, q)
-    }
-  },
-  { immediate: true },
-)
-
 const groupNameLabel = (groupId?: number) => {
   return getGroupLabel($t, groupId, groups.value, 'Σ')
-}
-
-const onSort = (sort: DataTableSortEvent) => {
-  loadData(setQuerySort(sort, lastQuery.value))
-}
-
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  loadData(setQueryCursor(value, lastQuery.value))
-}
-
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  loadData(setQueryPageSize(value, lastQuery.value))
-}
-
-const setSearch = (value?: string) => {
-  loadData(setQuerySearch(value, lastQuery.value))
 }
 
 const getRowClass = (row: VDBBlocksTableRow) => {
@@ -114,39 +53,38 @@ const isRowExpandable = (row: VDBBlocksTableRow) => {
   return row.status !== 'scheduled'
 }
 
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
   <div>
     <BcTableControl
+      v-model:search="query.search"
       :title="$t('dashboard.validator.blocks.title')"
       :search-placeholder="
         $t(
-          isGuestDashboard
+          variant === 'guest-dashboard'
             ? 'dashboard.validator.blocks.search_placeholder_public'
             : 'dashboard.validator.blocks.search_placeholder',
         )
       "
-      @set-search="setSearch"
     >
       <template #table>
         <ClientOnly fallback-tag="span">
           <BcTable
+            :query
             :data="blocks"
             data-key="slot"
             :expandable="!colsVisible.graffiti"
             class="block-table"
-            :cursor
-            :page-size
             :row-class="getRowClass"
             :add-spacer="true"
             :is-row-expandable
-            :selected-sort="tempQuery?.sort"
-            :is-loading
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+            :is-loading="status === 'pending'"
           >
             <Column
               field="proposer"
@@ -157,7 +95,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             >
               <template #body="slotProps">
                 <BcLink
-                  :to="`/validator/${slotProps.data.proposer}`"
+                  :to="`${v1Domain}/validator/${slotProps.data.proposer}`"
                   target="_blank"
                   class="link"
                 >
@@ -184,7 +122,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             >
               <template #body="slotProps">
                 <BcLink
-                  :to="`/epoch/${slotProps.data.epoch}`"
+                  :to="`${v1Domain}/epoch/${slotProps.data.epoch}`"
                   target="_blank"
                   class="link"
                 >
@@ -203,7 +141,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             >
               <template #body="slotProps">
                 <BcLink
-                  :to="`/slot/${slotProps.data.slot}`"
+                  :to="`${v1Domain}/slot/${slotProps.data.slot}`"
                   target="_blank"
                   class="link"
                 >
@@ -222,7 +160,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
               <template #body="slotProps">
                 <BcLink
                   v-if="slotProps.data.block || slotProps.data.slot === 0"
-                  :to="`/block/${slotProps.data.block}`"
+                  :to="`${v1Domain}/block/${slotProps.data.block}`"
                   target="_blank"
                   class="link"
                 >
@@ -316,7 +254,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
                     {{ $t("common.epoch") }}:
                   </div>
                   <BcLink
-                    :to="`/epoch/${slotProps.data.epoch}`"
+                    :to="`${v1Domain}/epoch/${slotProps.data.epoch}`"
                     target="_blank"
                     class="link"
                   >
@@ -331,7 +269,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
                     {{ $t("common.slot") }}:
                   </div>
                   <BcLink
-                    :to="`/slot/${slotProps.data.slot}`"
+                    :to="`${v1Domain}/slot/${slotProps.data.slot}`"
                     target="_blank"
                     class="link"
                   >
@@ -393,7 +331,10 @@ const { getTimestampFromEpoch } = useNetworkStore()
               </div>
             </template>
             <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
+              <DashboardTableAddValidator
+                v-if="!hasValidators"
+                @add-validator="emit('add-validator')"
+              />
             </template>
           </BcTable>
         </ClientOnly>

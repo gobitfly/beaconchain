@@ -5,35 +5,24 @@ const { locale } = useTranslation()
 useHead(
   {
     htmlAttrs: { lang: locale.value },
-    script: [ {
-      async: false,
-      key: 'revive',
-      src: '../js/revive.min.js',
+    link: [ {
+      href: '/assets-2usdf/favicon.ico',
+      rel: 'icon',
+      type: 'image/x-icon',
     } ],
   },
-  { mode: 'client' },
 )
-useWindowSizeProvider()
 useBcToastProvider()
-
-const { latestState } = storeToRefs(useLatestStateStore())
-const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])
-const exchangeRateLengthOnTestNetworks = 1
-if (exchangeRates.value.length === exchangeRateLengthOnTestNetworks) {
-  const { selectedCurrencyMain } = useCurrency()
-  selectedCurrencyMain.value = exchangeRates.value[0].code as CurrencyCode
-}
 </script>
 
 <template>
-  <div class="min-h-full">
-    <BcDataWrapper>
-      <NuxtLoadingIndicator color="var(--primary-color)" />
-      <NuxtPage />
-      <DynamicDialog />
-      <Toast />
-    </BcDataWrapper>
-  </div>
+  <NuxtLoadingIndicator color="var(--primary-color)" />
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
+  <DynamicDialog />
+  <Toast />
+  <BcCookieModal />
 </template>
 
 <style lang="scss"></style>

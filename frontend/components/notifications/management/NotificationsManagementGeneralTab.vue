@@ -1,8 +1,5 @@
 <script lang="ts" setup>
-import { Target } from '~/types/links'
-
 const { t: $t } = useTranslation()
-const { fetch } = useCustomFetch()
 const toast = useBcToast()
 
 const store = useNotificationsManagementStore()
@@ -55,13 +52,20 @@ const muteNotifications = (seconds: number) => {
     .do_not_disturb_timestamp = getFutureTimestampInSeconds({ seconds })
 }
 
+const { $api } = useNuxtApp()
+
 const sendTestNotification = async (type: 'email' | 'push') => {
   try {
-    await fetch(
-      type === 'email'
-        ? 'NOTIFICATIONS_TEST_EMAIL'
-        : 'NOTIFICATIONS_TEST_PUSH',
-    )
+    if (type === 'email') {
+      await $api('/api/bff/users/me/notifications/test-email', {
+        method: 'POST',
+      })
+    }
+    else {
+      await $api('/api/bff/users/me/notifications/test-push', {
+        method: 'POST',
+      })
+    }
   }
   catch {
     toast.showError({
@@ -118,6 +122,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
 }, {
   deep: true,
 })
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -212,8 +217,8 @@ watchDebounced(() => store.settings.general_settings, async () => {
       <div v-else>
         {{ tOf($t, "notifications.general.download_app", 0) }}
         <BcLink
-          to="/mobile"
-          :target="Target.External"
+          :to="`${v1Domain}/mobile`"
+          target="_blank"
           class="link"
         >
           {{ tOf($t, "notifications.general.download_app", 1) }}

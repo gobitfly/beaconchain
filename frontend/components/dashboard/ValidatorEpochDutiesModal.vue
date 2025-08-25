@@ -1,108 +1,106 @@
 <script lang="ts" setup>
-import type { DataTableSortEvent } from 'primevue/datatable'
 import type { DashboardKey } from '~/types/dashboard'
-import type { Cursor } from '~/types/datatable'
-import type { GetValidatorDashboardDutiesResponse } from '~/types/api/validator_dashboard'
 import type { ValidatorHistoryDuties } from '~/types/api/common'
-import type { PathValues } from '~/types/customFetch'
 
 const { t: $t } = useTranslation()
-const { fetch } = useCustomFetch()
 
 const { width } = useWindowSize()
 const size = computed(() => {
   return { expandable: width.value <= 1000 }
 })
 
-interface Props {
-  // we need to pass the key as prop as the dialog is not a child component and cannot access the provider
+const {
+  props,
+  setHeader,
+} = useBcDialog<{
   dashboardKey: DashboardKey,
   epoch: number,
   groupId: number,
   groupName?: string,
-}
-
-const {
-  props,
-  setHeader,
-} = useBcDialog<Props>({
+}>({
   contentClass: 'epoch-duties-modal',
   showHeader: size.value.expandable,
 })
 
-const isLoading = ref(false)
-const cursor = ref<Cursor>()
-const pageSize = ref<number>(25)
-
+// const {
+//   bounce: setQuery,
+//   temp: tempQuery,
+//   value: query,
+// } = useDebounceValue<PathValues | undefined>(
+//   {
+//     limit: pageSize.value,
+//     sort: 'validator:asc',
+//   },
+//   500,
+// )
+const query = useDefaultQuery({
+  group_id: props.value?.groupId,
+  sort: 'validator:asc',
+})
 const {
-  bounce: setQuery,
-  temp: tempQuery,
-  value: query,
-} = useDebounceValue<PathValues | undefined>(
-  {
-    limit: pageSize.value,
-    sort: 'validator:asc',
-  },
-  500,
-)
+  data,
+  status,
+} = useApi(`/api/bff/validator-dashboards/${props.value?.dashboardKey}/duties/${props.value?.epoch}`, {
+  query,
+})
 
-const data = ref<GetValidatorDashboardDutiesResponse | undefined>()
+// const data = ref<GetValidatorDashboardDutiesResponse | undefined>()
 
-const onSort = (sort: DataTableSortEvent) => {
-  setQuery(setQuerySort(sort, query?.value))
-}
+// const onSort = (sort: DataTableSortEvent) => {
+//   setQuery(setQuerySort(sort, query?.value))
+// }
 
-const setCursor = (value: Cursor) => {
-  cursor.value = value
-  setQuery(setQueryCursor(value, query?.value))
-}
+// const setCursor = (value: Cursor) => {
+//   cursor.value = value
+//   setQuery(setQueryCursor(value, query?.value))
+// }
 
-const setPageSize = (value: number) => {
-  pageSize.value = value
-  setQuery(setQueryPageSize(value, query?.value))
-}
+// const setPageSize = (value: number) => {
+//   pageSize.value = value
+//   setQuery(setQueryPageSize(value, query?.value))
+// }
 
-const setSearch = (value?: string) => {
-  setQuery(setQuerySearch(value, query?.value))
-}
+// const setSearch = (value?: string) => {
+//   setQuery(setQuerySearch(value, query?.value))
+// }
 
-const loadData = async () => {
-  if (props.value?.dashboardKey) {
-    isLoading.value = !data.value
-    const testQ = JSON.stringify(query.value)
-    const result = await fetch<GetValidatorDashboardDutiesResponse>(
-      'DASHBOARD_VALIDATOR_EPOCH_DUTY',
-      {
-        query: {
-          ...query.value,
-          group_id: props.value.groupId,
-        },
-      },
-      {
-        dashboardKey: props.value.dashboardKey,
-        epoch: props.value.epoch,
-      },
-      query.value,
-    )
+// const loadData = async () => {
+//   if (props.value?.dashboardKey) {
+//     isLoading.value = !data.value
+//     const testQ = JSON.stringify(query.value)
+//     const result = await fetch<GetValidatorDashboardDutiesResponse>(
+//       'DASHBOARD_VALIDATOR_EPOCH_DUTY',
+//       {
+//         query: {
+//           ...query.value,
+//           group_id: props.value.groupId,
+//         },
+//       },
+//       {
+//         dashboardKey: props.value.dashboardKey,
+//         epoch: props.value.epoch,
+//       },
+//       query.value,
+//     )
 
-    // Make sure that during loading the query did not change
-    if (testQ === JSON.stringify(query.value)) {
-      data.value = result
-    }
-    isLoading.value = false
-  }
-}
+//     // Make sure that during loading the query did not change
+//     if (testQ === JSON.stringify(query.value)) {
+//       data.value = result
+//     }
+//     isLoading.value = false
+//   }
+// }
 
-watch(
-  () => [
-    props.value,
-    query.value,
-  ],
-  () => {
-    loadData()
-  },
-  { immediate: true },
-)
+// watch(
+//   () => [
+//     props.value,
+//     query.value,
+//   ],
+//   () => {
+//     loadData()
+//   },
+//   { immediate: true },
+// )
 
 const mapDuties = (duties: ValidatorHistoryDuties) => {
   const list = []
@@ -147,13 +145,14 @@ watch(
   { immediate: true },
 )
 
-const { getTimestampFromEpoch } = useNetworkStore()
+const { getTimestampFromEpoch } = useNetwork()
+const v1Domain = useV1Domain()
 </script>
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :search-placeholder="$t('dashboard.validator.duties.search_placeholder')"
-    @set-search="setSearch"
   >
     <template
       v-if="size.expandable"
@@ -179,17 +178,12 @@ const { getTimestampFromEpoch } = useNetworkStore()
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
+          :query
           :data
           data-key="validator"
           :expandable="size.expandable"
           class="duties-table"
-          :cursor
-          :is-loading
-          :page-size
-          :selected-sort="tempQuery?.sort as string"
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             field="validator"
@@ -198,7 +192,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
           >
             <template #body="slotProps">
               <BcLink
-                :to="`/validator/${slotProps.data.validator}`"
+                :to="`${v1Domain}/validator/${slotProps.data.validator}`"
                 target="_blank"
                 class="link validator_link"
               >

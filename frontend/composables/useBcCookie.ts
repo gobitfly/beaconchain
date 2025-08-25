@@ -3,10 +3,12 @@ import {
   useCookie,
 } from '#app/composables/cookie'
 
-type CookieName =
-  | 'bc-account-dashboard-key'
-  | 'bc-age-format'
+type CookieName
+= | 'bc-age-format'
   | 'bc-cookies-preference'
+  | 'bc-slotviz-categories'
+  | 'bc-summary-tab-view'
+  | 'bc-summary-table-number-format'
   | 'bc-user-dashboards'
   | 'bc-validator-dashboard-key'
 
@@ -21,7 +23,7 @@ type OptionsUseCookie<T> = CookieOptions<T> & {
  * This allows us to have autocompletion for the cookie names.
  *
  */
-export const useBcCookie = <T = string | undefined>(
+export const useBcCookie = <T>(
   name: CookieName,
   options?: OptionsUseCookie<T>,
 ) => {

@@ -1,99 +1,75 @@
 <script setup lang="ts">
-import type { DataTableSortEvent } from 'primevue/datatable'
-import type {
-  GetValidatorDashboardConsensusLayerWithdrawalsResponse,
-  GetValidatorDashboardTotalConsensusWithdrawalsResponse,
-  VDBWithdrawalsClTableRow,
-} from '~/types/api/validator_dashboard'
-import type {
-  Cursor, TableQueryParams,
-} from '~/types/datatable'
+import type { VDBWithdrawalsClTableRow } from '~/types/api/validator_dashboard'
 
 const {
-  clWithdrawals,
-  clWithdrawalsTotalAmount,
-} = defineProps<{
-  clWithdrawals?: GetValidatorDashboardConsensusLayerWithdrawalsResponse,
-  clWithdrawalsTotalAmount?: GetValidatorDashboardTotalConsensusWithdrawalsResponse,
-  isLoading: boolean,
-}>()
-
-const {
-  isGuestDashboard,
-} = useDashboardKey()
+  hasValidators,
+  key,
+  variant,
+} = useDashboard()
 const { t: $t } = useTranslation()
-const { getTimestampFromSlot } = useNetworkStore()
+const { getTimestampFromSlot } = useNetwork()
 
 const { width } = useWindowSize()
 const isMobile = computed(() => {
   return width.value < 768
 })
 
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  hasValidators,
-} = storeToRefs(validatorDashboardOverviewStore)
+const query = useDefaultQuery({
+  sort: 'timestamp:desc',
+})
 
-const clWithdrawalsWithIdentifiers = computed(() =>
-  addIdentifier(clWithdrawals, 'slot', 'slot_index'),
-)
+const {
+  data: clWithdrawals,
+  status,
+} = useApi(`/api/bff/validator-dashboards/${key.value}/consensus-layer-withdrawals`, {
+  immediate: key.value !== undefined,
+  query,
+})
+
 const tableData = computed(() => {
-  if (!clWithdrawalsWithIdentifiers.value?.data?.length) {
-    return
+  if (!clWithdrawals.value?.data?.length) {
+    return null
   }
 
   return {
     data: [
       {
-        amount: clWithdrawalsTotalAmount?.data.total_amount,
+        amount: clWithdrawals.value.total_amount,
         isTotalAmountRow: true,
       },
-      ...clWithdrawalsWithIdentifiers.value.data,
+      ...clWithdrawals.value.data,
     ],
-    paging: clWithdrawalsWithIdentifiers.value.paging,
+    paging: clWithdrawals.value.paging,
   }
 })
-
-const query = defineModel<TableQueryParams>('query')
-
-const onSort = (sort: DataTableSortEvent) => {
-  query.value = setQuerySort(sort, query.value)
-}
-const setCursor = (cursor: Cursor) => {
-  query.value = setQueryCursor(cursor, query.value)
-}
-const setPageSize = (limit: number) => {
-  query.value = setQueryPageSize(limit, query.value)
-}
-const setSearch = (value?: string) => {
-  query.value = {
-    ...query.value,
-    search: value,
-  }
-}
 
 const { groups } = useValidatorDashboardGroups()
 const getGroupName = (groupId: number) => {
   return groups.value.find(group => group.id === groupId)?.name
 }
+const v1Domain = useV1Domain()
+const emit = defineEmits<{
+  (e: 'add-validator'): void,
+}>()
 </script>
 
 <template>
   <BcTableControl
+    v-model:search="query.search"
     :title="$t('dashboard.validator.cl_withdrawals.title')"
     :search-placeholder="
       $t(
-        isGuestDashboard
+        variant === 'guest-dashboard'
           ? 'dashboard.validator.cl_withdrawals.search_placeholder_guest_dashboard'
           : 'dashboard.validator.cl_withdrawals.search_placeholder_private_dashboard',
       )
     "
-    @set-search="setSearch"
   >
     <template #table>
       <ClientOnly fallback-tag="span">
         <BcTable
           :data="tableData"
+          :query
           expandable
           table-class="dashboard-table-cl-withdrawals"
           data-key="identifier"
@@ -102,9 +78,7 @@ const getGroupName = (groupId: number) => {
           :page-size="query?.limit"
           :row-class="(row: VDBWithdrawalsClTableRow) => row.status === 'queued' ? 'grayed-out-row' : ''"
           :is-row-expandable="(row: VDBWithdrawalsClTableRow) => row.index !== undefined"
-          @set-cursor="setCursor"
-          @sort="onSort"
-          @set-page-size="setPageSize"
+          :is-loading="status === 'pending'"
         >
           <Column
             sortable
@@ -137,7 +111,7 @@ const getGroupName = (groupId: number) => {
               />
               <BcLink
                 v-if="!slotProps.data.isTotalAmountRow"
-                :to="`/validator/${slotProps.data.index}`"
+                :to="`${v1Domain}/validator/${slotProps.data.index}`"
                 target="_blank"
                 class="link"
               >
@@ -247,7 +221,7 @@ const getGroupName = (groupId: number) => {
                       class="dashboard-table-cl-withdrawals__desktop-icon"
                     />
                     <BcLink
-                      :to="`/validator/${slotProps.data.index}`"
+                      :to="`${v1Domain}/validator/${slotProps.data.index}`"
                       target="_blank"
                       class="link"
                     >
@@ -322,7 +296,7 @@ const getGroupName = (groupId: number) => {
                   </div>
                   <BcLink
                     v-if="slotProps.data.slot_queued !== undefined"
-                    :to="`/slot/${slotProps.data.slot_queued}`"
+                    :to="`${v1Domain}/slot/${slotProps.data.slot_queued}`"
                     target="_blank"
                     class="link"
                   >
@@ -339,7 +313,7 @@ const getGroupName = (groupId: number) => {
                   <div class="dashboard-table-cl-withdrawals__details-value">
                     <BcLink
                       v-if="slotProps.data.slot_processed !== undefined"
-                      :to="`/slot/${slotProps.data.slot_processed}`"
+                      :to="`${v1Domain}/slot/${slotProps.data.slot_processed}`"
                       target="_blank"
                       class="link"
                     >
@@ -408,7 +382,10 @@ const getGroupName = (groupId: number) => {
             </div>
           </template>
           <template #empty>
-            <DashboardTableAddValidator v-if="!hasValidators" />
+            <DashboardTableAddValidator
+              v-if="!hasValidators"
+              @add-validator="emit('add-validator')"
+            />
           </template>
         </BcTable>
       </ClientOnly>

@@ -3,93 +3,33 @@ const { t: $t } = useTranslation()
 
 const emit = defineEmits<{ (e: 'openDialog'): void }>()
 
-const { isLoggedIn } = useUserStore()
-const { overview } = useNotificationsDashboardOverviewStore()
-
-const handleClick = () => {
-  if (!isLoggedIn.value) {
-    return navigateTo('/login')
-  }
-  if (!hasDashboards.value) {
-    return navigateTo('/dashboard')
-  }
-  emit('openDialog')
-}
-
-const userDashboardStore = useUserDashboardStore()
+const notificationsOverview = useNotificationsOverview()
 const {
-  refreshDashboards,
-} = userDashboardStore
+  validatorDashboards,
+} = usePrivateDashboards()
 
-const {
-  dashboards,
-} = storeToRefs(userDashboardStore)
-
-if (!dashboards.value) {
-  refreshDashboards()
-}
-const hasDashboards = computed(() => {
-  return (
-    dashboards.value?.account_dashboards?.length
-    || dashboards.value?.validator_dashboards?.length
-  )
-})
-const hasSubscriptions = computed(() => {
-  return (
-    overview.value?.vdb_subscriptions_count
-    || overview.value?.adb_subscriptions_count
-  )
-})
-
-const text = computed(() => {
-  if (!isLoggedIn.value) {
-    return $t('notifications.dashboards.empty.login')
-  }
-  if (!hasDashboards.value) {
-    return $t('notifications.dashboards.empty.no_dashboards')
-  }
-  if (!hasSubscriptions.value) {
-    return $t('notifications.dashboards.empty.no_subscriptions')
-  }
-  return $t('notifications.dashboards.empty.no_notifications')
-})
+const hasDashboards = computed(() =>
+  validatorDashboards.value.length,
+)
+const hasSubscriptions = computed(() =>
+  notificationsOverview.value?.vdb_subscriptions_count
+  || notificationsOverview.value?.adb_subscriptions_count,
+)
 </script>
 
 <template>
-  <div
-    class="empty delayed-fadein-animation"
-    @click="handleClick"
+  <BcTableEmpty
+    :role="hasDashboards ? 'link' : 'button'"
+    @click="hasDashboards ? navigateTo('/dashboard') : emit('openDialog')"
   >
-    <span class="big_text">
-      {{ text }}
-    </span>
-    <BcIcon
-      v-if="isLoggedIn"
-      name="circle-plus"
-    />
-    <BcIcon
-      v-else
-      name="right-from-bracket"
-    />
-  </div>
+    <span v-if="!hasDashboards">{{ $t('notifications.dashboards.empty.no_dashboards') }}</span>
+    <span v-else-if="!hasSubscriptions">{{ $t('notifications.dashboards.empty.no_subscriptions') }}</span>
+    <span v-else>{{ $t('notifications.dashboards.empty.no_notifications') }}</span>
+
+    <template #icon>
+      <BcIcon
+        name="circle-plus"
+      />
+    </template>
+  </BcTableEmpty>
 </template>
-
-<style lang="scss" scoped>
-.empty {
-  width: 100%;
-  height: 400px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: var(--text-color-disabled);
-  gap: var(--padding);
-  cursor: pointer;
-  text-align: center;
-
-  svg {
-    width: 30px;
-    height: 30px;
-  }
-}
-</style>

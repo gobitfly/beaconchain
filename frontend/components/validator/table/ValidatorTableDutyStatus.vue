@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { ValidatorHistoryDuties } from '~/types/api/common'
-import { useNetworkStore } from '~/stores/useNetworkStore'
 
 interface Props {
   compact?: boolean,
@@ -9,7 +8,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const { t: $t } = useTranslation()
-const { networkInfo } = useNetworkStore()
+const { networkInfo } = useNetwork()
 
 const mapped = computed(() => {
   const mapSuccess = (
@@ -168,23 +167,30 @@ const mapped = computed(() => {
 }
 .duty-status-container {
   background-color: var(--subcontainer-background);
+  padding: var(--padding-small);
   border-radius: var(--border-radius);
   display: inline-flex;
   flex-wrap: nowrap;
   color: var(--text-color-disabled);
-  height: 20px;
-
+  align-items: center;
+  gap: .125rem;
   .group {
     display: flex;
     flex-wrap: nowrap;
     border-radius: var(--border-radius);
     border: solid 1px transparent;
+    align-items: center;
+    gap: .125rem;
+    padding: var(--padding-small);
 
     svg {
       margin: 3px 4px;
       height: 12px;
       width: auto;
     }
+     .slot_container {
+      display: inline-flex;
+      }
 
     &.attestations {
       border-color: var(--text-color-disabled);

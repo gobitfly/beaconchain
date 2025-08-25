@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { BcButton } from '#components'
+
 interface Props {
   noLabel?: string, // defaults to "No"
   question?: string,
@@ -18,6 +20,19 @@ const yesLabel = computed(() => props.value?.yesLabel || $t('navigation.yes'))
 const closeDialog = (response: boolean) => {
   dialogRef?.value.close(response)
 }
+const buttonDismiss = templateRef<typeof BcButton>('buttonDismiss')
+const lastActiveElement = ref<Element | null>(null)
+onBeforeMount(() => {
+  lastActiveElement.value = document.activeElement
+})
+onMounted(() => {
+  buttonDismiss.value?.$el?.focus()
+})
+onUnmounted(() => {
+  if (lastActiveElement.value instanceof HTMLElement) {
+    lastActiveElement.value.focus()
+  }
+})
 </script>
 
 <template>
@@ -34,20 +49,17 @@ const closeDialog = (response: boolean) => {
     >
       {{ props?.question }}
     </div>
-    <div class="footer">
+    <div
+      class="footer"
+      @keydown.esc.stop="closeDialog(false)"
+    >
       <Button
-        v-if="props?.severity !== 'danger'"
+        ref="buttonDismiss"
+        :class="{ 'discreet-button': props?.severity === 'danger' }"
         type="button"
         :label="noLabel"
         @click="closeDialog(false)"
       />
-      <div
-        v-else
-        class="discreet-button"
-        @click="closeDialog(false)"
-      >
-        {{ noLabel }}
-      </div>
       <Button
         type="button"
         :severity="props?.severity === 'danger' ? `danger` : undefined"
@@ -90,6 +102,11 @@ const closeDialog = (response: boolean) => {
       cursor: pointer;
       color: var(--text-color-discreet);
       margin-right: var(--padding);
+      &,
+      &:hover {
+        background-color: transparent;
+        border-color: transparent;
+      }
     }
   }
 }

@@ -4,39 +4,26 @@ import type {
   SummaryDetailsEfficiencyCombinedProp,
   SummaryRow,
   SummaryTableVisibility,
-  SummaryTimeFrame,
 } from '~/types/dashboard/summary'
 
-interface Props {
-  absolute: boolean,
+const props = defineProps<{
+  isAbsolute: boolean,
   row: VDBSummaryTableRow,
   tableVisibility: SummaryTableVisibility,
-  timeFrame: SummaryTimeFrame,
-}
-const props = defineProps<Props>()
+  timeFrame: Query['period'],
+}>()
 
-const { dashboardKey } = useDashboardKey()
+const { key } = useDashboard()
 
 const { t: $t } = useTranslation()
-const {
-  details: summary,
-  getDetails,
-}
-  = useValidatorDashboardSummaryDetailsStore(
-    dashboardKey.value,
-    props.row.group_id,
-  )
 
-watch(
-  () => props.timeFrame,
-  () => {
-    getDetails(props.timeFrame)
+const {
+  data: summary,
+} = useApi(`/api/bff/validator-dashboards/${key.value}/groups/${props.row.group_id}/summary`, {
+  query: {
+    period: props.timeFrame,
   },
-  {
-    deep: true,
-    immediate: true,
-  },
-)
+})
 
 type CombinedPropOrUndefined = SummaryDetailsEfficiencyCombinedProp | undefined
 
@@ -132,7 +119,6 @@ const rowClass = (data: SummaryRow) => {
 
 <template>
   <div
-    v-if="summary"
     class="details-container"
   >
     <div
@@ -150,10 +136,10 @@ const rowClass = (data: SummaryRow) => {
           {{ summaryRow.title }}
         </div>
         <DashboardTableSummaryValue
-          v-if="summaryRow.property"
+          v-if="summaryRow.property && summary"
           class="value"
           :data="summary"
-          :absolute
+          :is-absolute
           :property="summaryRow.property"
           :time-frame
           :row="props.row"
@@ -161,13 +147,6 @@ const rowClass = (data: SummaryRow) => {
         />
       </div>
     </div>
-  </div>
-  <div v-else>
-    <BcLoadingSpinner
-      class="spinner"
-      :loading="true"
-      alignment="center"
-    />
   </div>
 </template>
 

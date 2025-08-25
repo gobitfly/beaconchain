@@ -17,6 +17,7 @@ interface Props {
 }
 const props = defineProps<Props>()
 
+const v1Domain = useV1Domain()
 const data = computed(() => {
   if (!props.hash || props.hash === '0x') {
     return
@@ -61,7 +62,7 @@ const data = computed(() => {
       ])
     }
     if (isSet && !props.noLink) {
-      link = `/address/0x${props.hash.substring(26)}`
+      link = `${v1Domain}/address/0x${props.hash.substring(26)}`
     }
   }
   else {
@@ -88,19 +89,19 @@ const data = computed(() => {
   if (!props.noLink) {
     switch (props.type) {
       case 'address':
-        link = `/address/${props.hash}`
+        link = `${v1Domain}/address/${props.hash}`
         break
       case 'block_hash':
-        link = `/block/${props.hash}`
+        link = `${v1Domain}/block/${props.hash}`
         break
       case 'public_key':
-        link = `/validator/${props.hash}`
+        link = `${v1Domain}/validator/${props.hash}`
         break
       case 'root':
-        link = `/slot/${props.hash}`
+        link = `${v1Domain}/slot/${props.hash}`
         break
       case 'tx':
-        link = `/tx/${props.hash}`
+        link = `${v1Domain}/tx/${props.hash}`
         break
     }
   }

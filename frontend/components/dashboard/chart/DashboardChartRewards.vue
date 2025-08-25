@@ -36,7 +36,7 @@ import { DashboardChartRewardsTooltip } from '#components'
 
 const {
   getTimestampFromEpoch,
-} = useNetworkStore()
+} = useNetwork()
 
 use([
   GridComponent,
@@ -52,29 +52,29 @@ use([
 const { fetch } = useCustomFetch()
 
 const {
-  dashboardKey,
-} = useDashboardKey()
+  key,
+} = useDashboard()
 
 const data = ref<ChartData<number, string> | undefined>()
 
 const { status } = useAsyncData(
   'validator_dashboard_rewards_chart',
   async () => {
-    if (dashboardKey.value === undefined) {
+    if (key.value === undefined) {
       data.value = undefined
       return
     }
     const res = await fetch<GetValidatorDashboardRewardsChartResponse>(
       'DASHBOARD_VALIDATOR_REWARDS_CHART',
       undefined,
-      { dashboardKey: dashboardKey.value },
+      { dashboardKey: key.value },
     )
     data.value = res.data
   },
   {
     immediate: true,
     server: false,
-    watch: [ dashboardKey ],
+    watch: [ key ],
   },
 )
 

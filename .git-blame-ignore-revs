@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# style(eslint): apply new `eslint stylistic` rules
+008c970f3d658d0979d8b3ed8fbdea24ab70a3c7
 # chore(eslint): add rule to enforce indentation of 4 spaces for json
 898005c54ea6824a895917b4d3c2b52a2a4f72f9
 # chore(eslint): apply `sort-modules` rule

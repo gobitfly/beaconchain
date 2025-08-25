@@ -1,42 +1,44 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core'
+// import { useStorage } from '@vueuse/core'
 import type { MultiBarItem } from '~/types/multiBar'
 import type { SlotVizCategories } from '~/types/dashboard/slotViz'
 
-type SlotVizCategoriesStorage = {
-  [dashboardId: string]: SlotVizCategories[],
-}
+// type SlotVizCategoriesStorage = {
+//   [dashboardId: string]: SlotVizCategories[],
+// }
 
 const { t: $t } = useTranslation()
-const {
-  dashboardKey,
-  isSharedDashboard,
-} = useDashboardKey()
-const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
-const {
-  isLargeDashboard,
-  overview,
-} = storeToRefs(validatorDashboardOverviewStore)
+// const {
+// key,
+// totalValidators,
+// variant,
+// isLargeDashboard,
+// } = useDashboard()
+// const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
+// const {
+//   isLargeDashboard,
+//   overview,
+// } = storeToRefs(validatorDashboardOverviewStore)
 
-const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-dashboard-slot-viz-visibile-categories', {})
+// const persistedSelectedCategories = useStorage<SlotVizCategoriesStorage>('bc-dashboard-slot-viz-visibile-categories', {})
 
-const emit = defineEmits<{ (e: 'updateCategories', value: SlotVizCategories[]): void }>()
+// const emit = defineEmits<{ (e: 'updateCategories', value: SlotVizCategories[]): void }>()
 
-const storageDashboardKey = computed(() => {
-  return dashboardKey.value || 'guest-dashboard'
-})
-const selectedCategories = computed(() => {
-  const categories: SlotVizCategories[] = [
-    'attestation',
-    'proposal',
-    'slashing',
-    'sync',
-  ]
+// const storageDashboardKey = computed(() => {
+//   return key.value || 'guest-dashboard'
+// })
+// const selectedCategories = computed(() => {
+//   const categories: SlotVizCategories[] = [
+//     'attestation',
+//     'proposal',
+//     'slashing',
+//     'sync',
+//   ]
 
-  if (!isSharedDashboard.value || !isLargeDashboard.value) categories.push('visible')
+//   if ((variant.value !== 'shared-dashboard') || !isLargeDashboard.value) categories.push('visible')
 
-  return categories
-})
+//   return categories
+// })
 const icons: MultiBarItem[] = [
   {
     icon: 'cube',
@@ -66,41 +68,44 @@ const icons: MultiBarItem[] = [
   },
 ]
 
-onMounted(() => {
-  if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
-    persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
-  }
-})
+// onMounted(() => {
+//   if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
+//     persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
+//   }
+// })
 
-watch(() => overview.value, () => {
-  if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
-    persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
-  }
+// watch(() => overview.value, () => {
+//   if (!persistedSelectedCategories.value[storageDashboardKey.value]) {
+//     persistedSelectedCategories.value[storageDashboardKey.value] = selectedCategories.value
+//   }
+// })
+// watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
+//   () => {
+//     if (persistedSelectedCategories.value[storageDashboardKey.value]) {
+//       emit('updateCategories', persistedSelectedCategories.value[storageDashboardKey.value])
+//     }
+//   },
+//   { immediate: true },
+// )
+
+const modelValue = defineModel<SlotVizCategories[]>({
+  required: true,
 })
-watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
-  () => {
-    if (persistedSelectedCategories.value[storageDashboardKey.value]) {
-      emit('updateCategories', persistedSelectedCategories.value[storageDashboardKey.value])
-    }
-  },
-  { immediate: true },
-)
 </script>
 
 <template>
   <div>
-    <div
-      v-if="!persistedSelectedCategories[storageDashboardKey]"
+    <!-- <div
       class="dashboard-slot-viz-duty-toggle-loading-skeleton"
     >
       <div class="dashboard-slot-viz-duty-toggle-loading-skeleton-content" />
-    </div>
-    <ClientOnly v-else>
-      <BcToggleMultiBar
-        v-model="persistedSelectedCategories[storageDashboardKey]"
-        :buttons="icons"
-      />
-    </ClientOnly>
+    </div> -->
+    <!-- <ClientOnly v-else> -->
+    <BcToggleMultiBar
+      v-model="modelValue"
+      :buttons="icons"
+    />
+    <!-- </ClientOnly> -->
   </div>
 </template>
 

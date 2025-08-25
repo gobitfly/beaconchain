@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type { DashboardType } from '~/types/dashboard'
-
 import type { ValidatorDashboard } from '~/types/api/dashboard'
 
 const { t: $t } = useTranslation()
@@ -11,7 +9,6 @@ const isLoading = ref(false)
 
 interface Props {
   dashboard: ValidatorDashboard,
-  dashboardType: DashboardType,
 }
 const {
   dialogRef,
@@ -44,10 +41,7 @@ const rename = async () => {
   }
 
   isLoading.value = true
-  const path
-    = props.value?.dashboardType === 'validator'
-      ? 'DASHBOARD_RENAME_VALIDATOR'
-      : 'DASHBOARD_RENAME_ACCOUNT'
+  const path = 'DASHBOARD_RENAME_VALIDATOR'
   await fetch(
     path,
     { body: { name: name.value } },

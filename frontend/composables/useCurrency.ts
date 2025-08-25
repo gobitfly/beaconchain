@@ -3,15 +3,14 @@ export const useCurrency = () => {
     clCurrency,
     displayCurrencyDefault,
     elCurrency,
-  } = useNetworkStore()
+  } = useNetwork()
 
   const settingsStore = useSettingsStore()
   const {
     selectedCurrencyMain,
   } = storeToRefs(settingsStore)
 
-  const { latestState } = storeToRefs(useLatestStateStore())
-  const exchangeRates = computed(() => latestState.value?.exchange_rates ?? [])
+  const exchangeRates = useExchangeRates()
 
   const convertCurrency = ({
     sourceCurrency,

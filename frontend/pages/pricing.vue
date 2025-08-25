@@ -30,11 +30,19 @@ const scrollToAddons = () => {
 </script>
 
 <template>
-  <BcPageWrapper>
+  <div>
     <div class="page-container">
       <div class="page-content">
         <div class="type-toggle-row">
-          <PricingTypeToggle />
+          <div class="content">
+            <BcButtonIcon
+              screenreader-text="navigation.back"
+              name="arrow-down"
+              class="back-button"
+              @click="$router.back()"
+            />
+            <PricingTypeToggle />
+          </div>
         </div>
         <PricingHeaderLine />
         <PricingPeriodToggle v-model="isPaymentYearly" />
@@ -69,7 +77,7 @@ const scrollToAddons = () => {
         </I18nT>
       </div>
     </div>
-  </BcPageWrapper>
+  </div>
 </template>
 
 <style lang="css">
@@ -138,6 +146,17 @@ const scrollToAddons = () => {
       background-color: var(--background-color);
       width: 100vw;
       justify-content: center;
+      .content {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        padding-inline: var(--padding-small);
+        width: var(--pricing-content-width);
+
+        .back-button{
+          rotate: 90deg;
+          justify-self: flex-start;
+        }
+      }
     }
 
     .view-addons-button {

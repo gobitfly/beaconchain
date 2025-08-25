@@ -19,8 +19,7 @@ type FormatAmountOptions = (
       sourceCurrency?: never,
       value?: never,
     }
-  |
-    {
+    | {
       currencyItems?: never,
       sourceCurrency?: 'clCurrency' | 'elCurrency' | CurrencyCode,
       value: `${number}` | string,
