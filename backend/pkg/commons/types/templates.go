@@ -2099,3 +2099,11 @@ type ValidatorDutyInfo struct {
 	ProposerSlashingsCount int8          `db:"proposerslashingscount"`
 	AttesterSlashingsCount int8          `db:"attesterslashingscount"`
 }
+
+type UserV1Notification int
+
+const (
+	UserV1Notification_Unknown UserV1Notification = 0
+	UserV1Notification_True    UserV1Notification = 1
+	UserV1Notification_False   UserV1Notification = 2
+)
