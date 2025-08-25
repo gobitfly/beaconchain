@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"os"
 
@@ -22,7 +23,12 @@ import (
 	"github.com/gobitfly/beaconchain/cmd/typescript_converter"
 	"github.com/gobitfly/beaconchain/cmd/user_service"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 )
+
+func init() {
+	gob.RegisterName("github.com/gobitfly/eth2-beaconchain-explorer/types.UserV1Notification", types.UserV1Notification(0))
+}
 
 func main() {
 	if len(os.Args) < 2 {
