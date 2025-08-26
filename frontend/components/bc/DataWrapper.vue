@@ -10,13 +10,10 @@ const { counter } = useInterval(secondsPerSlot)
 const { refreshLatestState } = useLatestStateStore()
 
 await useAsyncData('latest_state', () => refreshLatestState(), {
-  immediate: true,
   watch: [ counter ],
 })
 
-callOnce(async () => {
-  await getUser()
-})
+await useAsyncData('get_user', () => getUser())
 </script>
 
 <template>
