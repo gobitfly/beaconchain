@@ -101,8 +101,8 @@ func Run(
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.RecoveryMiddleware())
-	unaryInterceptors = append(unaryInterceptors, ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit))
 	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(cachedUserRepoI, cachedAPIKeyAuthRepoI))
+	unaryInterceptors = append(unaryInterceptors, ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit))
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(unaryInterceptors...),
