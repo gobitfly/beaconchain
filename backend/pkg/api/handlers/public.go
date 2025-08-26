@@ -988,7 +988,7 @@ func (h *HandlerService) PublicPutValidatorDashboardArchiving(w http.ResponseWri
 			handleErr(w, r, err)
 			return
 		}
-		if decimal.NewFromUint64(totalBalance).GreaterThanOrEqual(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
+		if decimal.NewFromUint64(totalBalance).GreaterThan(userInfo.PremiumPerks.EffectiveBalancePerDashboard) {
 			returnConflict(w, r, errors.New("maximum effective balance in dashboards reached"))
 			return
 		}
