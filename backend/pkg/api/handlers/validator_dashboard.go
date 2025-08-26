@@ -623,7 +623,7 @@ func (h *HandlerService) GetTruncatedGuestValidatorDashboard(ctx context.Context
 		return r, fmt.Errorf("failed to get requested validators: %w", err)
 	}
 
-	effectiveBalancesMap, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, requestedValidators, true)
+	effectiveBalancesMap, err := h.getDataAccessor(ctx).GetValidatorsEffectiveBalances(ctx, requestedValidators, false)
 	if err != nil {
 		return r, fmt.Errorf("failed to get effective balances: %w", err)
 	}
