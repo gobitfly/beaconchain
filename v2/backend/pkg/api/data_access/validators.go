@@ -23,7 +23,7 @@ type ValidatorRepository interface {
 }
 
 // returns the effective balances of the provided validators
-// if onlyActive = true: executed from the vdb premium limits pov, i.e. exited validators account for the EB at exit time
+// if onlyActive = false: executed from the vdb premium limits pov, i.e. exited validators account for the EB at exit time
 func (d *DataAccessService) GetValidatorsEffectiveBalances(ctx context.Context, validators []t.VDBValidator, onlyActive bool) (map[t.VDBValidator]uint64, error) {
 	validatorMapping, err := d.services.GetCurrentValidatorMapping()
 	if err != nil {
