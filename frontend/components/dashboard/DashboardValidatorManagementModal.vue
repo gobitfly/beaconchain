@@ -212,6 +212,7 @@ const loadData = async (dashboardKey: string) => {
 
 watch(
   () => [
+    dashboardKey.value,
     visible.value,
     query.value,
   ],
