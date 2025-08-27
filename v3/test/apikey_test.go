@@ -16,9 +16,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var testKeyName = "test-key"
-
 func TestAPIKeyLifecycle(t *testing.T) {
+	var testKeyName = "lifecycle-test-key"
 	var key *model.CreateAPIKeyResponse
 
 	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
@@ -124,7 +123,7 @@ func TestAPIKeyCreationMaxLimit(t *testing.T) {
 
 		var hasReachedLimit bool
 		for i := 0; i < tierMaxLimit+1; i++ { // one above tier limit
-			name := fmt.Sprintf("test-key-%d", i)
+			name := fmt.Sprintf("max-key-limit-key-%d", i)
 			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: name})
 			if status.Code(err) == codes.ResourceExhausted {
 				hasReachedLimit = true
@@ -138,7 +137,7 @@ func TestAPIKeyCreationMaxLimit(t *testing.T) {
 func TestAPIKeyList(t *testing.T) {
 	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
 		// Create some keys
-		keysToCreate := []string{"key1", "key2", "key3"}
+		keysToCreate := []string{"list-api-key-1", "list-api-key-2", "list-api-key-3"}
 		for _, name := range keysToCreate {
 			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: name})
 			assert.NoError(t, err)
