@@ -44,7 +44,7 @@ func getExternalAuthFromAPIKey(apiKey string) runtime.ClientAuthInfoWriter {
 	return NewBearerAuth(apiKey)
 }
 
-func setupExternalAPIClient(t *testing.T) (context.Context, external_service.ClientService) {
+func setupExternalAPIClient() (context.Context, external_service.ClientService) {
 	cl := client.NewHTTPClientWithConfig(
 		nil,
 		&client.TransportConfig{

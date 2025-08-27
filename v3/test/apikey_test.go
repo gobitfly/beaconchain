@@ -49,7 +49,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		// Usage
 
 		t.Run("use key", func(t *testing.T) {
-			_, extClient := setupExternalAPIClient(t)
+			_, extClient := setupExternalAPIClient()
 			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.NoError(t, err)
 		})
@@ -70,7 +70,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("disabled key cannot be used", func(t *testing.T) {
-			_, extClient := setupExternalAPIClient(t)
+			_, extClient := setupExternalAPIClient()
 			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.Error(t, err)
 			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
@@ -100,7 +100,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("enabled key can be used again", func(t *testing.T) {
-			_, extClient := setupExternalAPIClient(t)
+			_, extClient := setupExternalAPIClient()
 			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.NoError(t, err)
 		})
@@ -119,7 +119,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("deleted key cannot be used", func(t *testing.T) {
-			_, extClient := setupExternalAPIClient(t)
+			_, extClient := setupExternalAPIClient()
 			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.Error(t, err)
 			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
@@ -181,7 +181,7 @@ func TestAPIKeyList(t *testing.T) {
 func TestAPIKeyInvalidUsages(t *testing.T) {
 	var testAPIKeyInvalid = apiKeyMgmt.newTestKey("invalid")
 	t.Run("invalid key cannot be used", func(t *testing.T) {
-		_, extClient := setupExternalAPIClient(t)
+		_, extClient := setupExternalAPIClient()
 		_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(testAPIKeyInvalid))
 		assert.Error(t, err)
 		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
@@ -192,7 +192,7 @@ func TestAPIKeyInvalidUsages(t *testing.T) {
 	})
 
 	t.Run("usage without key", func(t *testing.T) {
-		_, extClient := setupExternalAPIClient(t)
+		_, extClient := setupExternalAPIClient()
 		_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
 		assert.Error(t, err)
 		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
