@@ -31,8 +31,6 @@ func TestAPIKeyLifecycle(t *testing.T) {
 	var testAPIKeyLifecycle = apiKeyMgmt.newTestKey("lifecycle")
 	var key *model.CreateAPIKeyResponse
 
-	fmt.Printf("key name: %s\n", testAPIKeyLifecycle)
-
 	apiKeyMgmt.withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
 
 		// Creation
