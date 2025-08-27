@@ -32,21 +32,18 @@ import (
 
 type ApiService struct {
 	model.UnimplementedExternalServiceServer
-	userRepository      dataaccess.UserRepository
-	dashboardRepository dataaccess.ValidatorDashboardRepository
-	limiter             *limits.Limiter
+	userRepository dataaccess.UserRepository
+	limiter        *limits.Limiter
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
-	dashboardRepository dataaccess.ValidatorDashboardRepository,
 ) (*ApiService, error) {
 	return &ApiService{
-		userRepository:      userRepository,
-		dashboardRepository: dashboardRepository,
-		limiter:             limits.NewLimiter(),
+		userRepository: userRepository,
+		limiter:        limits.NewLimiter(),
 	}, nil
 }
 
@@ -70,7 +67,6 @@ func Run(
 
 	var (
 		userRepoI             dataaccess.UserRepository
-		vdbRepoI              dataaccess.ValidatorDashboardRepository
 		cachedUserRepoI       dataaccess.UserAuthRepository
 		cachedAPIKeyAuthRepoI dataaccess.APIKeyAuthRepository
 	)
@@ -78,18 +74,15 @@ func Run(
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &dataaccess.MockUserRepository{}
-		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
 		cachedUserRepoI = &dataaccess.MockUserRepository{}
 		cachedAPIKeyAuthRepoI = &dataaccess.MockAPIKeyRepository{}
 	} else {
 		userDbRepo := &dataaccess.DBUserRepository{}
-		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
 		apikeyAuthRepo := &dataaccess.DBAPIKeyRepository{}
 		cachedUserRepo := &dataaccess.CachedUserRepository{}
 		cachedAPIKeyAuthRepo := &dataaccess.CachedAPIKeyRepository{}
 
 		userRepoI = userDbRepo
-		vdbRepoI = vbdDbRepo
 		cachedUserRepoI = cachedUserRepo
 		cachedAPIKeyAuthRepoI = cachedAPIKeyAuthRepo
 
@@ -98,13 +91,12 @@ func Run(
 			dataSources.InitApiConnections(&config)
 
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
 			apikeyAuthRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			cachedUserRepo.Initialize(dataSources.Redis, userDbRepo)
 			cachedAPIKeyAuthRepo.Initialize(dataSources.Redis, apikeyAuthRepo)
 		}()
 	}
-	apiService, _ := InitDependencies(userRepoI, vdbRepoI)
+	apiService, _ := InitDependencies(userRepoI)
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
@@ -215,7 +207,7 @@ func serveSwaggerStatics(mux *http.ServeMux) {
 func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	resp := grpc_health_v1.HealthCheckResponse_SERVING
 
-	if s.userRepository.Ping() != nil || s.dashboardRepository.Ping() != nil {
+	if s.userRepository.Ping() != nil {
 		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
 	}
 

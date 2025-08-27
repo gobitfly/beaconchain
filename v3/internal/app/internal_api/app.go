@@ -28,24 +28,21 @@ import (
 
 type ApiService struct {
 	model.UnimplementedInternalServiceServer
-	userRepository      dataaccess.UserRepository
-	dashboardRepository dataaccess.ValidatorDashboardRepository
-	authRepository      dataaccess.APIKeyRepository
-	limiter             *limits.Limiter
+	userRepository dataaccess.UserRepository
+	authRepository dataaccess.APIKeyRepository
+	limiter        *limits.Limiter
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository dataaccess.UserRepository,
-	dashboardRepository dataaccess.ValidatorDashboardRepository,
 	authRepository dataaccess.APIKeyRepository,
 ) (*ApiService, error) {
 	return &ApiService{
-		userRepository:      userRepository,
-		dashboardRepository: dashboardRepository,
-		authRepository:      authRepository,
-		limiter:             limits.NewLimiter(),
+		userRepository: userRepository,
+		authRepository: authRepository,
+		limiter:        limits.NewLimiter(),
 	}, nil
 }
 
@@ -69,20 +66,16 @@ func Run(
 
 	var (
 		userRepoI   dataaccess.UserRepository
-		vdbRepoI    dataaccess.ValidatorDashboardRepository
 		apikeyRepoI dataaccess.APIKeyRepository
 	)
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &dataaccess.MockUserRepository{}
-		vdbRepoI = &dataaccess.DummyValidatorDashboardRepository{}
 		apikeyRepoI = &dataaccess.MockAPIKeyRepository{}
 	} else {
 		userDbRepo := &dataaccess.DBUserRepository{}
-		vbdDbRepo := &dataaccess.DBValidatorDashboardRepository{}
 		apikeyRepo := &dataaccess.CachedAPIKeyRepository{}
 		userRepoI = userDbRepo
-		vdbRepoI = vbdDbRepo
 		apikeyRepoI = apikeyRepo
 
 		dbAPIKeyRepo := &dataaccess.DBAPIKeyRepository{}
@@ -92,12 +85,11 @@ func Run(
 			dataSources := data_sources.ApiDataSources{}
 			dataSources.InitApiConnections(&config)
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			vbdDbRepo.Initialize(dataSources.RoChainDb, dataSources.RwChainDb, dataSources.RoChDb, dataSources.RwChDb, dataSources.Redis, dataSources.Bigtable)
 			dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
 		}()
 	}
-	apiService, _ := InitDependencies(userRepoI, vdbRepoI, apikeyRepoI)
+	apiService, _ := InitDependencies(userRepoI, apikeyRepoI)
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
@@ -143,7 +135,7 @@ func HeaderMatcher(key string) (string, bool) {
 func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	resp := grpc_health_v1.HealthCheckResponse_SERVING
 
-	if s.userRepository.Ping() != nil || s.dashboardRepository.Ping() != nil {
+	if s.userRepository.Ping() != nil {
 		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
 	}
 

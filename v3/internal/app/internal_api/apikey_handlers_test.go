@@ -45,10 +45,9 @@ var (
 
 func newService(apiKeyRepo *dataaccess.MockAPIKeyRepository) *ApiService {
 	return &ApiService{
-		userRepository:      &dataaccess.MockUserRepository{},
-		dashboardRepository: &dataaccess.DummyValidatorDashboardRepository{},
-		authRepository:      apiKeyRepo,
-		limiter:             limits.NewLimiter(),
+		userRepository: &dataaccess.MockUserRepository{},
+		authRepository: apiKeyRepo,
+		limiter:        limits.NewLimiter(),
 	}
 }
 

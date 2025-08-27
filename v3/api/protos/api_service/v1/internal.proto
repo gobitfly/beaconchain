@@ -18,35 +18,6 @@ import "google/protobuf/timestamp.proto";
 
 service InternalService {
   
-  // Creates a new Validator Dashboard
-  rpc CreateValidatorDashboard (CreateValidatorDashboardRequest) returns (CreateValidatorDashboardResponse) {
-    option (google.api.http) = {
-      post: "/api/i/validatorDashboard"
-    };
-  }
-
-  // Retrieves a Validator Dashboard by its Id
-  rpc GetValidatorDashboard (GetValidatorDashboardRequest) returns (GetValidatorDashboardResponse) {
-    option (google.api.http) = {
-      get: "/api/i/validatorDashboard/{dashboard_id}"
-    };
-  }
-
-  // Retrieves multiple Validator Dashboards by ID or for the entire account
-  rpc ListValidatorDashboards (ListValidatorDashboardsRequest) returns (ListValidatorDashboardsResponse) {
-    option (google.api.http) = {
-      get: "/api/i/validatorDashboard"
-    };
-  }
-
-  // Deletes a Validator Dashboard by its Id
-  rpc DeleteValidatorDashboard (DeleteValidatorDashboardRequest) returns (DeleteValidatorDashboardResponse) {
-    option (google.api.http) = {
-      delete: "/api/i/validatorDashboard/{dashboard_id}"
-    };
-  }
-
-
   rpc CreateAPIKey (CreateAPIKeyRequest) returns (CreateAPIKeyResponse) {
     option (google.api.http) = {
       post: "/api-keys"
@@ -83,55 +54,6 @@ service InternalService {
 /////////////////////////////////////////////////
 /////////// Request/Response Definition ////////////
 /////////////////////////////////////////////////
-
-// Create
-message CreateValidatorDashboardRequest {
-  // nil
-}
-
-message CreateValidatorDashboardResponse {
-  ValidatorDashboard dashboard = 1;
-}
-
-// Get
-message GetValidatorDashboardRequest {
-  string dashboard_id = 1;
-
-}
-
-message GetValidatorDashboardResponse {
-  ValidatorDashboard dashboard = 1;
-
-}
-
-// List
-message ListValidatorDashboardsRequest {
-  repeated string dashboard_id = 1;
-}
-
-message ListValidatorDashboardsResponse {
-  repeated ValidatorDashboard dashboards = 1;
-}
-
-// Modify
-message ModifyValidatorDashboardsRequest {
-  string dashboard_id = 1;
-  // Whether the Dashboard is publicly visible
-  optional bool is_public = 2;
-}
-
-message ModifyValidatorDashboardsResponse {
-  ValidatorDashboard dashboard = 1;
-}
-
-// Delete
-message DeleteValidatorDashboardRequest {
-  string dashboard_id = 1;
-}
-
-message DeleteValidatorDashboardResponse {
-  // nil; no response
-}
 
 
 // == API Key Management ==
@@ -215,10 +137,6 @@ message GetAPIKeyResponse {
 /////////////// Message Definition ///////////////
 //////////////////////////////////////////////////
 
-message ValidatorDashboard {
-  string dashboard_id = 1;
-  bool is_public = 2;
-}
 
 message APIKey {
   string name = 1;
