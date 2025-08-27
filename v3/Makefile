@@ -25,7 +25,7 @@ build-service:
 	go build -o bin/beaconchain-api-service ./cmd/main.go
 clean:
 	rm -rf bin
-lint:
+lint: build-http-client
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
 	golangci-lint run --timeout 5m
 	buf lint
@@ -37,11 +37,11 @@ cr-create-registry:
 		--repository-format docker \
 		--location us-central1 \
 		--project ${PROJECT_NAME}
-cr-deploy-staging: generate-proto
+cr-deploy-staging: generate-proto build-http-client
 	gcloud run deploy --source . --project staging-456307 --network mono-vpc --region us-central1 --add-cloudsql-instances=staging-456307:us-central1:hoodi-d7ab6b26,staging-456307:us-central1:users-024879cd --args="--environment","staging"
 cr-deploy-personal:
 	gcloud run deploy --source . --network default --project ${PROJECT_NAME} --region us-central1 --add-cloudsql-instances=${PROJECT_NAME}:us-central1:dev --args="--environment","personal_cloudrun"
-cr-deploy-personal: generate-proto
+cr-deploy-personal: generate-proto build-http-client
 	gcloud builds submit --project ${PROJECT_NAME} --substitutions=_PROJECT_NAME="${PROJECT_NAME}" --config=build/package/cloudbuild.yaml
 integration-test:
 	TAGS=$(TAGS) ENV_FILE=test/testEnv/.env.$(NETWORK) go test -v $(TEST)
