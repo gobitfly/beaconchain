@@ -100,7 +100,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("delete key", func(t *testing.T) {
 			_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: testKeyName})
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, codes.OK, status.Code(err))
 		})
 
