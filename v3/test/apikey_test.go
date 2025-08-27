@@ -7,13 +7,11 @@ import (
 	"testing"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/api/gen/client/client/external_service"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
-	"github.com/gobitfly/beaconchain-backend/test/testUtils"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -51,8 +49,8 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		// Usage
 
 		t.Run("use key", func(t *testing.T) {
-			extCtx, extClient := setupExternalAPIClientWithAPIKey(t, key.RawApiKey)
-			_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+			_, extClient := setupExternalAPIClient(t)
+			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.NoError(t, err)
 		})
 
@@ -72,10 +70,14 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("disabled key cannot be used", func(t *testing.T) {
-			extCtx, extClient := setupExternalAPIClientWithAPIKey(t, key.RawApiKey)
-			_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+			_, extClient := setupExternalAPIClient(t)
+			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.Error(t, err)
-			assert.Equal(t, codes.Unauthenticated, status.Code(err))
+			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
+				assert.Equal(t, 401, apiErr.Code())
+			} else {
+				t.Fatalf("expected unauthorized error, got: %v", err)
+			}
 		})
 
 		t.Run("disabled key timestamp not changing after disabling again", func(t *testing.T) {
@@ -98,8 +100,8 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("enabled key can be used again", func(t *testing.T) {
-			extCtx, extClient := setupExternalAPIClientWithAPIKey(t, key.RawApiKey)
-			_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+			_, extClient := setupExternalAPIClient(t)
+			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.NoError(t, err)
 		})
 
@@ -117,10 +119,14 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("deleted key cannot be used", func(t *testing.T) {
-			extCtx, extClient := setupExternalAPIClientWithAPIKey(t, key.RawApiKey)
-			_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+			_, extClient := setupExternalAPIClient(t)
+			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(key.RawApiKey))
 			assert.Error(t, err)
-			assert.Equal(t, codes.Unauthenticated, status.Code(err))
+			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
+				assert.Equal(t, 401, apiErr.Code())
+			} else {
+				t.Fatalf("expected unauthorized error, got: %v", err)
+			}
 		})
 
 	})
@@ -175,26 +181,25 @@ func TestAPIKeyList(t *testing.T) {
 func TestAPIKeyInvalidUsages(t *testing.T) {
 	var testAPIKeyInvalid = apiKeyMgmt.newTestKey("invalid")
 	t.Run("invalid key cannot be used", func(t *testing.T) {
-		extCtx, extClient := setupExternalAPIClientWithAPIKey(t, testAPIKeyInvalid)
-		_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+		_, extClient := setupExternalAPIClient(t)
+		_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, getExternalAuthFromAPIKey(testAPIKeyInvalid))
 		assert.Error(t, err)
-		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
+			assert.Equal(t, 401, apiErr.Code())
+		} else {
+			t.Fatalf("expected unauthorized error, got: %v", err)
+		}
 	})
 
 	t.Run("usage without key", func(t *testing.T) {
-		conn, err := grpc.NewClient(testUtils.GetExternalGRPCUrl(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			t.Fatalf("failed to connect to gRPC server: %v", err)
-		}
-		t.Cleanup(func() {
-			_ = conn.Close()
-		})
-
-		extClient := model.NewExternalServiceClient(conn)
-		extCtx := context.Background()
-		_, err = extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
+		_, extClient := setupExternalAPIClient(t)
+		_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
 		assert.Error(t, err)
-		assert.Equal(t, codes.Unauthenticated, status.Code(err))
+		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
+			assert.Equal(t, 401, apiErr.Code())
+		} else {
+			t.Fatalf("expected unauthorized error, got: %v", err)
+		}
 	})
 }
 

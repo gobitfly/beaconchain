@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLatestStateEndpoint(t *testing.T) {
@@ -15,13 +15,13 @@ func TestLatestStateEndpoint(t *testing.T) {
 		t.Skip("❌ Skipping test: requires tag 'smoke' or 'e2e'")
 	}
 
-	if ok, reason := testUtils.IsValidBaseURL(); !ok {
+	if ok, reason := testUtils.IsValidURL(testUtils.GetExternalHTTPUrl()); !ok {
 		t.Skipf("⚠️ Skipping test due to invalid BASE_URL: %s", reason)
 	}
 
 	assert := assert.New(t)
 
-	url := testUtils.GetBaseURL() + "/api/v1/latestState"
+	url := testUtils.GetExternalHTTPUrl() + "/api/v1/latestState"
 	t.Logf("➡️  Requesting: %s", url)
 
 	resp, err := http.Get(url) //nolint:gosec // trusted internal URL

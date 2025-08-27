@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHealthzEndpoint(t *testing.T) {
@@ -15,11 +15,11 @@ func TestHealthzEndpoint(t *testing.T) {
 		t.Skip("❌ Skipping test: requires tag 'e2e' or 'smoke'")
 	}
 
-	if ok, reason := testUtils.IsValidBaseURL(); !ok {
+	if ok, reason := testUtils.IsValidURL(testUtils.GetExternalHTTPUrl()); !ok {
 		t.Skipf("⚠️ Skipping test due to invalid BASE_URL: %s", reason)
 	}
 
-	baseURL := testUtils.GetBaseURL()
+	baseURL := testUtils.GetExternalHTTPUrl()
 	url := baseURL + "/api/healthz"
 	t.Logf("➡️  Requesting: %s", url)
 

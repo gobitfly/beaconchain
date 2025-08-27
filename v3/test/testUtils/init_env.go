@@ -25,30 +25,21 @@ func init() {
 		log.Fatalf("❌ Error loading %s: %v", envFile, err)
 	}
 
-	baseURL := os.Getenv("BASE_URL")
+	baseURL := os.Getenv("BASE_DOMAIN")
 	log.Printf("✅ Loaded env file: %s", envFile)
 	log.Printf("🔍 BASE_URL=%s", baseURL)
 }
 
-func GetBaseURL() string {
-	baseURL := os.Getenv("BASE_URL")
+func GetBaseDomain() string {
+	baseURL := os.Getenv("BASE_DOMAIN")
 	if baseURL == "" {
-		baseURL = "https://beaconcha.in"
+		baseURL = "beaconcha.in"
 	}
 	return baseURL
 }
 
-func GetExternalGRPCUrl() string {
-	baseURL := GetBaseURL()
-	port := os.Getenv("EXTERNAL_GRPC_PORT")
-	if port == "" {
-		port = "9091"
-	}
-	return net.JoinHostPort(baseURL, port)
-}
-
 func GetInternalGRPCUrl() string {
-	baseURL := GetBaseURL()
+	baseURL := GetBaseDomain()
 	port := os.Getenv("INTERNAL_GRPC_PORT")
 	if port == "" {
 		port = "9090"
@@ -56,12 +47,16 @@ func GetInternalGRPCUrl() string {
 	return net.JoinHostPort(baseURL, port)
 }
 
-func IsValidBaseURL() (bool, string) {
-	raw := os.Getenv("BASE_URL")
-	if raw == "" {
-		return false, "BASE_URL is empty"
+func GetExternalHTTPUrl() string {
+	baseURL := GetBaseDomain()
+	port := os.Getenv("EXTERNAL_HTTP_PORT")
+	if port == "" {
+		port = "8080"
 	}
+	return net.JoinHostPort(baseURL, port)
+}
 
+func IsValidURL(raw string) (bool, string) {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return false, "BASE_URL is not a valid URL"

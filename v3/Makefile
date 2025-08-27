@@ -12,6 +12,14 @@ generate-proto:
 	buf generate --template buf.gen.api.yaml
 	# Generate domain protos
 	buf generate --template buf.gen.domain.yaml
+build-http-client:
+	go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+	rm -rf api/gen/client
+	mkdir api/gen/client
+	swagger generate client \
+		-f api/gen/api_service/v1/external.swagger.json \
+		-t api/gen/client \
+		--name=ApiServiceClient
 build-service:
 	mkdir -p bin
 	go build -o bin/beaconchain-api-service ./cmd/main.go

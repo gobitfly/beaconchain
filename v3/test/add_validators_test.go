@@ -9,8 +9,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestE2EValidatorLifecycle(t *testing.T) {
@@ -18,7 +18,7 @@ func TestE2EValidatorLifecycle(t *testing.T) {
 		t.Skip("❌ Skipping test: requires tag 'v2-beta-gnosis' or 'v2-beta-mainnet'")
 	}
 
-	if ok, reason := testUtils.IsValidBaseURL(); !ok {
+	if ok, reason := testUtils.IsValidURL(testUtils.GetExternalHTTPUrl()); !ok {
 		t.Skipf("⚠️ Skipping test due to invalid BASE_URL: %s", reason)
 	}
 
@@ -28,7 +28,7 @@ func TestE2EValidatorLifecycle(t *testing.T) {
 	}
 
 	assert := assert.New(t)
-	baseURL := testUtils.GetBaseURL()
+	baseURL := testUtils.GetExternalHTTPUrl()
 	dashboardID := testUtils.GetDashboardID()
 	groupID := 0
 	client := &http.Client{}
@@ -64,7 +64,7 @@ func TestE2EValidatorLifecycle(t *testing.T) {
 				t.Logf("❌ Failed to close addResp body: %v", err)
 			}
 		}()
-		
+
 		addRespBody, err := io.ReadAll(addResp.Body)
 		assert.NoError(err)
 
@@ -107,7 +107,7 @@ func TestE2EValidatorLifecycle(t *testing.T) {
 				t.Logf("❌ Failed to close delResp body: %v", err)
 			}
 		}()
-		
+
 		t.Logf("📦 Delete response status: %d", delResp.StatusCode)
 		assert.Equal(http.StatusNoContent, delResp.StatusCode)
 	}
@@ -141,7 +141,7 @@ func TestE2EValidatorLifecycle(t *testing.T) {
 			t.Logf("❌ Failed to close bulkResp body: %v", err)
 		}
 	}()
-	
+
 	bulkRespBody, err := io.ReadAll(bulkResp.Body)
 	assert.NoError(err)
 

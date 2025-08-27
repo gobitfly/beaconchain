@@ -6,29 +6,26 @@ import (
 	"testing"
 	"time"
 
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/api/gen/client/client/external_service"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func TestRateLimit(t *testing.T) {
 	ctx, client := setupExternalAPIClient(t)
-	in := &model.ExecutionBlockRequest{BlockNumber: "1"}
+	// give a timeout to avoid hanging tests
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	in := &external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1", Context: ctx}
 
 	const numRequests = 100
 	var wg sync.WaitGroup
 	results := make(chan error, numRequests)
 
-	// give a timeout to avoid hanging tests
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := client.ExecutionBlock(ctx, in)
+			_, err := client.ExternalServiceExecutionBlock(in, getExternalAuth(t))
 			results <- err
 		}()
 	}
@@ -46,10 +43,11 @@ func TestRateLimit(t *testing.T) {
 			successSeen = true
 			continue
 		}
-		if status.Code(err) == codes.ResourceExhausted {
-			rateLimitHit = true
-		} else {
-			t.Fatalf("unexpected error: %v", err)
+		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
+			if apiErr.Code() == 429 {
+				rateLimitHit = true
+				continue
+			}
 		}
 	}
 
