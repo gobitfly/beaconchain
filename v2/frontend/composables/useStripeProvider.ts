@@ -31,7 +31,8 @@ export function useStripeProvider() {
     if (stripePulicKey === '') {
       return
     }
-    await $fetch(`${apiClient}/pricing`, {
+    await $fetch('/pricing', {
+      baseURL: apiClient,
       onResponse({
         response,
       }) {
