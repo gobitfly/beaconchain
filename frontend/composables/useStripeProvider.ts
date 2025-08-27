@@ -13,7 +13,6 @@ import type {
 export function useStripeProvider() {
   const { fetch } = useCustomFetch()
   const { promoCode } = usePromoCode()
-  const { public: { stripeBaseUrl } } = useRuntimeConfig()
 
   const stripe = ref<null | Stripe>(null)
 
@@ -42,6 +41,7 @@ export function useStripeProvider() {
     stripe.value = await loadStripe(stripePulicKey)
   }
 
+  const currentOrigin = useRequestURL().origin
   const stripeCustomerPortal = async () => {
     if (isStripeDisabled.value) {
       return
@@ -52,7 +52,7 @@ export function useStripeProvider() {
     const res = await fetch<StripeCustomerPortal>(
       'STRIPE_CUSTOMER_PORTAL',
       {
-        baseURL: stripeBaseUrl,
+        baseURL: `${currentOrigin}`,
         body: JSON.stringify({ returnURL: window.location.href }),
         headers: {
           'x-csrf-token': csrfToken.value,
@@ -75,7 +75,7 @@ export function useStripeProvider() {
     const res = await fetch<StripeCreateCheckoutSession>(
       'STRIPE_CHECKOUT_SESSION',
       {
-        baseURL: stripeBaseUrl,
+        baseURL: `${currentOrigin}`,
         body: JSON.stringify({
           addonQuantity: amount,
           priceId,
