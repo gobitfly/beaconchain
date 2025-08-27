@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
@@ -16,22 +17,34 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type apiKeyMgmtTest struct {
+	testRunID string
+}
+
+func newAPIKeyMgmt() *apiKeyMgmtTest {
+	return &apiKeyMgmtTest{testRunID: "keymgmt"}
+}
+
+var apiKeyMgmt = newAPIKeyMgmt()
+
 func TestAPIKeyLifecycle(t *testing.T) {
-	var testKeyName = "lifecycle-test-key"
+	var testAPIKeyLifecycle = apiKeyMgmt.newTestKey("lifecycle")
 	var key *model.CreateAPIKeyResponse
 
-	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
+	fmt.Printf("key name: %s\n", testAPIKeyLifecycle)
+
+	apiKeyMgmt.withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
 
 		// Creation
 		t.Run("create key", func(t *testing.T) {
 			var err error
-			key, err = client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: testKeyName})
+			key, err = client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 		})
 
 		t.Run("get after creation", func(t *testing.T) {
-			got := mustGetKey(t, client, testKeyName)
-			assert.Equal(t, testKeyName, got.ApiKey.Name)
+			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
+			assert.Equal(t, testAPIKeyLifecycle, got.ApiKey.Name)
 			assert.Nil(t, got.ApiKey.LastUsedAt)
 			assert.Nil(t, got.ApiKey.DisabledAt)
 			assert.NotNil(t, got.ApiKey.CreatedAt)
@@ -46,17 +59,17 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("last used timestamp updated", func(t *testing.T) {
-			got := mustGetKey(t, client, testKeyName)
+			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
 			assert.NotNil(t, got.ApiKey.LastUsedAt)
 		})
 
 		// Disable
 
 		t.Run("disable key", func(t *testing.T) {
-			_, err := client.DisableAPIKey(ctx, &model.DisableAPIKeyRequest{Name: testKeyName})
+			_, err := client.DisableAPIKey(ctx, &model.DisableAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 
-			got := mustGetKey(t, client, testKeyName)
+			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
 			assert.NotNil(t, got.ApiKey.DisabledAt)
 		})
 
@@ -68,10 +81,10 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("disabled key timestamp not changing after disabling again", func(t *testing.T) {
-			key := mustGetKey(t, client, testKeyName)
+			key := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
 			assert.NotNil(t, key.ApiKey.DisabledAt)
 
-			keyDisabledAgain, err := client.DisableAPIKey(ctx, &model.DisableAPIKeyRequest{Name: testKeyName})
+			keyDisabledAgain, err := client.DisableAPIKey(ctx, &model.DisableAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 
 			assert.Equal(t, key.ApiKey.DisabledAt, keyDisabledAgain.ApiKey.DisabledAt)
@@ -79,10 +92,10 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		// Enable
 		t.Run("enable key", func(t *testing.T) {
-			_, err := client.EnableAPIKey(ctx, &model.EnableAPIKeyRequest{Name: testKeyName})
+			_, err := client.EnableAPIKey(ctx, &model.EnableAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 
-			got := mustGetKey(t, client, testKeyName)
+			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
 			assert.Nil(t, got.ApiKey.DisabledAt)
 		})
 
@@ -93,14 +106,14 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("enabling an enabled key should just return ok", func(t *testing.T) {
-			_, err := client.EnableAPIKey(ctx, &model.EnableAPIKeyRequest{Name: testKeyName})
+			_, err := client.EnableAPIKey(ctx, &model.EnableAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 		})
 
 		// Deletion
 
 		t.Run("delete key", func(t *testing.T) {
-			_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: testKeyName})
+			_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: testAPIKeyLifecycle})
 			assert.NoError(t, err)
 			assert.Equal(t, codes.OK, status.Code(err))
 		})
@@ -116,14 +129,16 @@ func TestAPIKeyLifecycle(t *testing.T) {
 }
 
 func TestAPIKeyCreationMaxLimit(t *testing.T) {
+	var testAPIKeyMaxLimit = apiKeyMgmt.newTestKey("max-key")
+
 	limiter := limits.NewLimiter()
-	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
+	apiKeyMgmt.withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
 		tierMaxLimit, err := limiter.GetMaxAPIKeys(ctx, &domain.User{ID: 1, SubscriptionTier: domain.TierScale})
 		assert.NoError(t, err)
 
 		var hasReachedLimit bool
 		for i := 0; i < tierMaxLimit+1; i++ { // one above tier limit
-			name := fmt.Sprintf("max-key-limit-key-%d", i)
+			name := fmt.Sprintf("%s-%d", testAPIKeyMaxLimit, i)
 			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: name})
 			if status.Code(err) == codes.ResourceExhausted {
 				hasReachedLimit = true
@@ -135,9 +150,11 @@ func TestAPIKeyCreationMaxLimit(t *testing.T) {
 }
 
 func TestAPIKeyList(t *testing.T) {
-	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
+	var testAPIKeyList = apiKeyMgmt.newTestKey("list-key")
+
+	apiKeyMgmt.withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
 		// Create some keys
-		keysToCreate := []string{"list-api-key-1", "list-api-key-2", "list-api-key-3"}
+		keysToCreate := []string{fmt.Sprintf("%s-1", testAPIKeyList), fmt.Sprintf("%s-2", testAPIKeyList), fmt.Sprintf("%s-3", testAPIKeyList)}
 		for _, name := range keysToCreate {
 			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: name})
 			assert.NoError(t, err)
@@ -146,7 +163,6 @@ func TestAPIKeyList(t *testing.T) {
 		t.Run("list keys", func(t *testing.T) {
 			resp, err := client.GetAPIKeys(ctx, &model.GetAPIKeysRequest{})
 			assert.NoError(t, err)
-			assert.Len(t, resp.ApiKeys, len(keysToCreate))
 			foundKeys := make(map[string]bool)
 			for _, k := range resp.ApiKeys {
 				foundKeys[k.Name] = true
@@ -159,8 +175,9 @@ func TestAPIKeyList(t *testing.T) {
 }
 
 func TestAPIKeyInvalidUsages(t *testing.T) {
+	var testAPIKeyInvalid = apiKeyMgmt.newTestKey("invalid")
 	t.Run("invalid key cannot be used", func(t *testing.T) {
-		extCtx, extClient := setupExternalAPIClientWithAPIKey(t, "invalid-api-key")
+		extCtx, extClient := setupExternalAPIClientWithAPIKey(t, testAPIKeyInvalid)
 		_, err := extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
 		assert.Error(t, err)
 		assert.Equal(t, codes.Unauthenticated, status.Code(err))
@@ -187,7 +204,7 @@ func TestAPIKeyInvalidUsages(t *testing.T) {
 
 // --- Helpers ---
 
-func mustGetKey(t *testing.T, client model.InternalServiceClient, name string) *model.GetAPIKeyResponse {
+func (*apiKeyMgmtTest) mustGetKey(t *testing.T, client model.InternalServiceClient, name string) *model.GetAPIKeyResponse {
 	t.Helper()
 	in := &model.GetAPIKeyRequest{Name: name}
 	k, err := client.GetAPIKey(context.Background(), in)
@@ -195,12 +212,15 @@ func mustGetKey(t *testing.T, client model.InternalServiceClient, name string) *
 	return k
 }
 
-func cleanState(t *testing.T, client model.InternalServiceClient, ctx context.Context) {
+func (*apiKeyMgmtTest) cleanState(t *testing.T, client model.InternalServiceClient, ctx context.Context) {
 	keys, err := client.GetAPIKeys(ctx, &model.GetAPIKeysRequest{})
 	if err != nil {
 		t.Fatal("failed to list API keys for cleanup:", err)
 	}
 	for _, k := range keys.ApiKeys {
+		if !strings.HasPrefix(k.Name, apiKeyMgmt.testRunID) { // scoped to cleanup just the keys of this test suite
+			continue
+		}
 		_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: k.Name})
 		if err != nil {
 			t.Fatal("failed to delete API key:", err)
@@ -208,15 +228,19 @@ func cleanState(t *testing.T, client model.InternalServiceClient, ctx context.Co
 	}
 }
 
-func withCleanState(t *testing.T, test func(ctx context.Context, client model.InternalServiceClient)) {
+func (apiKeyMgmt *apiKeyMgmtTest) newTestKey(name string) string {
+	return fmt.Sprintf("%s-%s", apiKeyMgmt.testRunID, name) // prefix key to know what to cleanup
+}
+
+func (apiKeyMgmt *apiKeyMgmtTest) withCleanState(t *testing.T, test func(ctx context.Context, client model.InternalServiceClient)) {
 	t.Helper()
 	ctx, client := setupInternalAPIClient(t)
 
-	cleanState(t, client, ctx)
+	apiKeyMgmt.cleanState(t, client, ctx)
 
 	test(ctx, client)
 
 	t.Cleanup(func() {
-		cleanState(t, client, ctx)
+		apiKeyMgmt.cleanState(t, client, ctx)
 	})
 }
