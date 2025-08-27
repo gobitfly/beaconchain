@@ -10,7 +10,7 @@ import (
 )
 
 func TestRateLimit(t *testing.T) {
-	ctx, client := setupExternalApiClient(t)
+	ctx, client := setupExternalAPIClient(t)
 	in := &model.ExecutionBlockRequest{
 		BlockNumber: "1",
 	}

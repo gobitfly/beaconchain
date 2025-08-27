@@ -26,13 +26,17 @@ func (ts testPerRPCCred) RequireTransportSecurity() bool {
 	return false
 }
 
-func setupExternalApiClient(t *testing.T) (context.Context, model.ExternalServiceClient) {
+func setupExternalAPIClient(t *testing.T) (context.Context, model.ExternalServiceClient) {
 	apiKey := os.Getenv("API_KEY_ORCA_TEST")
 	if apiKey == "" {
 		t.Fatal("API_KEY_ORCA_TEST environment variable is not set")
 	}
-	perRPC := testPerRPCCred{token: apiKey}
-	conn, err := grpc.NewClient(testUtils.GetBaseURL(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithPerRPCCredentials(perRPC))
+	return setupExternalAPIClientWithAPIKey(t, apiKey)
+}
+
+func setupExternalAPIClientWithAPIKey(t *testing.T, apikey string) (context.Context, model.ExternalServiceClient) {
+	perRPC := testPerRPCCred{token: apikey}
+	conn, err := grpc.NewClient(testUtils.GetExternalGRPCUrl(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithPerRPCCredentials(perRPC))
 	if err != nil {
 		t.Fatalf("failed to connect to gRPC server: %v", err)
 	}
@@ -42,8 +46,8 @@ func setupExternalApiClient(t *testing.T) (context.Context, model.ExternalServic
 	return context.Background(), model.NewExternalServiceClient(conn)
 }
 
-func setupInternalApiClient(t *testing.T) (context.Context, model.InternalServiceClient) {
-	conn, err := grpc.NewClient(testUtils.GetBaseURL(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+func setupInternalAPIClient(t *testing.T) (context.Context, model.InternalServiceClient) {
+	conn, err := grpc.NewClient(testUtils.GetInternalGRPCUrl(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to connect to gRPC server: %v", err)
 	}

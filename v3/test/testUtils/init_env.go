@@ -38,6 +38,24 @@ func GetBaseURL() string {
 	return baseURL
 }
 
+func GetExternalGRPCUrl() string {
+	baseURL := GetBaseURL()
+	port := os.Getenv("EXTERNAL_GRPC_PORT")
+	if port == "" {
+		port = "9091"
+	}
+	return net.JoinHostPort(baseURL, port)
+}
+
+func GetInternalGRPCUrl() string {
+	baseURL := GetBaseURL()
+	port := os.Getenv("INTERNAL_GRPC_PORT")
+	if port == "" {
+		port = "9090"
+	}
+	return net.JoinHostPort(baseURL, port)
+}
+
 func IsValidBaseURL() (bool, string) {
 	raw := os.Getenv("BASE_URL")
 	if raw == "" {

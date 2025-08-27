@@ -38,7 +38,8 @@ services:
     volumes:
       - ../api/gen/:/api/gen/
     ports:
-      - "8080:8080"
+      - "8080:8080" # expose http
+      - "9091:9090" # expose grpc
     command: ["--environment", "local"]
   api-service-internal:
     depends_on:

@@ -86,10 +86,10 @@ func Run(
 		cachedUserRepoI = cachedUserRepo
 		cachedAPIKeyAuthRepoI = cachedAPIKeyAuthRepo
 
+		dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
+
 		// init async
 		go func() {
-			dataSources.InitApiConnections(&config)
-
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			apikeyAuthRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			cachedUserRepo.Initialize(dataSources.Redis, userDbRepo)
