@@ -197,7 +197,7 @@ func TestAPIKeyInvalidUsages(t *testing.T) {
 			t.Fatalf("failed to connect to gRPC server: %v", err)
 		}
 		t.Cleanup(func() {
-			conn.Close()
+			_ = conn.Close()
 		})
 
 		extClient := model.NewExternalServiceClient(conn)

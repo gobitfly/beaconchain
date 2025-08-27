@@ -41,7 +41,7 @@ func setupExternalAPIClientWithAPIKey(t *testing.T, apikey string) (context.Cont
 		t.Fatalf("failed to connect to gRPC server: %v", err)
 	}
 	t.Cleanup(func() {
-		conn.Close()
+		_ = conn.Close()
 	})
 	return context.Background(), model.NewExternalServiceClient(conn)
 }
@@ -52,7 +52,7 @@ func setupInternalAPIClient(t *testing.T) (context.Context, model.InternalServic
 		t.Fatalf("failed to connect to gRPC server: %v", err)
 	}
 	t.Cleanup(func() {
-		conn.Close()
+		_ = conn.Close()
 	})
 	return context.Background(), model.NewInternalServiceClient(conn)
 }
