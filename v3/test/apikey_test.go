@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
+	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -115,9 +117,13 @@ func TestAPIKeyLifecycle(t *testing.T) {
 }
 
 func TestAPIKeyCreationMaxLimit(t *testing.T) {
+	limiter := limits.NewLimiter()
 	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
+		tierMaxLimit, err := limiter.GetMaxAPIKeys(ctx, &domain.User{ID: 1, SubscriptionTier: domain.TierScale})
+		assert.NoError(t, err)
+
 		var hasReachedLimit bool
-		for i := 0; i < 20; i++ {
+		for i := 0; i < tierMaxLimit+1; i++ { // one above tier limit
 			name := fmt.Sprintf("test-key-%d", i)
 			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: name})
 			if status.Code(err) == codes.ResourceExhausted {
@@ -190,15 +196,15 @@ func mustGetKey(t *testing.T, client model.InternalServiceClient, name string) *
 	return k
 }
 
-func cleanState(client model.InternalServiceClient, ctx context.Context) {
+func cleanState(t *testing.T, client model.InternalServiceClient, ctx context.Context) {
 	keys, err := client.GetAPIKeys(ctx, &model.GetAPIKeysRequest{})
 	if err != nil {
-		panic(err)
+		t.Fatal("failed to list API keys for cleanup:", err)
 	}
 	for _, k := range keys.ApiKeys {
 		_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: k.Name})
 		if err != nil {
-			panic(err)
+			t.Fatal("failed to delete API key:", err)
 		}
 	}
 }
@@ -207,11 +213,11 @@ func withCleanState(t *testing.T, test func(ctx context.Context, client model.In
 	t.Helper()
 	ctx, client := setupInternalAPIClient(t)
 
-	cleanState(client, ctx)
+	cleanState(t, client, ctx)
 
 	test(ctx, client)
 
 	t.Cleanup(func() {
-		cleanState(client, ctx)
+		cleanState(t, client, ctx)
 	})
 }
