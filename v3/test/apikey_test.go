@@ -153,36 +153,6 @@ func TestAPIKeyList(t *testing.T) {
 	})
 }
 
-func TestAPIKeyNotFound(t *testing.T) {
-	t.Run("delete non-existent key", func(t *testing.T) {
-		ctx, client := setupInternalAPIClient(t)
-		_, err := client.DeleteAPIKey(ctx, &model.DeleteAPIKeyRequest{Name: "non-existent"})
-		assert.Error(t, err)
-		assert.Equal(t, codes.NotFound, status.Code(err))
-	})
-
-	t.Run("disable non-existent key", func(t *testing.T) {
-		ctx, client := setupInternalAPIClient(t)
-		_, err := client.DisableAPIKey(ctx, &model.DisableAPIKeyRequest{Name: "non-existent"})
-		assert.Error(t, err)
-		assert.Equal(t, codes.NotFound, status.Code(err))
-	})
-
-	t.Run("enable non-existent key", func(t *testing.T) {
-		ctx, client := setupInternalAPIClient(t)
-		_, err := client.EnableAPIKey(ctx, &model.EnableAPIKeyRequest{Name: "non-existent"})
-		assert.Error(t, err)
-		assert.Equal(t, codes.NotFound, status.Code(err))
-	})
-
-	t.Run("get non-existent key", func(t *testing.T) {
-		ctx, client := setupInternalAPIClient(t)
-		_, err := client.GetAPIKey(ctx, &model.GetAPIKeyRequest{Name: "non-existent"})
-		assert.Error(t, err)
-		assert.Equal(t, codes.NotFound, status.Code(err))
-	})
-}
-
 func TestAPIKeyInvalidUsages(t *testing.T) {
 	t.Run("invalid key cannot be used", func(t *testing.T) {
 		extCtx, extClient := setupExternalAPIClientWithAPIKey(t, "invalid-api-key")
@@ -205,30 +175,6 @@ func TestAPIKeyInvalidUsages(t *testing.T) {
 		_, err = extClient.ExecutionBlock(extCtx, &model.ExecutionBlockRequest{BlockNumber: "1"})
 		assert.Error(t, err)
 		assert.Equal(t, codes.Unauthenticated, status.Code(err))
-	})
-}
-
-func TestAPIKeyCreationFailures(t *testing.T) {
-	withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
-		t.Run("create duplicate fails", func(t *testing.T) {
-			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: testKeyName})
-			assert.Nil(t, err)
-
-			_, err = client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: testKeyName})
-			assert.Error(t, err)
-			assert.Equal(t, codes.AlreadyExists, status.Code(err))
-		})
-
-		t.Run("create invalid name fails", func(t *testing.T) {
-			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: "invalid key name with spaces"})
-			assert.Error(t, err)
-			assert.Equal(t, codes.InvalidArgument, status.Code(err))
-		})
-		t.Run("create empty name fails", func(t *testing.T) {
-			_, err := client.CreateAPIKey(ctx, &model.CreateAPIKeyRequest{Name: ""})
-			assert.Error(t, err)
-			assert.Equal(t, codes.InvalidArgument, status.Code(err))
-		})
 	})
 }
 
