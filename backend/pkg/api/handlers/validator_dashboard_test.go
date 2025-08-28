@@ -244,107 +244,128 @@ func TestResolveAndValidateTimestamps_Success(t *testing.T) {
 	var chartSeconds uint64 = 1000 // -> min timestamp = lastExportedTs - chartSeconds
 	duration := time.Second        // -> max interval = 200s
 	tests := []struct {
-		name             string
-		latestExportedTs uint64
-		givenAfterTs     *uint64
-		givenBeforeTs    *uint64
-		wantAfterTs      uint64
-		wantBeforeTs     uint64
+		name          string
+		minPossibleTs uint64
+		maxPossibleTs uint64
+		givenAfterTs  *uint64
+		givenBeforeTs *uint64
+		wantAfterTs   uint64
+		wantBeforeTs  uint64
 	}{
 		// no timestams are provided, should resolve to beforeTs = latestExportedTs and afterTs = latestExportedTs - maxAllowedInterval
 		{
-			name:             "no timestamps",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    nil,
-			wantAfterTs:      999999800,
-			wantBeforeTs:     1000000000,
+			name:          "no timestamps",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  nil,
+			givenBeforeTs: nil,
+			wantAfterTs:   999999800,
+			wantBeforeTs:  1000000000,
 		},
 		// no timestamps are provided and latestExportedTs is low, should resolve to beforeTs = latestExportedTs and afterTs = 0
 		{
-			name:             "no timestamps - low latest ts",
-			latestExportedTs: 100,
-			givenAfterTs:     nil,
-			givenBeforeTs:    nil,
-			wantAfterTs:      0,
-			wantBeforeTs:     100,
+			name:          "no timestamps - low latest ts",
+			maxPossibleTs: 100,
+			givenAfterTs:  nil,
+			givenBeforeTs: nil,
+			wantAfterTs:   0,
+			wantBeforeTs:  100,
 		},
 		// afterTs is provided, beforeTs should be afterTs + maxAllowedInterval
 		{
-			name:             "high after ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(1000000000)),
-			givenBeforeTs:    nil,
-			wantAfterTs:      1000000000,
-			wantBeforeTs:     1000000200,
+			name:          "high after ts",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(1000000000)),
+			givenBeforeTs: nil,
+			wantAfterTs:   1000000000,
+			wantBeforeTs:  1000000200,
 		},
 		// afterTs is provided and lowest possible
 		{
-			name:             "low after ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    nil,
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
+			name:          "low after ts",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(999999000)),
+			givenBeforeTs: nil,
+			wantAfterTs:   999999000,
+			wantBeforeTs:  999999200,
+		},
+
+		// after ts is provided but below minPossibleTs, e.g. chain is younger than max interval
+		{
+			name:          "after ts below min possible",
+			minPossibleTs: 999999100,
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(999998999)),
+			givenBeforeTs: nil,
+			wantAfterTs:   999999100,
+			wantBeforeTs:  999999300,
 		},
 		// beforeTs is provided, afterTs should be beforeTs - maxAllowedInterval
 		{
-			name:             "high before ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999800)),
-			wantAfterTs:      999999600,
-			wantBeforeTs:     999999800,
+			name:          "high before ts",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  nil,
+			givenBeforeTs: ptr(uint64(999999800)),
+			wantAfterTs:   999999600,
+			wantBeforeTs:  999999800,
+		},
+		// beforeTs is higher than latest exported ts, should resolve to latest exported ts
+		{
+			name:          "high before ts - above latest",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  nil,
+			givenBeforeTs: ptr(uint64(1000000001)),
+			wantAfterTs:   999999800,
+			wantBeforeTs:  1000000000,
 		},
 		// beforeTs is exactly minAllowedTs + maxAllowedInterval, afterTs should be minAllowedTs
 		{
-			name:             "low before ts - exact",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999200)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
+			name:          "low before ts - exact",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  nil,
+			givenBeforeTs: ptr(uint64(999999200)),
+			wantAfterTs:   999999000,
+			wantBeforeTs:  999999200,
 		},
 		// beforeTs is provided and close to minAllowedTs, afterTs should be minAllowedTs
 		{
-			name:             "low before ts",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999999050)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999050,
+			name:          "low before ts",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  nil,
+			givenBeforeTs: ptr(uint64(999999050)),
+			wantAfterTs:   999999000,
+			wantBeforeTs:  999999050,
 		},
 		// both timestamps are provided
 		{
-			name:             "both timestamps",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999950)),
-			givenBeforeTs:    ptr(uint64(1000000000)),
-			wantAfterTs:      999999950,
-			wantBeforeTs:     1000000000,
+			name:          "both timestamps",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(999999950)),
+			givenBeforeTs: ptr(uint64(1000000000)),
+			wantAfterTs:   999999950,
+			wantBeforeTs:  1000000000,
 		},
 		// both timestamps are provided, high edge case
 		{
-			name:             "both timestamps - high edge",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(1000000000)),
-			givenBeforeTs:    ptr(uint64(1000000200)),
-			wantAfterTs:      1000000000,
-			wantBeforeTs:     1000000200,
+			name:          "both timestamps - high edge",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(1000000000)),
+			givenBeforeTs: ptr(uint64(1000000200)),
+			wantAfterTs:   1000000000,
+			wantBeforeTs:  1000000200,
 		},
 		// both timestamps are provided, low edge case
 		{
-			name:             "both timestamps - low edge",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    ptr(uint64(999999200)),
-			wantAfterTs:      999999000,
-			wantBeforeTs:     999999200,
+			name:          "both timestamps - low edge",
+			maxPossibleTs: 1000000000,
+			givenAfterTs:  ptr(uint64(999999000)),
+			givenBeforeTs: ptr(uint64(999999200)),
+			wantAfterTs:   999999000,
+			wantBeforeTs:  999999200,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotAfterTs, gotBeforeTs, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
+			gotAfterTs, gotBeforeTs, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.minPossibleTs, tt.maxPossibleTs)
 			assert.NoError(t, err, "Expected no error, got %v", err)
 			assert.Equal(t, tt.wantAfterTs, gotAfterTs, "Expected afterTs to be %d, got %d", tt.wantAfterTs, gotAfterTs)
 			assert.Equal(t, tt.wantBeforeTs, gotBeforeTs, "Expected beforeTs to be %d, got %d", tt.wantBeforeTs, gotBeforeTs)
@@ -354,39 +375,37 @@ func TestResolveAndValidateTimestamps_Success(t *testing.T) {
 
 func TestResolveAndValidateTimestamps_Failure(t *testing.T) {
 	var chartSeconds uint64 = 1000
+	maxPossibleTs := uint64(1000000000)
 	duration := time.Second // -> max interval = 200s
 	tests := []struct {
-		name             string
-		latestExportedTs uint64
-		givenAfterTs     *uint64
-		givenBeforeTs    *uint64
-		errMsg           string
+		name          string
+		maxPossibleTs uint64
+		givenAfterTs  *uint64
+		givenBeforeTs *uint64
+		errMsg        string
 	}{
 		{
-			name:             "after ts below min allowed",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999998999)),
-			givenBeforeTs:    nil,
-			errMsg:           "`after_ts` must be greater or equal to 999999000",
+			name:          "after ts below min allowed",
+			givenAfterTs:  ptr(uint64(999998999)),
+			givenBeforeTs: nil,
+			errMsg:        "`after_ts` must be greater or equal to 999999000",
 		},
 		{
-			name:             "before ts below min allowed",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     nil,
-			givenBeforeTs:    ptr(uint64(999998999)),
-			errMsg:           "`before_ts` must be greater or equal to 999999000",
+			name:          "before ts below min allowed",
+			givenAfterTs:  nil,
+			givenBeforeTs: ptr(uint64(999998999)),
+			errMsg:        "`before_ts` must be greater or equal to 999999000",
 		},
 		{
-			name:             "both timestamps - too high interval",
-			latestExportedTs: 1000000000,
-			givenAfterTs:     ptr(uint64(999999000)),
-			givenBeforeTs:    ptr(uint64(999999201)),
-			errMsg:           "difference between `before_ts` and `after_ts` must be smaller or equal to 200",
+			name:          "both timestamps - too high interval",
+			givenAfterTs:  ptr(uint64(999999000)),
+			givenBeforeTs: ptr(uint64(999999201)),
+			errMsg:        "difference between `before_ts` and `after_ts` must be smaller or equal to 200",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, tt.latestExportedTs)
+			_, _, err := resolveAndValidateTimestamps(tt.givenAfterTs, tt.givenBeforeTs, chartSeconds, duration, 0, maxPossibleTs)
 			assert.Error(t, err, "Expected error, got %v", err)
 			assert.Contains(t, err.Error(), tt.errMsg)
 		})
