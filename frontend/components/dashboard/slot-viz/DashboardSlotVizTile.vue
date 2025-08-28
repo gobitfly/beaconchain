@@ -132,13 +132,13 @@ const data = computed(() => {
         />
         <LazyDashboardSlotVizDutyIcon
           v-if="data.icons?.length"
-          :icon="data.icons[0]"
+          :icon="data.icons[0]!"
           class="first_icon"
           :class="data.firstIconClass"
         />
         <LazyDashboardSlotVizDutyIcon
           v-if="data.icons?.length === 2"
-          :icon="data.icons[1]"
+          :icon="data.icons[1]!"
           class="second_icon"
         />
       </div>

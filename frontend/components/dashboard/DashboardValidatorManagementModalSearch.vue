@@ -42,7 +42,7 @@ const isLoading = computed(() => status.value === 'pending')
 
 const handleSearch = (input: string) => {
   if (!input.length) return
-  error.value = null
+  error.value = undefined
   execute()
 }
 const emit = defineEmits<{

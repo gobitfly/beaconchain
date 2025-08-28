@@ -58,7 +58,7 @@ export function useValidatorDashboardRewardsStore() {
 
     // If we are on the first page we get the next Epoch slot viz data and create a future entry
     if (!query?.cursor && slotViz.value && res.data?.length) {
-      const searchEpoch = res.data[0].epoch
+      const searchEpoch = res.data[0]?.epoch ?? 0
       const nextEpoch = slotViz.value?.findLast(e => e.epoch > searchEpoch)
 
       if (nextEpoch) {

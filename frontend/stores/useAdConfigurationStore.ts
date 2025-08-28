@@ -27,7 +27,7 @@ export function useAdConfigurationStore() {
       if (!newConfigurations[config.key]) {
         newConfigurations[config.key] = []
       }
-      newConfigurations[config.key].push(config)
+      newConfigurations[config.key]?.push(config)
     })
     data.value = {
       ...adConfigs.value,

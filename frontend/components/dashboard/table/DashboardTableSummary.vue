@@ -243,7 +243,7 @@ watch(
               <template #body="{ data }">
                 <DashboardTableSummaryValidators
                   :validators="data.validators"
-                  :is-absolute="showAbsoluteValuesPersisted[storageDashboardKey]"
+                  :is-absolute="showAbsoluteValuesPersisted[storageDashboardKey] ?? false"
                   :row="data"
                   :group-id="data.group_id"
                   :dashboard-key

@@ -59,7 +59,7 @@ function onButtonClicked(value: string) {
       :icon="button.icon"
       :text="button.text"
       :sub-text="button.subText"
-      :selected="values[button.value]"
+      :selected="values[button.value] ?? false"
       :tooltip="button.tooltip"
       :disabled="button.disabled"
       :class="[layout, button.className]"

@@ -38,12 +38,12 @@ const mostRecentScheduledSlotId = computed(() => {
 
   for (let i = 0; i < slotViz.value.length; i++) {
     const row = slotViz.value[i]
-    if (!row.slots?.length) {
+    if (!row?.slots?.length) {
       continue
     }
     for (let j = row.slots.length - 1; j >= 0; j--) {
-      if (row.slots[j].status === 'scheduled') {
-        id = row.slots[j].slot
+      if (row?.slots[j]?.status === 'scheduled') {
+        id = row?.slots[j]?.slot ?? 0
       }
       else {
         return id

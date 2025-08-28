@@ -76,7 +76,7 @@ export function useDashboardKeyProvider(
       setDashboardKey(encodeBase64Url(route.params.id.join(',')))
     }
     else {
-      setDashboardKey(route.params.id)
+      setDashboardKey(route.params.id ?? '')
     }
   }
   initialCheck()

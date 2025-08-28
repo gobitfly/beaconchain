@@ -241,7 +241,7 @@ div.p-checkbox {
       }
     }
 
-    .p-toggleswitch-slider:before {
+    .p-toggleswitch-handle {
       background: var(--switch-slider-color) !important;
       width: 20px;
       height: 20px;
@@ -251,7 +251,7 @@ div.p-checkbox {
       transition-duration: 0.2s;
     }
 
-    &.p-toggleswitch-checked .p-toggleswitch-slider:before {
+    &.p-toggleswitch-checked .p-toggleswitch-handle {
       transform: translateX(20.6px);
     }
 
