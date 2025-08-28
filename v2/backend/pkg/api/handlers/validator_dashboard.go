@@ -166,25 +166,30 @@ func resolveAndValidateTimestamps(
 	beforeTs *uint64,
 	chartSeconds uint64,
 	aggregationDuration time.Duration,
-	latestExportedTs uint64,
+	minPossibleTs uint64,
+	maxPossibleTs uint64,
 ) (uint64, uint64, error) {
 	maxAllowedInterval := chartDatapointLimit * uint64(aggregationDuration.Seconds())
-	minAllowedTs := latestExportedTs - min(chartSeconds, latestExportedTs)
+	minAllowedTs := maxPossibleTs - min(chartSeconds, maxPossibleTs)
 	// Resolve missing timestamps based on the provided input.
 	var resolvedAfterTs, resolvedBeforeTs uint64
 	switch {
-	case afterTs == nil && beforeTs == nil:
-		intervalLookback := latestExportedTs - min(maxAllowedInterval, latestExportedTs)
+	case afterTs == nil && beforeTs == nil: // neither afterTs nor beforeTs is provided
+		// resolve to latest ts and largest possible interval
+		resolvedBeforeTs = maxPossibleTs
+		intervalLookback := maxPossibleTs - min(maxAllowedInterval, maxPossibleTs)
 		resolvedAfterTs = max(minAllowedTs, intervalLookback)
-		resolvedBeforeTs = latestExportedTs
-	case afterTs == nil && beforeTs != nil: // beforeTs is provided
-		intervalLookback := *beforeTs - min(maxAllowedInterval, *beforeTs)
+	case afterTs == nil && beforeTs != nil: // only beforeTs is provided
+		// cap to latest possible ts and largest possible interval
+		resolvedBeforeTs = min(*beforeTs, maxPossibleTs)
+		intervalLookback := resolvedBeforeTs - min(maxAllowedInterval, resolvedBeforeTs)
 		resolvedAfterTs = max(minAllowedTs, intervalLookback)
-		resolvedBeforeTs = *beforeTs
-	case afterTs != nil && beforeTs == nil: // afterTs is provided
-		resolvedAfterTs = *afterTs
-		resolvedBeforeTs = *afterTs + maxAllowedInterval
+	case afterTs != nil && beforeTs == nil: // only afterTs is provided
+		// cap to earliest possible ts and largest possible interval
+		resolvedAfterTs = max(*afterTs, minPossibleTs)
+		resolvedBeforeTs = resolvedAfterTs + maxAllowedInterval
 	case afterTs != nil && beforeTs != nil: // both are provided
+		// resolve as is
 		resolvedAfterTs = *afterTs
 		resolvedBeforeTs = *beforeTs
 	}
@@ -240,6 +245,7 @@ func (h *HandlerService) GetValidatorDashboardSummaryChart(ctx context.Context, 
 		input.beforeTs,
 		chartSeconds,
 		input.aggregation.Duration(h.cfg.ClConfig.SecondsPerSlot*h.cfg.ClConfig.SlotsPerEpoch),
+		h.cfg.Chain.GenesisTimestamp,
 		latestExportedTs,
 	)
 	if err != nil {
@@ -723,18 +729,17 @@ func (h *HandlerService) GetValidatorDashboardRewardsChart(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-
 	afterTs, beforeTs, err := resolveAndValidateTimestamps(
 		input.afterTs,
 		input.beforeTs,
 		chartSeconds,
 		input.aggregation.Duration(h.cfg.ClConfig.SecondsPerSlot*h.cfg.ClConfig.SlotsPerEpoch),
+		h.cfg.Chain.GenesisTimestamp,
 		latestExportedTs,
 	)
 	if err != nil {
 		return nil, err
 	}
-
 	data, err := h.getDataAccessor(ctx).GetValidatorDashboardRewardsChart(ctx, *dashboardId, input.groupIds, input.protocolModes, input.aggregation, afterTs, beforeTs)
 	if err != nil {
 		return nil, err
