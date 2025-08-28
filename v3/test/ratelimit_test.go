@@ -11,7 +11,7 @@ import (
 )
 
 func TestRateLimit(t *testing.T) {
-	ctx, client := setupExternalAPIClient()
+	ctx, client := setupExternalAPIClient(t)
 	// give a timeout to avoid hanging tests
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -25,7 +25,7 @@ func TestRateLimit(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := client.ExternalServiceExecutionBlock(in, getExternalAuth(t))
+			_, err := client.ExternalServiceExecutionBlock(in, nil)
 			results <- err
 		}()
 	}

@@ -2,11 +2,10 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
-	"github.com/go-openapi/runtime"
+	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/api/gen/client/client"
@@ -16,43 +15,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-// struct for creds for grpc clients
-// bearerAuth implements ClientAuthInfoWriter
-type bearerAuth struct {
-	token string
-}
-
-// AuthenticateRequest sets the Authorization header
-func (b *bearerAuth) AuthenticateRequest(req runtime.ClientRequest, _ strfmt.Registry) error {
-	return req.SetHeaderParam("Authorization", fmt.Sprintf("Bearer %s", b.token))
-}
-
-// NewBearerAuth returns a ClientAuthInfoWriter that injects a Bearer token
-func NewBearerAuth(token string) runtime.ClientAuthInfoWriter {
-	return &bearerAuth{token: token}
-}
-
-func getExternalAuth(t *testing.T) runtime.ClientAuthInfoWriter {
+func setupExternalAPIClient(t *testing.T) (context.Context, external_service.ClientService) {
 	apiKey := os.Getenv("API_KEY_ORCA_TEST")
 	if apiKey == "" {
 		t.Fatal("API_KEY_ORCA_TEST environment variable is not set")
 	}
-	return getExternalAuthFromAPIKey(apiKey)
+	return setupExternalAPIClientWithAuth(apiKey)
 }
 
-func getExternalAuthFromAPIKey(apiKey string) runtime.ClientAuthInfoWriter {
-	return NewBearerAuth(apiKey)
-}
+func setupExternalAPIClientWithAuth(apiKey string) (context.Context, external_service.ClientService) {
+	r := httptransport.New(testUtils.GetExternalHTTPUrl(), client.DefaultBasePath, client.DefaultSchemes)
+	r.DefaultAuthentication = httptransport.BearerToken(apiKey)
+	cl := client.New(r, strfmt.Default)
 
-func setupExternalAPIClient() (context.Context, external_service.ClientService) {
-	cl := client.NewHTTPClientWithConfig(
-		nil,
-		&client.TransportConfig{
-			Host:     testUtils.GetExternalHTTPUrl(),
-			BasePath: "/",
-			Schemes:  []string{"http"},
-		},
-	)
 	return context.Background(), cl.ExternalService
 }
 
