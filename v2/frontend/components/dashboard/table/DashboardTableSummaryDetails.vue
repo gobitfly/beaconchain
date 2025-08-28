@@ -59,7 +59,7 @@ const summarySections = computed<SummaryRow[][]>(() => {
       property,
       title,
     }
-    sections[index].push(row)
+    sections[index]?.push(row)
   }
 
   const addSummaryPropertiesToSection = (

@@ -337,7 +337,7 @@ const option = computed<EChartsOption>(() => {
       extraCssText: 'z-index: 100;',
       formatter(params) {
         if (!Array.isArray(params)) return ''
-        const ts = parseInt(params[0].name)
+        const ts = parseInt(params[0]?.name ?? '0')
         let lastDif = 0
         let highlightGroup = ''
         const groupInfos = params.map((param: any) => {

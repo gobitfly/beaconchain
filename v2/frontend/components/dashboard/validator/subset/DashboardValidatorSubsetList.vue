@@ -62,7 +62,7 @@ function createDutyLabels(dutyObjects?: number[]) {
   switch (props.category) {
     case 'exiting':
     case 'pending':
-      return getRelativeTime(dutyObjects[0])
+      return getRelativeTime(dutyObjects[0] ?? 0)
     case 'got_slashed':
       return $t('dashboard.validator.subset_dialog.got_slashed') + ':'
     case 'has_slashed':

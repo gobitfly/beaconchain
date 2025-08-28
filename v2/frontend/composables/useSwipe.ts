@@ -36,8 +36,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     }
     event.stopImmediatePropagation()
     isSwiping.value = true
-    touchStartX.value = event.changedTouches[0].screenX
-    touchStartY.value = event.changedTouches[0].screenY
+    touchStartX.value = event.changedTouches[0]?.screenX ?? 0
+    touchStartY.value = event.changedTouches[0]?.screenY ?? 0
   }
   const onTouchEnd = (event: TouchEvent) => {
     if (!isSwiping.value) {
@@ -45,8 +45,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     }
     event.stopImmediatePropagation()
     isSwiping.value = false
-    touchEndX.value = event.changedTouches[0].screenX
-    touchEndY.value = event.changedTouches[0].screenY
+    touchEndX.value = event.changedTouches[0]?.screenX ?? 0
+    touchEndY.value = event.changedTouches[0]?.screenY ?? 0
 
     if (!handleGesture(event) && touchableElement.value) {
       touchableElement.value.style.transform = ''
@@ -61,8 +61,8 @@ export const useSwipe = (swipeOptions?: SwipeOptions, bounce = true) => {
     if (!bounce || !touchableElement.value) {
       return
     }
-    let divX = event.changedTouches[0].screenX - touchStartX.value
-    let divY = event.changedTouches[0].screenY - touchStartY.value
+    let divX = event.changedTouches[0]?.screenX ?? 0 - touchStartX.value
+    let divY = event.changedTouches[0]?.screenY ?? 0 - touchStartY.value
     const directions = options.directions
     if (!intersection(directions, [
       'all',
