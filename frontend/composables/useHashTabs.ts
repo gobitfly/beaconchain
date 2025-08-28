@@ -12,8 +12,8 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = f
 
     for (let i = 0; i < tabs.length; i++) {
       const tab = tabs[i]
-      if (!tab.disabled) {
-        return tab.key
+      if (!tab?.disabled) {
+        return tab?.key
       }
     }
     return '-1'
@@ -23,9 +23,11 @@ export function useHashTabs(tabs: HashTabs, defaultTab: string, useRouteHash = f
     const hash = useRouteHash ? initialHash?.replace('#', '') : ''
     const matchedTab = tabs.find(t => t.key === hash)
     activeTab.value
-      = hash && matchedTab && !matchedTab.disabled
-        ? matchedTab.key
-        : findFirstValidIndex()
+      = (
+        hash && matchedTab && !matchedTab.disabled
+          ? matchedTab.key
+          : findFirstValidIndex()
+      ) ?? ''
   })
 
   const updateHash = (key: string) => {

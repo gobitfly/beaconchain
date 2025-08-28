@@ -279,7 +279,7 @@ const getGroupInfo = (series: ChartSeries<number, string>[], currentIndex: numbe
         name: groups.value.find(group => group.id === id)?.name ?? '',
         value: data[currentIndex] === '0' || data[currentIndex] === null
           ? '-'
-          : formatAmount(data[currentIndex], {
+          : formatAmount(data[currentIndex] ?? '0', {
               hasCurrencyDisplay: true,
               hasHigherPrecision: true,
               hasUnitDisplay: true,
@@ -292,7 +292,7 @@ const getGroupInfo = (series: ChartSeries<number, string>[], currentIndex: numbe
       name: groups.value.find(group => group.id === id)?.name ?? '',
       value: data[currentIndex] === '0' || data[currentIndex] === null
         ? '-'
-        : formatAmount(data[currentIndex], {
+        : formatAmount(data[currentIndex] ?? '0', {
             hasCurrencyDisplay: true,
             hasHigherPrecision: true,
             hasUnitDisplay: true,
@@ -358,13 +358,13 @@ const option = computed<EChartsOption>(() => {
 
         const paramsConsensusLayer = params.find(param => param.seriesId === seriesId.cl)
         const paramsExecutionLayer = params.find(param => param.seriesId === seriesId.el)
-        const currentIndex = params[0].dataIndex
+        const currentIndex = params[0]?.dataIndex
         const currentEpoch = {
-          index: params[0].name,
-          timestamp: Number(params[0].name),
+          index: params[0]?.name ?? '0',
+          timestamp: Number(params[0]?.name),
         }
-        const currentGroupTotalCl = clSeriesGroupTotal.value[currentIndex]
-        const currentGroupTotalEl = elSeriesGroupTotal.value[currentIndex]
+        const currentGroupTotalCl = clSeriesGroupTotal.value[currentIndex ?? 0]
+        const currentGroupTotalEl = elSeriesGroupTotal.value[currentIndex ?? 0]
 
         const consensusLayerRewardSum = currentGroupTotalCl === '0'
           ? '-'
@@ -389,8 +389,8 @@ const option = computed<EChartsOption>(() => {
         const executionLayerRewardSumLabel = paramsExecutionLayer?.seriesName ?? ''
 
         const groupInfo = {
-          cl: getGroupInfo(clSeries.value, currentIndex),
-          el: getGroupInfo(elSeries.value, currentIndex),
+          cl: getGroupInfo(clSeries.value, currentIndex ?? 0),
+          el: getGroupInfo(elSeries.value, currentIndex ?? 0),
         }
 
         const d = document.createElement('div')

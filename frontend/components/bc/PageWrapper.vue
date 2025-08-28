@@ -15,7 +15,6 @@ defineProps<{
     <slot name="banner" />
     <main class="content">
       <slot name="top" />
-      <!-- <BcAdControl /> -->
       <slot />
       <div id="bottom_banner" />
       <slot name="bottom" />

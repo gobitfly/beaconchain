@@ -26,7 +26,7 @@ export function useProductsStore() {
   const bestPremiumProduct = computed(() => {
     return data.value?.premium_products.reduce(
       (max, product) =>
-        product.price_per_year_eur > max.price_per_year_eur ? product : max,
+        product.price_per_year_eur > max!.price_per_year_eur ? product : max,
       data.value.premium_products[0],
     )
   })

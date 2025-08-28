@@ -34,9 +34,9 @@ export default defineNuxtConfig({
       { storesDirs: [ './stores/**' ] },
     ],
     'pinia-plugin-persistedstate/nuxt',
-    '@primevue/nuxt-module',
     '@nuxt/eslint',
     '@vueuse/nuxt',
+    '@primevue/nuxt-module',
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
@@ -118,11 +118,7 @@ export default defineNuxtConfig({
   postcss: { plugins: { autoprefixer: {} } },
   eslint: { config: { stylistic: true } },
   i18n: {
-    // can probably be removed with @nuxtjs/i18n@10
-    // see: https://github.com/nuxt-maodules/i18n/issues/3238#issuecomment-2672492536
-    bundle: {
-      optimizeTranslationDirective: false,
-    },
+    defaultLocale: 'en-US',
   },
   piniaPluginPersistedstate: {
     storage: 'cookies',

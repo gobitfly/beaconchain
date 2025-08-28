@@ -200,7 +200,7 @@ const subsets = computed<ValidatorSubset[]>(() => {
               xWithdrawing,
             ],
           ]
-          baseSubset.validators.forEach((v) => {
+          baseSubset?.validators.forEach((v) => {
             subsets.forEach(([
               origin,
               merged,

@@ -47,14 +47,14 @@ export function useBcToastProvider() {
   watch(value, (toasts) => {
     if (toasts.length) {
       if (toasts.length === 1) {
-        const hasGroup = toasts[0].group
+        const hasGroup = toasts[0]?.group
         toast.add({
           detail: hasGroup
-            ? `${toasts[0].group}: ${toasts[0].detail}`
-            : toasts[0].detail,
+            ? `${toasts[0]?.group}: ${toasts[0]?.detail}`
+            : toasts[0]?.detail,
           life: TOAST_TIME,
           severity: 'error',
-          summary: toasts[0].summary,
+          summary: toasts[0]?.summary,
         })
       }
       else {
@@ -69,11 +69,11 @@ export function useBcToastProvider() {
         }, groups)
         for (const key in mapped) {
           const list = mapped[key]
-          const summary = list[0].summary
+          const summary = list?.[0]?.summary
           const detail
-            = list.length === 1
-              ? `${key}: ${list[0].detail}`
-              : $t('error.multiple_times', { error: key }, list.length)
+            = list?.length === 1
+              ? `${key}: ${list[0]?.detail}`
+              : $t('error.multiple_times', { error: key }, list?.length ?? 0)
 
           toast.add({
             detail,

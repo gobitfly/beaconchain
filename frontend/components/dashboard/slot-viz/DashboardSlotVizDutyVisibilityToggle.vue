@@ -80,7 +80,7 @@ watch(() => overview.value, () => {
 watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
   () => {
     if (persistedSelectedCategories.value[storageDashboardKey.value]) {
-      emit('updateCategories', persistedSelectedCategories.value[storageDashboardKey.value])
+      emit('updateCategories', persistedSelectedCategories.value[storageDashboardKey.value] ?? [])
     }
   },
   { immediate: true },
@@ -97,7 +97,7 @@ watch(() => persistedSelectedCategories.value[storageDashboardKey.value],
     </div>
     <ClientOnly v-else>
       <BcToggleMultiBar
-        v-model="persistedSelectedCategories[storageDashboardKey]"
+        v-model="persistedSelectedCategories[storageDashboardKey] as []"
         :buttons="icons"
       />
     </ClientOnly>

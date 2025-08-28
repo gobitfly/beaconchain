@@ -54,12 +54,12 @@ const items = computed<MenuBarEntry[]>(() => {
       const count = hasMoreItems && width.value >= 520 ? ` (${items.length})` : ''
       buttons.push({
         active: !!active,
-        command: !hasMoreItems ? items[0].command : undefined,
-        disabledTooltip: !hasMoreItems ? items[0].disabledTooltip : undefined,
+        command: !hasMoreItems ? items[0]?.command : undefined,
+        disabledTooltip: !hasMoreItems ? items[0]?.disabledTooltip : undefined,
         dropdown: hasMoreItems,
         items: hasMoreItems ? items : undefined,
         label: label + count,
-        route: !hasMoreItems ? items[0].route : undefined,
+        route: !hasMoreItems ? items[0]?.route : undefined,
       })
     }
   }
