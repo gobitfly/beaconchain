@@ -1058,7 +1058,6 @@
             "custom_machine_alerts_subtext": "(CPU, RAM,...)",
             "effective_balance_per_dashboard": "Max Stake per dashboard",
             "email_notifications_per_day": "Email notifications per day",
-            "heatmap_history": "Heatmap history",
             "machine_monitoring_history_seconds": "Machine monitoring history",
             "manage_dashboard_via_api": "Manage dashboard via API",
             "max_effective_balance_per_dashboard": "Max Stake per dashboard",
@@ -1093,8 +1092,6 @@
             "share_dashboard": "Share Dashboard",
             "timeframe_dashboard_chart": "{timeframe} dashboard chart history",
             "timeframe_dashboard_chart_no_timeframe": "Dashboard chart history",
-            "timeframe_heatmap_chart": "{timeframe} heatmap chart history",
-            "timeframe_heatmap_chart_no_timeframe": "Heatmap chart history",
             "validator_dashboards": "{amount} Validator Dashboard | {amount} Validator Dashboards",
             "validators": "{amount} Validators"
         },
