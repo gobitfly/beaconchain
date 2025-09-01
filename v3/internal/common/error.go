@@ -3,6 +3,7 @@ package common
 import (
 	"errors"
 
+	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,6 +40,9 @@ func SanitizeErrorMessage(err error) error {
 
 	// Otherwise, sanitize the error
 	st, ok := status.FromError(err)
+	if st.Code() == codes.Internal {
+		log.Infof("internal error: %v", err)
+	}
 	if !ok {
 		return status.Error(codes.Internal, GenericErrMsg)
 	}

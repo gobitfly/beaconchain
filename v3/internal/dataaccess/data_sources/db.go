@@ -72,7 +72,19 @@ func InitDB(dbConfig *config.DatabaseConfig, databaseType DatabaseType) *sqlx.DB
 }
 
 func createDbConnectionString(databaseType DatabaseType, dbConfig config.DatabaseConfig) string {
-	return fmt.Sprintf("%s://%s:%s@%s/%s", string(databaseType), dbConfig.Username, dbConfig.Password, net.JoinHostPort(dbConfig.Host, dbConfig.Port), dbConfig.DbName)
+	var ssl string
+	switch databaseType {
+	case Postgres:
+		ssl = "sslmode=disable"
+		if dbConfig.SSL {
+			ssl = "sslmode=require"
+		}
+	case Clickhouse:
+		ssl = fmt.Sprintf("secure=%v", dbConfig.SSL)
+	}
+	redacted := fmt.Sprintf("%s://%s:<PASSWORD>@%s/%s?%s", string(databaseType), dbConfig.Username, net.JoinHostPort(dbConfig.Host, dbConfig.Port), dbConfig.DbName, ssl)
+	log.Infof("Connecting to %s database %s at %s", databaseType, dbConfig.DbName, redacted)
+	return fmt.Sprintf("%s://%s:%s@%s/%s?%s", string(databaseType), dbConfig.Username, dbConfig.Password, net.JoinHostPort(dbConfig.Host, dbConfig.Port), dbConfig.DbName, ssl)
 }
 
 // TODO: Connect via IAM Auth
