@@ -162,8 +162,6 @@ const rows = computed(() => {
     ),
   )
 
-  addRow('label', 'heatmap_history', 'last-in-group', comingSoon)
-
   addRow(
     'group',
     'notification',

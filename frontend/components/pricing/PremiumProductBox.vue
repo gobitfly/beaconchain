@@ -46,7 +46,6 @@ const percentages = computed(() => {
   if (bestPremiumProduct?.value === undefined) {
     return {
       effectiveBalancePerDashboard: 100,
-      heatmapChart: 100,
       summaryChart: 100,
       validatorDashboards: 100,
     }
@@ -69,7 +68,6 @@ const percentages = computed(() => {
 
   return {
     effectiveBalancePerDashboard,
-    heatmapChart: chartPercent,
     summaryChart: chartPercent,
     validatorDashboards:
       (product.premium_perks.validator_dashboards
@@ -182,12 +180,6 @@ const mainFeatures = computed<Feature[]>(() => {
         'pricing.premium_product.timeframe_dashboard_chart_no_timeframe',
       ),
       percentage: percentages.value.summaryChart,
-    },
-    {
-      available: true,
-      name: $t('pricing.premium_product.timeframe_heatmap_chart_no_timeframe'),
-      percentage: percentages.value.heatmapChart,
-      subtext: $t('pricing.premium_product.coming_soon'),
     },
   ]
 })
