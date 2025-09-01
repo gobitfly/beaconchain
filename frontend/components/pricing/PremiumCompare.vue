@@ -128,16 +128,33 @@ const rows = computed(() => {
   )
   addRow('group', 'dashboard_charts')
   addRow('label', 'summary_chart_history', 'first-in-group')
-  const chartProps = [
+  const summaryChartProps = [
     'epoch',
     'hourly',
     'daily',
     'weekly',
   ]
-  chartProps.forEach(p =>
+  summaryChartProps.forEach(p =>
     addRow(
       'perc',
       `chart_history_seconds.${p}`,
+      undefined,
+      undefined,
+      undefined,
+      `time_frames.${p}`,
+    ),
+  )
+
+  addRow('label', 'rewards_chart_history', 'first-in-group')
+  const rewardsChartProps = [
+    'hourly',
+    'daily',
+    'weekly',
+  ]
+  rewardsChartProps.forEach(p =>
+    addRow(
+      'perc',
+      `rewards_chart_history_seconds.${p}`,
       undefined,
       undefined,
       undefined,

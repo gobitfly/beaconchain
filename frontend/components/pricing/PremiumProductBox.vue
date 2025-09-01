@@ -182,7 +182,6 @@ const mainFeatures = computed<Feature[]>(() => {
         'pricing.premium_product.timeframe_dashboard_chart_no_timeframe',
       ),
       percentage: percentages.value.summaryChart,
-      subtext: $t('pricing.premium_product.coming_soon'),
     },
     {
       available: true,
