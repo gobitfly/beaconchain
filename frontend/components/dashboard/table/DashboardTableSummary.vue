@@ -175,6 +175,7 @@ watch(
         <DashboardChartSummaryFilter
           v-else
           v-model="chartFilter"
+          :is-guest-dashboard
         />
       </template>
       <template #table>

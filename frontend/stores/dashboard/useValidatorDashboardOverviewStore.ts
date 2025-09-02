@@ -82,7 +82,10 @@ export const useValidatorDashboardOverviewStore = defineStore('validator-dashboa
     return validatorCount.value > VALIDATOR_DASHBOARD_SIZE_THRESHOLD
   })
 
+  const groups = computed(() => overview.value?.groups)
+
   return {
+    groups,
     hasValidators,
     isLargeDashboard,
     loading,

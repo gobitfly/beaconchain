@@ -46,7 +46,7 @@ export function useProductsStore() {
   })
 
   const premiumProducts = computed(() => {
-    if (!data.value?.api_products) return {}
+    if (!data.value?.premium_products) return {}
 
     return Object.fromEntries(data.value.premium_products.map(product => [
       product.product_name,
