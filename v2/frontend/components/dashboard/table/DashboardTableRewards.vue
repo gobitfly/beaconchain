@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DataTableSortEvent } from 'primevue/datatable'
+import type { RewardsChartFilter } from '../chart/DashboardChartRewardsFilter.vue'
 import type { VDBRewardsTableRow } from '~/types/api/validator_dashboard'
 import type {
   Cursor, TableQueryParams,
@@ -139,254 +140,269 @@ const findNextEpochDuties = (epoch: number) => {
   return list.join(', ')
 }
 const { getTimestampFromEpoch } = useNetworkStore()
+
+const usedValidatorGroups = computed(() => groups.value?.filter(group => group.count > 0))
+const selectedValidatorGroups = computed(() => usedValidatorGroups.value?.map(group => group.id))
+
+const chartFilter = ref<RewardsChartFilter>({
+  aggregation: 'weekly',
+  before_ts: Math.floor(Date.now() / 1000),
+  group_ids: selectedValidatorGroups.value,
+})
 </script>
 
 <template>
-  <div>
-    <BcTableControl
-      :title="$t('dashboard.validator.rewards.title')"
-      :search-placeholder="
-        $t(
-          isGuestDashboard
-            ? 'dashboard.validator.rewards.search_placeholder_public'
-            : 'dashboard.validator.rewards.search_placeholder',
-        )
-      "
-      @set-search="setSearch"
-    >
-      <template #table>
-        <ClientOnly fallback-tag="span">
-          <BcTable
-            :data="addIdentifier(rewards, 'epoch', 'group_id')"
-            data-key="identifier"
-            :expandable="true"
-            class="rewards-table"
-            :cursor
-            :page-size
-            :row-class="getRowClass"
-            :add-spacer="colsVisible.age"
-            :is-row-expandable
-            :selected-sort="tempQuery?.sort"
-            :is-loading
-            @set-cursor="setCursor"
-            @sort="onSort"
-            @set-page-size="setPageSize"
+  <BcTableControl
+    :title="$t('dashboard.validator.rewards.title')"
+    :search-placeholder="
+      $t(
+        isGuestDashboard
+          ? 'dashboard.validator.rewards.search_placeholder_public'
+          : 'dashboard.validator.rewards.search_placeholder',
+      )
+    "
+    @set-search="setSearch"
+  >
+    <template #header-center="{ tableIsShown }">
+      <DashboardChartRewardsFilter
+        v-if="!tableIsShown"
+        v-model="chartFilter"
+        :groups="usedValidatorGroups"
+        :is-guest-dashboard
+      />
+    </template>
+    <template #table>
+      <ClientOnly fallback-tag="span">
+        <BcTable
+          :data="addIdentifier(rewards, 'epoch', 'group_id')"
+          data-key="identifier"
+          :expandable="true"
+          class="rewards-table"
+          :cursor
+          :page-size
+          :row-class="getRowClass"
+          :add-spacer="colsVisible.age"
+          :is-row-expandable
+          :selected-sort="tempQuery?.sort"
+          :is-loading
+          @set-cursor="setCursor"
+          @sort="onSort"
+          @set-page-size="setPageSize"
+        >
+          <Column
+            field="epoch"
+            :sortable="true"
+            body-class="epoch"
+            header-class="epoch"
+            :header="$t('common.epoch')"
           >
-            <Column
-              field="epoch"
-              :sortable="true"
-              body-class="epoch"
-              header-class="epoch"
-              :header="$t('common.epoch')"
-            >
-              <template #body="slotProps">
-                <BcLink
-                  :to="`/epoch/${slotProps.data.epoch}`"
-                  class="link"
-                  target="_blank"
-                >
-                  <BcFormatNumber :value="slotProps.data.epoch" />
-                </BcLink>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.age"
-              field="age"
-              body-class="age-field"
-            >
-              <template #header>
-                <BcTableAgeHeader />
-              </template>
-              <template #body="{ data }">
-                <BcTableDateTime
-                  :unix-timestamp="getTimestampFromEpoch(data.epoch)"
+            <template #body="slotProps">
+              <BcLink
+                :to="`/epoch/${slotProps.data.epoch}`"
+                class="link"
+                target="_blank"
+              >
+                <BcFormatNumber :value="slotProps.data.epoch" />
+              </BcLink>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.age"
+            field="age"
+            body-class="age-field"
+          >
+            <template #header>
+              <BcTableAgeHeader />
+            </template>
+            <template #body="{ data }">
+              <BcTableDateTime
+                :unix-timestamp="getTimestampFromEpoch(data.epoch)"
+              />
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.duty"
+            field="duty"
+            body-class="duty"
+            header-class="duty"
+            :header="$t('dashboard.validator.col.duty')"
+          >
+            <template #body="slotProps">
+              <span
+                v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+              >
+                {{ findNextEpochDuties(slotProps.data.epoch) }}
+              </span>
+              <DashboardTableValueDuty
+                v-else
+                :duty="slotProps.data.duty"
+              />
+            </template>
+          </Column>
+          <Column
+            field="group_id"
+            body-class="group-id"
+            header-class="group-id"
+            :header="$t('dashboard.validator.col.group')"
+          >
+            <template #body="slotProps">
+              <span>
+                {{ groupNameLabel(slotProps.data.group_id) }}
+              </span>
+            </template>
+          </Column>
+          <Column
+            field="reward"
+            body-class="reward"
+            header-class="reward"
+            :header="$t('dashboard.validator.summary.row.reward')"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+              >
+                -
+              </div>
+              <BcTooltip
+                v-else
+                fit-content
+                tooltip-text-align="left"
+              >
+                <BcFormatAmount
+                  :currency-items="[{
+                    executionLayerValue: slotProps.data.reward.el,
+                    consensusLayerValue: slotProps.data.reward.cl,
+                  }]"
+                  has-color
+                  has-sign-display
+                  target-unit-crypto="auto"
                 />
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.duty"
-              field="duty"
-              body-class="duty"
-              header-class="duty"
-              :header="$t('dashboard.validator.col.duty')"
-            >
-              <template #body="slotProps">
-                <span
-                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
-                >
-                  {{ findNextEpochDuties(slotProps.data.epoch) }}
-                </span>
-                <DashboardTableValueDuty
-                  v-else
-                  :duty="slotProps.data.duty"
-                />
-              </template>
-            </Column>
-            <Column
-              field="group_id"
-              body-class="group-id"
-              header-class="group-id"
-              :header="$t('dashboard.validator.col.group')"
-            >
-              <template #body="slotProps">
-                <span>
-                  {{ groupNameLabel(slotProps.data.group_id) }}
-                </span>
-              </template>
-            </Column>
-            <Column
-              field="reward"
-              body-class="reward"
-              header-class="reward"
-              :header="$t('dashboard.validator.summary.row.reward')"
-            >
-              <template #body="slotProps">
-                <div
-                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
-                >
-                  -
-                </div>
-                <BcTooltip
-                  v-else
-                  fit-content
-                  tooltip-text-align="left"
-                >
-                  <BcFormatAmount
-                    :currency-items="[{
-                      executionLayerValue: slotProps.data.reward.el,
-                      consensusLayerValue: slotProps.data.reward.cl,
-                    }]"
-                    has-color
-                    has-sign-display
-                    target-unit-crypto="auto"
-                  />
-                  <template #tooltip>
+                <template #tooltip>
+                  <div>
                     <div>
-                      <div>
-                        EL:
-                        <BcFormatAmount
-                          :value="slotProps.data.reward.el"
-                          has-sign-display
-                          has-additional-selected-currency-main
-                          has-higher-precision
-                          source-currency="elCurrency"
-                          target-currency="elDisplayCurrency"
-                          target-unit-crypto="auto"
-                        />
-                      </div>
-                      <div>
-                        CL:
-                        <BcFormatAmount
-                          :value="slotProps.data.reward.cl"
-                          has-sign-display
-                          has-additional-selected-currency-main
-                          has-higher-precision
-                          target-currency="clDisplayCurrency"
-                          target-unit-crypto="auto"
-                        />
-                      </div>
+                      EL:
+                      <BcFormatAmount
+                        :value="slotProps.data.reward.el"
+                        has-sign-display
+                        has-additional-selected-currency-main
+                        has-higher-precision
+                        source-currency="elCurrency"
+                        target-currency="elDisplayCurrency"
+                        target-unit-crypto="auto"
+                      />
                     </div>
-                  </template>
-                </BcTooltip>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.elRewards"
-              field="reward_el"
-              body-class="reward"
-              header-class="reward"
-              :header="$t('dashboard.validator.col.el_rewards')"
-            >
-              <template #body="slotProps">
-                <div
-                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
-                >
-                  -
-                </div>
-                <BcTooltip
-                  v-else
-                  fit-content
+                    <div>
+                      CL:
+                      <BcFormatAmount
+                        :value="slotProps.data.reward.cl"
+                        has-sign-display
+                        has-additional-selected-currency-main
+                        has-higher-precision
+                        target-currency="clDisplayCurrency"
+                        target-unit-crypto="auto"
+                      />
+                    </div>
+                  </div>
+                </template>
+              </BcTooltip>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.elRewards"
+            field="reward_el"
+            body-class="reward"
+            header-class="reward"
+            :header="$t('dashboard.validator.col.el_rewards')"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+              >
+                -
+              </div>
+              <BcTooltip
+                v-else
+                fit-content
+              >
+                <BcFormatAmount
+                  :value="slotProps.data.reward.el"
+                  has-color
+                  has-sign-display
+                  source-currency="elCurrency"
+                  target-currency="elDisplayCurrency"
+                  target-unit-crypto="auto"
+                />
+                <template
+                  v-if="slotProps.data.reward.el !== '0'"
+                  #tooltip
                 >
                   <BcFormatAmount
                     :value="slotProps.data.reward.el"
-                    has-color
+                    has-higher-precision
                     has-sign-display
                     source-currency="elCurrency"
-                    target-currency="elDisplayCurrency"
                     target-unit-crypto="auto"
                   />
-                  <template
-                    v-if="slotProps.data.reward.el !== '0'"
-                    #tooltip
-                  >
-                    <BcFormatAmount
-                      :value="slotProps.data.reward.el"
-                      has-higher-precision
-                      has-sign-display
-                      source-currency="elCurrency"
-                      target-unit-crypto="auto"
-                    />
-                  </template>
-                </BcTooltip>
-              </template>
-            </Column>
-            <Column
-              v-if="colsVisible.clRewards"
-              field="reward_cl"
-              body-class="reward"
-              header-class="reward"
-              :header="$t('dashboard.validator.col.cl_rewards')"
-            >
-              <template #body="slotProps">
-                <div
-                  v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
-                >
-                  -
-                </div>
-                <BcTooltip
-                  v-else
-                  fit-content
+                </template>
+              </BcTooltip>
+            </template>
+          </Column>
+          <Column
+            v-if="colsVisible.clRewards"
+            field="reward_cl"
+            body-class="reward"
+            header-class="reward"
+            :header="$t('dashboard.validator.col.cl_rewards')"
+          >
+            <template #body="slotProps">
+              <div
+                v-if="slotProps.data.group_id === DAHSHBOARDS_NEXT_EPOCH_ID"
+              >
+                -
+              </div>
+              <BcTooltip
+                v-else
+                fit-content
+              >
+                <BcFormatAmount
+                  :value="slotProps.data.reward?.cl"
+                  has-sign-display
+                  has-color
+                  target-currency="clDisplayCurrency"
+                  target-unit-crypto="auto"
+                />
+                <template
+                  v-if="slotProps.data.reward?.cl !== '0'"
+                  #tooltip
                 >
                   <BcFormatAmount
                     :value="slotProps.data.reward?.cl"
+                    has-higher-precision
                     has-sign-display
-                    has-color
-                    target-currency="clDisplayCurrency"
                     target-unit-crypto="auto"
                   />
-                  <template
-                    v-if="slotProps.data.reward?.cl !== '0'"
-                    #tooltip
-                  >
-                    <BcFormatAmount
-                      :value="slotProps.data.reward?.cl"
-                      has-higher-precision
-                      has-sign-display
-                      target-unit-crypto="auto"
-                    />
-                  </template>
-                </BcTooltip>
-              </template>
-            </Column>
-            <template #expansion="slotProps">
-              <DashboardTableRewardsDetails
-                :row="slotProps.data"
-                :group-name="groupNameLabel(slotProps.data.group_id)"
-              />
+                </template>
+              </BcTooltip>
             </template>
-            <template #empty>
-              <DashboardTableAddValidator v-if="!hasValidators" />
-            </template>
-          </BcTable>
-        </ClientOnly>
-      </template>
-      <template #chart>
-        <div class="chart-container">
-          <DashboardChartRewards />
-        </div>
-      </template>
-    </BcTableControl>
-  </div>
+          </Column>
+          <template #expansion="slotProps">
+            <DashboardTableRewardsDetails
+              :row="slotProps.data"
+              :group-name="groupNameLabel(slotProps.data.group_id)"
+            />
+          </template>
+          <template #empty>
+            <DashboardTableAddValidator v-if="!hasValidators" />
+          </template>
+        </BcTable>
+      </ClientOnly>
+    </template>
+    <template #chart>
+      <div class="chart-container">
+        <DashboardChartRewards :filter="chartFilter" />
+      </div>
+    </template>
+  </BcTableControl>
 </template>
 
 <style lang="scss" scoped>

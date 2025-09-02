@@ -5,27 +5,39 @@ import {
   AggregationTimeframes,
   type EfficiencyType,
   EfficiencyTypes,
-  // SUMMARY_CHART_GROUP_NETWORK_AVERAGE,
   SUMMARY_CHART_GROUP_TOTAL,
   type SummaryChartFilter,
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
+
+const { isGuestDashboard } = defineProps<{ isGuestDashboard: boolean }>()
 
 const { t: $t } = useTranslation()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
   overview,
 } = storeToRefs(validatorDashboardOverviewStore)
-const { hasAbilityChartHistory } = useUserStore()
+const {
+  hasAbilityChartHistory,
+  isLoggedIn,
+} = useUserStore()
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
 /** aggregation */
 const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
+const productStore = useProductsStore()
+
+const freeUserAbilityChartHistory = computed(() =>
+  productStore.premiumProducts.value['Free']?.premium_perks.chart_history_seconds,
+)
+
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(timeframe => ({
-    disabled: !hasAbilityChartHistory.value[timeframe],
+    disabled: isLoggedIn.value
+      ? !hasAbilityChartHistory.value[timeframe]
+      : !freeUserAbilityChartHistory.value[timeframe],
     id: timeframe,
     label: $t(`time_frames.${timeframe}`),
   }))
@@ -120,9 +132,6 @@ const selectedLabel = computed(() => {
     'asc',
   )
 
-  // if (average.value) {
-  //   list.splice(0, 0, $t('dashboard.validator.summary.chart.average'))
-  // }
   if (total.value) {
     list.splice(0, 0, $t('dashboard.validator.summary.chart.total'))
   }
@@ -139,6 +148,7 @@ const selectedLabel = computed(() => {
 <template>
   <div class="chart-filter-row">
     <BcDropdown
+      v-if="!isGuestDashboard"
       v-model="aggregation"
       :options="aggregationList"
       option-value="id"
@@ -226,6 +236,10 @@ const selectedLabel = computed(() => {
   @media (max-width: 1000px) {
     gap: var(--padding-small);
   }
+}
+
+.premium-gem {
+  margin-left: var(--padding-small);
 }
 
 .special-groups {

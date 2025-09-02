@@ -2,9 +2,7 @@
 import {
   h, render,
 } from 'vue'
-import {
-  type ElementEvent, use,
-} from 'echarts/core'
+import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { BarChart } from 'echarts/charts'
 import {
@@ -16,12 +14,13 @@ import {
   TransformComponent,
 } from 'echarts/components'
 import VChart from 'vue-echarts'
-
 import type {
   BarSeriesOption,
   EChartsOption,
   EChartsType,
 } from 'echarts'
+import type { RewardsChartFilter } from '../chart/DashboardChartRewardsFilter.vue'
+
 import {
   getChartTextColor,
   getChartTooltipBackgroundColor,
@@ -29,14 +28,12 @@ import {
   getRewardsChartLineColor,
 } from '~/utils/colors'
 import type { GetValidatorDashboardRewardsChartResponse } from '~/types/api/validator_dashboard'
-import type {
-  ChartData, ChartSeries,
-} from '~/types/api/common'
+import type { ChartSeries } from '~/types/api/common'
 import { DashboardChartRewardsTooltip } from '#components'
 
-const {
-  getTimestampFromEpoch,
-} = useNetworkStore()
+const { filter } = defineProps<{
+  filter: RewardsChartFilter,
+}>()
 
 use([
   GridComponent,
@@ -55,26 +52,33 @@ const {
   dashboardKey,
 } = useDashboardKey()
 
-const data = ref<ChartData<number, string> | undefined>()
-
-const { status } = useAsyncData(
+const {
+  data,
+  status,
+} = useAsyncData(
   'validator_dashboard_rewards_chart',
   async () => {
     if (dashboardKey.value === undefined) {
-      data.value = undefined
       return
     }
-    const res = await fetch<GetValidatorDashboardRewardsChartResponse>(
+    return await fetch<GetValidatorDashboardRewardsChartResponse>(
       'DASHBOARD_VALIDATOR_REWARDS_CHART',
-      undefined,
+      {
+        query: {
+          ...filter,
+          group_ids: filter.group_ids.join(','),
+        },
+      },
       { dashboardKey: dashboardKey.value },
     )
-    data.value = res.data
   },
   {
     immediate: true,
     server: false,
-    watch: [ dashboardKey ],
+    watch: [
+      dashboardKey,
+      filter,
+    ],
   },
 )
 
@@ -106,7 +110,7 @@ const {
   selectedCurrencyMain,
 } = useCurrency()
 
-const categoryCount = computed(() => data.value?.categories?.length ?? 0)
+const categoryCount = computed(() => data.value?.data.categories?.length ?? 0)
 
 const isGwei = ref(false)
 
@@ -153,7 +157,7 @@ const autoFormatAmount = (values: string[], {
   return result
 }
 
-const clSeries = computed(() => data.value?.series?.filter(series => series.property === 'cl') ?? [])
+const clSeries = computed(() => data.value?.data.series?.filter(series => series.property === 'cl') ?? [])
 const clSeriesGroupTotal = computed(() => {
   let total = Array(categoryCount.value).fill('0')
   clSeries.value.forEach((group) => {
@@ -170,7 +174,7 @@ const clSeriesGroupTotal = computed(() => {
 })
 const clSeriesGroupTotalFormatted = computed(() => autoFormatAmount(clSeriesGroupTotal.value))
 
-const elSeries = computed(() => data.value?.series?.filter(series => series.property === 'el') ?? [])
+const elSeries = computed(() => data.value?.data.series?.filter(series => series.property === 'el') ?? [])
 const elSeriesGroupTotal = computed(() => {
   let total = Array(categoryCount.value).fill('0')
   elSeries.value.forEach((group) => {
@@ -230,7 +234,7 @@ type DataZoomEvent = {
   start: number,
   type: 'datazoom',
 }
-const dataZoomStart = ref(60)
+const dataZoomStart = ref(0)
 const dataZoomEnd = ref(100)
 // position of tooltip get's lost due to rerendering of `options` (> computed > currency recalculations > latest-state)
 const onDatazoom = ({
@@ -246,10 +250,7 @@ const tooltipPosition = ref({
   x: 0,
   y: 0,
 })
-const setTooltipPosition = (event: ElementEvent) => {
-  tooltipPosition.value.x = event.offsetX
-  tooltipPosition.value.y = event.offsetY
-}
+
 const restoreTooltip = () => {
   nextTick(() => {
     if (!chart.value) return
@@ -318,8 +319,7 @@ const option = computed<EChartsOption>(() => {
       },
       end: dataZoomEnd.value,
       labelFormatter: (_value: number, valueStr: string) => {
-        const unixTimestamp = getTimestampFromEpoch(Number(valueStr))
-        return getDateTime(unixTimestamp, { hasTime: false })
+        return getDateTime(Number(valueStr), { hasTime: false })
       },
       start: dataZoomStart.value,
       type: 'slider',
@@ -353,6 +353,8 @@ const option = computed<EChartsOption>(() => {
       borderColor: colors.value.background,
       confine: true,
       enterable: true,
+      extraCssText: 'z-index: 100;',
+
       formatter(params) {
         if (!Array.isArray(params)) return ''
         if (params.length === 0) return ''
@@ -360,10 +362,9 @@ const option = computed<EChartsOption>(() => {
         const paramsConsensusLayer = params.find(param => param.seriesId === seriesId.cl)
         const paramsExecutionLayer = params.find(param => param.seriesId === seriesId.el)
         const currentIndex = params[0].dataIndex
-        const currentTimestamp = getTimestampFromEpoch(Number(params[0].name))
         const currentEpoch = {
           index: params[0].name,
-          timestamp: currentTimestamp,
+          timestamp: Number(params[0].name),
         }
         const currentGroupTotalCl = clSeriesGroupTotal.value[currentIndex]
         const currentGroupTotalEl = elSeriesGroupTotal.value[currentIndex]
@@ -412,20 +413,19 @@ const option = computed<EChartsOption>(() => {
       order: 'seriesAsc',
       padding: 0,
       trigger: 'axis',
-      triggerOn: 'click',
+      triggerOn: isTriggeringOnMouseMove.value ? 'mousemove|click' : 'click',
     },
     xAxis: {
       axisLabel: {
         fontSize: textSize,
         fontWeight: fontWeightMedium,
-        formatter: (epoch: number) => {
-          const unixTimestamp = getTimestampFromEpoch(epoch)
-          const date = getDateTime(unixTimestamp, { hasTime: false })
-          return `${date}\n${$t('common.epoch')} ${epoch}`
+        formatter: (timestamp: number) => {
+          const date = getDateTime(timestamp, { hasTime: false })
+          return date
         },
         lineHeight: 20,
       },
-      data: data.value?.categories,
+      data: data.value?.data.categories,
       type: 'category',
     },
     yAxis: {
@@ -446,6 +446,12 @@ const option = computed<EChartsOption>(() => {
     },
   }
 })
+
+const isTriggeringOnMouseMove = ref(true)
+
+const toggleTriggeringOnMouseMove = () => {
+  isTriggeringOnMouseMove.value = !isTriggeringOnMouseMove.value
+}
 </script>
 
 <template>
@@ -459,7 +465,7 @@ const option = computed<EChartsOption>(() => {
         :option
         autoresize
         @datazoom="onDatazoom"
-        @zr:click="setTooltipPosition"
+        @zr:mousedown="toggleTriggeringOnMouseMove"
       />
     </ClientOnly>
     <BcLoadingSpinner
@@ -473,14 +479,14 @@ const option = computed<EChartsOption>(() => {
       class="no-data"
       alignment="center"
     >
-      {{ $t("dashboard.validator.summary.chart.error") }}
+      {{ $t("dashboard.validator.rewards.chart.error") }}
     </div>
     <div
       v-if="status === 'success' && !clSeries.length"
       class="no-data"
       alignment="center"
     >
-      {{ $t("dashboard.validator.summary.chart.no_data") }}
+      {{ $t("dashboard.validator.rewards.chart.no_data") }}
     </div>
   </div>
 </template>
