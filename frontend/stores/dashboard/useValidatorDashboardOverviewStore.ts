@@ -73,13 +73,6 @@ export const useValidatorDashboardOverviewStore = defineStore('validator-dashboa
     )
   })
 
-  const hasAbilityCharthistory = computed(() => ({
-    daily: (overview.value?.chart_history_seconds?.daily ?? 0) > 0,
-    epoch: (overview.value?.chart_history_seconds?.epoch ?? 0) > 0,
-    hourly: (overview.value?.chart_history_seconds?.hourly ?? 0) > 0,
-    weekly: (overview.value?.chart_history_seconds?.weekly ?? 0) > 0,
-  }))
-
   const isLargeDashboard = computed(() => {
     if (!validatorCount.value) return false
 
@@ -90,7 +83,6 @@ export const useValidatorDashboardOverviewStore = defineStore('validator-dashboa
   })
 
   return {
-    hasAbilityCharthistory,
     hasValidators,
     isLargeDashboard,
     loading,
