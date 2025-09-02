@@ -6,6 +6,7 @@ option go_package = "github.com/gobitfly/beaconchain-backend/model";
 
 message SerializableUser {
   uint64 id = 1;
+  string tier = 2;
 }
 
 message SerializableAPIKey {

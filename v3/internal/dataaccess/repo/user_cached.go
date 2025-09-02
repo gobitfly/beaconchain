@@ -50,7 +50,8 @@ func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (
 
 func (r *CachedUserRepository) setUserCache(ctx context.Context, user *domain.User) error {
 	protoUser := &model.SerializableUser{
-		Id: user.ID,
+		Id:   user.ID,
+		Tier: string(user.SubscriptionTier),
 	}
 
 	data, err := proto.Marshal(protoUser)
@@ -81,6 +82,7 @@ func (r *CachedUserRepository) getUserByIdCache(ctx context.Context, id uint64) 
 	}
 
 	return &domain.User{
-		ID: protoUser.Id,
+		ID:               protoUser.Id,
+		SubscriptionTier: domain.Tier(protoUser.Tier),
 	}, nil
 }
