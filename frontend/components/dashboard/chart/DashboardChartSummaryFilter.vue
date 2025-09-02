@@ -14,9 +14,9 @@ import { getGroupLabel } from '~/utils/dashboard/group'
 const { t: $t } = useTranslation()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
-  hasAbilityCharthistory,
   overview,
 } = storeToRefs(validatorDashboardOverviewStore)
+const { hasAbilityChartHistory } = useUserStore()
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
@@ -25,7 +25,7 @@ const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(timeframe => ({
-    disabled: !hasAbilityCharthistory.value[timeframe],
+    disabled: !hasAbilityChartHistory.value[timeframe],
     id: timeframe,
     label: $t(`time_frames.${timeframe}`),
   }))

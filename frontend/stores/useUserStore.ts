@@ -50,9 +50,25 @@ export function useUserStore() {
 
   const premium_perks = computed(() => user.value?.premium_perks)
 
+  const hasAbilityRewardsChartHistory = computed(() => ({
+    daily: (user.value?.premium_perks.rewards_chart_history_seconds?.daily ?? 0) > 0,
+    epoch: (user.value?.premium_perks.rewards_chart_history_seconds?.epoch ?? 0) > 0,
+    hourly: (user.value?.premium_perks.rewards_chart_history_seconds?.hourly ?? 0) > 0,
+    weekly: (user.value?.premium_perks.rewards_chart_history_seconds?.weekly ?? 0) > 0,
+  }))
+
+  const hasAbilityChartHistory = computed(() => ({
+    daily: (user.value?.premium_perks.chart_history_seconds?.daily ?? 0) > 0,
+    epoch: (user.value?.premium_perks.chart_history_seconds?.epoch ?? 0) > 0,
+    hourly: (user.value?.premium_perks.chart_history_seconds?.hourly ?? 0) > 0,
+    weekly: (user.value?.premium_perks.chart_history_seconds?.weekly ?? 0) > 0,
+  }))
+
   return {
     doLogout,
     getUser,
+    hasAbilityChartHistory,
+    hasAbilityRewardsChartHistory,
     hasV1Notifications,
     isLoggedIn,
     premium_perks,
