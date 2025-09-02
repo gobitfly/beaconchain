@@ -4,9 +4,11 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/shopspring/decimal"
@@ -27,10 +29,12 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 	script := redis.NewScript(scriptStr)
 	limiter := limits.NewLimiter()
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		callerID := "caller123"                                                                                // TODO: Replace with actual caller ID
-		tier := domain.TierScale                                                                               // TODO: Replace with actual tier
-		globalRatelimit, _ := limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: tier}) // limits.SubscriptionPerksMap[tier].GlobalRateLimit
-		endpointRatelimit, err := getEndpointRatelimit(info.FullMethod, tier)
+		user, ok := auth.UserFromContext(ctx)
+		if !ok || user == nil {
+			return nil, status.Errorf(codes.Internal, "user not found while processing request")
+		}
+		globalRatelimit, _ := limiter.GetRateLimit(context.Background(), user)
+		endpointRatelimit, err := getEndpointRatelimit(info.FullMethod, user.SubscriptionTier)
 		if err != nil {
 			log.Error(fmt.Errorf("error getting rate limit options: %w", err))
 			return nil, status.Errorf(codes.Internal, "internal error: couldn't get rate limit options")
@@ -40,7 +44,7 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 		}
 		isWithinRateLimit := isWithinRateLimit(ctx, client, script,
 			time.Now(),
-			callerID,
+			strconv.FormatUint(user.ID, 10),
 			info.FullMethod,
 			globalRatelimit,
 			endpointRatelimit,
