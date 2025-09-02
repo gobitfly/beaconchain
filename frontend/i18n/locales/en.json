@@ -409,7 +409,10 @@
                 "chart": {
                     "cl": "Consensus Rewards",
                     "el": "Execution Rewards",
-                    "total": "Total Rewards"
+                    "end_date": "End date",
+                    "error": "An error occurred. Please try again later.",
+                    "groups": "Groups ({count})",
+                    "no_data": "No chart data"
                 },
                 "inactivity": "Inactivity Leak",
                 "open_duties_details": "Open duties details",
