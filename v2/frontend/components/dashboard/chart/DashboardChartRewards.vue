@@ -75,10 +75,7 @@ const {
   {
     immediate: true,
     server: false,
-    watch: [
-      dashboardKey,
-      filter,
-    ],
+    watch: [ filter ],
   },
 )
 
