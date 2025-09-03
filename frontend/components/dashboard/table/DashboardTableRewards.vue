@@ -149,6 +149,10 @@ const chartFilter = ref<RewardsChartFilter>({
   before_ts: Math.floor(Date.now() / 1000),
   group_ids: selectedValidatorGroups.value,
 })
+
+watch(() => selectedValidatorGroups.value, (newValue) => {
+  chartFilter.value.group_ids = newValue
+})
 </script>
 
 <template>
