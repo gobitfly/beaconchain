@@ -172,7 +172,6 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
         v-if="!tableIsShown"
         v-model="chartFilter"
         :groups="usedValidatorGroups"
-        :is-guest-dashboard
       />
     </template>
     <template #table>

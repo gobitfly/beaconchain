@@ -84,8 +84,24 @@ export const useValidatorDashboardOverviewStore = defineStore('validator-dashboa
 
   const groups = computed(() => overview.value?.groups)
 
+  const hasAbilityRewardsChartHistory = computed(() => ({
+    daily: (overview.value?.rewards_chart_history_seconds?.daily ?? 0) > 0,
+    epoch: (overview.value?.rewards_chart_history_seconds?.epoch ?? 0) > 0,
+    hourly: (overview.value?.rewards_chart_history_seconds?.hourly ?? 0) > 0,
+    weekly: (overview.value?.rewards_chart_history_seconds?.weekly ?? 0) > 0,
+  }))
+
+  const hasAbilityChartHistory = computed(() => ({
+    daily: (overview.value?.chart_history_seconds?.daily ?? 0) > 0,
+    epoch: (overview.value?.chart_history_seconds?.epoch ?? 0) > 0,
+    hourly: (overview.value?.chart_history_seconds?.hourly ?? 0) > 0,
+    weekly: (overview.value?.chart_history_seconds?.weekly ?? 0) > 0,
+  }))
+
   return {
     groups,
+    hasAbilityChartHistory,
+    hasAbilityRewardsChartHistory,
     hasValidators,
     isLargeDashboard,
     loading,

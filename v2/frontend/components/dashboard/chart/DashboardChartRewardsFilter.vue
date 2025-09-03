@@ -11,29 +11,19 @@ type AggregationTimeframe = keyof ChartHistorySeconds
 
 const {
   groups,
-  isGuestDashboard,
 } = defineProps<{
   groups: VDBOverviewGroup[],
-  isGuestDashboard?: boolean,
 }>()
 
 const { t: $t } = useTranslation()
 
+const { networkInfo } = useNetworkStore()
+const validatorDashboardsOverviewStore = useValidatorDashboardOverviewStore()
 const {
   hasAbilityRewardsChartHistory,
-  isLoggedIn,
-} = useUserStore()
-const { networkInfo } = useNetworkStore()
+} = storeToRefs(validatorDashboardsOverviewStore)
 
 const chartFilter = defineModel<RewardsChartFilter>({ required: true })
-
-const productStore = useProductsStore()
-
-const freeUserAbilityRewardsChartHistory = computed(() => {
-  const rewardsChartHistorySeconds
-  = productStore.premiumProducts.value['Free']?.premium_perks.rewards_chart_history_seconds
-  return rewardsChartHistorySeconds
-})
 
 const aggregationTimeframes: AggregationTimeframe[] = [
   'hourly',
@@ -43,9 +33,7 @@ const aggregationTimeframes: AggregationTimeframe[] = [
 const aggregationList = computed(() => {
   return aggregationTimeframes.map((timeframe) => {
     return {
-      disabled: isLoggedIn.value
-        ? !hasAbilityRewardsChartHistory.value[timeframe]
-        : !freeUserAbilityRewardsChartHistory.value[timeframe],
+      disabled: !hasAbilityRewardsChartHistory.value[timeframe],
       id: timeframe,
       label: $t(`time_frames.${timeframe}`),
     }
@@ -79,7 +67,6 @@ const handleSetEndDate = (value: Date) => {
 <template>
   <div class="chart-filter-row">
     <BcDropdown
-      v-if="!isGuestDashboard"
       v-model="chartFilter.aggregation"
       :options="aggregationList"
       option-value="id"
