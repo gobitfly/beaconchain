@@ -3,6 +3,7 @@ package dataaccess
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -16,7 +17,18 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const cacheAPIKeyPrefix = "apikey:"
+const (
+	// Cache settings
+	cacheAPIKeyPrefix = "apikey:"
+	cacheAPIKeyTTL    = time.Minute
+
+	// Metadata settings
+	cacheAPIKeyMetaPrefix      = "apikey_meta:"
+	cacheLastUsedFlushInterval = time.Minute   // Note that a higher value decreases db load but also increases inaccuracy of last used time by that value
+	cacheMetaTTL               = 1 * time.Hour // Ongoing usage will keep accuracy alive during this duration, we drop the accuracy to flush interval after
+	cacheMetaLastUsedField     = "lu"
+	cacheMetaLastUsedFlushed   = "luf"
+)
 
 type CachedAPIKeyRepository struct {
 	redis      *redis.Client
@@ -50,8 +62,90 @@ func (r *CachedAPIKeyRepository) GetAPIKey(ctx context.Context, key apikey.Hashe
 	return apiKey, nil
 }
 
-func (r *CachedAPIKeyRepository) UpdateLastUsedAt(ctx context.Context, key apikey.HashedKeyCredential) error {
-	return r.apikeyRepo.UpdateLastUsedAt(ctx, key) // todo caching not part of mvp
+func (r *CachedAPIKeyRepository) UpdateLastUsedAt(
+	ctx context.Context,
+	key apikey.HashedKeyCredential,
+) error {
+	now := time.Now()
+
+	_, lastFlushed, err := r.getAPIKeyLastUsedMeta(ctx, key)
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
+		return err
+	}
+
+	if lastFlushed == nil || lastFlushed.Before(time.Now().Add(-cacheLastUsedFlushInterval)) {
+		// Flush to DB
+		if err := r.apikeyRepo.UpdateLastUsedAt(ctx, key); err != nil {
+			return err
+		}
+		return r.updateAPIKeyLastUsedMeta(ctx, key, &now, &now) // also update last flushed time
+	}
+
+	return r.updateAPIKeyLastUsedMeta(ctx, key, &now, nil) // only update last used time
+}
+
+func (r *CachedAPIKeyRepository) updateAPIKeyLastUsedMeta(
+	ctx context.Context,
+	key apikey.HashedKeyCredential,
+	lastUsed *time.Time,
+	lastUsedFlushed *time.Time,
+) error {
+	redisKey := r.getMetaRedisKey(key)
+	updates := make(map[string]interface{})
+
+	if lastUsed != nil {
+		updates[cacheMetaLastUsedField] = lastUsed.Unix()
+	}
+	if lastUsedFlushed != nil {
+		updates[cacheMetaLastUsedFlushed] = lastUsedFlushed.Unix()
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	pipe := r.redis.TxPipeline()
+	pipe.HSet(ctx, redisKey, updates)
+	pipe.Expire(ctx, redisKey, cacheMetaTTL) // extend lifetime of metadata
+	if _, err := pipe.Exec(ctx); err != nil {
+		return fmt.Errorf("failed to update api key metadata in redis: %w", err)
+	}
+	return nil
+}
+
+func (r *CachedAPIKeyRepository) getAPIKeyLastUsedMeta(
+	ctx context.Context,
+	key apikey.HashedKeyCredential,
+) (*time.Time, *time.Time, error) {
+	redisKey := r.getMetaRedisKey(key)
+	vals, err := r.redis.HGetAll(ctx, redisKey).Result()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to HGETALL api key metadata: %w", err)
+	}
+	if len(vals) == 0 {
+		return nil, nil, domain.ErrNotFound
+	}
+
+	var lastUsed, lastUsedFlushed *time.Time
+
+	if v, ok := vals[cacheMetaLastUsedField]; ok {
+		if ts, err := strconv.ParseInt(v, 10, 64); err == nil {
+			t := time.Unix(ts, 0)
+			lastUsed = &t
+		}
+	}
+	if v, ok := vals[cacheMetaLastUsedFlushed]; ok {
+		if ts, err := strconv.ParseInt(v, 10, 64); err == nil {
+			t := time.Unix(ts, 0)
+			lastUsedFlushed = &t
+		}
+	}
+
+	return lastUsed, lastUsedFlushed, nil
+}
+
+func (r *CachedAPIKeyRepository) getMetaRedisKey(key apikey.HashedKeyCredential) string {
+	return fmt.Sprintf("%s%s", cacheAPIKeyMetaPrefix, key.String())
 }
 
 func (r *CachedAPIKeyRepository) CreateAPIKey(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
@@ -90,7 +184,25 @@ func (r *CachedAPIKeyRepository) EnableAPIKey(ctx context.Context, userID uint64
 }
 
 func (r *CachedAPIKeyRepository) GetAPIKeys(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
-	return r.apikeyRepo.GetAPIKeys(ctx, userID, keyName)
+	keys, err := r.apikeyRepo.GetAPIKeys(ctx, userID, keyName)
+	if err != nil {
+		return nil, err
+	}
+
+	// fetch last used times from cache
+	for i := range keys {
+		lastUsed, _, err := r.getAPIKeyLastUsedMeta(ctx, apikey.HashedKeyCredential(keys[i].Value))
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				continue
+			}
+			log.Warnf("failed to get api key %s metadata: %v", keys[i].Value, err)
+			continue
+		}
+		keys[i].LastUsedAt = lastUsed
+	}
+
+	return keys, nil
 }
 
 func (r *CachedAPIKeyRepository) setAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential, apiKey apikey.APIKey) error {
@@ -106,19 +218,23 @@ func (r *CachedAPIKeyRepository) setAPIKeyCache(ctx context.Context, key apikey.
 		return fmt.Errorf("failed to marshal api key proto: %w", err)
 	}
 
-	redisKey := fmt.Sprintf("%s%s", cacheAPIKeyPrefix, key.String())
-	if err := r.redis.Set(ctx, redisKey, data, time.Minute).Err(); err != nil {
+	redisKey := r.getRedisKey(key)
+	if err := r.redis.Set(ctx, redisKey, data, cacheAPIKeyTTL).Err(); err != nil {
 		return fmt.Errorf("failed to set api key in redis: %w", err)
 	}
 	return nil
 }
 
 func (r *CachedAPIKeyRepository) deleteAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) error {
-	redisKey := fmt.Sprintf("%s%s", cacheAPIKeyPrefix, key.String())
+	redisKey := r.getRedisKey(key)
 	if err := r.redis.Del(ctx, redisKey).Err(); err != nil {
 		return fmt.Errorf("failed to delete api key from cache: %w", err)
 	}
 	return nil
+}
+
+func (r *CachedAPIKeyRepository) getRedisKey(key apikey.HashedKeyCredential) string {
+	return fmt.Sprintf("%s%s", cacheAPIKeyPrefix, key.String())
 }
 
 func (r *CachedAPIKeyRepository) getAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {

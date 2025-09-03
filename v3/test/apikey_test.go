@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
@@ -52,7 +53,9 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		// Usage
 
-		t.Run("use key", func(t *testing.T) {
+		var lastUsedAt time.Time
+
+		t.Run("use key (no cache hit)", func(t *testing.T) {
 			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
 			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
 			assert.NoError(t, err)
@@ -61,6 +64,21 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		t.Run("last used timestamp updated", func(t *testing.T) {
 			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
 			assert.NotNil(t, got.ApiKey.LastUsedAt)
+			lastUsedAt = got.ApiKey.LastUsedAt.AsTime()
+		})
+
+		time.Sleep(1 * time.Second) // last used timestamps have second precision, so wait a bit to ensure next usage is chronologically after
+
+		t.Run("use key (cache hit)", func(t *testing.T) {
+			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
+			assert.NoError(t, err)
+		})
+
+		t.Run("last used timestamp is updated and chronological", func(t *testing.T) {
+			got := apiKeyMgmt.mustGetKey(t, client, testAPIKeyLifecycle)
+			assert.NotNil(t, got.ApiKey.LastUsedAt)
+			assert.True(t, got.ApiKey.LastUsedAt.AsTime().After(lastUsedAt), "expected last used timestamp to be updated in chronological order (old: %v, new: %v)", lastUsedAt, got.ApiKey.LastUsedAt.AsTime())
 		})
 
 		// Disable

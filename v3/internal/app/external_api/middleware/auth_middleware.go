@@ -67,8 +67,6 @@ func AuthUserInjectorInterceptor(userRepo dataaccess.UserAuthRepository, apiKeyR
 			return nil, common.NewExternalError(codes.Unauthenticated, "invalid API key")
 		}
 
-		// MVP Scope: We only update last used in the db for now.
-		// In the future, we might want to store this in redis or only update on non cache hit.
 		err = apiKeyRepo.UpdateLastUsedAt(ctx, apiKey)
 		if err != nil {
 			log.Warn(fmt.Errorf("failed to update last used time for API key: %v", err))
