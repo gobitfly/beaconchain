@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
+@font-face {
+  font-family: "Urbanist";
+  font-weight: 400 500 600 700;
+  src: url('/assets-2usdf/fonts/Urbanist-VariableFont_wght.ttf') format("truetype");
+}
+
+body {
+  font-family: 'Urbanist', sans-serif;
+}
+
+@theme {
+  /* todo: think about only removing specific utility classes */
+  --*: initial;
+
+  --color-black: #101010;
+  --color-white: #FAFAFA;
+  --color-gray-100: #D6D6D6;
+  --color-gray-300: #A8A8A8;
+
+  --font-urbanist: "Urbanist", sans-serif;
+  --font-weight-semibold: 600;
+  
+  --radius-full: 2rem;
+  
+  --spacing-sm: .375rem; /* 6px */
+  --spacing-md: .5rem; /* 8px */
+  --spacing-lg: .75rem; /* 12px */
+
+  --text-sm: .875rem; /* 14px */
+  --text-sm--line-height: 1.25rem; /* 20px */
+
+}
+/* todo: think about moving this to theme.css (problem import order) */
+@theme inline {  
+  /* --color-brand-100: var(--color-gray-100);  */
+  
+  /* --color-link-100: var(--color-gray-100);  */
+}
+
