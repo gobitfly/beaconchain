@@ -17,6 +17,9 @@ body {
   --*: initial;
 
   --color-black: #101010;
+
+  --color-brand-300: #6482EC; 
+  
   --color-white: #FAFAFA;
   --color-gray-100: #D6D6D6;
   --color-gray-300: #A8A8A8;
