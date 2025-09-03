@@ -23,9 +23,9 @@ const (
 	cacheAPIKeyTTL    = time.Minute
 
 	// Metadata settings
-	cacheAPIKeyMetaPrefix      = "apikey_meta:"
-	cacheLastUsedFlushInterval = time.Minute   // Note that a higher value decreases db load but also increases inaccuracy of last used time by that value
-	cacheMetaTTL               = 1 * time.Hour // Ongoing usage will keep accuracy alive during this duration, we drop the accuracy to flush interval after
+	cacheAPIKeyMetaPrefix      = "apikey_meta:" // #nosec G101
+	cacheLastUsedFlushInterval = time.Minute    // Note that a higher value decreases db load but also increases inaccuracy of last used time by that value
+	cacheMetaTTL               = 1 * time.Hour  // Ongoing usage will keep accuracy alive during this duration, we drop the accuracy to flush interval after
 	cacheMetaLastUsedField     = "lu"
 	cacheMetaLastUsedFlushed   = "luf"
 )
