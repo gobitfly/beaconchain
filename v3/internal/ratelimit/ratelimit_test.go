@@ -8,10 +8,17 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+// ------------------------------------------------
+// Tests for isWithinRateLimit
 
 func rateLimitTestSetup(t *testing.T) (context.Context, *miniredis.Miniredis, *redis.Client, *redis.Script) {
 	mr := miniredis.RunT(t)
@@ -265,4 +272,112 @@ func TestCalcRefillInterval(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+// ------------------------------------------------
+// Tests for GetRateLimitMiddleware
+
+var testHandler = func(_ context.Context, _ any) (any, error) {
+	return "ok", nil
+}
+
+type testScripterStub struct {
+	isRequestAllowed bool
+}
+
+func newTestScripterStub(isRequestAllowed bool) *testScripterStub {
+	return &testScripterStub{isRequestAllowed: isRequestAllowed}
+}
+func (s *testScripterStub) Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd {
+	var val int64 = 0
+	if s.isRequestAllowed {
+		val = 1
+	}
+	cmd := redis.NewCmd(ctx)
+	cmd.SetVal(val)
+	return cmd
+}
+func (s *testScripterStub) EvalSha(ctx context.Context, sha1 string, keys []string, args ...interface{}) *redis.Cmd {
+	return s.Eval(ctx, "", keys, args...)
+}
+func (s *testScripterStub) ScriptExists(ctx context.Context, hashes ...string) *redis.BoolSliceCmd {
+	return redis.NewBoolSliceCmd(ctx)
+}
+func (s *testScripterStub) ScriptLoad(ctx context.Context, script string) *redis.StringCmd {
+	return redis.NewStringCmd(ctx)
+}
+
+var _ redis.Scripter = (*testScripterStub)(nil) // Ensure testScripterStub implements redis.Scripter
+
+func testGetEndpointRatelinit(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
+	return &model.RateLimitSettings{
+		BucketCapacity: 5,
+		SteadyRate:     1,
+	}, nil
+}
+
+var testServerInfo = &grpc.UnaryServerInfo{}
+var testUser *domain.User = &domain.User{
+	ID:               123,
+	SubscriptionTier: domain.TierFree,
+}
+
+func TestGetRateLimitMiddleware_SuccessWithUserInContext(t *testing.T) {
+	scripter := newTestScripterStub(true /* isRequestAllowed */)
+	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+
+	ctx := auth.SetUserInContext(context.Background(), testUser)
+
+	response, err := middleware(ctx, nil, testServerInfo, testHandler)
+	assert.NoError(t, err)
+	assert.Equal(t, "ok", response)
+}
+
+func TestGetRateLimitMiddleware_SuccessfulRatelimit(t *testing.T) {
+	scripter := newTestScripterStub(false /* isRequestAllowed */)
+	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+
+	ctx := auth.SetUserInContext(context.Background(), testUser)
+
+	_, err := middleware(ctx, nil, testServerInfo, testHandler)
+	assert.Error(t, err)
+	assert.Equal(t, status.Code(err), codes.ResourceExhausted)
+}
+
+func TestGetRateLimitMiddleware_ErrorWithoutUserInContext(t *testing.T) {
+	scripter := newTestScripterStub(false /* isRequestAllowed */)
+	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+
+	ctx := context.Background()
+
+	_, err := middleware(ctx, nil, testServerInfo, testHandler)
+	assert.Error(t, err)
+	assert.Equal(t, status.Code(err), codes.Internal)
+}
+
+func TestGetRateLimitMiddleware_SuccessWithNilRatelimitOpts(t *testing.T) {
+	scripter := newTestScripterStub(false /* isRequestAllowed */)
+	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
+		return nil, nil // should cause fallback to global ratelimit
+	}
+	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
+
+	ctx := auth.SetUserInContext(context.Background(), testUser)
+
+	_, err := middleware(ctx, nil, testServerInfo, testHandler)
+	assert.Error(t, err)
+	assert.Equal(t, status.Code(err), codes.ResourceExhausted)
+}
+
+func TestGetRateLimitMiddleware_ErrorRateLimitOpts(t *testing.T) {
+	scripter := newTestScripterStub(false /* isRequestAllowed */)
+	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
+		return nil, status.Error(codes.Internal, "testerr")
+	}
+	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
+
+	ctx := auth.SetUserInContext(context.Background(), testUser)
+
+	_, err := middleware(ctx, nil, testServerInfo, testHandler)
+	assert.Equal(t, status.Code(err), codes.Internal)
 }
