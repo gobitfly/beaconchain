@@ -25,6 +25,7 @@ export interface VDBOverviewData {
   rewards: PeriodicValues<ClElValue<string /* decimal.Decimal */>>;
   apr: PeriodicValues<ClElValue<number /* float64 */>>;
   chart_history_seconds: ChartHistorySeconds;
+  rewards_chart_history_seconds: ChartHistorySeconds;
   balances: ValidatorBalances;
   is_above_effective_balance_limit: boolean; // refers to owner; relevant for shared dashboards
 }
