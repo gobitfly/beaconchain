@@ -21,16 +21,17 @@ type ValidatorBalances struct {
 }
 
 type VDBOverviewData struct {
-	Name                string                                     `json:"name,omitempty" extensions:"x-order=1"`
-	Network             uint64                                     `json:"network"`
-	Groups              []VDBOverviewGroup                         `json:"groups"`
-	Validators          ValidatorStateCounts                       `json:"validators"`
-	Efficiency          PeriodicValues[float64]                    `json:"efficiency"`
-	Rewards             PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
-	Apr                 PeriodicValues[ClElValue[float64]]         `json:"apr"`
-	ChartHistorySeconds ChartHistorySeconds                        `json:"chart_history_seconds"`
-	Balances            ValidatorBalances                          `json:"balances"`
-	IsAboveEbLimit      bool                                       `json:"is_above_effective_balance_limit"` // refers to owner; relevant for shared dashboards
+	Name                       string                                     `json:"name,omitempty" extensions:"x-order=1"`
+	Network                    uint64                                     `json:"network"`
+	Groups                     []VDBOverviewGroup                         `json:"groups"`
+	Validators                 ValidatorStateCounts                       `json:"validators"`
+	Efficiency                 PeriodicValues[float64]                    `json:"efficiency"`
+	Rewards                    PeriodicValues[ClElValue[decimal.Decimal]] `json:"rewards"`
+	Apr                        PeriodicValues[ClElValue[float64]]         `json:"apr"`
+	ChartHistorySeconds        ChartHistorySeconds                        `json:"chart_history_seconds"`
+	RewardsChartHistorySeconds ChartHistorySeconds                        `json:"rewards_chart_history_seconds"`
+	Balances                   ValidatorBalances                          `json:"balances"`
+	IsAboveEbLimit             bool                                       `json:"is_above_effective_balance_limit"` // refers to owner; relevant for shared dashboards
 }
 
 type GetValidatorDashboardResponse ApiDataResponse[VDBOverviewData]
