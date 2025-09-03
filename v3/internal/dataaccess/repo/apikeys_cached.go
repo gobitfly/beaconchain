@@ -189,7 +189,8 @@ func (r *CachedAPIKeyRepository) GetAPIKeys(ctx context.Context, userID uint64, 
 		return nil, err
 	}
 
-	// fetch last used times from cache
+	// keys contain last_used_time from db but
+	// we check redis cache if there is a more recent last_used time that has not been flushed yet and use that
 	for i := range keys {
 		lastUsed, _, err := r.getAPIKeyLastUsedMeta(ctx, apikey.HashedKeyCredential(keys[i].Value))
 		if err != nil {
