@@ -87,8 +87,15 @@
         "source.fixAll.eslint": "always"
     },
     "editor.formatOnSave": false,
+    "editor.quickSuggestions": {
+        "strings": "on"
+    },
     "editor.rulers": [
         80,
         120
-    ]
+    ],
+    "files.associations": {
+        "*.css": "tailwindcss"
+    },
+    "tailwindCSS.experimental.configFile": "layers/base/app/assets/css/main.css"
 }

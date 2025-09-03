@@ -47,6 +47,8 @@ export default defineNuxtConfig({
   colorMode: {
     fallback: 'dark',
     preference: 'dark',
+    dataValue: 'theme',
+    storageKey: 'theme',
   },
   runtimeConfig: {
     private: {
