@@ -60,5 +60,8 @@
         "typecheck": "npx nuxi typecheck",
         "validate": "npm run lint:fix && npm run typecheck"
     },
-    "type": "module"
+    "type": "module",
+    "workspaces": [
+        "layers/base"
+    ]
 }
