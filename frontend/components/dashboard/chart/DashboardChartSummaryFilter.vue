@@ -10,34 +10,21 @@ import {
 } from '~/types/dashboard/summary'
 import { getGroupLabel } from '~/utils/dashboard/group'
 
-const { isGuestDashboard } = defineProps<{ isGuestDashboard: boolean }>()
-
 const { t: $t } = useTranslation()
 const validatorDashboardOverviewStore = useValidatorDashboardOverviewStore()
 const {
+  hasAbilityChartHistory,
   overview,
 } = storeToRefs(validatorDashboardOverviewStore)
-const {
-  hasAbilityChartHistory,
-  isLoggedIn,
-} = useUserStore()
 
 const chartFilter = defineModel<SummaryChartFilter>({ required: true })
 
 /** aggregation */
 const aggregation = ref<AggregationTimeframe>(chartFilter.value.aggregation)
 
-const productStore = useProductsStore()
-
-const freeUserAbilityChartHistory = computed(() =>
-  productStore.premiumProducts.value['Free']?.premium_perks.chart_history_seconds,
-)
-
 const aggregationList = computed(() => {
   return AggregationTimeframes.map(timeframe => ({
-    disabled: isLoggedIn.value
-      ? !hasAbilityChartHistory.value[timeframe]
-      : !freeUserAbilityChartHistory.value[timeframe],
+    disabled: !hasAbilityChartHistory.value[timeframe],
     id: timeframe,
     label: $t(`time_frames.${timeframe}`),
   }))
@@ -148,7 +135,6 @@ const selectedLabel = computed(() => {
 <template>
   <div class="chart-filter-row">
     <BcDropdown
-      v-if="!isGuestDashboard"
       v-model="aggregation"
       :options="aggregationList"
       option-value="id"
