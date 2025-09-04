@@ -16,7 +16,8 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
-	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -28,21 +29,21 @@ import (
 
 type ApiService struct {
 	model.UnimplementedInternalServiceServer
-	userRepository dataaccess.UserRepository
-	authRepository dataaccess.APIKeyRepository
-	limiter        *limits.Limiter
+	userRepository   userrepo.Repository
+	apiKeyRepository apikeyrepo.Repository
+	limiter          *limits.Limiter
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
-	userRepository dataaccess.UserRepository,
-	authRepository dataaccess.APIKeyRepository,
+	userRepository userrepo.Repository,
+	apiKeyRepository apikeyrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
-		userRepository: userRepository,
-		authRepository: authRepository,
-		limiter:        limits.NewLimiter(),
+		userRepository:   userRepository,
+		apiKeyRepository: apiKeyRepository,
+		limiter:          limits.NewLimiter(),
 	}, nil
 }
 
@@ -65,20 +66,19 @@ func Run(
 	}
 
 	var (
-		userRepoI   dataaccess.UserRepository
-		apikeyRepoI dataaccess.APIKeyRepository
+		userRepoI   userrepo.Repository
+		apikeyRepoI apikeyrepo.Repository
 	)
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
-		userRepoI = &dataaccess.MockUserRepository{}
-		apikeyRepoI = &dataaccess.MockAPIKeyRepository{}
+		userRepoI = &userrepo.MockRepository{}
+		apikeyRepoI = &apikeyrepo.MockRepository{}
 	} else {
-		userDbRepo := &dataaccess.DBUserRepository{}
-		apikeyRepo := &dataaccess.CachedAPIKeyRepository{}
+		userDbRepo := &userrepo.DBRepository{}
+		apikeyRepo := &apikeyrepo.CachedRepository{}
 		userRepoI = userDbRepo
 		apikeyRepoI = apikeyRepo
-
-		dbAPIKeyRepo := &dataaccess.DBAPIKeyRepository{}
+		dbAPIKeyRepo := &apikeyrepo.DBRepository{}
 
 		// init async
 		go func() {

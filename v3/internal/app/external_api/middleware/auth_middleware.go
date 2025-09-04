@@ -10,7 +10,8 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/common"
-	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"google.golang.org/grpc"
@@ -21,7 +22,7 @@ import (
 
 // AuthUserInjectorInterceptor returns a gRPC interceptor that authenticates via API key
 // and injects the user into the context.
-func AuthUserInjectorInterceptor(userRepo dataaccess.UserAuthRepository, apiKeyRepo dataaccess.APIKeyAuthRepository) grpc.UnaryServerInterceptor {
+func AuthUserInjectorInterceptor(userRepo userrepo.AuthRepository, apiKeyRepo apikeyrepo.AuthRepository) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -54,12 +55,12 @@ func AuthUserInjectorInterceptor(userRepo dataaccess.UserAuthRepository, apiKeyR
 			return nil, common.NewExternalError(codes.Unauthenticated, "invalid authorization format")
 		}
 
-		key, err := apiKeyRepo.GetAPIKey(ctx, apiKey)
+		key, err := apiKeyRepo.Get(ctx, apiKey)
 		if err != nil {
 			return nil, common.NewExternalError(codes.Unauthenticated, "invalid API key")
 		}
 
-		user, err := userRepo.GetUserById(ctx, key.UserID)
+		user, err := userRepo.Get(ctx, key.UserID)
 		if err != nil {
 			if !errors.Is(err, domain.ErrNotFound) {
 				log.Error(fmt.Errorf("failed to get user by API key: %v", err))

@@ -1,4 +1,4 @@
-package dataaccess
+package apikeyrepo
 
 import (
 	"context"
@@ -30,17 +30,17 @@ const (
 	cacheLastUsedFlushed       = "luf"
 )
 
-type CachedAPIKeyRepository struct {
+type CachedRepository struct {
 	redis      *redis.Client
-	apikeyRepo APIKeyRepository
+	apikeyRepo Repository
 }
 
-func (r *CachedAPIKeyRepository) Initialize(redisClient *redis.Client, apikeyRepo APIKeyRepository) {
+func (r *CachedRepository) Initialize(redisClient *redis.Client, apikeyRepo Repository) {
 	r.redis = redisClient
 	r.apikeyRepo = apikeyRepo
 }
 
-func (r *CachedAPIKeyRepository) GetAPIKey(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
+func (r *CachedRepository) Get(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
 	apiKey, err := r.getAPIKeyCache(ctx, key)
 	if err == nil {
 		return apiKey, nil
@@ -49,7 +49,7 @@ func (r *CachedAPIKeyRepository) GetAPIKey(ctx context.Context, key apikey.Hashe
 		return apikey.APIKey{}, err
 	}
 
-	apiKey, err = r.apikeyRepo.GetAPIKey(ctx, key)
+	apiKey, err = r.apikeyRepo.Get(ctx, key)
 	if err != nil {
 		return apikey.APIKey{}, err
 	}
@@ -65,7 +65,7 @@ func (r *CachedAPIKeyRepository) GetAPIKey(ctx context.Context, key apikey.Hashe
 // UpdateLastUsedAt updates the last used timestamp of the API key.
 // To reduce database load, we use a caching strategy where we only flush to the database
 // if there is no unflushed last used time in cache or the last flushed time is older than a set interval.
-func (r *CachedAPIKeyRepository) UpdateLastUsedAt(
+func (r *CachedRepository) UpdateLastUsedAt(
 	ctx context.Context,
 	key apikey.HashedKeyCredential,
 ) error {
@@ -95,7 +95,7 @@ func shouldFlush(lastFlushed time.Time, interval time.Duration) bool {
 }
 
 // Stores last used and last flushed times in a redis hash separate from the API key cache
-func (r *CachedAPIKeyRepository) updateAPIKeyLastUsedCache(
+func (r *CachedRepository) updateAPIKeyLastUsedCache(
 	ctx context.Context,
 	key apikey.HashedKeyCredential,
 	lastUsed time.Time,
@@ -120,7 +120,7 @@ func (r *CachedAPIKeyRepository) updateAPIKeyLastUsedCache(
 }
 
 // Retrieves last used and last flushed times from redis hash
-func (r *CachedAPIKeyRepository) getAPIKeyLastUsedCache(
+func (r *CachedRepository) getAPIKeyLastUsedCache(
 	ctx context.Context,
 	key apikey.HashedKeyCredential,
 ) (time.Time, time.Time, error) {
@@ -149,16 +149,16 @@ func (r *CachedAPIKeyRepository) getAPIKeyLastUsedCache(
 	return lastUsed, lastUsedFlushed, nil
 }
 
-func (r *CachedAPIKeyRepository) formatLastUsedRedisKey(key apikey.HashedKeyCredential) string {
+func (r *CachedRepository) formatLastUsedRedisKey(key apikey.HashedKeyCredential) string {
 	return fmt.Sprintf("%s%s", cacheAPIKeyLastUsedPrefix, key.String())
 }
 
-func (r *CachedAPIKeyRepository) CreateAPIKey(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
-	return r.apikeyRepo.CreateAPIKey(ctx, userID, key)
+func (r *CachedRepository) Create(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
+	return r.apikeyRepo.Create(ctx, userID, key)
 }
 
-func (r *CachedAPIKeyRepository) DeleteAPIKey(ctx context.Context, userID uint64, name string) error {
-	key, err := r.apikeyRepo.GetAPIKeys(ctx, userID, &name)
+func (r *CachedRepository) Delete(ctx context.Context, userID uint64, name string) error {
+	key, err := r.apikeyRepo.GetAll(ctx, userID, &name)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (r *CachedAPIKeyRepository) DeleteAPIKey(ctx context.Context, userID uint64
 		return domain.ErrNotFound
 	}
 
-	err = r.apikeyRepo.DeleteAPIKey(ctx, userID, name)
+	err = r.apikeyRepo.Delete(ctx, userID, name)
 	if err != nil {
 		return err
 	}
@@ -175,8 +175,8 @@ func (r *CachedAPIKeyRepository) DeleteAPIKey(ctx context.Context, userID uint64
 	return r.deleteAPIKeyCache(ctx, apikey.HashedKeyCredential(key[0].Value))
 }
 
-func (r *CachedAPIKeyRepository) DisableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	key, err := r.apikeyRepo.DisableAPIKey(ctx, userID, name)
+func (r *CachedRepository) Disable(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
+	key, err := r.apikeyRepo.Disable(ctx, userID, name)
 	if err != nil {
 		return apikey.APIKey{}, err
 	}
@@ -184,12 +184,12 @@ func (r *CachedAPIKeyRepository) DisableAPIKey(ctx context.Context, userID uint6
 	return key, r.deleteAPIKeyCache(ctx, apikey.HashedKeyCredential(key.Value))
 }
 
-func (r *CachedAPIKeyRepository) EnableAPIKey(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	return r.apikeyRepo.EnableAPIKey(ctx, userID, name)
+func (r *CachedRepository) Enable(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
+	return r.apikeyRepo.Enable(ctx, userID, name)
 }
 
-func (r *CachedAPIKeyRepository) GetAPIKeys(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
-	keys, err := r.apikeyRepo.GetAPIKeys(ctx, userID, keyName)
+func (r *CachedRepository) GetAll(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
+	keys, err := r.apikeyRepo.GetAll(ctx, userID, keyName)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (r *CachedAPIKeyRepository) GetAPIKeys(ctx context.Context, userID uint64, 
 	return keys, nil
 }
 
-func (r *CachedAPIKeyRepository) setAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential, apiKey apikey.APIKey) error {
+func (r *CachedRepository) setAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential, apiKey apikey.APIKey) error {
 	protoAPIKey := &model.SerializableAPIKey{
 		UserId: apiKey.UserID,
 		ApiKeyId: &model.UUID{
@@ -231,7 +231,7 @@ func (r *CachedAPIKeyRepository) setAPIKeyCache(ctx context.Context, key apikey.
 	return nil
 }
 
-func (r *CachedAPIKeyRepository) deleteAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) error {
+func (r *CachedRepository) deleteAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) error {
 	redisKey := r.formatRedisKey(key)
 	if err := r.redis.Del(ctx, redisKey).Err(); err != nil {
 		return fmt.Errorf("failed to delete api key from cache: %w", err)
@@ -239,11 +239,11 @@ func (r *CachedAPIKeyRepository) deleteAPIKeyCache(ctx context.Context, key apik
 	return nil
 }
 
-func (r *CachedAPIKeyRepository) formatRedisKey(key apikey.HashedKeyCredential) string {
+func (r *CachedRepository) formatRedisKey(key apikey.HashedKeyCredential) string {
 	return fmt.Sprintf("%s%s", cacheAPIKeyPrefix, key.String())
 }
 
-func (r *CachedAPIKeyRepository) getAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
+func (r *CachedRepository) getAPIKeyCache(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
 	redisKey := fmt.Sprintf("%s%s", cacheAPIKeyPrefix, key.String())
 	val, err := r.redis.Get(ctx, redisKey).Bytes()
 	if err == redis.Nil {

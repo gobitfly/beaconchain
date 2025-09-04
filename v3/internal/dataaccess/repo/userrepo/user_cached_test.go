@@ -1,4 +1,4 @@
-package dataaccess
+package userrepo
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			redisClient, redisMock := redismock.NewClientMock()
-			userRepo := new(MockUserRepository)
+			userRepo := new(MockRepository)
 
 			switch {
 			case tt.cacheHit:
@@ -69,7 +69,7 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 				redisMock.ExpectGet(redisKey).RedisNil()
 
 				if tt.fallbackUser != (domain.User{}) || tt.fallbackErr != nil {
-					userRepo.On("GetUserById", ctx, user.ID).Return(tt.fallbackUser, tt.fallbackErr)
+					userRepo.On("Get", ctx, user.ID).Return(tt.fallbackUser, tt.fallbackErr)
 
 					if tt.fallbackErr == nil && tt.expectSetCache {
 						redisMock.ExpectSet(redisKey, protoBytes, time.Minute).SetVal("OK")
@@ -77,12 +77,12 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 				}
 			}
 
-			repo := &CachedUserRepository{
+			repo := &CachedRepository{
 				redis:    redisClient,
 				userRepo: userRepo,
 			}
 
-			result, err := repo.GetUserById(ctx, user.ID)
+			result, err := repo.Get(ctx, user.ID)
 
 			if tt.expectError {
 				assert.Error(t, err)

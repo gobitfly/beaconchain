@@ -1,4 +1,4 @@
-package dataaccess
+package userrepo
 
 import (
 	"context"
@@ -7,12 +7,13 @@ import (
 
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 )
 
-type DBUserRepository struct {
+type DBRepository struct {
 	roConnectionAdminDb *sqlx.DB
 	rwConnectionAdminDb *sqlx.DB
 }
@@ -22,12 +23,12 @@ type dbUser struct {
 	TierName string `db:"tier_name"`
 }
 
-func (r *DBUserRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
+func (r *DBRepository) Initialize(roConnectionAdminDb data_sources.AdminRoConnection, rwConnectionAdminDb data_sources.AdminRwConnection) {
 	r.roConnectionAdminDb = roConnectionAdminDb
 	r.rwConnectionAdminDb = rwConnectionAdminDb
 }
 
-func (r *DBUserRepository) Ping() error {
+func (r *DBRepository) Ping() error {
 	if r.roConnectionAdminDb == nil {
 		return fmt.Errorf("read connection not initialized")
 	}
@@ -44,7 +45,7 @@ func (r *DBUserRepository) Ping() error {
 	return nil
 }
 
-func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (domain.User, error) {
+func (r *DBRepository) Get(ctx context.Context, id uint64) (domain.User, error) {
 	return queryUser(ctx, r.roConnectionAdminDb, id)
 }
 
@@ -77,7 +78,7 @@ func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB,
 		).
 		Limit(1)
 
-	dbUser, err := runQuery[dbUser](ctx, db, ds)
+	dbUser, err := repo.RunQuery[dbUser](ctx, db, ds)
 	if err != nil {
 		return domain.User{}, errors.Wrap(err, "failed to query user")
 	}
@@ -90,7 +91,7 @@ func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB,
 	return user, nil
 }
 
-func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (domain.User, error) {
+func (r *DBRepository) Create(ctx context.Context, email string, initialApiKey string, hashedPassword string) (domain.User, error) {
 	user := domain.User{}
 
 	err := r.rwConnectionAdminDb.GetContext(ctx, &user, `
@@ -102,7 +103,7 @@ func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initial
 	return user, err
 }
 
-func (r *DBUserRepository) DeleteUser(ctx context.Context, id uint64) error {
+func (r *DBRepository) Delete(ctx context.Context, id uint64) error {
 	_, err := r.rwConnectionAdminDb.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id)
 	return err
 }

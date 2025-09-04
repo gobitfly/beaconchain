@@ -14,7 +14,8 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
-	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
@@ -32,14 +33,14 @@ import (
 
 type ApiService struct {
 	model.UnimplementedExternalServiceServer
-	userRepository dataaccess.UserRepository
+	userRepository userrepo.Repository
 	limiter        *limits.Limiter
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
-	userRepository dataaccess.UserRepository,
+	userRepository userrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
 		userRepository: userRepository,
@@ -66,21 +67,21 @@ func Run(
 	dataSources := data_sources.ApiDataSources{}
 
 	var (
-		userRepoI             dataaccess.UserRepository
-		cachedUserRepoI       dataaccess.UserAuthRepository
-		cachedAPIKeyAuthRepoI dataaccess.APIKeyAuthRepository
+		userRepoI             userrepo.Repository
+		cachedUserRepoI       userrepo.AuthRepository
+		cachedAPIKeyAuthRepoI apikeyrepo.AuthRepository
 	)
 
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
-		userRepoI = &dataaccess.MockUserRepository{}
-		cachedUserRepoI = &dataaccess.MockUserRepository{}
-		cachedAPIKeyAuthRepoI = &dataaccess.MockAPIKeyRepository{}
+		userRepoI = &userrepo.MockRepository{}
+		cachedUserRepoI = &userrepo.MockRepository{}
+		cachedAPIKeyAuthRepoI = &apikeyrepo.MockRepository{}
 	} else {
-		userDbRepo := &dataaccess.DBUserRepository{}
-		apikeyAuthRepo := &dataaccess.DBAPIKeyRepository{}
-		cachedUserRepo := &dataaccess.CachedUserRepository{}
-		cachedAPIKeyAuthRepo := &dataaccess.CachedAPIKeyRepository{}
+		userDbRepo := &userrepo.DBRepository{}
+		apikeyAuthRepo := &apikeyrepo.DBRepository{}
+		cachedUserRepo := &userrepo.CachedRepository{}
+		cachedAPIKeyAuthRepo := &apikeyrepo.CachedRepository{}
 
 		userRepoI = userDbRepo
 		cachedUserRepoI = cachedUserRepo

@@ -8,7 +8,8 @@ import (
 
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
-	dataaccess "github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,16 +34,16 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 	tests := []struct {
 		name            string
 		metadata        metadata.MD
-		setupMocks      func(userRepo *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository)
+		setupMocks      func(userRepo *userrepo.MockRepository, authRepo *apikeyrepo.MockRepository)
 		expectedCode    codes.Code
 		expectUserInCtx bool
 	}{
 		{
 			name:     "successfully injects user",
 			metadata: metadata.Pairs("authorization", fmt.Sprintf("Bearer %s", validKeyBase62)),
-			setupMocks: func(userRepo *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository) {
-				authRepo.On("GetAPIKey", mock.Anything, validKey).Return(validStoredKey, nil)
-				userRepo.On("GetUserById", mock.Anything, validStoredKey.UserID).Return(validUser, nil)
+			setupMocks: func(userRepo *userrepo.MockRepository, authRepo *apikeyrepo.MockRepository) {
+				authRepo.On("Get", mock.Anything, validKey).Return(validStoredKey, nil)
+				userRepo.On("Get", mock.Anything, validStoredKey.UserID).Return(validUser, nil)
 				authRepo.On("UpdateLastUsedAt", mock.Anything, validKey).Return(nil)
 			},
 			expectedCode:    codes.OK,
@@ -51,36 +52,36 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 		{
 			name:            "missing metadata",
 			metadata:        nil,
-			setupMocks:      func(_ *dataaccess.MockUserRepository, _ *dataaccess.MockAPIKeyRepository) {},
+			setupMocks:      func(_ *userrepo.MockRepository, _ *apikeyrepo.MockRepository) {},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
 		},
 		{
 			name:            "missing authorization header",
 			metadata:        metadata.Pairs("something", "else"),
-			setupMocks:      func(_ *dataaccess.MockUserRepository, _ *dataaccess.MockAPIKeyRepository) {},
+			setupMocks:      func(_ *userrepo.MockRepository, _ *apikeyrepo.MockRepository) {},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
 		},
 		{
 			name:            "malformed authorization header",
 			metadata:        metadata.Pairs("authorization", "Token not-a-real-key"),
-			setupMocks:      func(_ *dataaccess.MockUserRepository, _ *dataaccess.MockAPIKeyRepository) {},
+			setupMocks:      func(_ *userrepo.MockRepository, _ *apikeyrepo.MockRepository) {},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
 		},
 		{
 			name:            "invalid base62 key",
 			metadata:        metadata.Pairs("authorization", "Bearer invalid$$"),
-			setupMocks:      func(_ *dataaccess.MockUserRepository, _ *dataaccess.MockAPIKeyRepository) {},
+			setupMocks:      func(_ *userrepo.MockRepository, _ *apikeyrepo.MockRepository) {},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
 		},
 		{
 			name:     "API key not found",
 			metadata: metadata.Pairs("authorization", fmt.Sprintf("Bearer %s", validKeyBase62)),
-			setupMocks: func(_ *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository) {
-				authRepo.On("GetAPIKey", mock.Anything, validKey).Return(apikey.APIKey{}, errors.New("not found"))
+			setupMocks: func(_ *userrepo.MockRepository, authRepo *apikeyrepo.MockRepository) {
+				authRepo.On("Get", mock.Anything, validKey).Return(apikey.APIKey{}, errors.New("not found"))
 			},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
@@ -88,9 +89,9 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 		{
 			name:     "user not found",
 			metadata: metadata.Pairs("authorization", fmt.Sprintf("Bearer %s", validKeyBase62)),
-			setupMocks: func(userRepo *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository) {
-				authRepo.On("GetAPIKey", mock.Anything, validKey).Return(validStoredKey, nil)
-				userRepo.On("GetUserById", mock.Anything, validStoredKey.UserID).Return(domain.User{}, domain.ErrNotFound)
+			setupMocks: func(userRepo *userrepo.MockRepository, authRepo *apikeyrepo.MockRepository) {
+				authRepo.On("Get", mock.Anything, validKey).Return(validStoredKey, nil)
+				userRepo.On("Get", mock.Anything, validStoredKey.UserID).Return(domain.User{}, domain.ErrNotFound)
 			},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
@@ -98,9 +99,9 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 		{
 			name:     "update last used fails",
 			metadata: metadata.Pairs("authorization", fmt.Sprintf("Bearer %s", validKeyBase62)),
-			setupMocks: func(userRepo *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository) {
-				authRepo.On("GetAPIKey", mock.Anything, validKey).Return(validStoredKey, nil)
-				userRepo.On("GetUserById", mock.Anything, validStoredKey.UserID).Return(validUser, nil)
+			setupMocks: func(userRepo *userrepo.MockRepository, authRepo *apikeyrepo.MockRepository) {
+				authRepo.On("Get", mock.Anything, validKey).Return(validStoredKey, nil)
+				userRepo.On("Get", mock.Anything, validStoredKey.UserID).Return(validUser, nil)
 				authRepo.On("UpdateLastUsedAt", mock.Anything, validKey).Return(errors.New("db error"))
 			},
 			expectedCode:    codes.OK,
@@ -110,8 +111,8 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockUserRepo := new(dataaccess.MockUserRepository)
-			mockAuthRepo := new(dataaccess.MockAPIKeyRepository)
+			mockUserRepo := new(userrepo.MockRepository)
+			mockAuthRepo := new(apikeyrepo.MockRepository)
 
 			tt.setupMocks(mockUserRepo, mockAuthRepo)
 

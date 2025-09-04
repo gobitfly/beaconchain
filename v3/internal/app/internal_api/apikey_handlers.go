@@ -25,7 +25,7 @@ func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPI
 		return nil, status.Errorf(codes.Internal, "failed to get max API keys: %v", err)
 	}
 
-	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, nil)
+	keys, err := service.apiKeyRepository.GetAll(ctx, user.ID, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API keys: %v", err)
 	}
@@ -39,7 +39,7 @@ func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPI
 		return nil, status.Errorf(codes.Internal, "failed to create API key: %v", err)
 	}
 
-	dbKey, err := service.authRepository.CreateAPIKey(ctx, user.ID, key)
+	dbKey, err := service.apiKeyRepository.Create(ctx, user.ID, key)
 	if err != nil {
 		if errors.Is(err, domain.ErrDuplicate) {
 			return nil, status.Errorf(codes.AlreadyExists, "API key with name '%s' already exists", in.Name)
@@ -56,7 +56,7 @@ func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPI
 func (service *ApiService) DeleteAPIKey(ctx context.Context, in *model.DeleteAPIKeyRequest) (*model.DeleteAPIKeyResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
-	if err := service.authRepository.DeleteAPIKey(ctx, user.ID, in.Name); err != nil {
+	if err := service.apiKeyRepository.Delete(ctx, user.ID, in.Name); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			return nil, status.Errorf(codes.NotFound, "API key not found: %s", in.Name)
 		}
@@ -69,7 +69,7 @@ func (service *ApiService) DeleteAPIKey(ctx context.Context, in *model.DeleteAPI
 func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableAPIKeyRequest) (*model.DisableAPIKeyResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
-	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
+	preconditionKey, err := service.apiKeyRepository.GetAll(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}
@@ -84,7 +84,7 @@ func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableA
 		}, nil
 	}
 
-	updatedKey, err := service.authRepository.DisableAPIKey(ctx, user.ID, in.Name)
+	updatedKey, err := service.apiKeyRepository.Disable(ctx, user.ID, in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to disable API key: %v", err)
 	}
@@ -97,7 +97,7 @@ func (service *ApiService) DisableAPIKey(ctx context.Context, in *model.DisableA
 func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPIKeyRequest) (*model.EnableAPIKeyResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
-	preconditionKey, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
+	preconditionKey, err := service.apiKeyRepository.GetAll(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}
@@ -112,7 +112,7 @@ func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPI
 		}, nil
 	}
 
-	updatedKey, err := service.authRepository.EnableAPIKey(ctx, user.ID, in.Name)
+	updatedKey, err := service.apiKeyRepository.Enable(ctx, user.ID, in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to enable API key: %v", err)
 	}
@@ -125,7 +125,7 @@ func (service *ApiService) EnableAPIKey(ctx context.Context, in *model.EnableAPI
 func (service *ApiService) GetAPIKeys(ctx context.Context, in *model.GetAPIKeysRequest) (*model.GetAPIKeysResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
-	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, nil)
+	keys, err := service.apiKeyRepository.GetAll(ctx, user.ID, nil)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API keys: %v", err)
 	}
@@ -138,7 +138,7 @@ func (service *ApiService) GetAPIKeys(ctx context.Context, in *model.GetAPIKeysR
 func (service *ApiService) GetAPIKey(ctx context.Context, in *model.GetAPIKeyRequest) (*model.GetAPIKeyResponse, error) {
 	user := auth.MustUserFromContext(ctx)
 
-	keys, err := service.authRepository.GetAPIKeys(ctx, user.ID, &in.Name)
+	keys, err := service.apiKeyRepository.GetAll(ctx, user.ID, &in.Name)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get API key: %v", err)
 	}

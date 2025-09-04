@@ -1,4 +1,4 @@
-package dataaccess
+package userrepo
 
 import (
 	"context"
@@ -16,17 +16,17 @@ import (
 
 const cacheUserPrefix = "user:"
 
-type CachedUserRepository struct {
+type CachedRepository struct {
 	redis    *redis.Client
-	userRepo UserAuthRepository
+	userRepo AuthRepository
 }
 
-func (r *CachedUserRepository) Initialize(redisClient *redis.Client, userRepo UserAuthRepository) {
+func (r *CachedRepository) Initialize(redisClient *redis.Client, userRepo AuthRepository) {
 	r.redis = redisClient
 	r.userRepo = userRepo
 }
 
-func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (domain.User, error) {
+func (r *CachedRepository) Get(ctx context.Context, userID uint64) (domain.User, error) {
 	user, err := r.getUserByIdCache(ctx, userID)
 	if err == nil {
 		return user, nil
@@ -35,7 +35,7 @@ func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (
 		return user, err
 	}
 
-	user, err = r.userRepo.GetUserById(ctx, userID)
+	user, err = r.userRepo.Get(ctx, userID)
 	if err != nil {
 		return user, err
 	}
@@ -48,7 +48,7 @@ func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (
 	return user, nil
 }
 
-func (r *CachedUserRepository) setUserCache(ctx context.Context, user domain.User) error {
+func (r *CachedRepository) setUserCache(ctx context.Context, user domain.User) error {
 	protoUser := &model.SerializableUser{
 		Id:   user.ID,
 		Tier: string(user.SubscriptionTier),
@@ -66,7 +66,7 @@ func (r *CachedUserRepository) setUserCache(ctx context.Context, user domain.Use
 	return nil
 }
 
-func (r *CachedUserRepository) getUserByIdCache(ctx context.Context, id uint64) (domain.User, error) {
+func (r *CachedRepository) getUserByIdCache(ctx context.Context, id uint64) (domain.User, error) {
 	key := fmt.Sprintf("%s%d", cacheUserPrefix, id)
 	val, err := r.redis.Get(ctx, key).Bytes() // use .Bytes() instead of .Result() if storing binary
 	if err == redis.Nil {

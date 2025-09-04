@@ -1,4 +1,4 @@
-package dataaccess
+package apikeyrepo
 
 import (
 	"context"
@@ -74,7 +74,7 @@ func TestCachedAPIKeyRepository_GetAPIKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			redisClient, redisMock := redismock.NewClientMock()
-			apiKeyRepo := new(MockAPIKeyRepository)
+			apiKeyRepo := new(MockRepository)
 
 			switch {
 			case tt.cacheHit:
@@ -85,7 +85,7 @@ func TestCachedAPIKeyRepository_GetAPIKey(t *testing.T) {
 				redisMock.ExpectGet(redisKey).RedisNil()
 
 				if tt.fallbackErr != nil || tt.fallbackAPIKey.ID != nil {
-					apiKeyRepo.On("GetAPIKey", ctx, hashedKey).Return(tt.fallbackAPIKey, tt.fallbackErr)
+					apiKeyRepo.On("Get", ctx, hashedKey).Return(tt.fallbackAPIKey, tt.fallbackErr)
 
 					if tt.fallbackErr == nil && tt.expectSetCache {
 						redisMock.ExpectSet(redisKey, protoBytes, time.Minute).SetVal("OK")
@@ -93,12 +93,12 @@ func TestCachedAPIKeyRepository_GetAPIKey(t *testing.T) {
 				}
 			}
 
-			repo := &CachedAPIKeyRepository{
+			repo := &CachedRepository{
 				redis:      redisClient,
 				apikeyRepo: apiKeyRepo,
 			}
 
-			result, err := repo.GetAPIKey(ctx, hashedKey)
+			result, err := repo.Get(ctx, hashedKey)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -135,7 +135,7 @@ func TestUpdateAndGetAPIKeyLastUsedCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			redisClient, redisMock := redismock.NewClientMock()
-			repo := &CachedAPIKeyRepository{redis: redisClient}
+			repo := &CachedRepository{redis: redisClient}
 
 			if !tt.expectDoNothing {
 				redisMock.ExpectTxPipeline()
@@ -213,7 +213,7 @@ func TestUpdateAndGetAPIKeyLastUsedCache(t *testing.T) {
 	for _, tt := range getTests {
 		t.Run(tt.name, func(t *testing.T) {
 			redisClient, redisMock := redismock.NewClientMock()
-			repo := &CachedAPIKeyRepository{redis: redisClient}
+			repo := &CachedRepository{redis: redisClient}
 
 			if tt.redisErr != nil {
 				redisMock.ExpectHGetAll(metaKey).SetErr(tt.redisErr)

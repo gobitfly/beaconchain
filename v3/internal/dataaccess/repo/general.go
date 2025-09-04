@@ -1,4 +1,4 @@
-package dataaccess
+package repo
 
 import (
 	"context"
@@ -22,7 +22,7 @@ type goquDataset[T any] interface {
 	ToSQL() (string, []interface{}, error)
 }
 
-func runQuery[T any, dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) (T, error) {
+func RunQuery[T any, dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) (T, error) {
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		var zero T
@@ -37,7 +37,7 @@ func runQuery[T any, dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx
 	return result, nil
 }
 
-func runQueryRows[T ~[]E, E any, dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) (T, error) {
+func RunQueryRows[T ~[]E, E any, dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) (T, error) {
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		var zero T
@@ -52,7 +52,7 @@ func runQueryRows[T ~[]E, E any, dataSet goquDataset[dataSet]](ctx context.Conte
 	return result, nil
 }
 
-func execAndCheckRows[dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) error {
+func ExecAndCheckRows[dataSet goquDataset[dataSet]](ctx context.Context, db *sqlx.DB, ds dataSet) error {
 	query, args, err := ds.Prepared(true).ToSQL()
 	if err != nil {
 		return fmt.Errorf("failed to build update query: %w", err)
