@@ -44,7 +44,7 @@ To verify this is working correctly, you should be able to run `make generate-pr
 
 ```
 cp configs/service/local.yaml.example configs/service/local.yaml
-make generate-proto
+make
 docker compose -f deployments/docker-compose.yml up -d
 ```
 

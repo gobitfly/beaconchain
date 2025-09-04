@@ -1,6 +1,7 @@
-all: 
+all: generate-proto build-http-client
 	buf build
-	buf generate
+	buf generate --template buf.gen.api.yaml
+	buf generate --template buf.gen.domain.yaml
 	mkdir -p bin
 	go build -o ./bin/beaconchain-api-service ./cmd/main.go
 generate-proto:
