@@ -19,7 +19,7 @@ func NewLimiter() *Limiter {
 // It takes a map of limits per tier and returns the limit for the user's tier.
 // If the user's tier is unknown, it falls back to the free tier limit.
 func getLimitGeneric[T any](
-	user *domain.User,
+	user domain.User,
 	defaults map[domain.Tier]T,
 ) (T, error) {
 	// Fallback to default

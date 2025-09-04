@@ -17,21 +17,21 @@ const (
 	APIKeyHeader Header = "apikey"
 )
 
-func SetUserInContext(ctx context.Context, user *domain.User) context.Context {
+func SetUserInContext(ctx context.Context, user domain.User) context.Context {
 	return context.WithValue(ctx, ctxUserKey, user)
 }
 
 // UserFromContext retrieves the user from context
-func UserFromContext(ctx context.Context) (*domain.User, bool) {
-	user, ok := ctx.Value(ctxUserKey).(*domain.User)
+func UserFromContext(ctx context.Context) (domain.User, bool) {
+	user, ok := ctx.Value(ctxUserKey).(domain.User)
 	return user, ok
 }
 
 // MustUserFromContext should be used only when a user context is always expected such as in all external routes.
 // Use UserFromContext if the user may not be present (selective internal routes).
-func MustUserFromContext(ctx context.Context) *domain.User {
+func MustUserFromContext(ctx context.Context) domain.User {
 	user, ok := UserFromContext(ctx)
-	if !ok || user == nil {
+	if !ok {
 		panic("user not found in context: middleware contract broken")
 	}
 	return user

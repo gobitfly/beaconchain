@@ -104,7 +104,7 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 			tt.setupMocks(apiKeyRepo)
 			svc := newService(apiKeyRepo)
 
-			ctx := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337, SubscriptionTier: domain.TierFree})
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337, SubscriptionTier: domain.TierFree})
 			resp, err := svc.CreateAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
@@ -151,7 +151,7 @@ func TestApiService_DeleteAPIKey(t *testing.T) {
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
 
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
+			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
 			resp, err := svc.DeleteAPIKey(context, tt.input)
 
 			if tt.expectErr {
@@ -210,7 +210,7 @@ func TestApiService_DisableAPIKey(t *testing.T) {
 			mockRepo := new(dataaccess.MockAPIKeyRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
+			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
 			resp, err := svc.DisableAPIKey(context, tt.input)
 
 			if tt.expectErr {
@@ -269,7 +269,7 @@ func TestApiService_EnableAPIKey(t *testing.T) {
 			mockRepo := new(dataaccess.MockAPIKeyRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
+			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
 			resp, err := svc.EnableAPIKey(context, tt.input)
 
 			if tt.expectErr {
@@ -314,7 +314,7 @@ func TestApiService_GetAPIKeys(t *testing.T) {
 			mockRepo := new(dataaccess.MockAPIKeyRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
+			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
 			resp, err := svc.GetAPIKeys(context, &model.GetAPIKeysRequest{})
 
 			if tt.expectErr {
@@ -376,7 +376,7 @@ func TestApiService_GetAPIKey(t *testing.T) {
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
 
-			context := auth.SetUserInContext(context.Background(), &domain.User{ID: 1337})
+			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
 			resp, err := svc.GetAPIKey(context, tt.input)
 
 			if tt.expectErr {

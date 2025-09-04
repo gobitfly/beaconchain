@@ -18,7 +18,7 @@ func TestAuthUserInjectorMiddleware_AttachesUserToContext(t *testing.T) {
 	md := metadata.Pairs("dummy", "value")
 	ctx := metadata.NewIncomingContext(context.Background(), md)
 
-	var userFromCtx *domain.User
+	var userFromCtx domain.User
 
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		user, ok := auth.UserFromContext(ctx)

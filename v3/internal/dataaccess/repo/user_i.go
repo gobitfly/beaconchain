@@ -14,7 +14,7 @@ type UserRepository interface {
 
 	// CreateUser
 	// Creates a new user
-	CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*domain.User, error)
+	CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (domain.User, error)
 
 	// DeleteUser
 	// Returns nothing on success, or error if successfully deleted. Idempotent, if deleted when it DNE, no error should be returned.
@@ -24,5 +24,5 @@ type UserRepository interface {
 type UserAuthRepository interface {
 	// GetUserById
 	// Creates an empty Validator Dashboard
-	GetUserById(ctx context.Context, userId uint64) (*domain.User, error)
+	GetUserById(ctx context.Context, userId uint64) (domain.User, error)
 }

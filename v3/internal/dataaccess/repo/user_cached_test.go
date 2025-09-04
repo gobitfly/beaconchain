@@ -17,7 +17,7 @@ import (
 
 func TestCachedUserRepository_GetUserById(t *testing.T) {
 	ctx := context.Background()
-	user := &domain.User{ID: 42}
+	user := domain.User{ID: 42}
 	redisKey := fmt.Sprintf("%s%d", cacheUserPrefix, user.ID)
 
 	protoUser := &model.SerializableUser{Id: user.ID}
@@ -27,7 +27,7 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 		name           string
 		cacheHit       bool
 		cacheErr       error
-		fallbackUser   *domain.User
+		fallbackUser   domain.User
 		fallbackErr    error
 		expectSetCache bool
 		expectError    bool
@@ -68,7 +68,7 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 			default:
 				redisMock.ExpectGet(redisKey).RedisNil()
 
-				if tt.fallbackUser != nil || tt.fallbackErr != nil {
+				if tt.fallbackUser != (domain.User{}) || tt.fallbackErr != nil {
 					userRepo.On("GetUserById", ctx, user.ID).Return(tt.fallbackUser, tt.fallbackErr)
 
 					if tt.fallbackErr == nil && tt.expectSetCache {
@@ -86,7 +86,7 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Nil(t, result)
+				assert.Equal(t, domain.User{}, result)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, user, result)

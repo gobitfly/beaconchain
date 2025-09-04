@@ -24,7 +24,7 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 	validKey, err := apikey.FromBase62(validKeyBase62)
 	require.NoError(t, err)
 
-	validUser := &domain.User{ID: 1337}
+	validUser := domain.User{ID: 1337}
 	validStoredKey := apikey.APIKey{
 		UserID: validUser.ID,
 		Name:   "test-key",
@@ -90,7 +90,7 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 			metadata: metadata.Pairs("authorization", fmt.Sprintf("Bearer %s", validKeyBase62)),
 			setupMocks: func(userRepo *dataaccess.MockUserRepository, authRepo *dataaccess.MockAPIKeyRepository) {
 				authRepo.On("GetAPIKey", mock.Anything, validKey).Return(validStoredKey, nil)
-				userRepo.On("GetUserById", mock.Anything, validStoredKey.UserID).Return(&domain.User{}, domain.ErrNotFound)
+				userRepo.On("GetUserById", mock.Anything, validStoredKey.UserID).Return(domain.User{}, domain.ErrNotFound)
 			},
 			expectedCode:    codes.Unauthenticated,
 			expectUserInCtx: false,
@@ -122,7 +122,7 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 				ctx = metadata.NewIncomingContext(ctx, tt.metadata)
 			}
 
-			var userFromCtx *domain.User
+			var userFromCtx domain.User
 
 			handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 				if tt.expectUserInCtx {
@@ -159,7 +159,7 @@ func TestAuthUserInjectorInterceptor(t *testing.T) {
 	}
 }
 
-func assertUserInjectedIntoContext(t *testing.T, ctx context.Context, expected *domain.User, expectedHashedKey string) *domain.User {
+func assertUserInjectedIntoContext(t *testing.T, ctx context.Context, expected domain.User, expectedHashedKey string) domain.User {
 	t.Helper()
 
 	// Check user context value

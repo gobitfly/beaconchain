@@ -26,18 +26,18 @@ func (r *CachedUserRepository) Initialize(redisClient *redis.Client, userRepo Us
 	r.userRepo = userRepo
 }
 
-func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (*domain.User, error) {
+func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (domain.User, error) {
 	user, err := r.getUserByIdCache(ctx, userID)
 	if err == nil {
 		return user, nil
 	}
 	if !errors.Is(err, domain.ErrNotFound) {
-		return nil, err
+		return user, err
 	}
 
 	user, err = r.userRepo.GetUserById(ctx, userID)
 	if err != nil {
-		return nil, err
+		return user, err
 	}
 
 	err = r.setUserCache(ctx, user)
@@ -48,7 +48,7 @@ func (r *CachedUserRepository) GetUserById(ctx context.Context, userID uint64) (
 	return user, nil
 }
 
-func (r *CachedUserRepository) setUserCache(ctx context.Context, user *domain.User) error {
+func (r *CachedUserRepository) setUserCache(ctx context.Context, user domain.User) error {
 	protoUser := &model.SerializableUser{
 		Id:   user.ID,
 		Tier: string(user.SubscriptionTier),
@@ -66,22 +66,22 @@ func (r *CachedUserRepository) setUserCache(ctx context.Context, user *domain.Us
 	return nil
 }
 
-func (r *CachedUserRepository) getUserByIdCache(ctx context.Context, id uint64) (*domain.User, error) {
+func (r *CachedUserRepository) getUserByIdCache(ctx context.Context, id uint64) (domain.User, error) {
 	key := fmt.Sprintf("%s%d", cacheUserPrefix, id)
 	val, err := r.redis.Get(ctx, key).Bytes() // use .Bytes() instead of .Result() if storing binary
 	if err == redis.Nil {
-		return nil, domain.ErrNotFound
+		return domain.User{}, domain.ErrNotFound
 	}
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user from redis: %w", err)
+		return domain.User{}, fmt.Errorf("failed to get user from redis: %w", err)
 	}
 
 	var protoUser model.SerializableUser
 	if err := proto.Unmarshal(val, &protoUser); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal user proto: %w", err)
+		return domain.User{}, fmt.Errorf("failed to unmarshal user proto: %w", err)
 	}
 
-	return &domain.User{
+	return domain.User{
 		ID:               protoUser.Id,
 		SubscriptionTier: domain.Tier(protoUser.Tier),
 	}, nil

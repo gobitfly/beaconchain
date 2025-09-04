@@ -26,6 +26,6 @@ var rateLimits = map[domain.Tier]*model.RateLimitSettings{
 	},
 }
 
-func (s *Limiter) GetRateLimit(ctx context.Context, user *domain.User) (*model.RateLimitSettings, error) {
+func (s *Limiter) GetRateLimit(ctx context.Context, user domain.User) (*model.RateLimitSettings, error) {
 	return getLimitGeneric(user, rateLimits)
 }

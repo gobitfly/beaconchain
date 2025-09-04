@@ -24,7 +24,7 @@ func AuthUserInjectorMiddleware() grpc.UnaryServerInterceptor {
 		}
 
 		md, _ := metadata.FromIncomingContext(ctx)
-		ctx = auth.SetUserInContext(metadata.NewIncomingContext(ctx, md), &domain.User{
+		ctx = auth.SetUserInContext(metadata.NewIncomingContext(ctx, md), domain.User{
 			ID:               1337,
 			SubscriptionTier: domain.TierScale,
 		})

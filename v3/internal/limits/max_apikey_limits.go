@@ -13,6 +13,6 @@ var maxAPIKeyLimits = map[domain.Tier]int{
 	domain.TierScale:    10,
 }
 
-func (s *Limiter) GetMaxAPIKeys(ctx context.Context, user *domain.User) (int, error) {
+func (s *Limiter) GetMaxAPIKeys(ctx context.Context, user domain.User) (int, error) {
 	return getLimitGeneric(user, maxAPIKeyLimits)
 }

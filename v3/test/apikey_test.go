@@ -159,7 +159,7 @@ func TestAPIKeyCreationMaxLimit(t *testing.T) {
 
 	limiter := limits.NewLimiter()
 	apiKeyMgmt.withCleanState(t, func(ctx context.Context, client model.InternalServiceClient) {
-		tierMaxLimit, err := limiter.GetMaxAPIKeys(ctx, &domain.User{ID: 1, SubscriptionTier: domain.TierScale})
+		tierMaxLimit, err := limiter.GetMaxAPIKeys(ctx, domain.User{ID: 1, SubscriptionTier: domain.TierScale})
 		assert.NoError(t, err)
 
 		var hasReachedLimit bool

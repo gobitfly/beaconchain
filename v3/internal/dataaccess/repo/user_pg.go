@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
-	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/jmoiron/sqlx"
@@ -45,26 +44,11 @@ func (r *DBUserRepository) Ping() error {
 	return nil
 }
 
-func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (*domain.User, error) {
+func (r *DBUserRepository) GetUserById(ctx context.Context, id uint64) (domain.User, error) {
 	return queryUser(ctx, r.roConnectionAdminDb, id)
 }
 
-func (r *DBUserRepository) GetUserByAPIKey(ctx context.Context, key apikey.HashedKeyCredential) (*domain.User, error) {
-	subQuery := goqu.Dialect("postgres").From("api_keys_v2").
-		Select("user_id").
-		Where(
-			goqu.And(
-				goqu.C("api_key").Eq(key.Bytes()),
-				goqu.C("deleted_at").IsNull(),
-				goqu.C("disabled_at").IsNull(),
-			),
-		).
-		Limit(1)
-
-	return queryUser(ctx, r.roConnectionAdminDb, subQuery)
-}
-
-func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB, id T) (*domain.User, error) {
+func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB, id T) (domain.User, error) {
 	dialect := goqu.Dialect("postgres")
 
 	ds := dialect.From(goqu.T("users").As("u")).
@@ -95,10 +79,10 @@ func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB,
 
 	dbUser, err := runQuery[dbUser](ctx, db, ds)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to query user")
+		return domain.User{}, errors.Wrap(err, "failed to query user")
 	}
 
-	user := &domain.User{
+	user := domain.User{
 		ID:               dbUser.ID,
 		SubscriptionTier: domain.Tier(dbUser.TierName),
 	}
@@ -106,7 +90,7 @@ func queryUser[T uint64 | *goqu.SelectDataset](ctx context.Context, db *sqlx.DB,
 	return user, nil
 }
 
-func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (*domain.User, error) {
+func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initialApiKey string, hashedPassword string) (domain.User, error) {
 	user := domain.User{}
 
 	err := r.rwConnectionAdminDb.GetContext(ctx, &user, `
@@ -115,7 +99,7 @@ func (r *DBUserRepository) CreateUser(ctx context.Context, email string, initial
 			RETURNING *`,
 		hashedPassword, email, initialApiKey)
 
-	return &user, err
+	return user, err
 }
 
 func (r *DBUserRepository) DeleteUser(ctx context.Context, id uint64) error {

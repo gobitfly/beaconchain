@@ -33,8 +33,8 @@ var limiter = limits.NewLimiter()
 const testCallerA = "testCallerA"
 const testCallerB = "testCallerB"
 
-var testGlobalRateLimit, _ = limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: domain.TierScale})  // limits.SubscriptionPerksMap[domain.TierScale].GlobalRateLimit
-var testEndpointRateLimit, _ = limiter.GetRateLimit(context.Background(), &domain.User{SubscriptionTier: domain.TierFree}) // limits.SubscriptionPerksMap[domain.TierFree].GlobalRateLimit
+var testGlobalRateLimit, _ = limiter.GetRateLimit(context.Background(), domain.User{SubscriptionTier: domain.TierScale})
+var testEndpointRateLimit, _ = limiter.GetRateLimit(context.Background(), domain.User{SubscriptionTier: domain.TierFree})
 
 const testEndpointA = "/test/endpointA"
 const testEndpointB = "/test/endpointB"
@@ -317,7 +317,7 @@ func testGetEndpointRatelinit(fullMethod string, tier domain.Tier) (*model.RateL
 }
 
 var testServerInfo = &grpc.UnaryServerInfo{}
-var testUser *domain.User = &domain.User{
+var testUser = domain.User{
 	ID:               123,
 	SubscriptionTier: domain.TierFree,
 }

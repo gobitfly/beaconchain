@@ -30,7 +30,7 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 	limiter := limits.NewLimiter()
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		user, ok := auth.UserFromContext(ctx)
-		if !ok || user == nil {
+		if !ok {
 			return nil, status.Errorf(codes.Internal, "user not found while processing request")
 		}
 		globalRatelimit, _ := limiter.GetRateLimit(context.Background(), user)
