@@ -110,10 +110,6 @@ func (r *CachedAPIKeyRepository) updateAPIKeyLastUsedCache(
 		updates[cacheLastUsedFlushed] = lastUsedFlushed.UnixMilli()
 	}
 
-	if len(updates) == 0 {
-		return nil
-	}
-
 	pipe := r.redis.TxPipeline()
 	pipe.HSet(ctx, redisKey, updates)
 	pipe.Expire(ctx, redisKey, cacheLastUsedTTL) // extend lifetime of metadata
