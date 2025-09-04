@@ -114,24 +114,22 @@ func TestCachedAPIKeyRepository_GetAPIKey(t *testing.T) {
 	}
 }
 
-func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
+func TestUpdateAndGetAPIKeyLastUsedCache(t *testing.T) {
 	ctx := context.Background()
 	key := apikey.HashedKeyCredential{1, 2, 3}
-	metaKey := fmt.Sprintf("%s%s", cacheAPIKeyMetaPrefix, key.String())
+	metaKey := fmt.Sprintf("%s%s", cacheAPIKeyLastUsedPrefix, key.String())
 
 	type updateTestCase struct {
 		name            string
-		lastUsed        *time.Time
+		lastUsed        time.Time
 		lastUsedFlush   *time.Time
 		expectDoNothing bool
 	}
 
 	now := time.Now()
 	tests := []updateTestCase{
-		{"both lu and luf", &now, &now, false},
-		{"only lu", &now, nil, false},
-		{"only luf", nil, &now, false},
-		{"nothing", nil, nil, true},
+		{"both lu and luf", now, &now, false},
+		{"only lu", now, nil, false},
 	}
 
 	for _, tt := range tests {
@@ -142,23 +140,22 @@ func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
 			if !tt.expectDoNothing {
 				redisMock.ExpectTxPipeline()
 				updates := make(map[string]interface{})
-				if tt.lastUsed != nil {
-					updates[cacheMetaLastUsedField] = tt.lastUsed.Unix()
-				}
+				updates[cacheLastUsedField] = tt.lastUsed.UnixMilli()
+
 				if tt.lastUsedFlush != nil {
-					updates[cacheMetaLastUsedFlushed] = tt.lastUsedFlush.Unix()
+					updates[cacheLastUsedFlushed] = tt.lastUsedFlush.UnixMilli()
 				}
 
 				// HSet in pipeline: need a return value
 				redisMock.ExpectHSet(metaKey, updates).SetVal(int64(len(updates))) // return number of fields set
 
 				// Expire in pipeline: need a return value
-				redisMock.ExpectExpire(metaKey, cacheMetaTTL).SetVal(true)
+				redisMock.ExpectExpire(metaKey, cacheLastUsedTTL).SetVal(true)
 
 				redisMock.ExpectTxPipelineExec()
 			}
 
-			err := repo.updateAPIKeyLastUsedMeta(ctx, key, tt.lastUsed, tt.lastUsedFlush)
+			err := repo.updateAPIKeyLastUsedCache(ctx, key, tt.lastUsed, tt.lastUsedFlush)
 			assert.NoError(t, err)
 			assert.NoError(t, redisMock.ExpectationsWereMet())
 		})
@@ -173,15 +170,15 @@ func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
 		expectErr error
 	}
 
-	luTS := time.Now().Unix()
-	lufTS := time.Now().Add(-time.Minute).Unix()
+	luTS := time.Now().UnixMilli()
+	lufTS := time.Now().Add(-time.Minute).UnixMilli()
 
 	getTests := []getTestCase{
 		{
 			name: "both fields present",
 			redisVal: map[string]string{
-				cacheMetaLastUsedField:   strconv.FormatInt(luTS, 10),
-				cacheMetaLastUsedFlushed: strconv.FormatInt(lufTS, 10),
+				cacheLastUsedField:   strconv.FormatInt(luTS, 10),
+				cacheLastUsedFlushed: strconv.FormatInt(lufTS, 10),
 			},
 			expectLU:  &luTS,
 			expectLUF: &lufTS,
@@ -204,8 +201,8 @@ func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
 		{
 			name: "invalid integer",
 			redisVal: map[string]string{
-				cacheMetaLastUsedField:   "abc",
-				cacheMetaLastUsedFlushed: "123",
+				cacheLastUsedField:   "abc",
+				cacheLastUsedFlushed: "123",
 			},
 			expectLU:  nil,
 			expectLUF: func() *int64 { v := int64(123); return &v }(),
@@ -224,7 +221,7 @@ func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
 				redisMock.ExpectHGetAll(metaKey).SetVal(tt.redisVal)
 			}
 
-			lu, luf, err := repo.getAPIKeyLastUsedMeta(ctx, key)
+			lu, luf, err := repo.getAPIKeyLastUsedCache(ctx, key)
 			if tt.expectErr != nil {
 				assert.Error(t, err)
 				if tt.expectErr == domain.ErrNotFound {
@@ -233,14 +230,14 @@ func TestUpdateAndGetAPIKeyLastUsedMeta(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				if tt.expectLU != nil {
-					assert.Equal(t, *tt.expectLU, lu.Unix())
+					assert.Equal(t, *tt.expectLU, lu.UnixMilli())
 				} else {
-					assert.Nil(t, lu)
+					assert.Equal(t, lu, time.Time{})
 				}
 				if tt.expectLUF != nil {
-					assert.Equal(t, *tt.expectLUF, luf.Unix())
+					assert.Equal(t, *tt.expectLUF, luf.UnixMilli())
 				} else {
-					assert.Nil(t, luf)
+					assert.Equal(t, luf, time.Time{})
 				}
 			}
 

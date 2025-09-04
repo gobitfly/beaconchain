@@ -67,7 +67,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 			lastUsedAt = got.ApiKey.LastUsedAt.AsTime()
 		})
 
-		time.Sleep(1 * time.Second) // last used timestamps have second precision, so wait a bit to ensure next usage is chronologically after
+		time.Sleep(1000 * time.Millisecond) // wait a bit to ensure next last used timestamp is different & not trip over ratelimit
 
 		t.Run("use key (cache hit)", func(t *testing.T) {
 			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
