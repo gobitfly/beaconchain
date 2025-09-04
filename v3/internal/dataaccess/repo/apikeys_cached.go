@@ -88,9 +88,10 @@ func (r *CachedAPIKeyRepository) UpdateLastUsedAt(
 	return r.updateAPIKeyLastUsedCache(ctx, key, now, nil)
 }
 
-// We flush to db if there isn't or last flushed time is older than flush interval
 func shouldFlush(lastFlushed time.Time, interval time.Duration) bool {
-	return lastFlushed.IsZero() || time.Since(lastFlushed) > interval
+	// This also implicitly handles the zero-value case (never flushed):
+	// time.Since(time.Time{}) is effectively "forever ago", so it will trigger a flush.
+	return time.Since(lastFlushed) > interval
 }
 
 // Stores last used and last flushed times in a redis hash separate from the API key cache
