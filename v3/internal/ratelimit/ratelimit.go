@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/shopspring/decimal"
@@ -50,7 +51,7 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 			endpointRatelimit,
 		)
 		if !isWithinRateLimit {
-			return nil, status.Errorf(codes.ResourceExhausted, "rate limit exceeded")
+			return nil, common.NewExternalError(codes.ResourceExhausted, "rate limit exceeded")
 		}
 		return handler(ctx, req)
 	}
