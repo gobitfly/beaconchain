@@ -3,6 +3,10 @@
         "@tailwindcss/vite": "^4.1.12",
         "tailwindcss": "^4.1.12"
     },
+    "devDependencies": {
+        "@iconify-json/tabler": "^1.2.22",
+        "@nuxt/icon": "^2.0.0"
+    },
     "name": "beaconchain-explorer-base",
     "private": true,
     "type": "module"

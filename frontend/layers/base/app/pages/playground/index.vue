@@ -8,6 +8,16 @@
       <section class="grid gap-sm">
         <div>
           <BaseButton
+            leading-icon="file-code-2"
+            trailing-icon="arrow-up-right"
+            size="xl"
+            variant="branded"
+          >
+            Go to API
+          </BaseButton>
+        </div>
+        <div>
+          <BaseButton
             variant="primary"
           >
             Login
