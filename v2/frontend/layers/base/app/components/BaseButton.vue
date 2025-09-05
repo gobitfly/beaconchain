@@ -1,18 +1,40 @@
 <script setup lang="ts">
-const { variant = 'primary' } = defineProps<{
-  variant?: 'primary' | 'secondary',
+import { LazyBaseIcon } from '#components'
+import type { IconName } from '~/layers/base/app/components/BaseIcon.vue'
+
+const {
+  size = 'md',
+  variant = 'primary',
+} = defineProps<{
+  leadingIcon?: IconName,
+  size?: 'md' | 'xl',
+  trailingIcon?: IconName,
+  variant?: 'branded' | 'primary',
 }>()
 </script>
 
 <template>
   <button
-    class="bg-linear-to-b py-md px-sm rounded-full text-sm font-semibold opacity-90 hover:opacity-95 disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+    class="flex items-center bg-linear-to-b rounded-full font-semibold disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
     :class="[
-      variant === 'primary' && 'from-gray-100 to-gray-300 text-black',
+      variant === 'primary' && 'from-gray-100 to-gray-300 text-black opacity-90 hover:opacity-95',
+      variant === 'branded' && 'from-brand-500 to-brand-700 text-white hover:opacity-90',
+      size === 'md' && 'text-sm-tight py-md px-sm',
+      size === 'xl' && 'text-md py-xl px-3xl',
     ]"
   >
+    <LazyBaseIcon
+      v-if="leadingIcon"
+      :name="leadingIcon"
+      class=""
+    />
     <span class="px-lg">
       <slot />
     </span>
+    <LazyBaseIcon
+      v-if="trailingIcon"
+      :name="trailingIcon"
+      class=""
+    />
   </button>
 </template>
