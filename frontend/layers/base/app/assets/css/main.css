@@ -8,17 +8,14 @@
   src: url('/assets-2usdf/fonts/Urbanist-VariableFont_wght.ttf') format("truetype");
 }
 
-body {
-  font-family: 'Urbanist', sans-serif;
-}
-
 @theme {
-  /* todo: think about only removing specific utility classes */
   --*: initial;
 
   --color-black: #101010;
 
   --color-brand-300: #6482EC; 
+  --color-brand-500: #1E46D6;
+  --color-brand-700: #172F81;
   
   --color-white: #FAFAFA;
   --color-gray-100: #D6D6D6;
@@ -32,15 +29,13 @@ body {
   --spacing-sm: .375rem; /* 6px */
   --spacing-md: .5rem; /* 8px */
   --spacing-lg: .75rem; /* 12px */
+  --spacing-xl: 1rem; /* 16px */
+  --spacing-3xl: 1.5rem; /* 24px */
 
-  --text-sm: .875rem; /* 14px */
-  --text-sm--line-height: 1.25rem; /* 20px */
-
+  --text-sm-tight: .875rem; /* 14px */
+  --text-sm-tight--line-height: 1rem; /* 16px */
+  /* --text-sm: .875rem; 14px */
+  /* --text-sm--line-height: 1.25rem; 20px */
+  --text-md: 1rem; /* 16px */
+  --text-md--line-height: 1.5rem; /* 24px */
 }
-/* todo: think about moving this to theme.css (problem import order) */
-@theme inline {  
-  /* --color-brand-100: var(--color-gray-100);  */
-  
-  /* --color-link-100: var(--color-gray-100);  */
-}
-

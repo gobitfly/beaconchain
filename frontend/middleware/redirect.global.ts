@@ -3,6 +3,7 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 export default function ({
   name,
   params,
+  path,
 }: RouteLocationNormalizedLoaded) {
   const { has } = useFeatureFlag()
   const config = useRuntimeConfig()
@@ -61,5 +62,9 @@ export default function ({
     case 'validator':
     case 'validator-id':
       return redirectToV1(`/validator/${params.id || params.slug?.[1]}`)
+  }
+  const currentEnvironment = config.public.deploymentType
+  if (currentEnvironment === 'production' && path.startsWith('/playground')) {
+    return abortNavigation()
   }
 }
