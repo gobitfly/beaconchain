@@ -1,20 +1,21 @@
-import type { FeatureFlag } from '~/types/feature-flags'
+export type FeatureFlag
+  = | 'feature-account_dashboards'
+    | 'feature-product-landing'
+    | 'feature-user_settings'
 
 export const useFeatureFlag = () => {
-  type Environment = 'development' | 'production' | 'staging'
-
-  const currentEnvironment = useRuntimeConfig().public.deploymentType as Environment
+  const currentEnvironment = useRuntimeConfig().public.deploymentType
   if (!currentEnvironment) {
     throw createError('Environment variable `deploymentType` is not provided.')
   }
 
-  const staging: FeatureFlag[] = []
+  const staging: FeatureFlag[] = [ 'feature-product-landing' ]
   const development: FeatureFlag[] = [
     ...staging,
     'feature-account_dashboards',
     'feature-user_settings',
   ]
-  const featureCatalog: Record<Environment, FeatureFlag[]> = {
+  const featureCatalog: Record<typeof currentEnvironment, FeatureFlag[]> = {
     development,
     production: [],
     staging,

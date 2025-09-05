@@ -38,6 +38,12 @@ export default function ({
       return redirectToV1('/')
     case 'mobile':
       return redirectToV1('/mobile')
+    case 'p':
+    case 'product':
+      if (!has('feature-product-landing')) {
+        return abortNavigation()
+      }
+      break
     case 'privacy':
       return redirect('https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf')
     case 'register':
