@@ -21,7 +21,7 @@ type OptionsUseCookie<T> = CookieOptions<T> & {
  * This allows us to have autocompletion for the cookie names.
  *
  */
-export const useBcCookie = <T = string | undefined>(
+export const useBcCookie = <T = unknown>(
   name: CookieName,
   options?: OptionsUseCookie<T>,
 ) => {

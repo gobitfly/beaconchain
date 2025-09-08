@@ -65,8 +65,8 @@ export function useDashboardKeyProvider(
       // only use the dashboard cookie key as default if you are not logged in and it's not private
       if (
         !isLoggedIn.value
-        && isGuestDashboardKey(dashboardKeyCookie.value)
-        && !isSharedDashboardKey(dashboardKeyCookie.value)
+        && isGuestDashboardKey(`${dashboardKeyCookie.value}`)
+        && !isSharedDashboardKey(`${dashboardKeyCookie.value}`)
       ) {
         setDashboardKey(`${dashboardKeyCookie.value}`)
       }
@@ -135,7 +135,7 @@ export function useDashboardKeyProvider(
       oldValue
       && !newValue
       && dashboardKeyCookie.value
-      && !isNaN(parseInt(dashboardKeyCookie.value))
+      && !isNaN(parseInt(`${dashboardKeyCookie.value}`))
     ) {
       setDashboardKey('')
     }
