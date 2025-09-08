@@ -76,9 +76,9 @@ function createDutyLabels(dutyObjects?: number[]) {
 function createDutyLinksData(
   dutyObjects?: number[],
 ): {
-    label: string,
-    to?: string,
-  }[] {
+  label: string,
+  to?: string,
+}[] {
   if (!dutyObjects) {
     return []
   }

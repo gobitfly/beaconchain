@@ -1,11 +1,13 @@
 import eslintPluginNewlineDestructuring from 'eslint-plugin-newline-destructuring'
 // @ts-check
 import perfectionist from 'eslint-plugin-perfectionist'
+import stylistic from '@stylistic/eslint-plugin'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
 
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt({
+  plugins: { '@stylistic': stylistic },
   rules: {
     '@stylistic/array-bracket-newline': [
       'error',

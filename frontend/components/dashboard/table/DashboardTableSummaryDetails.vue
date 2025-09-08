@@ -70,7 +70,7 @@ const summarySections = computed<SummaryRow[][]>(() => {
   }
 
   const rewardCols: CombinedPropOrUndefined[]
-  = [ (!props.tableVisibility.reward ? 'reward' : undefined) ]
+    = [ (!props.tableVisibility.reward ? 'reward' : undefined) ]
 
   let addCols: CombinedPropOrUndefined[] = props.tableVisibility
     .attestations

@@ -109,13 +109,6 @@ export default defineNuxtConfig({
         plugins: [ nodeResolve() ],
       },
     },
-    css: {
-      preprocessorOptions: {
-        scss: {
-          api: 'modern-compiler',
-        },
-      },
-    },
   },
   postcss: { plugins: { autoprefixer: {} } },
   eslint: { config: { stylistic: true } },

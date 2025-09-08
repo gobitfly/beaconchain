@@ -3,12 +3,12 @@ import {
   useCookie,
 } from '#app/composables/cookie'
 
-type CookieName =
-  | 'bc-account-dashboard-key'
-  | 'bc-age-format'
-  | 'bc-cookies-preference'
-  | 'bc-user-dashboards'
-  | 'bc-validator-dashboard-key'
+type CookieName
+  = | 'bc-account-dashboard-key'
+    | 'bc-age-format'
+    | 'bc-cookies-preference'
+    | 'bc-user-dashboards'
+    | 'bc-validator-dashboard-key'
 
 // for now without the other `type overload` there is no way to use
 // `readonly` feature of `useCookieNuxt` (we might adapt this if needed)

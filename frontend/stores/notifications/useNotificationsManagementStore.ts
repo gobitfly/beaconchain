@@ -55,7 +55,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
     ).then(() => {
       // using optimistic ui here to avoid calling the api after delete
       settings.value.paired_devices
-      = [ ...settings.value.paired_devices.filter(device => device.id !== id) ]
+        = [ ...settings.value.paired_devices.filter(device => device.id !== id) ]
     }).then(() => refreshOverview())
   }
   const setNotificationForPairedDevice = async ({

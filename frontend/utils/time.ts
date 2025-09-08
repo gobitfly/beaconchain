@@ -41,14 +41,14 @@ export const formatSecondsTo = (seconds: number,
   } = {},
 ) => {
   const format
-  = (value: number) => {
-    return new Intl.NumberFormat(locale, {
-      maximumFractionDigits,
-      minimumFractionDigits,
-      minimumIntegerDigits,
-    })
-      .format(value)
-  }
+    = (value: number) => {
+      return new Intl.NumberFormat(locale, {
+        maximumFractionDigits,
+        minimumFractionDigits,
+        minimumIntegerDigits,
+      })
+        .format(value)
+    }
   const minutes = format(seconds / 60)
   return {
     minutes,

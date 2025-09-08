@@ -8,8 +8,8 @@ const {
   {
     ariaLabel: string,
     label?: never,
-  } |
-  {
+  }
+  | {
     ariaLabel?: never,
     label: string,
   }
