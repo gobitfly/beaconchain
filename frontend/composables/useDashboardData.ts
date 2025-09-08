@@ -50,12 +50,12 @@ export const useDashboardData = () => {
     query?: TableQueryParams,
   ) {
     const res
-    = await fetch<GetValidatorDashboardConsensusLayerDepositsResponse>(
-      'DASHBOARD_CL_DEPOSITS',
-      undefined,
-      { dashboardKey },
-      query,
-    )
+      = await fetch<GetValidatorDashboardConsensusLayerDepositsResponse>(
+        'DASHBOARD_CL_DEPOSITS',
+        undefined,
+        { dashboardKey },
+        query,
+      )
 
     return res
   }

@@ -5,9 +5,9 @@ export const useTranslation = () => {
   // https://vue-i18n.intlify.dev/guide/advanced/typescript.html#resource-keys-completion-supporting
   return { ...useI18n<{ message: MessageSchema }>({ useScope: 'global' }) }
 }
-export type TranslationInput =
-  | TranslationKey
-  | TranslationWithMessageInterpolation
+export type TranslationInput
+  = | TranslationKey
+    | TranslationWithMessageInterpolation
 
 export type TranslationKey = GetObjectPaths<MessageSchema>
 
@@ -21,8 +21,8 @@ export type TranslationKey = GetObjectPaths<MessageSchema>
  *
  * @see https://vue-i18n.intlify.dev/api/injection.html#component-injections
  */
-type TranslationWithMessageInterpolation =
-  | {
+type TranslationWithMessageInterpolation
+  = | {
     interpolation: number,
     key: TranslationKey,
   }

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-export type Color =
-  | 'gray'
-  | 'green'
-  | 'red'
-  | 'yellow'
+export type Color
+  = | 'gray'
+    | 'green'
+    | 'red'
+    | 'yellow'
 
 defineProps<{
   color?: Color,
