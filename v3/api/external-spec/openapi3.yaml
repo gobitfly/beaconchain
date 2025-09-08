@@ -50,6 +50,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/rpc.Status'
 
+  # temp endpoint for testing pagination
+  /blocks/{block_number}/transactions:
+    get:
+      operationId: GetBlockTransactions
+      parameters:
+        - name: block_number
+          in: path
+          required: true
+          schema:
+            type: integer
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/page_size'
+      responses:
+        '200':
+          description: block transactions response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BlockTransactions'
 components:
   parameters:
     chain:
@@ -66,7 +85,25 @@ components:
       schema:
         $ref: '#/components/schemas/validatorIndexPubkey'
 
+    cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+
+    page_size:
+      name: page_size
+      in: query
+      required: false
+      schema:
+        type: integer
   schemas:
+    Paging: 
+      type: object
+      properties:
+        next_cursor:
+          type: string
     Chain:
       type: string
       enum:
@@ -235,6 +272,21 @@ components:
         - orphaned
         - scheduled
 
+    BlockTransaction:
+      type: object
+      properties:
+        hash:
+          type: string
+    BlockTransactions:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/BlockTransaction'
+        paging:
+          $ref: '#/components/schemas/Paging'
+
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
@@ -247,4 +299,3 @@ components:
       description: 'Authorization header with value: Bearer <token>'
       name: X-Serverless-Authorization
       in: header
-   

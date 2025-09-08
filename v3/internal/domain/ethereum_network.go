@@ -73,3 +73,12 @@ const (
 	ConsensusViewJustified ConsensusView = "justified"
 	ConsensusViewFinalized ConsensusView = "finalized"
 )
+
+type BlockTransaction struct {
+	Hash string
+	Idx  int // field used for pagination
+}
+
+type BlockTransactionCursor struct {
+	Idx int
+}
