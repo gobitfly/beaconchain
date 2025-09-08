@@ -11,9 +11,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const dashboardKey = to.params.id
   if (!dashboardKey || typeof dashboardKey !== 'string' || !isGuestDashboardKey(dashboardKey)) return
   const validators
-  = decodeBase64Url(dashboardKey)
-    .split(',')
-    .filter(id => isInt(id) || isPublicKey(id))
+    = decodeBase64Url(dashboardKey)
+      .split(',')
+      .filter(id => isInt(id) || isPublicKey(id))
 
   const { fetch } = useCustomFetch()
   try {
