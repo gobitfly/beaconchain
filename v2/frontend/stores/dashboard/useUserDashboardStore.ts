@@ -29,7 +29,7 @@ export const useUserDashboardStore = defineStore('user_dashboards_store', () => 
         return dashboardCookie.value as any as UserDashboardsData
       }
       else {
-        return JSON.parse(dashboardCookie.value)
+        return JSON.parse(`${dashboardCookie.value}`)
       }
     }
   })
