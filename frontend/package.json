@@ -5,7 +5,7 @@
         "@vueuse/core": "^13.0.0",
         "@vueuse/nuxt": "^13.0.0",
         "big.js": "^6.2.2",
-        "echarts": "^5.6.0",
+        "echarts": "^6.0.0",
         "lodash-es": "^4.17.21",
         "pinia": "^3.0.3",
         "pinia-plugin-persistedstate": "^4.5.0",
