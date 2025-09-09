@@ -10,43 +10,53 @@ option go_package = "github.com/gobitfly/beaconchain-backend/model";
 import "google/api/annotations.proto";
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/descriptor.proto";
 
 
 //////////////////////////////////////////////////
 /////////////// Service Definition ///////////////
 //////////////////////////////////////////////////
 
+extend google.protobuf.MethodOptions {
+  bool require_authentication = 50002;
+}
+
 service InternalService {
-  
   rpc CreateAPIKey (CreateAPIKeyRequest) returns (CreateAPIKeyResponse) {
     option (google.api.http) = {
       post: "/api-keys"
     };
+    option (require_authentication) = true;
   }
   rpc DeleteAPIKey (DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse) {
     option (google.api.http) = {
       delete: "/api-keys/{name}"
     };
+    option (require_authentication) = true;
   }
   rpc DisableAPIKey (DisableAPIKeyRequest) returns (DisableAPIKeyResponse) {
     option (google.api.http) = {
       post: "/api-keys/{name}/disable"
     };
+    option (require_authentication) = true;
   }
   rpc EnableAPIKey (EnableAPIKeyRequest) returns (EnableAPIKeyResponse) {
     option (google.api.http) = {
       post: "/api-keys/{name}/enable"
     };
+    option (require_authentication) = true;
   }
   rpc GetAPIKeys (GetAPIKeysRequest) returns (GetAPIKeysResponse) {
     option (google.api.http) = {
       get: "/api-keys"
     };
+    option (require_authentication) = true;
   }
   rpc GetAPIKey (GetAPIKeyRequest) returns (GetAPIKeyResponse) {
     option (google.api.http) = {
       get: "/api-keys/{name}"
     };
+    option (require_authentication) = true;
   }
 
 }

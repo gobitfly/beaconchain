@@ -1,26 +1,23 @@
 package app
 
 import (
+	"buf.build/go/protovalidate"
 	"context"
 	"fmt"
-	"net"
-	"strings"
-
-	"buf.build/go/protovalidate"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"net"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/app/internal_api/middleware"
 	globalmiddleware "github.com/gobitfly/beaconchain-backend/internal/app/middleware"
-	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
-	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/sessionstorerepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
@@ -66,18 +63,23 @@ func Run(
 	}
 
 	var (
-		userRepoI   userrepo.Repository
-		apikeyRepoI apikeyrepo.Repository
+		userRepoI         userrepo.Repository
+		apikeyRepoI       apikeyrepo.Repository
+		sessionStoreRepoI sessionstorerepo.Repository
 	)
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
 		userRepoI = &userrepo.MockRepository{}
 		apikeyRepoI = &apikeyrepo.MockRepository{}
+		sessionStoreRepoI = &sessionstorerepo.MockRepository{}
 	} else {
 		userDbRepo := &userrepo.DBRepository{}
 		apikeyRepo := &apikeyrepo.CachedRepository{}
+		sessionStoreRepo := &sessionstorerepo.DBRepository{}
 		userRepoI = userDbRepo
 		apikeyRepoI = apikeyRepo
+		sessionStoreRepoI = sessionStoreRepo
+
 		dbAPIKeyRepo := &apikeyrepo.DBRepository{}
 
 		// init async
@@ -87,6 +89,7 @@ func Run(
 			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 			apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
+			sessionStoreRepo.Initialize(dataSources.Redis)
 		}()
 	}
 	apiService, _ := InitDependencies(userRepoI, apikeyRepoI)
@@ -95,7 +98,7 @@ func Run(
 	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.RecoveryMiddleware())
-	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorMiddleware())
+	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepoI))
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(unaryInterceptors...),
@@ -118,18 +121,6 @@ func Run(
 
 	log.Infof("To close connection CTRL+C :-)")
 	select {} // block
-}
-
-// HeaderMatcher
-// GRPC expects headers in a format which includes . This function simply passes along all HTTP-specified headers to GRPC.
-// Headers in GRPC will be available via `metadata.FromIncomingContext(ctx)`
-func HeaderMatcher(key string) (string, bool) {
-	switch strings.ToLower(key) {
-	case string(auth.APIKeyHeader):
-		return key, true
-	default:
-		return runtime.DefaultHeaderMatcher(key)
-	}
 }
 
 func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
