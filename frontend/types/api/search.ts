@@ -35,11 +35,17 @@ export interface SearchValidatorsByGraffiti {
 export interface SearchAddress {
   address: Address;
 }
+export interface SearchEnsName {
+  ens_name: string;
+}
 export interface SearchTransaction {
   transaction_hash: Hash;
 }
 export interface SearchBlock {
   block_number: number /* uint64 */;
+}
+export interface SearchSlot {
+  slot: number /* uint64 */;
 }
 export interface SearchEpoch {
   epoch: number /* uint64 */;
@@ -54,5 +60,5 @@ export interface SearchResult {
   value: any;
 }
 export interface InternalPostSearchResponse {
-  data: ({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti } | { type: 'address'; chain_id: number; value: SearchAddress } | { type: 'transaction'; chain_id: number; value: SearchTransaction } | { type: 'block'; chain_id: number; value: SearchBlock } | { type: 'epoch'; chain_id: number; value: SearchEpoch } | { type: 'token'; chain_id: number; value: SearchToken })[];
+  data: ({ type: 'validator'; chain_id: number; value: SearchValidator } | { type: 'validator_list'; chain_id: number; value: SearchValidatorList } | { type: 'validators_by_deposit_address'; chain_id: number; value: SearchValidatorsByDepositAddress } | { type: 'validators_by_withdrawal_credential'; chain_id: number; value: SearchValidatorsByWithdrawalCredential } | { type: 'validators_by_graffiti'; chain_id: number; value: SearchValidatorsByGraffiti } | { type: 'address'; chain_id: number; value: SearchAddress } | { type: 'transaction'; chain_id: number; value: SearchTransaction } | { type: 'block'; chain_id: number; value: SearchBlock } | { type: 'epoch'; chain_id: number; value: SearchEpoch } | { type: 'token'; chain_id: number; value: SearchToken } | { type: 'slot'; chain_id: number; value: SearchSlot } | { type: 'ens_name'; chain_id: number; value: SearchEnsName })[];
 }
