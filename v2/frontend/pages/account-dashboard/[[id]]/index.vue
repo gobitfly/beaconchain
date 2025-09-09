@@ -17,6 +17,9 @@ const dashboardCreationControllerModal
 function showDashboardCreation() {
   dashboardCreationControllerModal.value?.show()
 }
+definePageMeta({
+  layout: 'validator-dashboard',
+})
 </script>
 
 <template>

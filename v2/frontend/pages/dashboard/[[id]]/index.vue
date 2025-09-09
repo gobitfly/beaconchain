@@ -10,6 +10,7 @@ import type { HashTabs } from '~/types/hashTabs'
 import type { TableQueryParams } from '~/types/datatable'
 
 definePageMeta({
+  layout: 'validator-dashboard',
   middleware: [
     'dashboard-max-eb-query',
     'dashboard-max-eb-param',

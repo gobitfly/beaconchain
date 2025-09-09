@@ -27,6 +27,9 @@ if (!isLoggedIn.value) {
   // TODO: This should maybe be part of the middleware
   await navigateToV1Login()
 }
+definePageMeta({
+  layout: 'validator-dashboard',
+})
 </script>
 
 <template>

@@ -27,6 +27,9 @@ const scrollToAddons = () => {
   const element = document.getElementById('addons')
   element?.scrollIntoView({ behavior: 'smooth' })
 }
+definePageMeta({
+  layout: 'validator-dashboard',
+})
 </script>
 
 <template>

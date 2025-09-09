@@ -4,6 +4,8 @@
 @use "~/assets/css/prime_megamenu.scss";
 @use "~/assets/css/prime_menubar.scss";
 
+.validator-dashboard {
+
 .p-error {
   color: #e24c4c;
 }
@@ -638,4 +640,5 @@ div.p-accordion {
 
 div.p-dialog-mask.p-overlay-mask {
   background: rgba(0, 0, 0, 0.5);
+}
 }
