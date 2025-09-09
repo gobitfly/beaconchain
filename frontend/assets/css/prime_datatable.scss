@@ -1,5 +1,7 @@
 @use "~/assets/css/fonts.scss" as fonts;
 
+.validator-dashboard {
+
 :root {
   --expander-col-width: 53px;
   --table-header-background: var(--grey-4);
@@ -264,4 +266,5 @@
       border-width: 0 1px 0 1px;
     }
   }
+}
 }

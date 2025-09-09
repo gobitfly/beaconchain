@@ -1,6 +1,8 @@
 @use "~/assets/css/fonts.scss";
 @use "~/assets/css/utils.scss";
 
+.validator-dashboard {
+
 .p-menubar {
   @include fonts.button_text;
 
@@ -152,4 +154,5 @@
   &.right-aligned-submenu .p-menubar-submenu {
     right: 0;
   }
+}
 }

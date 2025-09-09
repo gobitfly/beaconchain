@@ -58,6 +58,9 @@ const openManageNotifications = () => {
     manageNotificationsModalVisisble.value = true
   }
 }
+definePageMeta({
+  layout: 'validator-dashboard',
+})
 </script>
 
 <template>

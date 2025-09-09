@@ -3,6 +3,15 @@
 @use "~/assets/css/fonts.scss" as font;
 @use "~/assets/css/utils.scss";
 
+@mixin container() {
+  color: var(--container-color);
+  background-color: var(--container-background);
+  border: var(--container-border);
+  border-radius: var(--border-radius);
+}
+
+.validator-dashboard {
+
 html {
   transition-behavior: allow-discrete;
   interpolate-size: allow-keywords;
@@ -51,13 +60,6 @@ a {
   &[disabled] {
     color: var(--text-color-disabled);
   }
-}
-
-@mixin container() {
-  color: var(--container-color);
-  background-color: var(--container-background);
-  border: var(--container-border);
-  border-radius: var(--border-radius);
 }
 
 .container {
@@ -109,4 +111,5 @@ svg {
       fill: none;
     }
   }
+}
 }

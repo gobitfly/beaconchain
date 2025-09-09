@@ -40,10 +40,6 @@ export default defineNuxtConfig({
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
-  css: [
-    '~/assets/css/main.scss',
-    '~/assets/css/prime.scss',
-  ],
   colorMode: {
     fallback: 'dark',
     preference: 'dark',
