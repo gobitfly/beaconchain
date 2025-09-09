@@ -7,6 +7,9 @@ const route = useRoute()
 useBcSeo()
 
 warn(`route id: ${route.params.id}, query: ${route.query}`)
+definePageMeta({
+  layout: 'validator-dashboard',
+})
 </script>
 
 <template>
