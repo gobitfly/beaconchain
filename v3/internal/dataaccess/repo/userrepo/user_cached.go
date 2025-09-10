@@ -17,13 +17,13 @@ import (
 const cacheUserPrefix = "user:"
 
 type CachedRepository struct {
-	redis    *redis.Client
-	userRepo AuthRepository
+	redis *redis.Client
+	Repository
 }
 
-func (r *CachedRepository) Initialize(redisClient *redis.Client, userRepo AuthRepository) {
+func (r *CachedRepository) Initialize(redisClient *redis.Client, userRepo Repository) {
 	r.redis = redisClient
-	r.userRepo = userRepo
+	r.Repository = userRepo
 }
 
 func (r *CachedRepository) Get(ctx context.Context, userID uint64) (domain.User, error) {
@@ -35,7 +35,7 @@ func (r *CachedRepository) Get(ctx context.Context, userID uint64) (domain.User,
 		return user, err
 	}
 
-	user, err = r.userRepo.Get(ctx, userID)
+	user, err = r.Repository.Get(ctx, userID)
 	if err != nil {
 		return user, err
 	}

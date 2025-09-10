@@ -31,13 +31,13 @@ const (
 )
 
 type CachedRepository struct {
-	redis      *redis.Client
-	apikeyRepo Repository
+	redis *redis.Client
+	Repository
 }
 
 func (r *CachedRepository) Initialize(redisClient *redis.Client, apikeyRepo Repository) {
 	r.redis = redisClient
-	r.apikeyRepo = apikeyRepo
+	r.Repository = apikeyRepo
 }
 
 func (r *CachedRepository) Get(ctx context.Context, key apikey.HashedKeyCredential) (apikey.APIKey, error) {
@@ -49,7 +49,7 @@ func (r *CachedRepository) Get(ctx context.Context, key apikey.HashedKeyCredenti
 		return apikey.APIKey{}, err
 	}
 
-	apiKey, err = r.apikeyRepo.Get(ctx, key)
+	apiKey, err = r.Repository.Get(ctx, key)
 	if err != nil {
 		return apikey.APIKey{}, err
 	}
@@ -78,7 +78,7 @@ func (r *CachedRepository) UpdateLastUsedAt(
 	}
 
 	if shouldFlush(lastFlushed, cacheLastUsedFlushInterval) {
-		if err := r.apikeyRepo.UpdateLastUsedAt(ctx, key); err != nil { // flush to DB
+		if err := r.Repository.UpdateLastUsedAt(ctx, key); err != nil { // flush to DB
 			return err
 		}
 		return r.updateAPIKeyLastUsedCache(ctx, key, now, &now) // also update last flushed time in cache
@@ -153,12 +153,8 @@ func (r *CachedRepository) formatLastUsedRedisKey(key apikey.HashedKeyCredential
 	return fmt.Sprintf("%s%s", cacheAPIKeyLastUsedPrefix, key.String())
 }
 
-func (r *CachedRepository) Create(ctx context.Context, userID uint64, key apikey.APIKey) (apikey.APIKey, error) {
-	return r.apikeyRepo.Create(ctx, userID, key)
-}
-
 func (r *CachedRepository) Delete(ctx context.Context, userID uint64, name string) error {
-	key, err := r.apikeyRepo.GetAll(ctx, userID, &name)
+	key, err := r.Repository.GetAll(ctx, userID, &name)
 	if err != nil {
 		return err
 	}
@@ -167,7 +163,7 @@ func (r *CachedRepository) Delete(ctx context.Context, userID uint64, name strin
 		return domain.ErrNotFound
 	}
 
-	err = r.apikeyRepo.Delete(ctx, userID, name)
+	err = r.Repository.Delete(ctx, userID, name)
 	if err != nil {
 		return err
 	}
@@ -176,7 +172,7 @@ func (r *CachedRepository) Delete(ctx context.Context, userID uint64, name strin
 }
 
 func (r *CachedRepository) Disable(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	key, err := r.apikeyRepo.Disable(ctx, userID, name)
+	key, err := r.Repository.Disable(ctx, userID, name)
 	if err != nil {
 		return apikey.APIKey{}, err
 	}
@@ -184,12 +180,8 @@ func (r *CachedRepository) Disable(ctx context.Context, userID uint64, name stri
 	return key, r.deleteAPIKeyCache(ctx, apikey.HashedKeyCredential(key.Value))
 }
 
-func (r *CachedRepository) Enable(ctx context.Context, userID uint64, name string) (apikey.APIKey, error) {
-	return r.apikeyRepo.Enable(ctx, userID, name)
-}
-
 func (r *CachedRepository) GetAll(ctx context.Context, userID uint64, keyName *string) ([]apikey.APIKey, error) {
-	keys, err := r.apikeyRepo.GetAll(ctx, userID, keyName)
+	keys, err := r.Repository.GetAll(ctx, userID, keyName)
 	if err != nil {
 		return nil, err
 	}

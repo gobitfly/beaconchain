@@ -95,7 +95,7 @@ func TestCachedAPIKeyRepository_GetAPIKey(t *testing.T) {
 
 			repo := &CachedRepository{
 				redis:      redisClient,
-				apikeyRepo: apiKeyRepo,
+				Repository: apiKeyRepo,
 			}
 
 			result, err := repo.Get(ctx, hashedKey)

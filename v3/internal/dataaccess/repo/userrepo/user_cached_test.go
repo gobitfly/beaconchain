@@ -78,8 +78,8 @@ func TestCachedUserRepository_GetUserById(t *testing.T) {
 			}
 
 			repo := &CachedRepository{
-				redis:    redisClient,
-				userRepo: userRepo,
+				redis:      redisClient,
+				Repository: userRepo,
 			}
 
 			result, err := repo.Get(ctx, user.ID)
