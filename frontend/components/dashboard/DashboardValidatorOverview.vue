@@ -84,7 +84,7 @@ const aprInfos = [
 </script>
 
 <template>
-  <div class="container">
+  <div class="dashboard-overview__container">
     <DashboardValidatorOverviewItem
       :title="$t('dashboard.validator.overview.online_validators')"
     >
@@ -260,7 +260,7 @@ const aprInfos = [
 
 <style lang="scss" scoped>
 @use "~/assets/css/main.scss";
-.container {
+.dashboard-overview__container {
   @include main.container;
   display: flex;
   align-items: center;
