@@ -67,42 +67,39 @@ func Run(
 	dataSources := data_sources.ApiDataSources{}
 
 	var (
-		userRepoI             userrepo.Repository
-		cachedUserRepoI       userrepo.AuthRepository
-		cachedAPIKeyAuthRepoI apikeyrepo.AuthRepository
+		userRepo   userrepo.Repository
+		apiKeyRepo apikeyrepo.Repository
 	)
 
 	if config.IsCloudDeployment {
 		// TODO remove & use actual db repositories
-		userRepoI = &userrepo.MockRepository{}
-		cachedUserRepoI = &userrepo.MockRepository{}
-		cachedAPIKeyAuthRepoI = &apikeyrepo.MockRepository{}
+		userRepo = &userrepo.MockRepository{}
+		apiKeyRepo = &apikeyrepo.MockRepository{}
 	} else {
-		userDbRepo := &userrepo.DBRepository{}
-		apikeyAuthRepo := &apikeyrepo.DBRepository{}
+		dbUserRepo := &userrepo.DBRepository{}
+		dbAPIKeyRepo := &apikeyrepo.DBRepository{}
 		cachedUserRepo := &userrepo.CachedRepository{}
-		cachedAPIKeyAuthRepo := &apikeyrepo.CachedRepository{}
+		cachedAPIKeyRepo := &apikeyrepo.CachedRepository{}
 
-		userRepoI = userDbRepo
-		cachedUserRepoI = cachedUserRepo
-		cachedAPIKeyAuthRepoI = cachedAPIKeyAuthRepo
+		userRepo = cachedUserRepo
+		apiKeyRepo = cachedAPIKeyRepo
 
 		dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
 
 		// init async
 		go func() {
-			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			apikeyAuthRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			cachedUserRepo.Initialize(dataSources.Redis, userDbRepo)
-			cachedAPIKeyAuthRepo.Initialize(dataSources.Redis, apikeyAuthRepo)
+			dbUserRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+			cachedUserRepo.Initialize(dataSources.Redis, dbUserRepo)
+			cachedAPIKeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
 		}()
 	}
-	apiService, _ := InitDependencies(userRepoI)
+	apiService, _ := InitDependencies(userRepo)
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
 	unaryInterceptors = append(unaryInterceptors, globalmiddleware.RecoveryMiddleware())
-	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(cachedUserRepoI, cachedAPIKeyAuthRepoI))
+	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(userRepo, apiKeyRepo))
 	unaryInterceptors = append(unaryInterceptors, ratelimit.GetRateLimitMiddleware(dataSources.Redis, getEndpointRatelimit))
 
 	grpcServer := grpc.NewServer(
