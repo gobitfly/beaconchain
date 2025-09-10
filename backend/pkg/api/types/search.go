@@ -3,7 +3,7 @@ package types
 type PostSearchRequest struct {
 	Input    string        `json:"input"`
 	Networks []interface{} `json:"networks,omitempty" tstype:"(number | string)[]"`
-	Types    []string      `json:"types,omitempty"`
+	Types    []string      `json:"types,omitempty" tstype:"('validator_by_index' | 'validator_by_public_key' | 'validator_list' | 'validators_by_deposit_address' | 'validators_by_withdrawal_credential' | 'validators_by_graffiti' | 'address' | 'address_by_ens_name' | 'ens_name' | 'transaction' | 'block' | 'epoch' | 'token' | 'slot' | 'slot_by_block_root' | 'slot_by_state_root')[]"`
 }
 
 type SearchValidator struct {
