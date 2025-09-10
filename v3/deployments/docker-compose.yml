@@ -17,6 +17,8 @@ services:
       - CLICKHOUSE_SKIP_USER_SETUP=1
   redis:
     image: redis:7
+    ports:
+      - "6479:6379"
   littlebigtable:
     image: "gobitfly/little_bigtable:latest"
 
