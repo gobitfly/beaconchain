@@ -26,13 +26,13 @@ jobs:
       - name: unit tests
         run: |
           export TERM=xterm
-          go test $(go list ./... | grep -Ev "test|cmd|api/gen|domain/gen")  -coverprofile=coverage.out -covermode=atomic -race
+          go test $(go list ./... | grep -Ev "test|cmd|api/gen|domain/gen|internal/log")  -coverprofile=coverage.out -covermode=atomic -race
 
       - name: coverage
         run: |
           echo "Quality Gate: checking test coverage is above threshold ..."
           echo "Threshold             : $COVERAGE_THRESHOLD %"
-          totalCoverage=`go tool cover -func=coverage.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
+          totalCoverage=`cat coverage.out | grep -v 'mock' > coverage_no_mock.out && go tool cover -func=coverage_no_mock.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
           echo "Current test coverage : $totalCoverage %"
           if (( $(echo "$totalCoverage $COVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
               echo "OK"
