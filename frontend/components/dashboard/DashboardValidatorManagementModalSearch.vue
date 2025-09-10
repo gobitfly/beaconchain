@@ -31,6 +31,14 @@ const {
     body: {
       input: input.value,
       networks: [ currentDashboardNetwork.value ],
+      types: [
+        'validator_by_index',
+        'validator_by_public_key',
+        'validator_list',
+        'validators_by_deposit_address',
+        'validators_by_withdrawal_credential',
+        'validators_by_graffiti',
+      ],
     },
   }), {
     immediate: false,
