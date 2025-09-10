@@ -40,7 +40,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="container">
+  <div class="notifications-overview__container">
     <div class="box">
       <section class="box-item">
         <h3 class="big_text_label">
@@ -170,7 +170,7 @@ const emit = defineEmits<{
 @use '~/assets/css/main.scss';
 @use "~/assets/css/utils.scss";
 
-.container {
+.notifications-overview__container {
   @include main.container;
   padding: 1.0625rem 1.25rem;
   position: relative;
