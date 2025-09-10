@@ -8,7 +8,7 @@ import type { Address, Hash } from './common'
 export interface PostSearchRequest {
   input: string;
   networks?: (number | string)[];
-  types?: string[];
+  types?: ('validator_by_index' | 'validator_by_public_key' | 'validator_list' | 'validators_by_deposit_address' | 'validators_by_withdrawal_credential' | 'validators_by_graffiti' | 'address' | 'address_by_ens_name' | 'ens_name' | 'transaction' | 'block' | 'epoch' | 'token' | 'slot' | 'slot_by_block_root' | 'slot_by_state_root')[];
 }
 export interface SearchValidator {
   index: number /* uint64 */;
