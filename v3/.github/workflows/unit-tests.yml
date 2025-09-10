@@ -22,6 +22,7 @@ jobs:
           cache-dependency-path: go.sum
       - uses: bufbuild/buf-setup-action@v1.50.0
       - run: make generate-proto
+      - run: make generate-mocks
       - name: unit tests
         run: |
           export TERM=xterm

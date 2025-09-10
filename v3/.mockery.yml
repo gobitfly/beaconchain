@@ -1,0 +1,15 @@
+all: false
+dir: '{{.InterfaceDir}}' # put mock in the same directory as the interface
+filename: mock.go
+force-file-write: true # overwrite existing files
+formatter: goimports
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: '{{.SrcPackageName}}'
+recursive: false
+template: testify
+packages:
+  github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo:
+    config:
+      recursive: true
+      include-interface-regex: "Repository"

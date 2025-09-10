@@ -1,9 +1,11 @@
-all: generate-proto build-http-client
+all: generate-static-files
 	buf build
 	buf generate --template buf.gen.api.yaml
 	buf generate --template buf.gen.domain.yaml
 	mkdir -p bin
 	go build -o ./bin/beaconchain-api-service ./cmd/main.go
+generate-static-files: generate-proto build-http-client generate-mocks
+	# No-op
 generate-proto:
 	rm -rf api/gen
 	rm -rf domain/gen
@@ -21,6 +23,9 @@ build-http-client:
 		-f api/gen/api_service/v1/external.swagger.json \
 		-t api/gen/client \
 		--name=ApiServiceClient
+generate-mocks:
+	go install github.com/vektra/mockery/v3@latest
+	mockery
 build-service:
 	mkdir -p bin
 	go build -o bin/beaconchain-api-service ./cmd/main.go
