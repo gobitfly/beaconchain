@@ -1,5 +1,15 @@
 {
-    "beaconchain_homepage": "Beaconchain Homepage",
+    "base": {
+        "beaconchain_homepage": "Beaconchain Homepage",
+        "common": {
+            "log_in": "Log in"
+        },
+        "products": {
+            "api": "API",
+            "explorer": "Explorer",
+            "stacking_hub": "StackingHub"
+        }
+    },
     "block": {
         "col": {
             "graffiti": "Graffiti",

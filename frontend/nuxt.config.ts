@@ -119,5 +119,11 @@ export default defineNuxtConfig({
     key: 'bc-store-%id',
     debug: true,
   },
+  // otherwise `<component :is="'button'" ...` resolves the `primevue:button` component
+  // primevue: {
+  //   components: {
+  //     prefix: 'Pv',
+  //   },
+  // },
   /* eslint-enable perfectionist/sort-objects */
 })

@@ -8,7 +8,10 @@ const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   /* eslint-disable perfectionist/sort-objects  -- as there is a conflict with `nuxt specific eslint rules` */
-  modules: [ '@nuxt/icon' ],
+  modules: [
+    '@nuxt/icon',
+    '@nuxtjs/i18n',
+  ],
   $meta: {
     name: 'base',
   },
