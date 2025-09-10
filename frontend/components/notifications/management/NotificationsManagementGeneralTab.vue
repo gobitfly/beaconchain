@@ -125,7 +125,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
     v-if="isVisible"
     v-model="isVisible"
   />
-  <div class="container">
+  <div class="notifications-management-general-tab__container">
     <div
       v-if="status === 'pending'"
       class="loading"
@@ -275,7 +275,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
   pointer-events: none;
 }
 
-.container {
+.notifications-management-general-tab__container {
   border: unset;
   margin-top: var(--padding-xl);
   display: flex;

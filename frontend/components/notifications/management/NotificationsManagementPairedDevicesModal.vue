@@ -28,10 +28,10 @@ const handleToggleNotifications = ({
 <template>
   <BcDialog
     v-model="visible"
-    class="paired-devices-modal-container"
+    class="notifications-management-paired-devices-modal"
     @keydown.esc.stop.prevent="close"
   >
-    <div class="container">
+    <div class="notifications-management-paired-devices-modal__container">
       <h1>{{ $t("notifications.general.paired_devices.title") }}</h1>
       <div
         v-if="notificationsManagementStore.settings.paired_devices.length"
@@ -72,11 +72,11 @@ const handleToggleNotifications = ({
 </template>
 
 <style lang="scss" scoped>
-:global(.paired-devices-modal-container) {
+:global(.notifications-management-paired-devices-modal) {
   width: 790px;
 }
 
-.container {
+.notifications-management-paired-devices-modal__container {
   padding: var(--padding-large);
 
   h1 {

@@ -378,6 +378,7 @@ const data = computed(() => {
 
     &:nth-child(2) {
       border-width: 3px;
+      border-color: transparent;
     }
 
     .row {
