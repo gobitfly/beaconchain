@@ -83,21 +83,21 @@ func (bigtable *Bigtable) ClearByPrefix(table string, family, columns, prefix st
 	var btTable *gcp_bigtable.Table
 
 	switch table {
-	case "data":
+	case utils.Config.Bigtable.TableNameData:
 		btTable = bigtable.tableData
-	case "blocks":
+	case utils.Config.Bigtable.TableNameBlocks:
 		btTable = bigtable.tableBlocks
-	case "metadata_updates":
+	case utils.Config.Bigtable.TableNameMetadataUpdates:
 		btTable = bigtable.tableMetadataUpdates
-	case "metadata":
+	case utils.Config.Bigtable.TableNameMetadata:
 		btTable = bigtable.tableMetadata
-	case "beaconchain":
+	case utils.Config.Bigtable.TableNameBeaconchain:
 		btTable = bigtable.tableBeaconchain
-	case "machine_metrics":
+	case utils.Config.Bigtable.TableNameMachineMetrics:
 		btTable = bigtable.tableMachineMetrics
-	case "beaconchain_validators":
+	case utils.Config.Bigtable.TableNameValidators:
 		btTable = bigtable.tableValidators
-	case "beaconchain_validators_history":
+	case utils.Config.Bigtable.TableNameValidatorsHistory:
 		btTable = bigtable.tableValidatorsHistory
 	default:
 		return fmt.Errorf("unknown table %v provided", table)
@@ -192,7 +192,7 @@ func (bigtable *Bigtable) ClearRawByPrefix(prefix string, dryRun bool) error {
 
 	rowRange := gcp_bigtable.PrefixRange(prefix)
 
-	btTable := bigtable.client.Open("blocks-raw")
+	btTable := bigtable.client.Open(utils.Config.Bigtable.TableNameBlocksRaw)
 
 	mutsDelete := types.NewBulkMutations(MAX_BATCH_MUTATIONS)
 
