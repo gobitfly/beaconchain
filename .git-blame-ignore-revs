@@ -4,6 +4,8 @@
 # in order to work execute once:
 # git config blame.ignoreRevsFile .git-blame-ignore-revs
 
+# style: format `scss` files
+b78e90c739f492fae2b0d9d6499683b7c59cfd93
 # chore(eslint): add rule to enforce indentation of 4 spaces for json
 898005c54ea6824a895917b4d3c2b52a2a4f72f9
 # chore(eslint): apply `sort-modules` rule
