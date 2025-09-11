@@ -1,15 +1,15 @@
 @use "~/assets/css/fonts.scss" as fonts;
 
-.validator-dashboard {
-  :root {
-    --expander-col-width: 53px;
-    --table-header-background: var(--grey-4);
+:root {
+  --expander-col-width: 53px;
+  --table-header-background: var(--grey-4);
 
-    &.dark-mode {
-      --table-header-background: var(--very-dark-grey);
-    }
+  &.dark-mode {
+    --table-header-background: var(--very-dark-grey);
   }
+}
 
+.validator-dashboard {
   .p-datatable {
     --table-background-color: var(--background-color);
 

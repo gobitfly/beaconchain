@@ -86,14 +86,14 @@ watch(() => selectedGroupIds.value, () => {
 </template>
 
 <style lang="scss" scoped>
-  .slot-viz-group-selector {
-    margin-left: auto;
-    width: 120px;
-    height: 46px;
+.slot-viz-group-selector {
+  margin-left: auto;
+  max-width: 120px;
+  min-height: 46px;
 
-    @media (min-width: 800px) {
-      width: 196px;
-      height: 30px;
+  @media (min-width: 800px) {
+    max-width: unset;
+    min-height: unset;
     }
   }
 </style>
