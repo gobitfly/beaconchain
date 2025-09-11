@@ -11,8 +11,8 @@
 @theme {
   --*: initial;
 
-  /* --breakpoint-sm: 40rem; */
-  --breakpoint-md: 48rem;
+  --breakpoint-sm: 40rem; /* 640px */
+  --breakpoint-md: 48rem; /* 768px */
   /* --breakpoint-lg: 64rem; */
   /* --breakpoint-xl: 80rem; */
   /* --breakpoint-2xl: 96rem; */
@@ -34,6 +34,8 @@
   --color-gray-300: #A8A8A8;
   --color-gray-700: #3B3B3B;
   --color-gray-900: #262626;
+
+  --container-8xl: 90rem; /* 1440px */
 
   --font-urbanist: "Urbanist", sans-serif;
   --font-weight-semibold: 600;
