@@ -1,5 +1,5 @@
 # yaml-language-server: $schema=../../../configuration-schema.json
-package: api
+package: model
 generate:
   std-http-server: true
   embedded-spec: true

@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../../../configuration-schema.json
+package: model
+generate:
+  models: true
+output: external-types.gen.go
+output-options:
+  prefer-skip-optional-pointer: true
