@@ -8,13 +8,22 @@ import (
 )
 
 type Bigtable struct {
-	Project             string `yaml:"project" env:"PROJECT"`
-	Instance            string `yaml:"instance" env:"INSTANCE"`
-	Emulator            bool   `yaml:"emulator" env:"EMULATOR"`
-	EmulatorPort        int    `yaml:"emulatorPort" env:"EMULATOR_PORT"`
-	EmulatorHost        string `yaml:"emulatorHost" env:"EMULATOR_HOST"`
-	V2SchemaCutOffEpoch uint64 `yaml:"v2SchemaCutOffEpoch" env:"V2_SCHEMA_CUTT_OFF_EPOCH"`
-	Remote              string `yaml:"remote"`
+	Project                    string `yaml:"project" env:"PROJECT"`
+	Instance                   string `yaml:"instance" env:"INSTANCE"`
+	Emulator                   bool   `yaml:"emulator" env:"EMULATOR"`
+	EmulatorPort               int    `yaml:"emulatorPort" env:"EMULATOR_PORT"`
+	EmulatorHost               string `yaml:"emulatorHost" env:"EMULATOR_HOST"`
+	V2SchemaCutOffEpoch        uint64 `yaml:"v2SchemaCutOffEpoch" env:"V2_SCHEMA_CUTT_OFF_EPOCH"`
+	Remote                     string `yaml:"remote"`
+	TableNameBeaconchain       string `yaml:"tableNameBeaconchain" env:"TABLE_NAME_BEACONCHAIN"`
+	TableNameValidators        string `yaml:"tableNameBeaconchainValidators" env:"TABLE_NAME_BEACONCHAIN_VALIDATORS"`
+	TableNameValidatorsHistory string `yaml:"tableNameBeaconchainValidatorsHistory" env:"TABLE_NAME_BEACONCHAIN_VALIDATORS_HISTORY"`
+	TableNameBlocks            string `yaml:"tableNameBlocks" env:"TABLE_NAME_BLOCKS"`
+	TableNameData              string `yaml:"tableNameData" env:"TABLE_NAME_DATA"`
+	TableNameMachineMetrics    string `yaml:"tableNameMachineMetrics" env:"TABLE_NAME_MACHINE_METRICS"`
+	TableNameMetadata          string `yaml:"tableNameMetadata" env:"TABLE_NAME_METADATA"`
+	TableNameMetadataUpdates   string `yaml:"tableNameMetadataUpdates" env:"TABLE_NAME_METADATA_UPDATES"`
+	TableNameBlocksRaw         string `yaml:"tableNameBlocksRaw" env:"TABLE_NAME_BLOCKS_RAW"`
 }
 
 // Config is a struct to hold the configuration data
