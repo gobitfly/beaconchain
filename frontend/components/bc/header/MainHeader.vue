@@ -67,10 +67,12 @@ const toggleMegaMenu = (evt: Event) => {
 
 const isMobileMegaMenuOpen = computed(() => megaMenu.value?.isMobileMenuOpen)
 
+const v1Domain = useV1Domain()
+
 type UserMenuItem = { command: () => Promise<void>, label: string }
 const userMenu: UserMenuItem[] = [
   {
-    command: async () => { await navigateTo('/user/settings') },
+    command: async () => { await navigateTo(`${v1Domain}/user/settings`, { external: true }) },
     label: $t('header.settings'),
   },
   {
