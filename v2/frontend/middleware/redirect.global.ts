@@ -60,11 +60,6 @@ export default function ({
       return redirect('https://storage.googleapis.com/legal.beaconcha.in/tos.pdf')
     case 'tx':
       return redirectToV1(`/tx/${params.id || params.slug?.[1]}`)
-    case 'user-settings':
-      if (!has('feature-user_settings')) {
-        return redirectToV1('/user/settings')
-      }
-      break
     case 'validator':
     case 'validator-id':
       return redirectToV1(`/validator/${params.id || params.slug?.[1]}`)

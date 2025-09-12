@@ -62,7 +62,7 @@ const items = computed(() => {
     if (isLoggedIn.value) {
       list.push({
         command: async () => {
-          await navigateTo('../user/settings')
+          await navigateTo(`${v1Domain}/user/settings`, { external: true })
         },
         label: $t('header.settings'),
       })

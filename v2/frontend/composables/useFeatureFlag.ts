@@ -1,7 +1,6 @@
 export type FeatureFlag
   = | 'feature-account_dashboards'
     | 'feature-product-landing'
-    | 'feature-user_settings'
 
 export const useFeatureFlag = () => {
   const currentEnvironment = useRuntimeConfig().public.deploymentType
@@ -13,7 +12,6 @@ export const useFeatureFlag = () => {
   const development: FeatureFlag[] = [
     ...staging,
     'feature-account_dashboards',
-    'feature-user_settings',
   ]
   const featureCatalog: Record<typeof currentEnvironment, FeatureFlag[]> = {
     development,
