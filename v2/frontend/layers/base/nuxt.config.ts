@@ -16,6 +16,11 @@ export default defineNuxtConfig({
     name: 'base',
   },
   css: [ join(currentDir, './app/assets/css/main.css') ],
+  router: {
+    options: {
+      scrollBehaviorType: 'smooth',
+    },
+  },
   vite: {
     plugins: [ tailwindcss() ],
   },

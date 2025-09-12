@@ -1,0 +1,24 @@
+<script setup lang="ts">
+import type { NuxtLinkProps } from '#app'
+import type { IconName } from '#layers/base/app/components/BaseIcon.vue'
+
+export type BaseNavigationItem = {
+  icon: IconName,
+  label: string,
+  to: NuxtLinkProps['to'],
+}
+
+defineProps<BaseNavigationItem>()
+</script>
+
+<template>
+  <NuxtLink
+    class="font-semibold flex gap-md items-center p-md bg-linear-to-b rounded-full from-gray-300 to-gray-200 dark:from-charcoal-600 dark:to-charcoal-700 opacity-90 hover:opacity-95 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+    :to
+  >
+    <BaseIcon :name="icon" />
+    {{ label }}
+  </NuxtLink>
+</template>
+
+<style scoped></style>
