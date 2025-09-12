@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useHead({
   bodyAttrs: {
-    class: 'dark:bg-black bg-white',
+    class: 'dark:bg-black dark:text-white bg-white text-black',
   },
 })
 </script>
@@ -9,7 +9,7 @@ useHead({
 <template>
   <div class="font-urbanist antialiased grid h-dvh grid-rows-[auto_1fr_auto]">
     <header>
-      <BaseNavigation />
+      <slot name="header" />
     </header>
     <main>
       <slot />
