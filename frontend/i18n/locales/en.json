@@ -1283,56 +1283,6 @@
         "last_30d": "Last 30d",
         "weekly": "Weekly"
     },
-    "user_settings": {
-        "delete_account": {
-            "button": "Delete My Account",
-            "dialog": {
-                "no_label": "Cancel",
-                "title": "Delete Account",
-                "warning": "This will permanently delete your account: {email}",
-                "yes_label": "Delete Account"
-            },
-            "title": "Delete Account",
-            "warning": "Warning! You will not be able to recover your account!"
-        },
-        "email": {
-            "confirm": "Confirm Email Address",
-            "error": {
-                "toast_group": "Could not update your email address",
-                "toast_message": "Please try again.",
-                "toast_title": "Error"
-            },
-            "new": "New Email Address",
-            "password": "Password",
-            "success": {
-                "toast_group": "Email success",
-                "toast_message": "Your email address has been updated.",
-                "toast_title": "Success"
-            },
-            "title": "Email"
-        },
-        "password": {
-            "confirm": "Confirm new password",
-            "error": {
-                "toast_group": "Could not update your password",
-                "toast_message": "Please try again.",
-                "toast_title": "Error"
-            },
-            "new": "New password",
-            "old": "Old password",
-            "success": {
-                "toast_group": "Password success",
-                "toast_message": "Your password has been updated.",
-                "toast_title": "Success"
-            },
-            "title": "Password"
-        },
-        "subscriptions": {
-            "explanation": "Premium features for web and beaconcha.in mobile app experience.",
-            "title": "Subscriptions"
-        },
-        "title": "User Settings"
-    },
     "validation": {
         "email": {
             "empty": "Please provide your email address.",
