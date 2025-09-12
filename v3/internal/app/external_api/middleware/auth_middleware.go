@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
-	"github.com/gobitfly/beaconchain-backend/internal/app/io"
+	"github.com/gobitfly/beaconchain-backend/api/external/model"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/common"
@@ -14,73 +14,69 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-
-	"google.golang.org/grpc/metadata"
 )
 
-// AuthUserInjectorInterceptor returns a gRPC interceptor that authenticates via API key
-// and injects the user into the context.
-func AuthUserInjectorInterceptor(userRepo userrepo.AuthRepository, apiKeyRepo apikeyrepo.AuthRepository) grpc.UnaryServerInterceptor {
-	return func(
-		ctx context.Context,
-		req interface{},
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (interface{}, error) {
-		// Bypass health check methods
-		if io.IsHealthCheckEndpoint(info.FullMethod) {
-			return handler(ctx, req)
-		}
+const (
+	AuthHeader = "Authorization"
+)
 
-		md, ok := metadata.FromIncomingContext(ctx)
-		if !ok {
-			return nil, common.NewExternalError(codes.Unauthenticated, "missing metadata")
-		}
-
-		authHeaders := md.Get("authorization")
-		if len(authHeaders) == 0 {
-			return nil, common.NewExternalError(codes.Unauthenticated, "missing authorization header")
-		}
-
-		authHeader := authHeaders[0]
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			return nil, common.NewExternalError(codes.Unauthenticated, "invalid authorization format")
-		}
-
-		base62Key := strings.TrimPrefix(authHeader, "Bearer ")
-		apiKey, err := apikey.FromBase62(base62Key)
-		if err != nil {
-			return nil, common.NewExternalError(codes.Unauthenticated, "invalid authorization format")
-		}
-
-		key, err := apiKeyRepo.Get(ctx, apiKey)
-		if err != nil {
-			return nil, common.NewExternalError(codes.Unauthenticated, "invalid API key")
-		}
-
-		user, err := userRepo.Get(ctx, key.UserID)
-		if err != nil {
-			if !errors.Is(err, domain.ErrNotFound) {
-				log.Error(fmt.Errorf("failed to get user by API key: %v", err))
+// AuthUserInjectorMiddleware authenticates via API key and injects the user into the request context.
+func AuthUserInjectorMiddleware(userRepo userrepo.AuthRepository, apiKeyRepo apikeyrepo.AuthRepository, errorHandler func(w http.ResponseWriter, r *http.Request, err error)) model.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authHeader := r.Header.Get(AuthHeader)
+			if authHeader == "" {
+				err := common.NewAPIUserFacingError(http.StatusUnauthorized, "missing authorization header")
+				errorHandler(w, r, err)
+				return
 			}
-			return nil, common.NewExternalError(codes.Unauthenticated, "invalid API key")
-		}
 
-		err = apiKeyRepo.UpdateLastUsedAt(ctx, apiKey)
-		if err != nil {
-			log.Warn(fmt.Errorf("failed to update last used time for API key: %v", err))
-		}
+			if !strings.HasPrefix(authHeader, "Bearer ") {
+				err := common.NewAPIUserFacingError(http.StatusUnauthorized, "invalid authorization format")
+				errorHandler(w, r, err)
+				return
+			}
 
-		// Security: Strip the authorization header from metadata before continuing
-		newMD := md.Copy()
-		newMD.Delete("authorization")
+			base62Key := strings.TrimPrefix(authHeader, "Bearer ")
+			apiKey, err := apikey.FromBase62(base62Key)
+			if err != nil {
+				err := common.NewAPIUserFacingError(http.StatusUnauthorized, "invalid authorization format")
+				errorHandler(w, r, err)
+				return
+			}
 
-		ctx = metadata.NewIncomingContext(ctx, newMD)
-		ctx = auth.SetUserInContext(ctx, user)
-		ctx = auth.SetAPIKeyInContext(ctx, apiKey.String())
+			key, err := apiKeyRepo.Get(r.Context(), apiKey)
+			if err != nil {
+				err := common.NewAPIUserFacingError(http.StatusUnauthorized, "invalid API key")
+				errorHandler(w, r, err)
+				return
+			}
 
-		return handler(ctx, req)
+			user, err := userRepo.Get(r.Context(), key.UserID)
+			if err != nil {
+				if !errors.Is(err, domain.ErrNotFound) {
+					log.Error(fmt.Errorf("failed to get user by API key: %v", err))
+				}
+				err := common.NewAPIUserFacingError(http.StatusUnauthorized, "invalid API key")
+				errorHandler(w, r, err)
+				return
+			}
+
+			// Optional: update last-used timestamp for the API key
+			if err := apiKeyRepo.UpdateLastUsedAt(r.Context(), apiKey); err != nil {
+				log.Warn(fmt.Errorf("failed to update last used time for API key: %v", err))
+			}
+
+			// Inject user and API key into context
+			ctx := r.Context()
+			ctx = auth.SetUserInContext(ctx, user)
+			ctx = auth.SetAPIKeyInContext(ctx, apiKey.String())
+
+			// Remove Authorization header before passing to next handler
+			rStripped := r.Clone(ctx)
+			rStripped.Header.Del(AuthHeader)
+
+			next.ServeHTTP(w, rStripped)
+		})
 	}
 }

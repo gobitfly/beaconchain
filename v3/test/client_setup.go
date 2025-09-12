@@ -2,20 +2,19 @@ package integration
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
+	"github.com/gobitfly/beaconchain-backend/api/external/client"
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
-	"github.com/gobitfly/beaconchain-backend/api/gen/client/client"
-	"github.com/gobitfly/beaconchain-backend/api/gen/client/client/external_service"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func setupExternalAPIClient(t *testing.T) (context.Context, external_service.ClientService) {
+func setupExternalAPIClient(t *testing.T) (context.Context, *client.ClientWithResponses) {
 	apiKey := os.Getenv("API_KEY_ORCA_TEST")
 	if apiKey == "" {
 		t.Fatal("API_KEY_ORCA_TEST environment variable is not set")
@@ -23,12 +22,21 @@ func setupExternalAPIClient(t *testing.T) (context.Context, external_service.Cli
 	return setupExternalAPIClientWithAuth(apiKey)
 }
 
-func setupExternalAPIClientWithAuth(apiKey string) (context.Context, external_service.ClientService) {
-	r := httptransport.New(testUtils.GetExternalHTTPUrl(), client.DefaultBasePath, client.DefaultSchemes)
-	r.DefaultAuthentication = httptransport.BearerToken(apiKey)
-	cl := client.New(r, strfmt.Default)
+func setupExternalAPIClientWithAuth(apiKey string) (context.Context, *client.ClientWithResponses) {
+	authFn := func(ctx context.Context, req *http.Request) error {
+		req.Header.Set("Authorization", "Bearer "+apiKey)
+		return nil
+	}
 
-	return context.Background(), cl.ExternalService
+	cl, err := client.NewClientWithResponses(
+		fmt.Sprintf("http://%s", testUtils.GetExternalHTTPUrl()),
+		client.WithRequestEditorFn(authFn),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return context.Background(), cl
 }
 
 func setupInternalAPIClient(t *testing.T) (context.Context, model.InternalServiceClient) {

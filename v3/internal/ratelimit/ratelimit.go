@@ -51,7 +51,7 @@ func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(ful
 			endpointRatelimit,
 		)
 		if !isWithinRateLimit {
-			return nil, common.NewExternalError(codes.ResourceExhausted, "rate limit exceeded")
+			return nil, common.NewInternalUserFacingError(codes.ResourceExhausted, "rate limit exceeded")
 		}
 		return handler(ctx, req)
 	}

@@ -30,7 +30,7 @@ func (service *ApiService) CreateAPIKey(ctx context.Context, in *model.CreateAPI
 		return nil, status.Errorf(codes.Internal, "failed to get API keys: %v", err)
 	}
 	if len(keys) >= maxKeys {
-		return nil, common.NewExternalError(codes.ResourceExhausted, fmt.Sprintf("maximum number of API keys (%d) reached", maxKeys))
+		return nil, common.NewInternalUserFacingError(codes.ResourceExhausted, fmt.Sprintf("maximum number of API keys (%d) reached", maxKeys))
 	}
 
 	// create API key

@@ -1,17 +1,17 @@
 package app
 
 import (
-	"buf.build/go/protovalidate"
 	"context"
 	"fmt"
+	"net"
+
+	"buf.build/go/protovalidate"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"net"
 
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/app/internal_api/middleware"
-	globalmiddleware "github.com/gobitfly/beaconchain-backend/internal/app/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/sessionstorerepo"
@@ -96,8 +96,8 @@ func Run(
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
-	unaryInterceptors = append(unaryInterceptors, globalmiddleware.StripErrorMessageMiddleware())
-	unaryInterceptors = append(unaryInterceptors, globalmiddleware.RecoveryMiddleware())
+	unaryInterceptors = append(unaryInterceptors, middleware.StripErrorMessageMiddleware())
+	unaryInterceptors = append(unaryInterceptors, middleware.RecoveryMiddleware())
 	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepoI))
 
 	grpcServer := grpc.NewServer(

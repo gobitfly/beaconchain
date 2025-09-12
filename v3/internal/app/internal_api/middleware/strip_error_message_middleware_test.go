@@ -45,13 +45,13 @@ func TestStripErrorMessageInterceptor(t *testing.T) {
 		},
 		{
 			name:         "external error passed through",
-			inputError:   common.NewExternalError(codes.Internal, "trusted error message"),
+			inputError:   common.NewInternalUserFacingError(codes.Internal, "trusted error message"),
 			expectedCode: codes.Internal,
 			expectedMsg:  "trusted error message",
 		},
 		{
 			name:         "wrapped external error passed through",
-			inputError:   errors.Wrap(common.NewExternalError(codes.InvalidArgument, "invalid input provided"), "additional context"),
+			inputError:   errors.Wrap(common.NewInternalUserFacingError(codes.InvalidArgument, "invalid input provided"), "additional context"),
 			expectedCode: codes.InvalidArgument,
 			expectedMsg:  "invalid input provided",
 		},

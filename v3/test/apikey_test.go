@@ -7,11 +7,8 @@ import (
 	"testing"
 	"time"
 
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
+	"github.com/gobitfly/beaconchain-backend/api/external/client"
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
-	"github.com/gobitfly/beaconchain-backend/api/gen/client/client"
-	"github.com/gobitfly/beaconchain-backend/api/gen/client/client/external_service"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
@@ -56,8 +53,9 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		var lastUsedAt time.Time
 
 		t.Run("use key (no cache hit)", func(t *testing.T) {
-			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
-			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
+			ctx, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			resp, err := extClient.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
 
@@ -70,8 +68,9 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		time.Sleep(1000 * time.Millisecond) // wait a bit to ensure next last used timestamp is different & not trip over ratelimit
 
 		t.Run("use key (cache hit)", func(t *testing.T) {
-			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
-			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
+			ctx, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			resp, err := extClient.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
 
@@ -92,14 +91,11 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("disabled key cannot be used", func(t *testing.T) {
-			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
-			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
-			assert.Error(t, err)
-			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
-				assert.Equal(t, 401, apiErr.Code())
-			} else {
-				t.Fatalf("expected unauthorized error, got: %v", err)
-			}
+			ctx, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			resp, err := extClient.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
+			assert.Nil(t, err)
+			assert.Equal(t, 401, resp.StatusCode)
 		})
 
 		t.Run("disabled key timestamp not changing after disabling again", func(t *testing.T) {
@@ -122,8 +118,9 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("enabled key can be used again", func(t *testing.T) {
-			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
-			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
+			ctx, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			resp, err := extClient.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
 
@@ -141,14 +138,11 @@ func TestAPIKeyLifecycle(t *testing.T) {
 		})
 
 		t.Run("deleted key cannot be used", func(t *testing.T) {
-			_, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
-			_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
-			assert.Error(t, err)
-			if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
-				assert.Equal(t, 401, apiErr.Code())
-			} else {
-				t.Fatalf("expected unauthorized error, got: %v", err)
-			}
+			ctx, extClient := setupExternalAPIClientWithAuth(key.RawApiKey)
+			resp, err := extClient.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
+			assert.Nil(t, err)
+			assert.Equal(t, 401, resp.StatusCode)
 		})
 
 	})
@@ -203,26 +197,19 @@ func TestAPIKeyList(t *testing.T) {
 func TestAPIKeyInvalidUsages(t *testing.T) {
 	var testAPIKeyInvalid = apiKeyMgmt.newTestKey("invalid")
 	t.Run("invalid key cannot be used", func(t *testing.T) {
-		_, extClient := setupExternalAPIClientWithAuth(testAPIKeyInvalid)
-		_, err := extClient.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
-		assert.Error(t, err)
-		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
-			assert.Equal(t, 401, apiErr.Code())
-		} else {
-			t.Fatalf("expected unauthorized error, got: %v", err)
-		}
+		ctx, extClient := setupExternalAPIClientWithAuth(testAPIKeyInvalid)
+		resp, err := extClient.GetPing(ctx)
+		assert.Nil(t, resp.Body.Close())
+		assert.Nil(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
 	})
 
 	t.Run("usage without key", func(t *testing.T) {
-		r := httptransport.New(testUtils.GetExternalHTTPUrl(), client.DefaultBasePath, client.DefaultSchemes)
-		extClient := client.New(r, strfmt.Default)
-		_, err := extClient.ExternalService.ExternalServiceExecutionBlock(&external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1"}, nil)
-		assert.Error(t, err)
-		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
-			assert.Equal(t, 401, apiErr.Code())
-		} else {
-			t.Fatalf("expected unauthorized error, got: %v", err)
-		}
+		cl, _ := client.NewClient(fmt.Sprintf("http://%s", testUtils.GetExternalHTTPUrl()))
+		resp, err := cl.GetPing(context.Background())
+		assert.Nil(t, resp.Body.Close())
+		assert.Nil(t, err)
+		assert.Equal(t, 401, resp.StatusCode)
 	})
 }
 

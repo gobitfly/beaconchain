@@ -2,11 +2,11 @@ package integration
 
 import (
 	"context"
+	"net/http"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/gobitfly/beaconchain-backend/api/gen/client/client/external_service"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,18 +15,22 @@ func TestRateLimit(t *testing.T) {
 	// give a timeout to avoid hanging tests
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	in := &external_service.ExternalServiceExecutionBlockParams{BlockNumber: "1", Context: ctx}
 
 	const numRequests = 100
 	var wg sync.WaitGroup
-	results := make(chan error, numRequests)
+	results := make(chan *http.Response, numRequests)
 
 	for i := 0; i < numRequests; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := client.ExternalServiceExecutionBlock(in, nil)
-			results <- err
+			resp, err := client.GetPing(ctx)
+			assert.Nil(t, resp.Body.Close())
+			if err != nil {
+				results <- &http.Response{StatusCode: http.StatusInternalServerError}
+				return
+			}
+			results <- resp
 		}()
 	}
 
@@ -38,17 +42,17 @@ func TestRateLimit(t *testing.T) {
 		rateLimitHit bool
 	)
 
-	for err := range results {
-		if err == nil {
+	for resp := range results {
+		if resp.StatusCode == http.StatusOK {
 			successSeen = true
 			continue
 		}
-		if apiErr, ok := err.(*external_service.ExternalServiceExecutionBlockDefault); ok {
-			if apiErr.Code() == 429 {
-				rateLimitHit = true
-				continue
-			}
+
+		if resp.StatusCode == http.StatusTooManyRequests {
+			rateLimitHit = true
+			continue
 		}
+
 	}
 
 	assert.True(t, successSeen, "expected at least one successful request before rate limit is hit")

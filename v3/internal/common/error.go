@@ -1,68 +1,69 @@
 package common
 
 import (
-	"errors"
-
-	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 const GenericErrMsg = "internal server error. please try again later."
 
-// ExternalError is a trusted, user-facing error type
+// ==== Internal API Errors ====
+
+// InternalUserFacingError is a trusted, user-facing error type
 // use status.Errorf instead if you want an error that should not be exposed to the user and catched in the middleware.
-type ExternalError struct {
+type InternalUserFacingError struct {
 	Message string
 	Code    codes.Code
 }
 
-func (e *ExternalError) Error() string {
+func (e *InternalUserFacingError) Error() string {
 	return e.Message
 }
 
-func (e *ExternalError) GRPCStatus() *status.Status {
+func (e *InternalUserFacingError) GRPCStatus() *status.Status {
 	return status.New(e.Code, e.Message)
 }
 
-func NewExternalError(code codes.Code, message string) error {
-	return &ExternalError{
+func NewInternalUserFacingError(code codes.Code, message string) error {
+	return &InternalUserFacingError{
 		Message: message,
 		Code:    code,
 	}
 }
 
-func SanitizeErrorMessage(err error) error {
-	var external *ExternalError
-	if errors.As(err, &external) {
-		return external.GRPCStatus().Err()
-	}
+// ===== External API Errors =====
 
-	// Otherwise, sanitize the error
-	st, ok := status.FromError(err)
-	if st.Code() == codes.Internal {
-		log.Infof("internal error: %v", err)
-	}
-	if !ok {
-		return status.Error(codes.Internal, GenericErrMsg)
-	}
+// ErrorVisibility indicates whether an error is safe to show to users.
+type ErrorVisibility string
 
-	return status.Error(st.Code(), genericMessageForCode(st.Code()))
+const (
+	ErrorVisibilityUser     ErrorVisibility = "user"     // safe to show, user facing
+	ErrorVisibilityInternal ErrorVisibility = "internal" // log only, replace with generic for users
+)
+
+type APIError struct {
+	Status     int                    `json:"status"`
+	Message    string                 `json:"message"`
+	Visibility ErrorVisibility        `json:"-"`
+	Extras     map[string]interface{} `json:"extras,omitempty"`
 }
 
-func genericMessageForCode(code codes.Code) string {
-	switch code {
-	case codes.NotFound:
-		return "resource not found"
-	case codes.PermissionDenied:
-		return "permission denied"
-	case codes.AlreadyExists:
-		return "resource already exists"
-	case codes.InvalidArgument:
-		return "invalid request parameters"
-	case codes.Unauthenticated:
-		return "unauthenticated request"
-	default:
-		return GenericErrMsg
-	}
+func (e *APIError) Error() string {
+	return e.Message
+}
+
+func NewAPIUserFacingError(status int, msg string) *APIError {
+	return &APIError{Status: status, Message: msg, Visibility: ErrorVisibilityUser, Extras: nil}
+}
+
+func NewAPIInternalError(status int, msg string) *APIError {
+	return &APIError{Status: status, Message: msg, Visibility: ErrorVisibilityInternal, Extras: nil}
+}
+
+func NewAPIError(status int, vis ErrorVisibility, msg string) *APIError {
+	return &APIError{Status: status, Message: msg, Visibility: vis, Extras: nil}
+}
+
+func NewAPIErrorWithExtras(status int, vis ErrorVisibility, msg string, extras map[string]interface{}) *APIError {
+	return &APIError{Status: status, Message: msg, Visibility: vis, Extras: extras}
 }

@@ -39,12 +39,12 @@ func AuthUserInjectorInterceptor(sessionStoreRepo sessionstorerepo.Repository) g
 		md, _ := metadata.FromIncomingContext(ctx)
 		sessionID := md.Get("session_id")
 		if len(sessionID) == 0 {
-			return nil, common.NewExternalError(codes.Unauthenticated, "missing metadata")
+			return nil, common.NewInternalUserFacingError(codes.Unauthenticated, "missing metadata")
 		}
 
 		user, err := sessionStoreRepo.GetUserFromSessionID(ctx, sessionID[0])
 		if err != nil {
-			return nil, common.NewExternalError(codes.Unauthenticated, "invalid session ID")
+			return nil, common.NewInternalUserFacingError(codes.Unauthenticated, "invalid session ID")
 		}
 
 		newMD := md.Copy()

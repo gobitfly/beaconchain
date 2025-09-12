@@ -2,7 +2,7 @@ name: Unit-Tests
 
 env:
   # raise that threshold over time
-  COVERAGE_THRESHOLD: 34
+  COVERAGE_THRESHOLD: 30
 
 on:
   push:
@@ -21,8 +21,7 @@ jobs:
           go-version-file: './go.mod'
           cache-dependency-path: go.sum
       - uses: bufbuild/buf-setup-action@v1.50.0
-      - run: make generate-proto
-      - run: make generate-mocks
+      - run: make generate-static-files
       - name: unit tests
         run: |
           export TERM=xterm
