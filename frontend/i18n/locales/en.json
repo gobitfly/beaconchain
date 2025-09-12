@@ -2,12 +2,10 @@
     "base": {
         "beaconchain_homepage": "Beaconchain Homepage",
         "common": {
-            "log_in": "Log in"
-        },
-        "products": {
-            "api": "API",
-            "explorer": "Explorer",
-            "stacking_hub": "StackingHub"
+            "close": "Close",
+            "log_in": "Log in",
+            "open_navigation": "Open Navigation",
+            "side_navigation": "Side Navigation"
         }
     },
     "block": {
@@ -663,7 +661,7 @@
         "register": "Sign up",
         "settings": "Account Settings",
         "slot": "Slot"
-    },
+    }, 
     "login_and_register": {
         "already_have_account": "Already have an account?",
         "choose_password": "Choose a password",
@@ -1118,6 +1116,25 @@
         "subtitle": "Monitoring without limits on web and mobile.",
         "view_addons": "View Add-Ons",
         "yearly": "Yearly"
+    },
+    "products": {
+        "api": "API",
+        "explorer": "Explorer",
+        "landing_page": {
+            "api": {
+                "title": "Unified API to access data on"
+            },
+            "explorer": {
+                "title": "Seamless access to blockchain data on"
+            },
+            "search": {
+                "title": "Explore Transactions & Validator Staking on"
+            },
+            "stacking_hub": {
+                "title": "Comprehensive staking insights on"
+            }
+        },
+        "stacking_hub": "StackingHub"
     },
     "search_bar": {
         "account_placeholder": "Address or ENS name",
