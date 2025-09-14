@@ -170,7 +170,7 @@ const selectedLabel = computed(() => {
     >
       <template #header>
         <div class="special-groups">
-          <Checkbox
+          <PvCheckbox
             v-model="total"
             input-id="total"
             :binary="true"

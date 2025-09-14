@@ -46,7 +46,7 @@ const emit = defineEmits<{
       />
     </button>
 
-    <Popover
+    <PvPopover
       ref="popover"
       unstyled
       @keydown.esc.stop
@@ -83,7 +83,7 @@ const emit = defineEmits<{
           />
         </li>
       </ul>
-    </Popover>
+    </PvPopover>
   </span>
 </template>
 

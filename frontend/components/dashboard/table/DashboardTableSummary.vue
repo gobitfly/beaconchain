@@ -194,7 +194,7 @@ watch(
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="group_id"
               :sortable="true"
               body-class="group-id-column bold"
@@ -204,8 +204,8 @@ watch(
               <template #body="slotProps">
                 {{ groupNameLabel(slotProps.data.group_id) }}
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="status"
               header-class="status-column"
               body-class="status-column"
@@ -217,8 +217,8 @@ watch(
                   :status="slotProps.data.status"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="validators"
               body-class="validator-column"
               header-class="validator-column"
@@ -251,8 +251,8 @@ watch(
                   context="group"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.efficiency"
               field="efficiency"
               :sortable="true"
@@ -267,8 +267,8 @@ watch(
                   :row="slotProps.data"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.attestations"
               field="attestations"
               :sortable="true"
@@ -283,8 +283,8 @@ watch(
                   :row="slotProps.data"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.proposals"
               field="proposals"
               :sortable="true"
@@ -300,8 +300,8 @@ watch(
                   :row="slotProps.data"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.reward"
               field="reward"
               :sortable="true"
@@ -317,7 +317,7 @@ watch(
                   :row="slotProps.data"
                 />
               </template>
-            </Column>
+            </PvColumn>
             <template #expansion="slotProps">
               <DashboardTableSummaryDetails
                 :table-visibility="colsVisible"

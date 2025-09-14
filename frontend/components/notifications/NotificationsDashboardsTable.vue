@@ -120,7 +120,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="chain_id"
               sortable
               header-class="col-header-network"
@@ -134,8 +134,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   />
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="epoch"
               sortable
               header-class="col-age"
@@ -149,8 +149,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   :unix-timestamp="getTimestampFromEpoch(slotProps.data.epoch)"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.dashboard"
               field="dashboard_id"
               :sortable="true"
@@ -165,8 +165,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   :dashboard-name="slotProps.data.dashboard_name"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.groups"
               field="group_name"
               body-class="col-group"
@@ -178,8 +178,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   {{ slotProps.data.group_name }}
                 </span>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="entity_count"
               header-class="col-entity"
               body-class="col-entity"
@@ -223,9 +223,9 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   />
                 </div>
               </template>
-            </Column>
+            </PvColumn>
 
-            <Column
+            <PvColumn
               v-if="colsVisible.notifications"
               field="notification"
               body-class="col-notification"
@@ -235,7 +235,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
               <template #body="slotProps">
                 {{ textDashboardNotifications(slotProps.data.event_types) }}
               </template>
-            </Column>
+            </PvColumn>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="label-dashboard">

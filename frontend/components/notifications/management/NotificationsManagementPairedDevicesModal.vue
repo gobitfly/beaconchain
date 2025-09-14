@@ -62,7 +62,7 @@ const handleToggleNotifications = ({
       </BcText>
     </div>
     <div class="button-row">
-      <Button
+      <BcButton
         :label="$t('navigation.done')"
         autofocus
         @click="close"

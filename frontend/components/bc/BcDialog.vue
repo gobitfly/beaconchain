@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type Dialog from 'primevue/dialog'
-
 const { width } = useWindowSize()
 const { setTouchableElement } = useSwipe()
 

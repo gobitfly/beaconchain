@@ -239,7 +239,7 @@ const isMobile = computed(() => {
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <InputText
+          <PvInputText
             v-model="newGroupName"
             class="search-input"
             maxlength="20"
@@ -248,13 +248,13 @@ const isMobile = computed(() => {
             "
             @keypress.enter="addGroup"
           />
-          <Button
+          <PvButton
             style="display: inline"
             :disabled="newGroupDisabled"
             @click="addGroup"
           >
             <BcIcon name="plus" />
-          </Button>
+          </PvButton>
         </div>
       </template>
       <template #table>
@@ -270,7 +270,7 @@ const isMobile = computed(() => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="name"
               class="edit-group"
               :sortable="true"
@@ -292,8 +292,8 @@ const isMobile = computed(() => {
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="id"
               :sortable="!isMobile"
               :header="$t('dashboard.validator.group_management.col.id')"
@@ -303,8 +303,8 @@ const isMobile = computed(() => {
                   {{ slotProps.data.id }}
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="count"
               :sortable="!isMobile"
               :header="$t('dashboard.validator.group_management.col.count')"
@@ -315,8 +315,8 @@ const isMobile = computed(() => {
                   default="0"
                 />
               </template>
-            </Column>
-            <Column field="action">
+            </PvColumn>
+            <PvColumn field="action">
               <template #body="slotProps">
                 <div class="action-col">
                   <BcButtonIcon
@@ -331,7 +331,7 @@ const isMobile = computed(() => {
                   />
                 </div>
               </template>
-            </Column>
+            </PvColumn>
 
             <template #bc-table-footer-left>
               <div class="left">
@@ -353,7 +353,7 @@ const isMobile = computed(() => {
             </template>
 
             <template #bc-table-footer-right>
-              <Button
+              <PvButton
                 :label="$t('navigation.done')"
                 @click="onClose"
               />

@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { CookiesPreference } from '~/types/cookie'
+import Dialog from 'primevue/dialog' // TODO: as Pv
 
 const cookiePreference = useBcCookie<CookiesPreference>(
   'bc-cookies-preference',
@@ -56,9 +57,9 @@ const text = computed(() => {
           :to="`/dashboard`"
           :replace="route.path.startsWith('/dashboard')"
         >
-          <Button>
+          <PvButton>
             {{ text.button }}
-          </Button>
+          </PvButton>
         </BcLink>
       </div>
     </div>

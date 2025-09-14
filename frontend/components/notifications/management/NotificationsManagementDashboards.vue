@@ -241,7 +241,7 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
         @sort="onSort"
         @set-page-size="setPageSize"
       >
-        <Column
+        <PvColumn
           field="dashboard_id"
           body-class="dashboard-col"
           header-class="dashboard-col"
@@ -272,8 +272,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               {{ slotProps.data.dashboard_name }}
             </span>
           </template>
-        </Column>
-        <Column
+        </PvColumn>
+        <PvColumn
           field="group_id"
           body-class="group-col"
           header-class="group-col"
@@ -285,8 +285,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               {{ slotProps.data.group_name }}
             </span>
           </template>
-        </Column>
-        <Column
+        </PvColumn>
+        <PvColumn
           v-if="colsVisible.subscriptions"
           field="subscriptions"
           body-class="subscriptions-col"
@@ -302,8 +302,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               @on-edit="onEdit('subscriptions', slotProps.data)"
             />
           </template>
-        </Column>
-        <Column
+        </PvColumn>
+        <PvColumn
           v-if="colsVisible.webhook"
           field="webhook"
           body-class="webhook-col"
@@ -319,8 +319,8 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               @on-edit="() => onEdit('webhook', slotProps.data)"
             />
           </template>
-        </Column>
-        <Column
+        </PvColumn>
+        <PvColumn
           field="action"
           body-class="action-col"
           header-class="action-col"
@@ -339,7 +339,7 @@ const isDeleteButtonDisabled = (dashboard: WrappedRow) => {
               />
             </div>
           </template>
-        </Column>
+        </PvColumn>
         <template #expansion="slotProps">
           <div class="expansion">
             <div class="info">

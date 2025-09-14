@@ -106,7 +106,7 @@ const getGroupName = (groupId: number) => {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             sortable
             body-class="dashboard-table-cl-withdrawals__age-cell"
             field="timestamp"
@@ -122,8 +122,8 @@ const getGroupName = (groupId: number) => {
               />
               <span v-else>-</span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="validator_index"
             :header="$t('dashboard.validator.col.validator_index')"
@@ -144,8 +144,8 @@ const getGroupName = (groupId: number) => {
                 {{ slotProps.data.index }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="group_id"
             :header="$t('dashboard.validator.col.group')"
@@ -155,8 +155,8 @@ const getGroupName = (groupId: number) => {
                 {{ getGroupName(slotProps.data.group_id) }}
               </span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             :header="$t('dashboard.validator.col.type')"
           >
@@ -192,8 +192,8 @@ const getGroupName = (groupId: number) => {
                 </BcTooltip>
               </div>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="status"
             :header="$t('table.status')"
@@ -205,8 +205,8 @@ const getGroupName = (groupId: number) => {
                 :reject-reason="slotProps.data.reject_reason"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="amount"
             sortable
             :header="$t('table.amount')"
@@ -217,8 +217,8 @@ const getGroupName = (groupId: number) => {
                 has-tooltip
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="isMobile"
             field="status"
           >
@@ -229,7 +229,7 @@ const getGroupName = (groupId: number) => {
                 is-compact
               />
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="dashboard-table-cl-withdrawals__details">
               <div class="dashboard-table-cl-withdrawals__details-grid">

@@ -46,7 +46,7 @@ const icon = computed(() => {
         </div>
       </div>
     </template>
-    <ToggleButton
+    <PvToggleButton
       v-model="selected"
       class="bc-toggle"
       :class="readonlyClass"
@@ -63,7 +63,7 @@ const icon = computed(() => {
           />
         </slot>
       </template>
-    </ToggleButton>
+    </PvToggleButton>
   </BcTooltip>
 </template>
 

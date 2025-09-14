@@ -47,7 +47,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               sortable
               header-class="col-client-name"
               body-class="col-client-name"
@@ -56,8 +56,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
               <template #body="slotProps">
                 {{ slotProps.data.client_name }}
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               header-class="col-version"
               body-class="col-version"
               :header="$t('notifications.clients.col.version')"
@@ -72,8 +72,8 @@ const { overview } = useNotificationsDashboardOverviewStore()
                   {{ slotProps.data.version }}
                 </BcLink>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="timestamp"
               sortable
               header-class="col-age"
@@ -87,7 +87,7 @@ const { overview } = useNotificationsDashboardOverviewStore()
                   :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
-            </Column>
+            </PvColumn>
             <template #empty>
               <NotificationsTableEmpty
                 v-if="!clientsNotifications?.data.length"

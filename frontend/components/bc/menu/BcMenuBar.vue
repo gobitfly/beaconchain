@@ -9,7 +9,7 @@ defineProps<Props>()
 </script>
 
 <template>
-  <Menubar
+  <PvMenubar
     v-if="buttons?.length"
     :model="buttons"
     breakpoint="0px"
@@ -69,7 +69,7 @@ defineProps<Props>()
         />
       </span>
     </template>
-  </Menubar>
+  </PvMenubar>
 </template>
 
 <style lang="scss" scoped>

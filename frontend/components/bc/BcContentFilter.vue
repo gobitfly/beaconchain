@@ -39,7 +39,7 @@ watchDebounced(filter, () => {
 
 <template>
   <div class="filter_elements_container">
-    <InputText
+    <PvInputText
       ref="input"
       v-model.trim="filter"
       type="search"
@@ -49,7 +49,7 @@ watchDebounced(filter, () => {
       :class="{ visible: isFilterVisible }"
       @keydown.escape.stop="closeFilter"
     />
-    <Button
+    <PvButton
       ref="button"
       :disabled="disabledFilter"
       :aria-expanded="isFilterVisible"
@@ -71,7 +71,7 @@ watchDebounced(filter, () => {
         v-else
         name="magnifying-glass"
       />
-    </Button>
+    </PvButton>
   </div>
 </template>
 

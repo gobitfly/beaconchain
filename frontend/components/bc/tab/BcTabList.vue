@@ -15,14 +15,14 @@ const {
 </script>
 
 <template>
-  <Tabs
+  <PvTabs
     v-model:value="activeTab"
     lazy
     scrollable
     class="dashboard-tab-view"
   >
-    <TabList>
-      <Tab
+    <PvTabList>
+      <PvTab
         v-for="tab in tabs"
         :key="tab.key"
         :value="tab.key"
@@ -36,11 +36,11 @@ const {
             <slot :name="`tab-header-icon-${tab.key}`" />
           </template>
         </BcTabHeader>
-      </Tab>
-    </TabList>
+      </PvTab>
+    </PvTabList>
 
-    <TabPanels :class="panelsClass">
-      <TabPanel
+    <PvTabPanels :class="panelsClass">
+      <PvTabPanel
         v-for="tab in tabs"
         :key="tab.key"
         :value="tab.key"
@@ -57,7 +57,7 @@ const {
             tab-panel-{{ tab.key }}
           </div>
         </slot>
-      </TabPanel>
-    </TabPanels>
-  </Tabs>
+      </PvTabPanel>
+    </PvTabPanels>
+  </PvTabs>
 </template>

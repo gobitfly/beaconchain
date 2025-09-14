@@ -192,7 +192,7 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             field="epoch"
             :sortable="true"
             body-class="epoch"
@@ -208,8 +208,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 <BcFormatNumber :value="slotProps.data.epoch" />
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.age"
             field="age"
             body-class="age-field"
@@ -222,8 +222,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 :unix-timestamp="getTimestampFromEpoch(data.epoch)"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.duty"
             field="duty"
             body-class="duty"
@@ -241,8 +241,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 :duty="slotProps.data.duty"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="group_id"
             body-class="group-id"
             header-class="group-id"
@@ -253,8 +253,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 {{ groupNameLabel(slotProps.data.group_id) }}
               </span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="reward"
             body-class="reward"
             header-class="reward"
@@ -309,8 +309,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 </template>
               </BcTooltip>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.elRewards"
             field="reward_el"
             body-class="reward"
@@ -349,8 +349,8 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 </template>
               </BcTooltip>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.clRewards"
             field="reward_cl"
             body-class="reward"
@@ -387,7 +387,7 @@ watch(() => selectedValidatorGroups.value, (newValue) => {
                 </template>
               </BcTooltip>
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <DashboardTableRewardsDetails
               :row="slotProps.data"

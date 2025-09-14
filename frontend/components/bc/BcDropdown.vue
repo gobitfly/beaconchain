@@ -11,7 +11,7 @@ const emit = defineEmits<{ (e: 'select', value: SelectChangeEvent['value']): voi
 </script>
 
 <template>
-  <Select
+  <PvSelect
     class="bc-dropdown"
     :class="variant"
     :panel-class="[variant, panelClass]"
@@ -42,7 +42,7 @@ const emit = defineEmits<{ (e: 'select', value: SelectChangeEvent['value']): voi
         </span>
       </slot>
     </template>
-  </Select>
+  </PvSelect>
 </template>
 
 <style lang="scss" scoped>
