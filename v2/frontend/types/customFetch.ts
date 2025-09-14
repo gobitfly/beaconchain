@@ -58,7 +58,6 @@ export type API_PATH
     | 'NOTIFICATIONS_TEST_PUSH'
     | 'NOTIFICATIONS_TEST_WEBHOOK'
     | 'PRODUCT_SUMMARY'
-    | 'REGISTER'
     | 'SAVE_VALIDATOR_DASHBOARDS_SETTINGS'
     | 'SEARCH'
     | 'STRIPE_CHECKOUT_SESSION'
@@ -402,11 +401,6 @@ export const mapping: Record<API_PATH, MappingData> = {
   PRODUCT_SUMMARY: {
     mock: false,
     path: '/product-summary',
-  },
-  REGISTER: {
-    method: 'POST',
-    mock: true,
-    path: '/users',
   },
   SAVE_VALIDATOR_DASHBOARDS_SETTINGS: {
     getPath: values =>
