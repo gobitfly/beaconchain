@@ -46,8 +46,6 @@ export default function ({
       break
     case 'privacy':
       return redirect('https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf')
-    case 'register':
-      return redirectToV1('/register')
     case 'requestReset':
       return redirectToV1('/requestReset')
     case 'shop':
