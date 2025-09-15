@@ -28,13 +28,13 @@ const hasNotifications = ref(props.device.is_notifications_enabled)
         {{ $t("notifications.general.paired_devices.device") }}:
         {{ device.name || $t("notifications.general.paired_devices.unknown") }}
       </div>
-      <Button
+      <BcButton
         severity="secondary"
         class="p-button-icon-only margin-inline-start-small"
         @click="emit('remove-device', device.id)"
       >
         <BcIcon name="trash" />
-      </Button>
+      </BcButton>
     </div>
     <div class="toggle-row">
       <BcToggle

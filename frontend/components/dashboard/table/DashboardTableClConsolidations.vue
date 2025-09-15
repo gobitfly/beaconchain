@@ -71,7 +71,7 @@ const setSearch = (value?: string) => {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             sortable
             field="timestamp"
             body-class="dashboard-table-cl-consolidations__age-cell"
@@ -86,8 +86,8 @@ const setSearch = (value?: string) => {
               />
               <span v-else>-</span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="source"
             :header="$t('table.source')"
@@ -106,8 +106,8 @@ const setSearch = (value?: string) => {
                 {{ slotProps.data.source }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="target"
             :header="$t('table.target')"
@@ -126,8 +126,8 @@ const setSearch = (value?: string) => {
                 {{ slotProps.data.target }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="status"
             :header="$t('table.status')"
@@ -138,8 +138,8 @@ const setSearch = (value?: string) => {
                 :reject-reason="slotProps.data.reject_reason"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="fee"
             :header="$t('table.amount')"
           >
@@ -148,8 +148,8 @@ const setSearch = (value?: string) => {
                 :value="slotProps.data.amount"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="isMobile"
             field="status"
           >
@@ -159,7 +159,7 @@ const setSearch = (value?: string) => {
                 is-compact
               />
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="dashboard-table-cl-consolidations__details">
               <div class="dashboard-table-cl-consolidations__details-grid">

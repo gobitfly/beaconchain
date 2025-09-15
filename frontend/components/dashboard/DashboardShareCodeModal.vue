@@ -108,18 +108,18 @@ const unpublish = async () => {
         v-if="!isReadonly"
         class="footer"
       >
-        <Button
+        <PvButton
           :disabled="isUpdating"
           @click="unpublish"
         >
           {{ $t("navigation.unpublish") }}
-        </Button>
-        <Button
+        </PvButton>
+        <PvButton
           :disabled="isUpdating"
           @click="edit"
         >
           {{ $t("dashboard.share_dialog.edit") }}
-        </Button>
+        </PvButton>
       </div>
     </div>
   </div>

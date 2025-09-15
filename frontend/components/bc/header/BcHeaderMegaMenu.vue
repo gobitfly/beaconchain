@@ -92,7 +92,7 @@ defineExpose({
 
 <template>
   <ClientOnly>
-    <MegaMenu
+    <PvMegaMenu
       ref="megaMenu"
       :model="items"
       :breakpoint
@@ -121,7 +121,7 @@ defineExpose({
           </div>
         </span>
       </template>
-    </MegaMenu>
+    </PvMegaMenu>
   </ClientOnly>
 </template>
 

@@ -67,20 +67,20 @@ const next = () => {
         layout="gaudy"
       />
       <div class="row-container">
-        <InputText
+        <PvInputText
           v-if="isLoggedIn"
           v-model="name"
           :placeholder="$t('dashboard.creation.type.placeholder')"
           class="input-field"
           @keypress.enter="next"
         />
-        <Button
+        <PvButton
           class="button"
           :disabled="continueDisabled"
           @click="next"
         >
           {{ $t("navigation.continue") }}
-        </Button>
+        </PvButton>
       </div>
     </div>
   </div>

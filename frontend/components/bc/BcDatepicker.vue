@@ -21,7 +21,7 @@ const modelValue = defineModel<Date>({
     class="bc-datepicker__label"
   >
     <span>{{ label }}</span>
-    <Datepicker
+    <PvDatePicker
       :id
       v-model="modelValue"
       :date-format

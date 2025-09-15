@@ -119,11 +119,14 @@ export default defineNuxtConfig({
     key: 'bc-store-%id',
     debug: true,
   },
-  // otherwise `<component :is="'button'" ...` resolves the `primevue:button` component
-  // primevue: {
-  //   components: {
-  //     prefix: 'Pv',
-  //   },
-  // },
+  // we prefix `primevue` components so e.g. primevue Button is not resolved when using `<component :is="button"...`
+  // we don't prefix the `Dialog` component, as otherwise the useDialog() composable won't find it
+  primevue: {
+    components: {
+      name: ({ name }) => {
+        return name === 'Dialog' ? name : `Pv${name}`
+      },
+    },
+  },
   /* eslint-enable perfectionist/sort-objects */
 })

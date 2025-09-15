@@ -23,7 +23,7 @@ const shouldAppearDisabled = computed(
 </script>
 
 <template>
-  <Button
+  <PvButton
     :type
     :disabled="isDisabled"
     :aria-disabled="isAriaDisabled"
@@ -41,7 +41,7 @@ const shouldAppearDisabled = computed(
     >
       <slot name="icon" />
     </span>
-  </Button>
+  </PvButton>
 </template>
 
 <style lang="scss" scoped>

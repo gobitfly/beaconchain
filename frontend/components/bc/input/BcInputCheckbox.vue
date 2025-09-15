@@ -33,7 +33,7 @@ const input = defineModel<boolean>()
         </template>
       </BcTooltip>
     </span>
-    <Checkbox
+    <PvCheckbox
       v-model="input"
       class="bc-input-ckeckbox__checkbox"
       :input-id="id"

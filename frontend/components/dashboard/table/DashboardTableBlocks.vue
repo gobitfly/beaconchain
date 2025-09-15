@@ -148,7 +148,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="proposer"
               :sortable="true"
               :header="$t('block.col.proposer')"
@@ -164,8 +164,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   {{ slotProps.data.proposer || "-" }}
                 </BcLink>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="group_id"
               body-class="group-id"
               header-class="group-id"
@@ -176,8 +176,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   {{ groupNameLabel(slotProps.data.group_id) }}
                 </span>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.epoch"
               field="epoch"
               :header="$t('common.epoch')"
@@ -194,8 +194,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   />
                 </BcLink>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.slot"
               field="slot"
               :sortable="true"
@@ -213,8 +213,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   />
                 </BcLink>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="block"
               :sortable="true"
               :header="$t('common.block')"
@@ -233,8 +233,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                 </BcLink>
                 <span v-else>-</span>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.age"
               field="age"
               body-class="age-field"
@@ -247,8 +247,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   :unix-timestamp="getTimestampFromEpoch(slotProps.data.epoch)"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.status"
               field="status"
               :sortable="!colsVisible.mobileStatus"
@@ -265,8 +265,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   :mobile="colsVisible.mobileStatus"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.rewardsRecipient"
               field="reward_recipient"
               header-class="reward_recipient"
@@ -283,8 +283,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                 />
                 <span v-else>-</span>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.rewards"
               field="reward"
               body-class="reward"
@@ -297,8 +297,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                   :status="slotProps.data.status"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.graffiti"
               field="graffiti"
               body-class="graffiti"
@@ -308,7 +308,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
               <template #body="slotProps">
                 <BcFormatGraffiti :graffiti="slotProps.data.graffiti" />
               </template>
-            </Column>
+            </PvColumn>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="row">

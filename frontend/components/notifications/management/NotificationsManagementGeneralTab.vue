@@ -157,7 +157,7 @@ watchDebounced(() => store.settings.general_settings, async () => {
         v-if="isMuted"
         class="unmute-container"
       >
-        <Button
+        <BcButton
           :label="$t('notifications.general.mute.unmute')"
           @click="store.settings.general_settings.do_not_disturb_timestamp = 0"
         />

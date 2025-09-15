@@ -120,7 +120,7 @@ const shareGroupTooltip = computed(() => {
       >{{
         $t("dashboard.share_dialog.setting.name.label")
       }}</label>
-      <InputText
+      <PvInputText
         id="dashboardName"
         v-model="dashboardName"
         :placeholder="$t('dashboard.share_dialog.setting.name.placeholder')"
@@ -128,7 +128,7 @@ const shareGroupTooltip = computed(() => {
         @keypress.enter="share"
       />
       <div class="share-setting">
-        <Checkbox
+        <PvCheckbox
           id="shareGroup"
           v-model="shareGroups"
           :binary="true"
@@ -153,12 +153,12 @@ const shareGroupTooltip = computed(() => {
       </div>
     </div>
     <div class="footer">
-      <Button
+      <PvButton
         :disabled="publishDisabled"
         @click="share"
       >
         {{ isNew ? $t("navigation.publish") : $t("navigation.update") }}
-      </Button>
+      </PvButton>
     </div>
   </div>
 </template>

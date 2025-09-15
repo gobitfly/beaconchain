@@ -252,11 +252,11 @@ const rows = computed(() => {
       class="button-row"
       :class="{ 'show-content': showContent }"
     >
-      <Button
+      <BcButton
         @click="() => (showContent = !showContent)"
       >
         {{ $t(showContent ? "pricing.hide_feature" : "pricing.show_feature") }}
-      </Button>
+      </BcButton>
     </div>
   </div>
 </template>

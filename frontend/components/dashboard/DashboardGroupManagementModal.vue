@@ -217,8 +217,7 @@ const isMobile = computed(() => {
       <span />
     </template>
     <BcTableControl
-      :search-placeholder="
-        $t('dashboard.validator.group_management.search_placeholder')
+      :search-placeholder="$t('dashboard.validator.group_management.search_placeholder')
       "
       :disabled-filter="isGuestDashboard"
       @set-search="setSearch"
@@ -239,22 +238,21 @@ const isMobile = computed(() => {
       </template>
       <template #bc-table-sub-header>
         <div class="add-row">
-          <InputText
+          <PvInputText
             v-model="newGroupName"
             class="search-input"
             maxlength="20"
-            :placeholder="
-              $t('dashboard.validator.group_management.new_group_placeholder')
+            :placeholder="$t('dashboard.validator.group_management.new_group_placeholder')
             "
             @keypress.enter="addGroup"
           />
-          <Button
+          <PvButton
             style="display: inline"
             :disabled="newGroupDisabled"
             @click="addGroup"
           >
             <BcIcon name="plus" />
-          </Button>
+          </PvButton>
         </div>
       </template>
       <template #table>
@@ -270,7 +268,7 @@ const isMobile = computed(() => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="name"
               class="edit-group"
               :sortable="true"
@@ -280,10 +278,9 @@ const isMobile = computed(() => {
                 <DashboardValidatorManagementModalGroupLabel
                   class="edit-group truncate-text"
                   :value="slotProps.data.name"
-                  :default="
-                    slotProps.data.id === 0
-                      ? $t('dashboard.group.selection.default')
-                      : ''
+                  :default="slotProps.data.id === 0
+                    ? $t('dashboard.group.selection.default')
+                    : ''
                   "
                   :can-be-empty="slotProps.data.id === 0"
                   :disabled="isGuestDashboard"
@@ -292,8 +289,8 @@ const isMobile = computed(() => {
                   @set-value="(name: string) => editGroup(slotProps.data, name)"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="id"
               :sortable="!isMobile"
               :header="$t('dashboard.validator.group_management.col.id')"
@@ -303,8 +300,8 @@ const isMobile = computed(() => {
                   {{ slotProps.data.id }}
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="count"
               :sortable="!isMobile"
               :header="$t('dashboard.validator.group_management.col.count')"
@@ -315,8 +312,8 @@ const isMobile = computed(() => {
                   default="0"
                 />
               </template>
-            </Column>
-            <Column field="action">
+            </PvColumn>
+            <PvColumn field="action">
               <template #body="slotProps">
                 <div class="action-col">
                   <BcButtonIcon
@@ -331,7 +328,7 @@ const isMobile = computed(() => {
                   />
                 </div>
               </template>
-            </Column>
+            </PvColumn>
 
             <template #bc-table-footer-left>
               <div class="left">
@@ -353,7 +350,7 @@ const isMobile = computed(() => {
             </template>
 
             <template #bc-table-footer-right>
-              <Button
+              <PvButton
                 :label="$t('navigation.done')"
                 @click="onClose"
               />
@@ -387,11 +384,7 @@ const isMobile = computed(() => {
   @include fonts.subtitle_text;
 }
 
-:global(
-    .validator-group-managment-modal-container
-      .bc-table-header
-      .side:first-child
-  ) {
+:global(.validator-group-managment-modal-container .bc-table-header .side:first-child) {
   display: contents;
 }
 
@@ -401,94 +394,96 @@ const isMobile = computed(() => {
   width: 201px;
 }
 
-.edit-group {
-  max-width: 180px;
-}
+.validator-group-managment-modal-container {
+  .edit-group {
+    max-width: 180px;
+  }
 
-.id-cell {
-  @include utils.set-all-width(64px);
-}
+  .id-cell {
+    @include utils.set-all-width(64px);
+  }
 
-.small-title {
-  @include utils.truncate-text;
-  @include fonts.big_text;
-}
+  .small-title {
+    @include utils.truncate-text;
+    @include fonts.big_text;
+  }
 
-.management-table {
-  @include main.container;
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: hidden;
-
-  :deep(.p-datatable-wrapper) {
+  .management-table {
+    @include main.container;
     flex-grow: 1;
-  }
-}
-
-.add-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--padding);
-
-  .search-input {
-    padding: var(--padding-small);
-    flex-shrink: 1;
-    flex-grow: 1;
-    width: 50px;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-    height: 100%;
-  }
-
-  button {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-    padding: var(--padding-small) 8px;
-  }
-}
-
-.left {
-  display: flex;
-  margin-top: 4px;
-  gap: var(--padding-small);
-
-  .labels {
     display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+
+    :deep(.p-datatable-wrapper) {
+      flex-grow: 1;
+    }
+  }
+
+  .add-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--padding);
+
+    .search-input {
+      padding: var(--padding-small);
+      flex-shrink: 1;
+      flex-grow: 1;
+      width: 50px;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      height: 100%;
+    }
+
+    button {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      padding: var(--padding-small) 8px;
+    }
+  }
+
+  .left {
+    display: flex;
+    margin-top: 4px;
     gap: var(--padding-small);
 
-    &.premiumLimit {
-      color: var(--negative-color);
+    .labels {
+      display: flex;
+      gap: var(--padding-small);
+
+      &.premiumLimit {
+        color: var(--negative-color);
+      }
+
+      @media (max-width: 450px) {
+        flex-direction: column;
+      }
     }
 
-    @media (max-width: 450px) {
-      flex-direction: column;
+    .gem {
+      color: var(--primary-color);
     }
   }
 
-  .gem {
-    color: var(--primary-color);
-  }
-}
-
-.edit-icon {
-  margin-left: var(--padding-small);
-}
-
-.action-col {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 560px) {
-  .edit-group {
-    max-width: 100px;
+  .edit-icon {
+    margin-left: var(--padding-small);
   }
 
   .action-col {
-    width: 33px;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  @media (max-width: 560px) {
+    .edit-group {
+      max-width: 100px;
+    }
+
+    .action-col {
+      width: 33px;
+    }
   }
 }
 </style>

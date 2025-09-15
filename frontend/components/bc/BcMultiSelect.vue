@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <MultiSelect
+  <PvMultiSelect
     class="bc-multitselect"
   >
     <template #header>
@@ -17,7 +17,7 @@
         name="chevron-down"
       />
     </template>
-  </MultiSelect>
+  </PvMultiSelect>
 </template>
 
 <style lang="scss" scoped>
