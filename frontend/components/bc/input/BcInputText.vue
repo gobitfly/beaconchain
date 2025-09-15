@@ -34,7 +34,7 @@ onMounted(() => {
     >
       {{ label }}
     </label>
-    <InputText
+    <PvInputText
       :id="idInput"
       v-model.trim="input"
       v-bind="$attrs"

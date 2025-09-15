@@ -247,11 +247,11 @@ const subsets = computed<ValidatorSubset[]>(() => {
       />
     </div>
 
-    <Accordion
+    <PvAccordion
       :active-index="-1"
       class="accordion basic"
     >
-      <AccordionTab
+      <PvAccordionTab
         v-for="subset in subsets"
         :key="subset.category"
       >
@@ -268,8 +268,8 @@ const subsets = computed<ValidatorSubset[]>(() => {
           :category="subset.category"
           :validators="subset.validators"
         />
-      </AccordionTab>
-    </Accordion>
+      </PvAccordionTab>
+    </PvAccordion>
     <BcLoadingSpinner
       :loading="isLoading"
       alignment="center"

@@ -116,7 +116,7 @@ const {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             field="timestamp"
             body-class="age-field"
             sortable
@@ -131,8 +131,8 @@ const {
                 :unix-timestamp="slotProps.data.timestamp"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.validatorIndex"
             field="index"
             :header="$t('dashboard.validator.col.validator_index')"
@@ -153,8 +153,8 @@ const {
                 {{ slotProps.data.index }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.group"
             field="group_id"
             body-class="group-id"
@@ -166,8 +166,8 @@ const {
                 {{ getGroupName(slotProps.data.group_id) }}
               </span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.block"
             field="block"
             sortable
@@ -183,8 +183,8 @@ const {
                 <BcFormatNumber :value="slotProps.data.block" />
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.depositor"
             field="depositor"
             :header="$t('dashboard.validator.col.depositor')"
@@ -198,8 +198,8 @@ const {
                 type="address"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="colsVisible.validity"
             field="validity"
             :header="$t('table.validity')"
@@ -214,8 +214,8 @@ const {
                 />
               </div>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="amount"
             :header="$t('table.amount')"
             sortable
@@ -240,8 +240,8 @@ const {
                 </template>
               </BcTooltip>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!colsVisible.validity"
             field="validity"
           >
@@ -253,7 +253,7 @@ const {
                 />
               </div>
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="expansion">
               <div

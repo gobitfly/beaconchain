@@ -55,7 +55,7 @@ const tabs: HashTabs = [
         <NotificationsManagementNetwork />
       </template>
     </BcTabList>
-    <Button
+    <BcButton
       class="done-button"
       :label="$t('navigation.done')"
       @click="visible = false"

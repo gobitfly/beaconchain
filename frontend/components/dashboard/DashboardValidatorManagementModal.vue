@@ -449,13 +449,13 @@ const inputValidator = ref('')
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="index"
               :sortable="true"
               :header="$t('dashboard.validator.col.index')"
             />
 
-            <Column
+            <PvColumn
               v-if="size.showPublicKey"
               field="public_key"
               :sortable="!size.expandable"
@@ -468,8 +468,8 @@ const inputValidator = ref('')
                   class="public-key"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="size.showGroup"
               field="group_id"
               :sortable="!size.expandable"
@@ -484,8 +484,8 @@ const inputValidator = ref('')
                   "
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="size.showBalance"
               field="balance"
               :sortable="true"
@@ -498,8 +498,8 @@ const inputValidator = ref('')
                   />
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="status"
               :sortable="!size.expandable"
               header-class="status-col"
@@ -511,8 +511,8 @@ const inputValidator = ref('')
                   :hide-label="size.expandable"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="size.showWithdrawalCredentials"
               field="withdrawal_credential"
               :sortable="!size.expandable"
@@ -526,10 +526,10 @@ const inputValidator = ref('')
                   />
                 </div>
               </template>
-            </Column>
-            <Column field="action">
+            </PvColumn>
+            <PvColumn field="action">
               <template #header>
-                <Button
+                <PvButton
                   v-show="selected?.length"
                   class="edit-button"
                   @click.stop.prevent="editSelected()"
@@ -539,7 +539,7 @@ const inputValidator = ref('')
                     class="edit-icon"
                     name="edit"
                   />
-                </Button>
+                </PvButton>
               </template>
               <template #body="slotProps">
                 <div class="action-col">
@@ -554,7 +554,7 @@ const inputValidator = ref('')
                   />
                 </div>
               </template>
-            </Column>
+            </PvColumn>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="info">
@@ -630,7 +630,7 @@ const inputValidator = ref('')
             </template>
 
             <template #bc-table-footer-right>
-              <Button
+              <PvButton
                 :label="$t('navigation.done')"
                 @click="onClose"
               />

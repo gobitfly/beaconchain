@@ -191,7 +191,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             field="validator"
             :sortable="true"
             :header="$t('dashboard.validator.duties.col.validator')"
@@ -205,8 +205,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                 {{ slotProps.data.validator }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="duties"
             :header="$t('dashboard.validator.duties.col.duties')"
           >
@@ -215,8 +215,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
                 {{ mapDuties(slotProps.data.duties) }}
               </div>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!size.expandable"
             field="result"
             :header="$t('dashboard.validator.duties.col.result')"
@@ -224,8 +224,8 @@ const { getTimestampFromEpoch } = useNetworkStore()
             <template #body="slotProps">
               <ValidatorTableDutyStatus :data="slotProps.data.duties" />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="reward"
             :sortable="!size.expandable"
             :header="$t('dashboard.validator.duties.col.rewards')"
@@ -233,7 +233,7 @@ const { getTimestampFromEpoch } = useNetworkStore()
             <template #body="slotProps">
               <ValidatorTableDutyRewards :data="slotProps.data.duties" />
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="expansion">
               <div class="info">

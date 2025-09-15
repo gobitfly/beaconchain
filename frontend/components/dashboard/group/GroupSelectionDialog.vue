@@ -55,7 +55,7 @@ watch(
             props.selectedValidators ?? 0,
           )
         }}</b>
-      <Button
+      <PvButton
         :disabled="selectedGroupId === undefined"
         type="button"
         :label="$t('navigation.save')"

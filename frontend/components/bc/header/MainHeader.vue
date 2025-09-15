@@ -157,7 +157,7 @@ const { url } = useV1Login()
           <BcLink
             :to="url"
           >
-            <Button
+            <PvButton
               class="login"
               :label="$t('header.login')"
             />

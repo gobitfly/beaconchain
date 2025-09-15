@@ -56,9 +56,9 @@ const text = computed(() => {
           :to="`/dashboard`"
           :replace="route.path.startsWith('/dashboard')"
         >
-          <Button>
+          <PvButton>
             {{ text.button }}
-          </Button>
+          </PvButton>
         </BcLink>
       </div>
     </div>

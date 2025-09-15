@@ -66,7 +66,7 @@ const setSearch = (value?: string) => {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             sortable
             body-class="dashboard-table-el-consolidations__age-cell"
             field="timestamp"
@@ -81,8 +81,8 @@ const setSearch = (value?: string) => {
               />
               <span v-else>-</span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="source"
             :header="$t('table.source')"
@@ -102,8 +102,8 @@ const setSearch = (value?: string) => {
                 {{ slotProps.data.source }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="target"
             :header="$t('table.target')"
@@ -123,8 +123,8 @@ const setSearch = (value?: string) => {
                 {{ slotProps.data.target }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="consolidator"
             :header="$t('table.consolidator')"
@@ -137,8 +137,8 @@ const setSearch = (value?: string) => {
                 :ens="slotProps.data.consolidator.ens"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="status"
             :header="$t('table.status')"
@@ -146,8 +146,8 @@ const setSearch = (value?: string) => {
             <template #body="slotProps">
               <DashboardTableElConsolidationsStatus :status="slotProps.data.status" />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             field="fee"
             :header="$t('table.consolidation_request_fee')"
@@ -157,8 +157,8 @@ const setSearch = (value?: string) => {
                 :value="slotProps.data.fee"
               />
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="isMobile"
             field="block_processed"
             :header="$t('dashboard.validator.col.block_processed')"
@@ -174,8 +174,8 @@ const setSearch = (value?: string) => {
               </BcLink>
               <span v-else>-</span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="isMobile"
             field="status"
           >
@@ -185,7 +185,7 @@ const setSearch = (value?: string) => {
                 is-compact
               />
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="dashboard-table-el-consolidations__details">
               <div class="dashboard-table-el-consolidations__details-grid">

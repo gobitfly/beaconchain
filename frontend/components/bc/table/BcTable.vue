@@ -108,7 +108,7 @@ const sort = computed(() => {
 </script>
 
 <template>
-  <DataTable
+  <PvDataTable
     v-model:expanded-rows="expandedRows"
     class="bc-table"
     sort-mode="single"
@@ -120,12 +120,12 @@ const sort = computed(() => {
     :loading="isLoading"
     :table-class
   >
-    <Column
+    <PvColumn
       v-if="selectionMode"
       :selection-mode
       class="selection"
     />
-    <Column
+    <PvColumn
       v-if="expandable"
       expander
       class="expander"
@@ -154,9 +154,9 @@ const sort = computed(() => {
           @click.stop.prevent="toggleItem(slotProps.data)"
         />
       </template>
-    </Column>
+    </PvColumn>
     <slot />
-    <Column
+    <PvColumn
       v-if="addSpacer"
       field="space_filler"
     >
@@ -164,7 +164,7 @@ const sort = computed(() => {
         <span />
         <!-- used to fill up the empty space so that the last column does not strech endlessly -->
       </template>
-    </Column>
+    </PvColumn>
     <template #empty>
       <slot
         v-if="!isLoading"
@@ -209,7 +209,7 @@ const sort = computed(() => {
         </template>
       </BcTablePager>
     </template>
-  </DataTable>
+  </PvDataTable>
 </template>
 
 <style lang="scss" scoped>

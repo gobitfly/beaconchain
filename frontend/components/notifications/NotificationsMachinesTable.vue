@@ -56,7 +56,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="machine_name"
               sortable
               header-class="col-machine-name"
@@ -68,8 +68,8 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                   {{ slotProps.data.machine_name }}
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               v-if="colsVisible.threshold"
               field="threshold"
               sortable
@@ -84,8 +84,8 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                 />
                 <span v-else>-</span>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="event_type"
               sortable
               header-class="col-event-type"
@@ -97,8 +97,8 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                   {{ machineEvent(slotProps.data.event_type) }}
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="timestamp"
               sortable
               header-class="col-age"
@@ -112,7 +112,7 @@ const machineEvent = (eventType: NotificationMachinesTableRow['event_type']) => 
                   :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
-            </Column>
+            </PvColumn>
             <template #expansion="slotProps">
               <div class="expansion">
                 <div class="group">

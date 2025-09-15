@@ -127,7 +127,7 @@ const {
           @sort="onSort"
           @set-page-size="setPageSize"
         >
-          <Column
+          <PvColumn
             field="timestamp"
             body-class="age-field"
             sortable
@@ -143,8 +143,8 @@ const {
               />
               <span v-else>-</span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             :header="$t('dashboard.validator.col.validator_index')"
           >
@@ -164,8 +164,8 @@ const {
                 {{ slotProps.data.index }}
               </BcLink>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             body-class="group-id"
             header-class="group-id"
@@ -176,8 +176,8 @@ const {
                 {{ getGroupName(slotProps.data.group_id) }}
               </span>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             :header="$t('dashboard.validator.col.type')"
           >
@@ -194,8 +194,8 @@ const {
                 }}
               </BcBadge>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="!isMobile"
             :header="$t('table.status')"
           >
@@ -210,8 +210,8 @@ const {
                 />
               </div>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             field="amount"
             :header="$t('table.amount')"
             sortable
@@ -236,8 +236,8 @@ const {
                 </template>
               </BcTooltip>
             </template>
-          </Column>
-          <Column
+          </PvColumn>
+          <PvColumn
             v-if="isMobile"
           >
             <template #body="slotProps">
@@ -251,7 +251,7 @@ const {
                 />
               </div>
             </template>
-          </Column>
+          </PvColumn>
           <template #expansion="slotProps">
             <div class="dashboard-table-cl-deposits__details">
               <div class="dashboard-table-cl-deposits__details-grid">
