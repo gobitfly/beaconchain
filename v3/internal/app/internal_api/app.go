@@ -62,43 +62,27 @@ func Run(
 		log.Fatalf("failed to create validator: %v", err)
 	}
 
-	var (
-		userRepoI         userrepo.Repository
-		apikeyRepoI       apikeyrepo.Repository
-		sessionStoreRepoI sessionstorerepo.Repository
-	)
-	if config.IsCloudDeployment {
-		// TODO remove & use actual db repositories
-		userRepoI = &userrepo.MockRepository{}
-		apikeyRepoI = &apikeyrepo.MockRepository{}
-		sessionStoreRepoI = &sessionstorerepo.MockRepository{}
-	} else {
-		userDbRepo := &userrepo.DBRepository{}
-		apikeyRepo := &apikeyrepo.CachedRepository{}
-		sessionStoreRepo := &sessionstorerepo.DBRepository{}
-		userRepoI = userDbRepo
-		apikeyRepoI = apikeyRepo
-		sessionStoreRepoI = sessionStoreRepo
+	userDbRepo := &userrepo.DBRepository{}
+	apikeyRepo := &apikeyrepo.CachedRepository{}
+	sessionStoreRepo := &sessionstorerepo.DBRepository{}
+	dbAPIKeyRepo := &apikeyrepo.DBRepository{}
 
-		dbAPIKeyRepo := &apikeyrepo.DBRepository{}
-
-		// init async
-		go func() {
-			dataSources := data_sources.ApiDataSources{}
-			dataSources.InitApiConnections(&config)
-			userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
-			sessionStoreRepo.Initialize(dataSources.Redis)
-		}()
-	}
-	apiService, _ := InitDependencies(userRepoI, apikeyRepoI)
+	// init async
+	go func() {
+		dataSources := data_sources.ApiDataSources{}
+		dataSources.InitApiConnections(&config)
+		userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+		dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+		apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
+		sessionStoreRepo.Initialize(dataSources.Redis)
+	}()
+	apiService, _ := InitDependencies(userDbRepo, apikeyRepo)
 
 	var unaryInterceptors []grpc.UnaryServerInterceptor
 	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
 	unaryInterceptors = append(unaryInterceptors, middleware.StripErrorMessageMiddleware())
 	unaryInterceptors = append(unaryInterceptors, middleware.RecoveryMiddleware())
-	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepoI))
+	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepo))
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(unaryInterceptors...),

@@ -52,8 +52,6 @@ type ServiceConfig struct {
 	InternalServiceUri string `yaml:"internalServiceUri"` // output only
 	ExternalServiceUri string `yaml:"externalServiceUri"` // output only
 
-	IsCloudDeployment bool `yaml:"isCloudDeployment"` // temp flag, remove
-
 	ReaderChainDatabaseMainnet DatabaseConfig `yaml:"readerChainDatabaseMainnet"`
 	WriterChainDatabaseMainnet DatabaseConfig `yaml:"writerChainDatabaseMainnet"`
 	ReaderChainDatabaseGnosis  DatabaseConfig `yaml:"readerChainDatabaseGnosis"`

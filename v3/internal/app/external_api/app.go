@@ -48,34 +48,20 @@ func Run(
 
 	dataSources := data_sources.ApiDataSources{}
 
-	var (
-		userRepo   userrepo.Repository
-		apiKeyRepo apikeyrepo.Repository
-	)
+	dbUserRepo := &userrepo.DBRepository{}
+	dbAPIKeyRepo := &apikeyrepo.DBRepository{}
+	userRepo := &userrepo.CachedRepository{}
+	apiKeyRepo := &apikeyrepo.CachedRepository{}
 
-	if config.IsCloudDeployment {
-		// TODO remove & use actual db repositories
-		userRepo = &userrepo.MockRepository{}
-		apiKeyRepo = &apikeyrepo.MockRepository{}
-	} else {
-		dbUserRepo := &userrepo.DBRepository{}
-		dbAPIKeyRepo := &apikeyrepo.DBRepository{}
-		cachedUserRepo := &userrepo.CachedRepository{}
-		cachedAPIKeyRepo := &apikeyrepo.CachedRepository{}
+	dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
 
-		userRepo = cachedUserRepo
-		apiKeyRepo = cachedAPIKeyRepo
-
-		dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
-
-		// init async
-		go func() {
-			dbUserRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
-			cachedUserRepo.Initialize(dataSources.Redis, dbUserRepo)
-			cachedAPIKeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
-		}()
-	}
+	// init async
+	go func() {
+		dbUserRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+		dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
+		userRepo.Initialize(dataSources.Redis, dbUserRepo)
+		apiKeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
+	}()
 	apiService, _ := InitDependencies(userRepo)
 
 	mux := http.NewServeMux()
