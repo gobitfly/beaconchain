@@ -36,9 +36,8 @@ func (d *dashboardData) handleRollings() error {
 		edb.Rolling90d,
 		edb.RollingTotal,
 	}
-	// but lets limit to x rollings
 	eg := errgroup.Group{}
-	eg.SetLimit(int(utils.Config.DashboardExporter.RollingsInParallel))
+	//eg.SetLimit(int(utils.Config.DashboardExporter.RollingsInParallel))
 	for _, rolling := range rollings {
 		rolling := rolling
 		eg.Go(func() error {

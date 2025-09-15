@@ -1664,6 +1664,7 @@ func TransferRollingSourceToRolling(rolling Rollings, source RollingSourcesSuffi
 		"select_sequential_consistency": 1,
 		"use_skip_indexes_if_final":     1, // this is only safe because our index is over a column from the primary key
 		"max_threads":                   2,
+		"workload":                      "exporter_rollings", // configured to 2 concurrent queries per node at the time of writing
 	}))
 	column := "t"
 	selector := `
