@@ -54,7 +54,7 @@ onUnmounted(() => {
       target="_blank"
       @click="hide()"
     >
-      <Button :label="$t('premium.unlock')" />
+      <PvButton :label="$t('premium.unlock')" />
     </BcLink>
   </div>
 </template>

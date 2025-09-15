@@ -35,10 +35,6 @@
       font: var(--standard_text_font_family);
     }
 
-    ul {
-      padding-inline-start: 1.5rem;
-    }
-
     body {
       @include font.standard_text;
       margin: 0;

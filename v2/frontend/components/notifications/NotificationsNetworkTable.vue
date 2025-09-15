@@ -68,7 +68,7 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
             @sort="onSort"
             @set-page-size="setPageSize"
           >
-            <Column
+            <PvColumn
               field="chain_id"
               header-class="col-header-network"
               body-class="col-network"
@@ -81,8 +81,8 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
                   />
                 </div>
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="timestamp"
               sortable
               header-class="col-age"
@@ -96,8 +96,8 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
                   :unix-timestamp="slotProps.data.timestamp"
                 />
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="event_type"
               :sortable="true"
               header-class="col-event_type"
@@ -107,8 +107,8 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
               <template #body="slotProps">
                 {{ textNotifications(slotProps.data.event_type) }}
               </template>
-            </Column>
-            <Column
+            </PvColumn>
+            <PvColumn
               field="threshold"
               sortable
               :header="$t('notifications.col.threshold')"
@@ -116,7 +116,7 @@ const textThreshold = (row: NotificationNetworksTableRow) => {
               <template #body="slotProps">
                 {{ textThreshold(slotProps.data) }}
               </template>
-            </Column>
+            </PvColumn>
             <template #empty>
               <NotificationsTableEmpty
                 v-if="!networkNotifications?.data.length"

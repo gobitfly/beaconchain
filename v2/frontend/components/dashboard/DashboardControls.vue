@@ -351,7 +351,7 @@ const editDashboard = () => {
       {{ title }}
     </div>
     <div class="action-button-container">
-      <Button
+      <PvButton
         severity="secondary"
         class="share-button"
         :class="{ 'p-button-icon-only': !shareButtonOptions.label }"
@@ -360,7 +360,7 @@ const editDashboard = () => {
       >
         {{ shareButtonOptions.label }}
         <BcIcon :name="shareButtonOptions.icon" />
-      </Button>
+      </PvButton>
       <BcMenuBar
         :buttons="editButtons"
         :align-right="isMobile"

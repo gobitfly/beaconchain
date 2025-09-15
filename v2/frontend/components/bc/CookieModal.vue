@@ -39,9 +39,9 @@ const visible = computed(() => cookiePreference.value === undefined)
         >
           {{ $t("cookies.only_necessary") }}
         </div>
-        <Button @click="setCookiePreference('all')">
+        <PvButton @click="setCookiePreference('all')">
           {{ $t("cookies.accept_all") }}
-        </Button>
+        </PvButton>
       </div>
     </div>
   </Dialog>

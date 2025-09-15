@@ -77,7 +77,7 @@ definePageMeta({
         v-model="manageNotificationsModalVisisble"
       />
       <div class="button-row">
-        <Button
+        <BcButton
           :label="$t('notifications.manage')"
           @click="openManageNotifications"
         />

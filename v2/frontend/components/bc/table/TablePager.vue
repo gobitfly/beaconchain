@@ -173,7 +173,7 @@ watch(
           />
         </div>
       </template>
-      <Select
+      <PvSelect
         v-if="props.pageSize && !stepperOnly"
         :model-value="props.pageSize"
         :options="pageSizes"

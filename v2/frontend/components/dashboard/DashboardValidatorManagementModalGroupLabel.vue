@@ -57,7 +57,7 @@ watch([
       v-if="isEditing"
       class="input-wrapper"
     >
-      <InputText
+      <PvInputText
         ref="inputRef"
         v-model.trim="editValue"
         :maxlength

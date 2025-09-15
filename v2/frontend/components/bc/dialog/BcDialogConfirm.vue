@@ -35,7 +35,7 @@ const closeDialog = (response: boolean) => {
       {{ props?.question }}
     </div>
     <div class="footer">
-      <Button
+      <PvButton
         v-if="props?.severity !== 'danger'"
         type="button"
         :label="noLabel"
@@ -48,7 +48,7 @@ const closeDialog = (response: boolean) => {
       >
         {{ noLabel }}
       </div>
-      <Button
+      <PvButton
         type="button"
         :severity="props?.severity === 'danger' ? `danger` : undefined"
         :label="yesLabel"

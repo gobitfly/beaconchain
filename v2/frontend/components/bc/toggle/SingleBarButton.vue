@@ -40,7 +40,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
         </div>
       </div>
     </template>
-    <ToggleButton
+    <PvToggleButton
       class="bc-toggle"
       :class="layout"
       :disabled
@@ -69,7 +69,7 @@ const topBottomPadding = computed(() => (props.subText ? '8px' : '16px'))
           </div>
         </div>
       </template>
-    </ToggleButton>
+    </PvToggleButton>
   </BcTooltip>
 </template>
 
