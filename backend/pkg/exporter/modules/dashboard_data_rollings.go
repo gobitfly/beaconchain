@@ -176,7 +176,7 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 
 func (d *dashboardData) swapRollingTables(rolling edb.Rollings) error {
 	now := time.Now()
-	// swap or, we unsafe clean so clickhouse doesnt waste compute on it. if it fails the next attempt would nuke it at startup anyways
+	// swap or not, we want unsafe clean so clickhouse doesnt waste compute on it. if it fails the next attempt would nuke it at startup anyways
 	defer func() {
 		err := edb.NukeUnsafeRollingTable(rolling)
 		if err != nil {
