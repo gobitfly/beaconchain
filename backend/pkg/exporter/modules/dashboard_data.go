@@ -30,7 +30,7 @@ type dashboardData struct {
 	log                   ModuleLog
 	signingDomain         []byte
 	phase0HotfixMutex     sync.Mutex
-	sharedRollingGenMutex *sync.Mutex
+	sharedRollingGenMutex sync.Mutex
 	latestSafeEpoch       atomic.Int64
 	heavySemaphore        *semaphore.Weighted
 	mediumSemaphore       *semaphore.Weighted
