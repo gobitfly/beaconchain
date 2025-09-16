@@ -59,10 +59,15 @@ type ServiceConfig struct {
 	ReaderChainDatabaseHoodi   DatabaseConfig `yaml:"readerChainDatabaseHoodi"`
 	WriterChainDatabaseHoodi   DatabaseConfig `yaml:"writerChainDatabaseHoodi"`
 
+	ReaderClickhouseMainnet    DatabaseConfig `yaml:"readerClickhouseMainnet"`
+	WriterClickhouseMainnet    DatabaseConfig `yaml:"writerClickhouseMainnet"`
+	ReaderClickhouseGnosis     DatabaseConfig `yaml:"readerClickhouseGnosis"`
+	WriterClickhouseGnosis     DatabaseConfig `yaml:"writerClickhouseGnosis"`
+	ReaderClickhouseHoodi      DatabaseConfig `yaml:"readerClickhouseHoodi"`
+	WriterClickhouseHoodi      DatabaseConfig `yaml:"writerClickhouseHoodi"`
+
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`
 	WriterAdminDatabase DatabaseConfig `yaml:"writerAdminDatabase"`
-	ReaderClickhouse    DatabaseConfig `yaml:"readerClickhouse"`
-	WriterClickhouse    DatabaseConfig `yaml:"writerClickhouse"`
 	Bigtable            BigtableConfig `yaml:"bigtable"`
 	RawBigtable         BigtableConfig `yaml:"rawBigtable"`
 	Redis               RedisConfig    `yaml:"redis"`

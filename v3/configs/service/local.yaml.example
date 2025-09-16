@@ -41,7 +41,7 @@ writerChainDatabaseMainnet:
   password: "postgres"
   useSSL: false
 
-readerClickhouse:
+readerClickhouseMainnet:
   isCloudConnection: false
   username: "default"
   dbName: "default"
@@ -49,7 +49,7 @@ readerClickhouse:
   port: "9000"
   password: ""
   useSSL: false
-writerClickhouse:
+writerClickhouseMainnet:
   isCloudConnection: false
   username: "default"
   dbName: "default"

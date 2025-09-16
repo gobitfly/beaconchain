@@ -34,15 +34,16 @@ type ApiDataSources struct {
 }
 
 func (dataSources *ApiDataSources) InitApiConnections(config *config.ServiceConfig) *ApiDataSources {
+	// TODO hoodi, gnosis
 	dataSources.RoChainDb = InitDB(&config.ReaderChainDatabaseMainnet, Postgres)
 	dataSources.RwChainDb = InitDB(&config.WriterChainDatabaseMainnet, Postgres)
-	// TODO hoodi, gnosis
 
 	dataSources.RoAdminDb = InitDB(&config.ReaderAdminDatabase, Postgres)
 	dataSources.RwAdminDb = InitDB(&config.WriterAdminDatabase, Postgres)
 
-	dataSources.RoChDb = InitDB(&config.ReaderClickhouse, Clickhouse)
-	dataSources.RwChDb = InitDB(&config.WriterClickhouse, Clickhouse)
+	// TODO hoodi, gnosis
+	dataSources.RoChDb = InitDB(&config.ReaderClickhouseMainnet, Clickhouse)
+	dataSources.RwChDb = InitDB(&config.WriterClickhouseMainnet, Clickhouse)
 
 	redis, err := InitRedisCache(context.Background(), &config.Redis)
 	if err != nil {

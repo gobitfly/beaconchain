@@ -37,7 +37,7 @@ writerAdminDatabase:
   useSSL: "REPLACE_WITH_ENV"
 
 # Clickhouse
-readerClickhouse:
+readerClickhouseMainnet:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
@@ -45,7 +45,7 @@ readerClickhouse:
   password: "REPLACE_WITH_ENV"
   useSSL: "REPLACE_WITH_ENV"
 
-writerClickhouse:
+writerClickhouseMainnet:
   username: "REPLACE_WITH_ENV"
   dbName: "REPLACE_WITH_ENV"
   host: "REPLACE_WITH_ENV"
