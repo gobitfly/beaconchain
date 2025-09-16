@@ -4,7 +4,7 @@ description: Visualizes your validator performance in multiple time frames
 
 # 🦸 Summary view
 
-The summary table is part of the [validator dashboard](https://v2-beta-mainnet.beaconcha.in/dashboard). It provides detailed performance metrics for each validator [group](validator-groups.md), including [efficiency](summary-table.md#efficiency) and validator rewards across various time frames. It also features a [historical chart view](summary-table.md#summary-chart-view).
+The summary table is part of the [validator dashboard](https://beaconcha.in/dashboard). It provides detailed performance metrics for each validator [group](validator-groups.md), including [efficiency](summary-table.md#efficiency) and validator rewards across various time frames. It also features a [historical chart view](summary-table.md#summary-chart-view).
 
 ***
 

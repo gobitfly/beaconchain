@@ -1,17 +1,3 @@
----
-layout:
-  title:
-    visible: true
-  description:
-    visible: true
-  tableOfContents:
-    visible: true
-  outline:
-    visible: true
-  pagination:
-    visible: true
----
-
 # 🎉 Introducing v2-beta
 
 V2-beta introduces a new validator dashboard with a variety of new features and addresses issues observed in the past years when monitoring validators. Most importantly, it scales up to 100,000 validators, a 35,600% increase over our V1 dashboard.\
@@ -20,9 +6,9 @@ We have worked tirelessly over the last year and will roll out more features ove
 
 During our transition to v2, the v1 code base will not receive any updates unless there are critical issues. Expect all new features to launch in our new github repository here: [https://github.com/gobitfly/beaconchain](https://github.com/gobitfly/beaconchain)
 
-Mainnet:  [https://v2-beta-mainnet.beaconcha.in/dashboard](https://v2-beta-mainnet.beaconcha.in/dashboard)
+Mainnet:  [https://beaconcha.in/dashboard](https://beaconcha.in/dashboard)
 
-Holesky:  [https://v2-beta-holesky.beaconcha.in/dashboard](https://v2-beta-holesky.beaconcha.in/dashboard)
+Holesky:  [https://holesky.beaconcha.in/dashboard](https://v2-beta-holesky.beaconcha.in/dashboard)
 
 ***
 
