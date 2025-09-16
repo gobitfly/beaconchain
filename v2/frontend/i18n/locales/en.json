@@ -1156,11 +1156,11 @@
             "search": {
                 "title": "Explore Transactions & Validator Staking on"
             },
-            "stacking_hub": {
+            "staking_hub": {
                 "title": "Comprehensive staking insights on"
             }
         },
-        "stacking_hub": "StackingHub"
+        "staking_hub": "StakingHub"
     },
     "search_bar": {
         "account_placeholder": "Address or ENS name",
