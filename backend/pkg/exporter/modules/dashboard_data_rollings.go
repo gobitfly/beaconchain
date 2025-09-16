@@ -36,8 +36,13 @@ func (d *dashboardData) handleRollings() error {
 		edb.Rolling90d,
 		edb.RollingTotal,
 	}
+	d.log.Tracef("acquiring shared rolling gen mutex for rollings")
+	d.sharedRollingGenMutex.Lock()
+	d.log.Tracef("acquired shared rolling gen mutex for rollings")
+	defer d.sharedRollingGenMutex.Unlock()
+
 	eg := errgroup.Group{}
-	//eg.SetLimit(int(utils.Config.DashboardExporter.RollingsInParallel))
+	eg.SetLimit(int(utils.Config.DashboardExporter.RollingsInParallel))
 	for _, rolling := range rollings {
 		rolling := rolling
 		eg.Go(func() error {

@@ -27,13 +27,14 @@ import (
 
 type dashboardData struct {
 	ModuleContext
-	log               ModuleLog
-	signingDomain     []byte
-	phase0HotfixMutex sync.Mutex
-	latestSafeEpoch   atomic.Int64
-	heavySemaphore    *semaphore.Weighted
-	mediumSemaphore   *semaphore.Weighted
-	lightSemaphore    *semaphore.Weighted
+	log                   ModuleLog
+	signingDomain         []byte
+	phase0HotfixMutex     sync.Mutex
+	sharedRollingGenMutex *sync.Mutex
+	latestSafeEpoch       atomic.Int64
+	heavySemaphore        *semaphore.Weighted
+	mediumSemaphore       *semaphore.Weighted
+	lightSemaphore        *semaphore.Weighted
 }
 
 func NewDashboardDataModule(moduleContext ModuleContext) ModuleInterface {
