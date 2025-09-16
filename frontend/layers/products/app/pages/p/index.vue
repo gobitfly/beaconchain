@@ -174,6 +174,7 @@ const { navigateToV1Login } = useV1Login()
   position: relative;
 
   &:before {
+    z-index: -1;
     opacity: 0.1;
     content: '';
     position: absolute;
