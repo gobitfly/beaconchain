@@ -81,7 +81,7 @@
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode"
+        "vscode" 
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"
