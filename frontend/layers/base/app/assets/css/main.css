@@ -32,11 +32,16 @@
   --color-gray-100: #D6D6D6;
   --color-gray-200: #BDBDBD;
   --color-gray-300: #A8A8A8;
+  --color-gray-400: #888888;
   --color-gray-700: #3B3B3B;
   --color-gray-900: #262626;
   
+  /* todo remove these and integrate them into spacings */
   --container-3xs: 16rem; /* 256px */
+  /* --container-7xl: 80rem; 1280px -> this is in conflict with --spacing-7xl */
   --container-8xl: 90rem; /* 1440px */
+  
+  --container-24xl: 80rem; /* 144px */
 
   /* --ease-in: cubic-bezier(0.4, 0, 1, 1); */
   /* --ease-out: cubic-bezier(0, 0, 0.2, 1); */
@@ -54,14 +59,28 @@
   --spacing-xl: 1rem; /* 16px */
   --spacing-2xl: 1.25rem; /* 20px */
   --spacing-3xl: 1.5rem; /* 24px */
+  --spacing-4xl: 2rem; /* 32px */
+  --spacing-6xl: 3rem; /* 48px */
+  --spacing-7xl: 3.5rem; /* 56px */
+  --spacing-11xl: 8rem; /* 128px */
 
-  --text-sm-tight: .875rem; /* 14px */
-  --text-sm-tight--line-height: 1rem; /* 16px */
+
+  /* --text-sm-tight: .875rem; 14px */
+  /* --text-sm-tight--line-height: 1rem;  16px */
   --text-sm: .875rem; /* 14px */
   --text-sm--line-height: 1.25rem; /* 20px */
   --text-md: 1rem; /* 16px */
   --text-md--line-height: 1.5rem; /* 24px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-lg--line-height: 1.75rem; /* 28px */
+
+  --text-2xl: 1.5rem ; /* 24px */
+  --text-2xl--line-height: 2rem; /* 32px */
+
+  --text-4xl: 2rem; /* 32px */
+  --text-4xl--line-height: 3rem; /* 48px */
 }
+
 html {
   transition-behavior: allow-discrete;
   interpolate-size: allow-keywords;
