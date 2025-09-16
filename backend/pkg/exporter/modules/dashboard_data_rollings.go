@@ -42,7 +42,6 @@ func (d *dashboardData) handleRollings() error {
 	defer d.sharedRollingGenMutex.Unlock()
 
 	eg := errgroup.Group{}
-	eg.SetLimit(int(utils.Config.DashboardExporter.RollingsInParallel))
 	for _, rolling := range rollings {
 		rolling := rolling
 		eg.Go(func() error {
