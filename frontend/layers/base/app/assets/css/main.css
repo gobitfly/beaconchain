@@ -29,12 +29,19 @@
   
   --color-white: #FAFAFA;
 
+  --color-gray-50: #E5E5E5;
   --color-gray-100: #D6D6D6;
   --color-gray-200: #BDBDBD;
   --color-gray-300: #A8A8A8;
   --color-gray-400: #888888;
   --color-gray-700: #3B3B3B;
   --color-gray-900: #262626;
+  --color-gray-950: #1A1919;
+  
+  --color-link-500: #3771D5;
+
+  --color-success-500: #00BE5E;
+  --color-success-600: #009F4E;
   
   /* todo remove these and integrate them into spacings */
   --container-3xs: 16rem; /* 256px */
@@ -51,8 +58,11 @@
   --font-weight-semibold: 600;
   
   --radius-xl: .75rem; /* 12px */
+  --radius-7xl: 1.5rem; /* 12px */
   --radius-full: 2rem;
-  
+
+  --spacing-unset: unset;
+  --spacing-xs: .25rem; /* 4px */
   --spacing-sm: .375rem; /* 6px */
   --spacing-md: .5rem; /* 8px */
   --spacing-lg: .75rem; /* 12px */
@@ -60,11 +70,14 @@
   --spacing-2xl: 1.25rem; /* 20px */
   --spacing-3xl: 1.5rem; /* 24px */
   --spacing-4xl: 2rem; /* 32px */
+  --spacing-5xl: 2.5rem; /* 40px */
   --spacing-6xl: 3rem; /* 48px */
   --spacing-7xl: 3.5rem; /* 56px */
   --spacing-11xl: 8rem; /* 128px */
 
 
+  --text-xs: .75rem; /* 12px */
+  --text-xs--line-height: 1rem; /* 16px */
   /* --text-sm-tight: .875rem; 14px */
   /* --text-sm-tight--line-height: 1rem;  16px */
   --text-sm: .875rem; /* 14px */
