@@ -16,7 +16,7 @@ const items: BaseNavigationItem[] = [
   },
   {
     icon: 'coins',
-    label: $t('products.stacking_hub'),
+    label: $t('products.staking_hub'),
     to: `#${id.stackingHub}`,
   },
   {
