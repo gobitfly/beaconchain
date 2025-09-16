@@ -86,8 +86,8 @@ const { navigateToV1Login } = useV1Login()
         >
           {{ $t('products.landing_page.explorer.action.go_to_explorer') }}
         </BaseButton>
-        <div class="grid gap-6xl mt-7xl grid-cols-[repeat(auto-fit,minmax(224px,1fr))] w-full">
-          <span class="flex flex-col items-center">
+        <div class="flex justify-center flex-wrap gap-6xl mt-7xl w-full">
+          <span class="flex flex-col items-center min-w-[224px]">
             <BaseIcon
               name="clock"
               class="size-6xl"
@@ -106,7 +106,7 @@ const { navigateToV1Login } = useV1Login()
               {{ $t('products.landing_page.explorer.transaction_tracking.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center">
+          <span class="flex flex-col items-center min-w-[224px]">
             <BaseIcon
               name="wallet"
               class="size-6xl"
@@ -125,7 +125,7 @@ const { navigateToV1Login } = useV1Login()
               {{ $t('products.landing_page.explorer.wallet_tocken_insights.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center">
+          <span class="flex flex-col items-center min-w-[224px]">
             <BaseIcon
               name="code"
               class="size-6xl"
@@ -144,7 +144,7 @@ const { navigateToV1Login } = useV1Login()
               {{ $t('products.landing_page.explorer.smart_contract_analysis.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center">
+          <span class="flex flex-col items-center min-w-[224px]">
             <BaseIcon
               name="gas-station"
               class="size-6xl"
