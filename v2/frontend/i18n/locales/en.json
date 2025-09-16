@@ -6,6 +6,34 @@
             "log_in": "Log in",
             "open_navigation": "Open Navigation",
             "side_navigation": "Side Navigation"
+        },
+        "footer": {
+            "copyright": "© 2025 beaconcha.in. All rights reserved",
+            "imprint": "Imprint",
+            "links": {
+                "follow_us": "Follow us on social media to find out the latest updates on our progress.",
+                "text_discord": "Go to our Discord server",
+                "text_github": "Check out our GitHub repositories",
+                "text_x": "Go to our X profile",
+                "title": "Links"
+            },
+            "logo_text": "By bitfly Explorer GMBH",
+            "privacy": "Privacy",
+            "resources": {
+                "links": {
+                    "advertise": "Advertise",
+                    "api_pricing": "API Pricing",
+                    "beaconchain_premium": "beaconcha.in Premium",
+                    "contact_sales": "Contact Sales",
+                    "site_status": "Site Status",
+                    "swag_shop": "Swag Shop"
+                },
+                "title": "Resources"
+            },
+            "services": {
+                "title": "Services"
+            },
+            "terms_of_service": "Terms"
         }
     },
     "block": {
