@@ -46,17 +46,27 @@ func (d *dashboardData) handleRollings() error {
 	for _, rolling := range rollings {
 		rolling := rolling
 		eg.Go(func() error {
-			return d.doRollingCheck(rolling)
+			return d.fillUnsafeRolling(rolling)
 		})
 	}
 	err := eg.Wait()
 	if err != nil {
 		return errors.Wrap(err, "failed to do rollings")
 	}
+	for _, rolling := range rollings {
+		rolling := rolling
+		eg.Go(func() error {
+			return d.swapRollingTables(rolling)
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return errors.Wrap(err, "failed to swap rolling tables")
+	}
 	return nil
 }
 
-func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
+func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 	defer func() {
 		// GetOldestUnfinishedTransferEpoch
 		oldestUnfinishedTransferEpoch, err := edb.GetOldestUnfinishedTransferEpoch()
@@ -95,28 +105,13 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_overall", rolling)).Observe(time.Since(start).Seconds())
 	}()
 	d.log.Infof("rolling %s is outdated, latest epoch %d, latest finished epoch %d", rolling, rollingEpoch, finishedEpoch)
-	// update metric after run
-	defer func() {
-		rollingEpoch, err := edb.GetRollingLastEpoch(rolling)
-		if err != nil {
-			d.log.Error(err, "failed to get rolling last epoch", 0)
-			return
-		}
-		metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_epoch", rolling)).Set(float64(rollingEpoch))
-	}()
+
 	now := time.Now()
 	// next, nuke the unsafe rolling tables to prepare them for us to fill them
 	err = edb.NukeUnsafeRollingTable(rolling)
 	if err != nil {
 		return errors.Wrap(err, "failed to nuke unsafe rolling table")
 	}
-	// also create a defer that nukes it - exchange or not, we want it clean so clickhouse doesnt waste compute on it
-	defer func() {
-		err := edb.NukeUnsafeRollingTable(rolling)
-		if err != nil {
-			d.log.Error(err, "failed to nuke unsafe rolling table", 0)
-		}
-	}()
 	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_nuke_unsafe", rolling)).Observe(time.Since(now).Seconds())
 	// now we fetch the start & end for each pre-aggregated table we use
 	minTs := utils.EpochToTime(uint64(finishedEpoch)).Add(-rolling.GetDuration())
@@ -164,7 +159,7 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 			if err != nil {
 				return errors.Wrap(err, "failed to transfer rolling source to rolling")
 			}
-			// d.log.Infof("transferred rolling source %s to rolling %s in %s", source, rolling, time.Since(now))
+			d.log.Debugf("transferred rolling source %s to rolling %s in %s", source, rolling, time.Since(now))
 			// one metric for the source table and oe for the rolling table
 			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer", source)).Observe(time.Since(now).Seconds())
 			metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_transfer", rolling)).Observe(time.Since(now).Seconds())
@@ -176,22 +171,28 @@ func (d *dashboardData) doRollingCheck(rolling edb.Rollings) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer all rolling sources")
 	}
-	/*
-		// trigger an optimize final on the table. this should be fine since the size of the table is relatively small and calls are constrained
-		now = time.Now()
-		d.log.Infof("optimizing rolling %s", rolling)
-		err = edb.OptimizeUnsafeRollingTable(rolling)
+	return nil
+}
+
+func (d *dashboardData) swapRollingTables(rolling edb.Rollings) error {
+	now := time.Now()
+	// swap or, we unsafe clean so clickhouse doesnt waste compute on it. if it fails the next attempt would nuke it at startup anyways
+	defer func() {
+		err := edb.NukeUnsafeRollingTable(rolling)
 		if err != nil {
-			return errors.Wrap(err, "failed to optimize rolling table")
+			d.log.Error(err, "failed to nuke unsafe rolling table", 0)
 		}
-		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_optimize", rolling)).Observe(time.Since(now).Seconds())
-	*/
-	// now we swap the tables
-	now = time.Now()
-	err = edb.SwapRollingTables(rolling)
+	}()
+	err := edb.SwapRollingTables(rolling)
 	if err != nil {
 		return errors.Wrap(err, "failed to swap rolling tables")
 	}
-	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_swap", rolling)).Observe(time.Since(now).Seconds())
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_swap", rolling)).Observe(time.Since(now).Seconds()) // update metric after run
+
+	rollingEpoch, err := edb.GetRollingLastEpoch(rolling)
+	if err != nil {
+		d.log.Error(err, "failed to get rolling last epoch", 0)
+	}
+	metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_epoch", rolling)).Set(float64(rollingEpoch))
 	return nil
 }
