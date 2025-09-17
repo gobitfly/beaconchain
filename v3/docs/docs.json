@@ -91,13 +91,13 @@
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "label": "Pricing",
+        "href": "https://dashboard.mintlify.com"
       }
     ],
     "primary": {
       "type": "button",
-      "label": "Dashboard",
+      "label": "Get API Key",
       "href": "https://dashboard.mintlify.com"
     }
   },
