@@ -92,7 +92,7 @@
   "navbar": {
     "links": [
       {
-        "label": "Pricing",
+        "label": "Explorer",
         "href": "https://dashboard.mintlify.com"
       }
     ],
