@@ -1,0 +1,2228 @@
+openapi: 3.0.4
+info:
+  title: External Service API
+  version: 1.0.3
+
+servers:
+  - url: https://api-external-616724563735.us-central1.run.app
+    description: Staging
+  - url: http://localhost:8080
+    description: Local development
+
+security:
+  - ApiKeyAuth: []
+  - GCPAuth: []
+  
+paths:
+  /v2/ethereum/validators:
+    post:
+      tags:
+        - Validator
+      summary: Returns basic information of a validator
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorMetadataResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/apr:
+    get:
+      tags:
+        - Validator
+      summary: Returns the APR for a set of validators
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/depositAddress'
+        - $ref: '#/components/parameters/withdrawalAddress'
+        - $ref: '#/components/parameters/validator'
+        - $ref: '#/components/parameters/timeRangeSelector'
+        - name: calculation_period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["backwards", "forwards"]
+            default: backwards
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorAprResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/rewards-summary:
+    get:
+      tags:
+        - Validator
+      summary: Returns the cumulative rewards for a set of validators
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/depositAddress'
+        - $ref: '#/components/parameters/withdrawalAddress'
+        - $ref: '#/components/parameters/validator'
+        - $ref: '#/components/parameters/timeRangeSelector'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorRewardsSummaryResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/rewards-detailed:
+    post:
+      tags:
+        - Validator
+      summary: Returns a detailed description of the rewards
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/epochQuery'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorRewardsDetailedResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/performance-summary:
+    get:
+      tags:
+        - Validator
+      summary: Returns the beaconscore of a set of validators
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/depositAddress'
+        - $ref: '#/components/parameters/withdrawalAddress'
+        - $ref: '#/components/parameters/validator'
+        - $ref: '#/components/parameters/timeRangeSelector'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorPerformanceSummaryResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/performance-detailed:
+    post:
+      tags:
+        - Validator
+      summary: Returns a detailed description of a validators performance for a specific epoch for a set of validators
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorPerformanceDetailedResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/balances:
+    get:
+      tags:
+        - Validator
+      summary: Returns the balance for validator(s) at a particular epoch
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/epochQuery'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorBalanceResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/proposals:
+    post:
+      tags:
+        - Validator
+      summary: Returns information on Block Proposals for a set of validators
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorProposalsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/attestations:
+    post:
+      tags:
+        - Validator
+      summary: Returns attestation information for a set of validators at a particular epoch
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/epochQuery'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorAttestationsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/sync-committees:
+    post:
+      tags:
+        - Validator
+      summary: Returns a list of the sync committees that validators have participated in
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorSyncCommitteesResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/deposits:
+    post:
+      tags:
+        - Validator
+      summary: Returns the deposits for a set of validators
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorDepositsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/validators/withdrawals:
+    post:
+      tags:
+        - Validator
+      summary: Returns the withdrawals for a set of validators
+      requestBody:
+        $ref: '#/components/requestBodies/validatorsSelector'
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetValidatorWithdrawalsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  
+  
+  ######## Network endpoints ########
+
+  /v2/ethereum/epochs/{epoch}:
+    get:
+      tags:
+        - Network
+      summary: Return basic information on the epoch
+      parameters:
+        - $ref: '#/components/parameters/epochPath'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetEpochResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/{epoch}/performance-summary:
+    get:
+      tags:
+        - Network
+      summary: Returns a summary of the validator duties for a particular epoch
+      parameters:
+        - $ref: '#/components/parameters/epochPath'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDutySummaryResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slots/{slot}:
+    get:
+      tags:
+        - Network
+      summary: Return basic information on the slot
+      parameters:
+        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSlotResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/blocks/{block}:
+    get:
+      tags:
+        - Network
+      summary: Return basic information on the block
+      parameters:
+        - $ref: '#/components/parameters/block'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBlockResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/block-proposal:
+    get:
+      tags:
+        - Network
+      summary: Returns basic information on the Block Proposal for a specific slot
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - name: block
+          in: query
+          required: false
+          schema:
+            type: string
+            default: latest
+        - name: slot
+          in: query
+          required: false
+          schema:
+            type: string
+            default: latest
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProposalResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slots/{slot}/attestations:
+    get:
+      tags:
+        - Network
+      summary: Returns basic information on the Attestations for a specific slot
+      parameters:
+        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAttestationsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slots/{slot}/attestations/details:
+    get:
+      tags:
+        - Network
+      summary: Returns detailed information on the Attestations for a specific slot
+      parameters:
+        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAttestationsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/sync-committees/{period}:
+    get:
+      tags:
+        - Network
+      summary: Returns basic information on a specific sync committee
+      parameters:
+        - name: period
+          in: path
+          required: true
+          schema:
+            type: string
+            default: latest
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSyncCommitteeResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slots/{slot}/withdrawals:
+    get:
+      tags:
+        - Network
+      summary: Returns the withdrawals associated with a specific slot
+      parameters:
+        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSlotWithdrawalsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/blocks/{block}/withdrawals:
+    get:
+      tags:
+        - Network
+      summary: Returns the withdrawals associated with a specific block
+      parameters:
+        - $ref: '#/components/parameters/block'
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBlockWithdrawalsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slots/{slot}/deposits:
+    get:
+      tags:
+        - Network
+      summary: Returns the deposits associated with a specific slot
+      parameters:
+        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSlotDepositsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/blocks/{block}/deposits:
+    get:
+      tags:
+        - Network
+      summary: Returns the deposits associated with a specific block
+      parameters:
+        - $ref: '#/components/parameters/block'
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/cursor'
+        - $ref: '#/components/parameters/pageSize'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetBlockDepositsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/queue:
+    get:
+      tags:
+        - Network
+      summary: Returns statistics on the validator entry and exit queues at the specified epoch
+      parameters:
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetQueueStatsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/health:
+    get:
+      tags:
+        - Network
+      summary: Returns statistics on general health of the chain
+      parameters:
+        - $ref: '#/components/parameters/chain'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetChainHealthResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/slashings:
+    get:
+      tags:
+        - Network
+      summary: Returns statistics on chain slashings
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/timeRangeSelector'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetSlashingsResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+  /v2/ethereum/performance:
+    get:
+      tags:
+        - Network
+      summary: Returns the network-wide beaconscore over a specified time range
+      parameters:
+        - $ref: '#/components/parameters/chain'
+        - $ref: '#/components/parameters/timeRangeSelector'
+      responses:
+        "200":
+          description: A successful response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPerformanceResponse'
+        default:
+          description: An unexpected error response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/rpc.Status'
+
+components:
+  # responses:
+  # headers:
+  # examples:
+  # links:
+  # callbacks:
+  parameters:
+    slot:
+      name: slot
+      in: path
+      required: true
+      schema:
+        oneOf:
+          - type: integer
+            minimum: 0
+          - type: string
+            enum:
+              - latest
+          - $ref: '#/components/schemas/ConsensusLayerBlockRoot'
+        default: latest
+
+    block:
+      name: block
+      in: path
+      required: true
+      schema:
+        oneOf:
+          - type: integer
+            minimum: 0
+          - type: string
+            enum:
+              - latest
+          - $ref: '#/components/schemas/ExecutionLayerBlockHash'
+        default: latest
+
+    epochQuery:
+      name: epoch
+      in: query
+      required: true
+      schema:
+        $ref: '#/components/schemas/epochParam'
+
+    epochPath:
+      name: epoch
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/epochParam'
+
+    chain:
+      name: chain
+      in: query
+      required: true
+      schema:
+        type: string
+        enum:
+          - mainnet
+          - hoodi
+          - sepolia
+        default: mainnet
+
+    cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Cursor for pagination
+      schema:
+        type: string
+
+    pageSize:
+      name: page_size
+      in: query
+      required: false
+      description: Number of results to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+
+    # depositAddress, withdrawalAddress and validator are the "validator selector", they're mutually exclusive
+    # see confluence HLD for details
+    # TODO implement like time selector
+    depositAddress:
+      name: deposit_address
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ExecutionLayerAddress'
+
+    withdrawalAddress:
+      name: withdrawal_address
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/ExecutionLayerAddress'
+
+    validator:
+      name: validator
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/validatorIndexPubkey'
+
+    timeRangeSelector:
+      name: time_range
+      in: query
+      required: true
+      style: form
+      explode: true
+      schema:
+        $ref: '#/components/schemas/timeRangeParam'
+
+  requestBodies:
+    validatorsSelector:
+      description: Request body to filter validators
+      required: true
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/ValidatorsByDeposit'
+              - $ref: '#/components/schemas/ValidatorsByWithdrawal'
+              - $ref: '#/components/schemas/ValidatorsByList'
+
+  schemas:
+    wei:
+      type: string
+      pattern: ^(0|-?[1-9][0-9]*)$
+
+    validator:
+      type: object
+      properties:
+        index:
+          allOf:
+            - $ref: '#/components/schemas/validatorIndex'
+          nullable: true
+        pubkey:
+          $ref: '#/components/schemas/validatorPubkey'
+
+    validatorPubkey:
+      type: string
+      pattern: ^0x[a-fA-F0-9]{96}$
+
+    validatorIndex:
+      type: integer
+      format: int32
+      minimum: 0
+
+    count:
+      type: integer
+      format: int32
+      minimum: 0
+
+    ValidatorsByDeposit:
+      type: object
+      properties:
+        deposit_address:
+          $ref: '#/components/schemas/ExecutionLayerAddress'
+      required: [deposit_address]
+
+    ValidatorsByWithdrawal:
+      type: object
+      properties:
+        withdrawal_address:
+          $ref: '#/components/schemas/ExecutionLayerAddress'
+      required: [withdrawal_address]
+
+    ValidatorsByList:
+      type: object
+      properties:
+        validators:
+          $ref: '#/components/schemas/validatorIndexPubkeys'
+      required: [validators]
+
+    timeRangeParam:
+      description: You must provide either (start + end), (start + duration), or (end + duration).
+      type: object
+      oneOf:
+        - type: object
+          properties:
+            start:
+              $ref: '#/components/schemas/timestampParam'
+            end:
+              $ref: '#/components/schemas/timestampParam'
+          required: [start, end]
+          additionalProperties: false
+        - type: object
+          properties:
+            start:
+              $ref: '#/components/schemas/timestampParam'
+            duration:
+              $ref: '#/components/schemas/durationParam'
+          required: [start, duration]
+          additionalProperties: false
+        - type: object
+          properties:
+            end:
+              $ref: '#/components/schemas/timestampParam'
+            duration:
+              $ref: '#/components/schemas/durationParam'
+          required: [end, duration]
+          additionalProperties: false
+      default:
+        end:
+          latest: true
+        duration:
+          days: 1
+
+    chainTimestamp:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        consensus_algorithm:
+          type: string
+          enum:
+            - proof_of_work
+            - proof_of_stake
+        block:
+          type: object
+          nullable: true
+          properties:
+            number:
+              type: integer
+              format: int32
+              minimum: 0
+            transaction_index:
+              type: integer
+              format: int32
+              nullable: true
+              minimum: 0
+            internal_transaction_index:
+              type: integer
+              format: int32
+              nullable: true
+              minimum: 0
+        slot:
+          type: object
+          nullable: true
+          properties:
+            number:
+              type: integer
+              format: int32
+              minimum: 0
+            epoch:
+              type: integer
+              format: int32
+              minimum: 0
+
+    epochParam:
+      oneOf:
+        - type: integer
+          format: int32
+          minimum: 0
+        - type: string
+          enum:
+            - latest
+      default: latest
+
+    timestampParam:
+      description: Can be one of `epoch`, `slot`, `block`, `timestamp` or `latest`
+      type: object
+      properties:
+        epoch:
+          type: integer
+          minimum: 0
+        slot:
+          type: integer
+          minimum: 0
+        block:
+          type: integer
+          minimum: 0
+        timestamp:
+          type: integer
+          format: int64
+          minimum: 0
+        latest:
+          type: boolean
+      additionalProperties: false
+      oneOf:
+        - required: [epoch]
+        - required: [slot]
+        - required: [block]
+        - required: [timestamp]
+        - required: [latest]
+      default:
+        latest: true
+
+    durationParam:
+      type: object
+      properties:
+        hours:
+          type: integer
+          minimum: 1
+        days:
+          type: integer
+          minimum: 1
+        weeks:
+          type: integer
+          minimum: 1
+        months:
+          type: integer
+          minimum: 1
+      additionalProperties: false
+      oneOf:
+        - required: [hours]
+        - required: [days]
+        - required: [weeks]
+        - required: [months]
+      default:
+        days: 1
+
+    transactionHash:
+      type: string
+      pattern: ^0x[a-fA-F0-9]{64}$
+
+    ExecutionLayerAddress:
+      type: string
+      pattern: ^0x[a-fA-F0-9]{40}$
+
+    ConsensusLayerBlockRoot:
+      type: string
+      pattern: ^0x[a-fA-F0-9]{64}$
+
+    ExecutionLayerBlockHash:
+      type: string
+      pattern: ^0x[a-fA-F0-9]{64}$ 
+
+    ExecutionLayerAddressDetails:
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/ExecutionLayerAddress'
+        is_contract:
+          type: boolean
+        ens:
+          type: string
+          nullable: true
+
+    EOAPubkey:
+      description: The public key of an externally owned account (EOA, ie. user-controlled)
+      type: string
+      pattern: ^0x[a-fA-F0-9]{96}$
+
+    validatorIndexPubkey:
+      description: Validator index or pubkey
+      oneOf:
+        - $ref: '#/components/schemas/validatorIndex'
+        - $ref: '#/components/schemas/validatorPubkey'
+
+    validatorIndexPubkeys:
+      description: comma-separated list of validator indices or pubkeys
+      type: string
+      pattern: ^((0|[1-9][0-9]*|0x[a-fA-F0-9]{96}))(,(0|[1-9][0-9]*|0x[a-fA-F0-9]{96}))*$
+
+    ConsensusLayerEventStatus:
+      type: string
+      enum:
+        - queued
+        - completed
+        - rejected
+      nullable: true
+
+    Data.Status:
+      type: string
+      enum:
+        - pending_initialized
+        - pending_queued
+        - active_ongoing
+        - active_exiting
+        - active_slashed
+        - exited_unslashed
+        - exited_slashed
+        - withdrawal_possible
+        - withdrawal_done
+      nullable: true
+
+    Deposits:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        amount:
+          $ref: '#/components/schemas/wei'
+        withdrawal_credential:
+          type: string
+          format: byte
+        signature:
+          type: string
+          format: byte
+        status:
+          $ref: '#/components/schemas/ConsensusLayerEventStatus'
+        is_processed:
+          type: boolean
+        queues:
+          type: object
+          properties:
+            execution_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            execution_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            consensus_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+            consensus_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    DutyStatus:
+      type: string
+      enum:
+        - success
+        - missed
+        - orphaned
+        - scheduled
+
+    GetAttestationsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetAttestationsResponse.Data'
+      description: A Response containing basic information about the attestations.
+
+    GetAttestationsResponse.Data:
+      type: object
+      properties:
+        attested_slot:
+          type: integer
+          format: int64
+        committee_index:
+          type: integer
+          format: int32
+        committee_bits:
+          type: array
+          items:
+            type: boolean
+        aggregation_bits:
+          type: array
+          items:
+            type: boolean
+        validators:
+          type: array
+          items:
+            $ref: '#/components/schemas/validator'
+        block_root:
+          type: string
+          format: byte
+        source_epoch:
+          type: integer
+          format: int32
+        target_epoch:
+          type: integer
+          format: int32
+        signature:
+          type: string
+          format: byte
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetBlockDepositsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deposits'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing basic information about the deposits.
+
+    GetBlockResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetBlockResponse.Data'
+      description: A Response containing basic information about the block.
+
+    rewardDetails:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/wei'
+        recipient:
+          $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+
+    GetBlockResponse.Data:
+      type: object
+      properties:
+        time:
+          $ref: '#/components/schemas/chainTimestamp'
+        status:
+          $ref: '#/components/schemas/DutyStatus'
+        block_hash:
+          type: string
+          format: byte
+        parent_hash:
+          type: string
+          format: byte
+        reward:
+          type: object
+          properties:
+            fees:
+              $ref: '#/components/schemas/rewardDetails'
+            mev:
+              allOf:
+                - $ref: '#/components/schemas/rewardDetails'
+              nullable: true
+            # pow
+            miner:
+              nullable: true
+              allOf:
+                - $ref: '#/components/schemas/rewardDetails'
+            uncles:
+              nullable: true
+              type: array
+              maxItems: 2
+              items:
+                $ref: '#/components/schemas/rewardDetails'
+        gas:
+          type: object
+          properties:
+            used:
+              type: integer
+              format: int32
+            limit:
+              type: integer
+              format: int32
+            base_fee:
+              allOf:
+                - $ref: '#/components/schemas/wei'
+              nullable: true
+        transaction_count:
+          type: integer
+          format: int32
+        receipts_root:
+          type: string
+          format: byte
+        state_root:
+          type: string
+          format: byte
+        logs_bloom:
+          type: string
+          format: byte
+        proof_of_work:
+          nullable: true
+          type: object
+          properties:
+            extra:
+              type: string
+              format: byte
+            difficulty:
+              type: integer
+              format: int64
+            random:
+              type: string
+              format: byte
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetBlockWithdrawalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Withdrawals'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing basic information about the withdrawals.
+
+    GetChainHealthResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetChainHealthResponse.Data'
+      description: A Response containing basic information about chain health.
+
+    GetChainHealthResponse.Data:
+      type: object
+      properties:
+        epoch_finality:
+          $ref: '#/components/schemas/FinalityDetailed'
+        slot_finality:
+          $ref: '#/components/schemas/FinalityDetailed'
+
+    GetEpochResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetEpochResponse.Data'
+      description: A Response containing basic information about the epoch.
+
+    GetEpochResponse.Data:
+      type: object
+      properties:
+        time:
+          $ref: '#/components/schemas/chainTimestamp'
+        validator_count:
+          type: integer
+          format: int32
+        voluntary_exit_count:
+          type: integer
+          format: int32
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetDutySummaryResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            block_counts:
+              type: object
+              properties:
+                proposed:
+                  $ref: '#/components/schemas/count'
+                missed:
+                  $ref: '#/components/schemas/count'
+                orphaned:
+                  $ref: '#/components/schemas/count'
+                scheduled:
+                  $ref: '#/components/schemas/count'
+            slashing_counts:
+              type: object
+              properties:
+                proposer:
+                  $ref: '#/components/schemas/count'
+                attestation:
+                  $ref: '#/components/schemas/count'
+            sync:
+              type: object
+              properties:
+                participation:
+                  $ref: '#/components/schemas/percent'
+            attestations:
+              type: object
+              properties:
+                count:
+                  $ref: '#/components/schemas/count'
+                eligible:
+                  $ref: '#/components/schemas/wei'
+                attested:
+                  $ref: '#/components/schemas/wei'
+      description: A Response containing basic information about the duty summary.
+
+    GetProposalResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetProposalResponse.Data'
+      description: A Response containing basic information about the proposal.
+
+    GetProposalResponse.Data:
+      type: object
+      properties:
+        relay_name:
+          type: string
+          nullable: true
+        builder_public_key:
+          allOf:
+            - $ref: "#/components/schemas/EOAPubkey"
+          nullable: true
+        proposer_reward:
+          $ref: '#/components/schemas/wei'
+        proposer_reward_recipient:
+          $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetQueueStatsResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetQueueStatsResponse.Data'
+      description: A Response containing basic information about the queue.
+
+    GetQueueStatsResponse.Data:
+      type: object
+      properties:
+        entering_validator_count:
+          type: integer
+          format: int32
+        exiting_validator_count:
+          type: integer
+          format: int32
+        estimated_clear_time:
+          type: integer
+          format: int64
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetSlashingsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetSlashingsResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing information about chain slashings.
+
+    GetSlashingsResponse.Data:
+      type: object
+      properties:
+        slashed_validator:
+          $ref: '#/components/schemas/validator'
+        slashing_validator:
+          $ref: '#/components/schemas/validator'
+        violation:
+          $ref: '#/components/schemas/GetSlashingsResponse.Violation'
+        time:
+          $ref: '#/components/schemas/chainTimestamp'
+
+    GetSlashingsResponse.Violation:
+      type: string
+      enum:
+        - multiple_attestations_checkpoints
+        - surrounding_attestation
+        - multiple_blocks
+        - multiple_attestations_head
+
+    GetSlotDepositsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Deposits'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing basic information about the deposits.
+
+    GetSlotResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetSlotResponse.Data'
+      description: A Response containing basic information about the slot.
+
+    clEventDetails:
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int32
+          minimum: 0
+        amount:
+          $ref: '#/components/schemas/wei'
+
+    GetSlotResponse.Data:
+      type: object
+      properties:
+        time:
+          $ref: '#/components/schemas/chainTimestamp'
+        proposer:
+          $ref: '#/components/schemas/validator'
+        status:
+          $ref: '#/components/schemas/DutyStatus'
+        block_root:
+          type: string
+          format: byte
+          nullable: true
+        attestation_count:
+          type: integer
+          format: int32
+          nullable: true
+        attestation_slashing_count:
+          type: integer
+          format: int32
+          nullable: true
+        events:
+          type: object
+          properties:
+            queued:
+              type: object
+              properties:
+                deposits:
+                  $ref: '#/components/schemas/clEventDetails'
+                withdrawals:
+                  $ref: '#/components/schemas/clEventDetails'
+                consolidations:
+                  $ref: '#/components/schemas/clEventDetails'
+            processed:
+              type: object
+              properties:
+                deposits:
+                  $ref: '#/components/schemas/clEventDetails'
+                auto_withdrawals:
+                  $ref: '#/components/schemas/clEventDetails'
+                manual_withdrawals:
+                  $ref: '#/components/schemas/clEventDetails'
+                consolidations:
+                  $ref: '#/components/schemas/clEventDetails'
+        graffiti:
+          type: string
+          format: byte
+          nullable: true
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetSlotWithdrawalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Withdrawals'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing basic information about the withdrawals.
+
+    GetSyncCommitteeResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetSyncCommitteeResponse.Data'
+      description: A Response containing basic information about the sync committee.
+
+    GetSyncCommitteeResponse.Data:
+      type: object
+      properties:
+        start:
+          $ref: '#/components/schemas/chainTimestamp'
+        end:
+          $ref: '#/components/schemas/chainTimestamp'
+        period:
+          type: integer
+          format: int32
+        validators:
+          type: array
+          items:
+            $ref: '#/components/schemas/validator'
+
+    GetValidatorAprResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetValidatorAprResponse.Data'
+      description: A Response containing apr information of the validators.
+
+    GetValidatorAprResponse.Data:
+      type: object
+      properties:
+        execution_layer:
+          type: number
+          format: float
+        consensus_layer:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        start:
+          $ref: '#/components/schemas/chainTimestamp'
+        end:
+          $ref: '#/components/schemas/chainTimestamp'
+
+    GetValidatorAttestationsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorAttestationsResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed attestation information of the validators.
+
+    GetValidatorAttestationsResponse.Data:
+      type: object
+      properties:
+        attester_slot:
+          type: integer
+          format: int64
+          x-sortable: true
+        inclusion_slot:
+          type: integer
+          format: int64
+          nullable: true
+        epoch:
+          type: integer
+          format: int32
+        validator:
+          $ref: '#/components/schemas/validator'
+        committee_index:
+          type: integer
+          format: int32
+        status:
+          $ref: '#/components/schemas/DutyStatus'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorBalanceResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorBalanceResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed balance information of the validators.
+
+    GetValidatorBalanceResponse.Data:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        balance:
+          $ref: '#/components/schemas/wei'
+        effective_balance:
+          $ref: '#/components/schemas/wei'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorDepositsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorDepositsResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed deposit information of the validators.
+
+    GetValidatorDepositsResponse.Data:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/wei'
+        validator:
+          $ref: '#/components/schemas/validator'
+        reject_reason:
+          allOf:
+            - $ref: '#/components/schemas/GetValidatorDepositsResponse.RejectReason'
+          nullable: true
+        status:
+          allOf:
+            - $ref: '#/components/schemas/ConsensusLayerEventStatus'
+          nullable: true
+        signature:
+          type: string
+          format: byte
+        validity:
+          $ref: '#/components/schemas/Validity'
+        type:
+          allOf:
+            - $ref: '#/components/schemas/GetValidatorDepositsResponse.Type'
+          nullable: true
+        queues:
+          type: object
+          properties:
+            execution_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            execution_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            consensus_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+            consensus_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+        withdrawal_credentials:
+          type: string
+          format: byte
+        request:
+          type: object
+          nullable: true
+          properties:
+            tx_hash:
+              $ref: '#/components/schemas/transactionHash'
+            tx_sender:
+              $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+            depositor:
+              $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorDepositsResponse.RejectReason:
+      type: string
+      enum:
+        - invalid_signature
+
+    GetValidatorDepositsResponse.Type:
+      type: string
+      enum:
+        - manual
+        - network
+
+    GetValidatorMetadataResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorMetadataResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing basic information about the validator.
+
+    GetValidatorMetadataResponse.Data:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        slashed:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/Data.Status'
+        withdrawal_credentials:
+          type: string
+          format: byte
+        epochs:
+          type: object
+          properties:
+            activation_eligibility:
+              type: integer
+              format: int32
+              nullable: true
+            activation:
+              type: integer
+              format: int32
+              nullable: true
+            exit:
+              type: integer
+              format: int32
+              nullable: true
+            withdrawable:
+              type: integer
+              format: int32
+              nullable: true
+        balances:
+          type: object
+          properties:
+            current:
+              $ref: '#/components/schemas/wei'
+            effective:
+              $ref: '#/components/schemas/wei'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorPerformanceDetailedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed performance information of the validators.
+
+    percent:
+      type: number
+      format: float
+      minimum: 0.0
+      maximum: 1.0
+
+    performance:
+      type: object
+      properties:
+        total:
+          allOf:
+            - $ref: '#/components/schemas/percent'
+          nullable: true
+        attestation:
+          allOf:
+            - $ref: '#/components/schemas/percent'
+          nullable: true
+        proposal:
+          allOf:
+            - $ref: '#/components/schemas/percent'
+          nullable: true
+        sync:
+          allOf:
+            - $ref: '#/components/schemas/percent'
+          nullable: true
+
+    GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        performance:
+          $ref: '#/components/schemas/performance'
+        duties:
+          $ref: '#/components/schemas/GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties.Duties'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties.Duties:
+      type: object
+      properties:
+        attestation:
+          $ref: '#/components/schemas/performanceDuties'
+        sync:
+          $ref: '#/components/schemas/performanceDuties'
+        proposal:
+          $ref: '#/components/schemas/performanceDuties'
+
+    GetValidatorPerformanceSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetValidatorPerformanceSummaryResponse.ValidatorPerformanceDuties'
+      description: A response containing the aggregated beaconscore of the validators.
+
+    GetPerformanceResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/performance'
+
+    GetValidatorPerformanceSummaryResponse.ValidatorPerformanceDuties:
+      type: object
+      properties:
+        performance:
+          $ref: '#/components/schemas/performance'
+        duties:
+          $ref: '#/components/schemas/GetValidatorPerformanceSummaryResponse.ValidatorPerformanceDuties.Duties'
+        start:
+          $ref: '#/components/schemas/chainTimestamp'
+        end:
+          $ref: '#/components/schemas/chainTimestamp'
+
+    performanceDuties:
+      type: array
+      items:
+        type: object
+        properties:
+          time:
+            $ref: '#/components/schemas/chainTimestamp'
+          success:
+            type: boolean
+
+    GetValidatorPerformanceSummaryResponse.ValidatorPerformanceDuties.Duties:
+      type: object
+      properties:
+        attestation:
+          type: integer
+          format: int32
+        sync:
+          type: integer
+          format: int32
+        proposal:
+          type: integer
+          format: int32
+
+    GetValidatorProposalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorProposalsResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed proposal information of the validators.
+
+    GetValidatorProposalsResponse.Data:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        proposal:
+          $ref: '#/components/schemas/chainTimestamp'
+        graffiti:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/DutyStatus'
+        relayers:
+          type: array
+          items:
+            type: string
+        builder_public_key:
+          allOf:
+            - $ref: "#/components/schemas/EOAPubkey"
+          nullable: true
+        gas:
+          type: object
+          properties:
+            used:
+              type: integer
+              format: int32
+            limit:
+              type: integer
+              format: int32
+        fees_burned:
+          $ref: '#/components/schemas/wei'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorRewardsDetailedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorRewardsDetailedResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed rewards information of the validators.
+
+    GetValidatorRewardsDetailedResponse.Data:
+      type: object
+      properties:
+        validator:
+          $ref: '#/components/schemas/validator'
+        attestation:
+          $ref: '#/components/schemas/attestationRewards'
+        sync_participation:
+          $ref: '#/components/schemas/rewardBreakdown'
+        proposals:
+          $ref: '#/components/schemas/proposalRewards'
+        slashings_penalty:
+          $ref: '#/components/schemas/wei'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    rewardBreakdown:
+      type: object
+      properties:
+        reward:
+          $ref: '#/components/schemas/wei'
+        penalty:
+          $ref: '#/components/schemas/wei'
+        total:
+          $ref: '#/components/schemas/wei'
+
+    GetValidatorRewardsSummaryResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/GetValidatorRewardsSummaryResponse.Data'
+      description: A Response containing aggregated rewards information of the validators.
+
+    attestationRewards:
+      type: object
+      properties:
+        head:
+          $ref: '#/components/schemas/rewardBreakdown'
+        source:
+          $ref: '#/components/schemas/rewardBreakdown'
+        target:
+          $ref: '#/components/schemas/rewardBreakdown'
+        inactivity_leak_penalty:
+          $ref: '#/components/schemas/wei'
+        inclusion_delay_reward:
+          allOf:
+            - $ref: '#/components/schemas/wei'
+          nullable: true
+    
+    proposalRewards:
+      type: object
+      properties:
+        attestation_inclusion_reward:
+          $ref: '#/components/schemas/wei'
+        sync_inclusion_reward:
+          $ref: '#/components/schemas/wei'
+        slashing_inclusion_reward:
+          $ref: '#/components/schemas/wei'
+        execution_layer_fees_reward:
+          $ref: '#/components/schemas/wei'
+        execution_layer_mev_reward:
+          allOf:
+            - $ref: '#/components/schemas/wei'
+          nullable: true
+
+    GetValidatorRewardsSummaryResponse.Data:
+      type: object
+      properties:
+        attestations:
+          $ref: '#/components/schemas/attestationRewards'
+        sync_participations:
+          $ref: '#/components/schemas/rewardBreakdown'
+        proposals:
+          $ref: '#/components/schemas/proposalRewards'
+        slashings_penalty:
+          $ref: '#/components/schemas/wei'
+        start:
+          $ref: '#/components/schemas/chainTimestamp'
+        end:
+          $ref: '#/components/schemas/chainTimestamp'
+
+    GetValidatorSyncCommitteesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: integer
+            format: int32
+          x-sortable: true
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed sync committee information of the validators.
+
+    GetValidatorWithdrawalsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GetValidatorWithdrawalsResponse.Data'
+        paging:
+          $ref: '#/components/schemas/Paging'
+      description: A Response containing detailed withdrawal information of the validators.
+
+    GetValidatorWithdrawalsResponse.Data:
+      type: object
+      properties:
+        amount:
+          $ref: '#/components/schemas/wei'
+        validator:
+          $ref: '#/components/schemas/validator'
+        reject_reason:
+          allOf:
+            - $ref: '#/components/schemas/GetValidatorWithdrawalsResponse.RejectReason'
+          nullable: true
+        status:
+          allOf:
+            - $ref: '#/components/schemas/ConsensusLayerEventStatus'
+          nullable: true
+        type:
+          allOf:
+            - $ref: '#/components/schemas/GetValidatorWithdrawalsResponse.Type'
+          nullable: true
+        queues:
+          type: object
+          properties:
+            execution_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            execution_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            consensus_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+            consensus_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+        withdrawal_credentials:
+          type: string
+          format: byte
+        recipient:
+          type: string
+          format: byte
+          nullable: true
+        request:
+          type: object
+          nullable: true
+          properties:
+            tx_hash:
+              $ref: '#/components/schemas/transactionHash'
+            tx_sender:
+              $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+            withdrawer:
+              $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+            fee:
+              $ref: '#/components/schemas/wei'
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    GetValidatorWithdrawalsResponse.RejectReason:
+      type: string
+      enum:
+        - full_queue
+        - unknown_pubkey
+        - no_execution_withdrawal_credentials
+        - address_mismatch
+        - inactive
+        - exiting
+        - too_young
+        - pending_withdrawals
+        - not_compounding
+        - insufficient_effective_balance
+        - excess_balance
+
+    GetValidatorWithdrawalsResponse.Type:
+      type: string
+      enum:
+        - manual
+        - network
+        - skimming
+
+    Paging:
+      type: object
+      properties:
+        next_cursor:
+          type: string
+
+    Validity:
+      type: string
+      enum:
+        - valid
+        - invalid
+        - invalid_skipped
+
+    Finality:
+      type: string
+      enum:
+        - unjustified
+        - justified
+        - finalized
+
+    FinalityDetailed:
+      type: object
+      properties:
+        head:
+          type: integer
+          format: int32
+          minimum: 0
+        justified:
+          type: integer
+          format: int32
+          minimum: 0
+        finalized:
+          type: integer
+          format: int32
+          minimum: 0
+
+    DataRecency:
+      type: object
+      properties:
+        time:
+          $ref: '#/components/schemas/chainTimestamp'
+        epoch_finality:
+          $ref: '#/components/schemas/Finality'
+        slot_finality:
+          $ref: '#/components/schemas/Finality'
+
+    Withdrawals:
+      type: object
+      properties:
+        next_withdrawal_index:
+          type: integer
+          format: int64
+        validator:
+          $ref: '#/components/schemas/validator'
+        recipient:
+          $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+        amount:
+          $ref: '#/components/schemas/wei'
+        fee:
+          allOf:
+            - $ref: '#/components/schemas/wei'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ConsensusLayerEventStatus'
+        is_processed:
+          type: boolean
+        queues:
+          type: object
+          properties:
+            execution_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            execution_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+            consensus_layer_queued:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+            consensus_layer_processed:
+              allOf:
+                - $ref: '#/components/schemas/chainTimestamp'
+              nullable: true
+              x-sortable: true
+        data_recency:
+          $ref: '#/components/schemas/DataRecency'
+
+    rpc.Status:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+  
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: 'Authorization header with value: Bearer <token>'
+
+    GCPAuth:
+      type: apiKey
+      description: 'Authorization header with value: Bearer <token>'
+      name: X-Serverless-Authorization
+      in: header
