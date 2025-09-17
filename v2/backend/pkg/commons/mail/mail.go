@@ -136,6 +136,9 @@ func SendMailMailgun(to, subject, msgHtml, msgText string, attachment []types.Em
 		utils.Config.Frontend.Mail.Mailgun.Domain,
 		utils.Config.Frontend.Mail.Mailgun.PrivateKey,
 	)
+	if utils.Config.Frontend.Mail.Mailgun.UseEUAPI {
+		mg.SetAPIBase(mailgun.APIBaseEU)
+	}
 
 	// if the text part still contains html tags / entities, remove / convert them
 	msgText = html2text.HTML2Text(msgText)
@@ -184,6 +187,10 @@ func SendTextMailMailgun(to, subject, msg string, attachment []types.EmailAttach
 		utils.Config.Frontend.Mail.Mailgun.Domain,
 		utils.Config.Frontend.Mail.Mailgun.PrivateKey,
 	)
+	if utils.Config.Frontend.Mail.Mailgun.UseEUAPI {
+		mg.SetAPIBase(mailgun.APIBaseEU)
+	}
+
 	message := mg.NewMessage(utils.Config.Frontend.Mail.Mailgun.Sender, subject, msg, to)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)

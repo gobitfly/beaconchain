@@ -134,6 +134,7 @@ type Config struct {
 				Domain     string `yaml:"domain" env:"DOMAIN"`
 				PrivateKey string `yaml:"privateKey" env:"PRIVATE_KEY"`
 				Sender     string `yaml:"sender" env:"SENDER"`
+				UseEUAPI   bool   `yaml:"useEUApi" envconfig:"USE_EU_API"`
 			} `yaml:"mailgun" env:", prefix=MAILGUN_"`
 			Contact struct {
 				SupportEmail string `yaml:"supportEmail" env:"SUPPORT_EMAIL"`
