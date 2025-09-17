@@ -35,6 +35,7 @@ func Run() {
 	concurrency := fs.Int("concurrency", 1, "concurrency level to use (1 for no concurrency)")
 	debugLevel := fs.Uint64("debug-level", 0, "debug level to use for eth.store calculation output")
 	beaconchainApiKey := fs.String("beaconchain-apikey", "", "beaconchain apikey to use")
+	beaconchainDomain := fs.String("beaconchain-domain", "beaconcha.in", "beaconchain domain to use")
 
 	_ = fs.Parse(os.Args[2:])
 
@@ -93,6 +94,7 @@ func Run() {
 		receiptsMode = ethstore.RECEIPTS_MODE_BATCH
 	}
 
+	ethstore.SetDomain(*beaconchainDomain)
 	ethstore.SetBeaconchainApiKey(utils.MustAccessSecretVersion(*beaconchainApiKey))
 	ethstore.SetDebugLevel(*debugLevel)
 	log.Infof("using receipts mode %s (%d)", *receiptsModeStr, receiptsMode)
