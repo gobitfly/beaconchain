@@ -22,16 +22,16 @@
         "tab": "API Docs",
         "groups": [
           {
-            "group": "API docs",
-            "openapi": "api-reference/openapi3.yaml"
-          },
-          {
             "group": "Getting started",
             "pages": [
               "index",
               "quickstart",
               "development"
             ]
+          },
+          {
+            "group": "API docs",
+            "openapi": "api-reference/openapi3.yaml"
           },
           {
             "group": "Customization",
@@ -67,23 +67,24 @@
     "global": {
       "anchors": [
         {
-          "anchor": "Explorer",
+          "anchor": "Pricing",
           "href": "https://mintlify.com/community",
-          "icon": "slack"
+          "icon": "newspaper"
         },
         {
-          "anchor": "StakingHub",
+          "anchor": "SLA Policy",
           "href": "https://beaconcha.in",
           "icon": "newspaper"
         },
         {
-          "anchor": "Discord",
+          "anchor": "Support",
           "href": "https://beaconcha.in",
           "icon": "newspaper"
         }
       ]
     }
   },
+
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
