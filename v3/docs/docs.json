@@ -19,7 +19,7 @@
   "navigation": {
     "tabs": [
             {
-        "tab": "API reference",
+        "tab": "API Docs",
         "openapi": "api-reference/openapi3.yaml"
       },
       {
