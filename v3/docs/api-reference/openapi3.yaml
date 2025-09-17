@@ -12,7 +12,7 @@ servers:
 security:
   - ApiKeyAuth: []
   - GCPAuth: []
-  
+
 paths:
   /v2/ethereum/validators:
     post:
@@ -414,32 +414,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/rpc.Status'
 
-  /v2/ethereum/block-proposal:
+  /v2/ethereum/blocks/{block}/rewards:
     get:
       tags:
         - Network
-      summary: Returns basic information on the Block Proposal for a specific slot
+      summary: Returns information on the Block rewards
       parameters:
         - $ref: '#/components/parameters/chain'
-        - name: block
-          in: query
-          required: false
-          schema:
-            type: string
-            default: latest
-        - name: slot
-          in: query
-          required: false
-          schema:
-            type: string
-            default: latest
+        - $ref: '#/components/parameters/block'
       responses:
         "200":
           description: A successful response.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetProposalResponse'
+                $ref: '#/components/schemas/GetBlockRewardResponse'
         default:
           description: An unexpected error response.
           content:
@@ -728,6 +717,7 @@ components:
       schema:
         oneOf:
           - type: integer
+            format: int64
             minimum: 0
           - type: string
             enum:
@@ -826,6 +816,37 @@ components:
               - $ref: '#/components/schemas/ValidatorsByList'
 
   schemas:
+    clQueues:
+      type: object
+      properties:
+        execution_layer_queued:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        execution_layer_processed:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        consensus_layer_queued:
+          type: integer
+          format: int32
+          minimum: 0
+          nullable: true
+          x-sortable: true
+        consensus_layer_processed:
+          type: integer
+          format: int32
+          minimum: 0
+          nullable: true
+          x-sortable: true
+
+    timestamp:
+      type: integer
+      format: int64
+      minimum: 0
+
     wei:
       type: string
       pattern: ^(0|-?[1-9][0-9]*)$
@@ -909,48 +930,6 @@ components:
         duration:
           days: 1
 
-    chainTimestamp:
-      type: object
-      properties:
-        timestamp:
-          type: integer
-          format: int64
-        consensus_algorithm:
-          type: string
-          enum:
-            - proof_of_work
-            - proof_of_stake
-        block:
-          type: object
-          nullable: true
-          properties:
-            number:
-              type: integer
-              format: int32
-              minimum: 0
-            transaction_index:
-              type: integer
-              format: int32
-              nullable: true
-              minimum: 0
-            internal_transaction_index:
-              type: integer
-              format: int32
-              nullable: true
-              minimum: 0
-        slot:
-          type: object
-          nullable: true
-          properties:
-            number:
-              type: integer
-              format: int32
-              minimum: 0
-            epoch:
-              type: integer
-              format: int32
-              minimum: 0
-
     epochParam:
       oneOf:
         - type: integer
@@ -975,9 +954,7 @@ components:
           type: integer
           minimum: 0
         timestamp:
-          type: integer
-          format: int64
-          minimum: 0
+          $ref: "#/components/schemas/timestamp"
         latest:
           type: boolean
       additionalProperties: false
@@ -1028,7 +1005,7 @@ components:
 
     ExecutionLayerBlockHash:
       type: string
-      pattern: ^0x[a-fA-F0-9]{64}$ 
+      pattern: ^0x[a-fA-F0-9]{64}$
 
     ExecutionLayerAddressDetails:
       type: object
@@ -1097,26 +1074,7 @@ components:
         is_processed:
           type: boolean
         queues:
-          type: object
-          properties:
-            execution_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            execution_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            consensus_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
-            consensus_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
+          $ref: '#/components/schemas/clQueues'
         data_recency:
           $ref: '#/components/schemas/DataRecency'
 
@@ -1200,36 +1158,33 @@ components:
     GetBlockResponse.Data:
       type: object
       properties:
-        time:
-          $ref: '#/components/schemas/chainTimestamp'
         status:
           $ref: '#/components/schemas/DutyStatus'
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
+        block_number:
+          type: integer
+          format: int64
+          minimum: 0
+        slot_number:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         block_hash:
           type: string
           format: byte
         parent_hash:
           type: string
           format: byte
-        reward:
-          type: object
-          properties:
-            fees:
-              $ref: '#/components/schemas/rewardDetails'
-            mev:
-              allOf:
-                - $ref: '#/components/schemas/rewardDetails'
-              nullable: true
-            # pow
-            miner:
-              nullable: true
-              allOf:
-                - $ref: '#/components/schemas/rewardDetails'
-            uncles:
-              nullable: true
-              type: array
-              maxItems: 2
-              items:
-                $ref: '#/components/schemas/rewardDetails'
+        relayers:
+          type: array
+          items:
+            type: string
+        builder_public_key:
+          allOf:
+            - $ref: "#/components/schemas/EOAPubkey"
+          nullable: true
         gas:
           type: object
           properties:
@@ -1244,8 +1199,9 @@ components:
                 - $ref: '#/components/schemas/wei'
               nullable: true
         transaction_count:
-          type: integer
-          format: int32
+          $ref: '#/components/schemas/count'
+        internal_transaction_count:
+          $ref: '#/components/schemas/count'
         receipts_root:
           type: string
           format: byte
@@ -1307,8 +1263,12 @@ components:
     GetEpochResponse.Data:
       type: object
       properties:
-        time:
-          $ref: '#/components/schemas/chainTimestamp'
+        epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        timestamp:
+          $ref: '#/components/schemas/timestamp'
         validator_count:
           type: integer
           format: int32
@@ -1358,27 +1318,33 @@ components:
                   $ref: '#/components/schemas/wei'
       description: A Response containing basic information about the duty summary.
 
-    GetProposalResponse:
+    GetBlockRewardResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/GetProposalResponse.Data'
+          $ref: '#/components/schemas/GetBlockRewardResponse.Data'
       description: A Response containing basic information about the proposal.
 
-    GetProposalResponse.Data:
+    GetBlockRewardResponse.Data:
       type: object
       properties:
-        relay_name:
-          type: string
-          nullable: true
-        builder_public_key:
+        fees:
+          $ref: '#/components/schemas/rewardDetails'
+        mev:
           allOf:
-            - $ref: "#/components/schemas/EOAPubkey"
+            - $ref: '#/components/schemas/rewardDetails'
           nullable: true
-        proposer_reward:
-          $ref: '#/components/schemas/wei'
-        proposer_reward_recipient:
-          $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+        # pow
+        coinbase:
+          nullable: true
+          type: object
+          properties:
+            recipient:
+              $ref: '#/components/schemas/ExecutionLayerAddressDetails'
+            block_reward:
+              $ref: '#/components/schemas/wei'
+            uncle_inclusion_reward:
+              $ref: '#/components/schemas/wei'
         data_recency:
           $ref: '#/components/schemas/DataRecency'
 
@@ -1424,8 +1390,10 @@ components:
           $ref: '#/components/schemas/validator'
         violation:
           $ref: '#/components/schemas/GetSlashingsResponse.Violation'
-        time:
-          $ref: '#/components/schemas/chainTimestamp'
+        slot:
+          type: integer
+          format: int32
+          minimum: 0
 
     GetSlashingsResponse.Violation:
       type: string
@@ -1466,8 +1434,19 @@ components:
     GetSlotResponse.Data:
       type: object
       properties:
-        time:
-          $ref: '#/components/schemas/chainTimestamp'
+        slot:
+          type: integer
+          format: int32
+          minimum: 0
+        epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        block:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         proposer:
           $ref: '#/components/schemas/validator'
         status:
@@ -1535,13 +1514,18 @@ components:
     GetSyncCommitteeResponse.Data:
       type: object
       properties:
-        start:
-          $ref: '#/components/schemas/chainTimestamp'
-        end:
-          $ref: '#/components/schemas/chainTimestamp'
+        start_epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        end_epoch:
+          type: integer
+          format: int32
+          minimum: 0
         period:
           type: integer
           format: int32
+          minimum: 0
         validators:
           type: array
           items:
@@ -1566,10 +1550,14 @@ components:
         total:
           type: number
           format: float
-        start:
-          $ref: '#/components/schemas/chainTimestamp'
-        end:
-          $ref: '#/components/schemas/chainTimestamp'
+        start_epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        end_epoch:
+          type: integer
+          format: int32
+          minimum: 0
 
     GetValidatorAttestationsResponse:
       type: object
@@ -1665,26 +1653,7 @@ components:
             - $ref: '#/components/schemas/GetValidatorDepositsResponse.Type'
           nullable: true
         queues:
-          type: object
-          properties:
-            execution_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            execution_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            consensus_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
-            consensus_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
+          $ref: '#/components/schemas/clQueues'
         withdrawal_credentials:
           type: string
           format: byte
@@ -1843,18 +1812,24 @@ components:
           $ref: '#/components/schemas/performance'
         duties:
           $ref: '#/components/schemas/GetValidatorPerformanceSummaryResponse.ValidatorPerformanceDuties.Duties'
-        start:
-          $ref: '#/components/schemas/chainTimestamp'
-        end:
-          $ref: '#/components/schemas/chainTimestamp'
+        start_epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        end_epoch:
+          type: integer
+          format: int32
+          minimum: 0
 
     performanceDuties:
       type: array
       items:
         type: object
         properties:
-          time:
-            $ref: '#/components/schemas/chainTimestamp'
+          slot:
+            type: integer
+            format: int32
+            minimum: 0
           success:
             type: boolean
 
@@ -1887,8 +1862,19 @@ components:
       properties:
         validator:
           $ref: '#/components/schemas/validator'
-        proposal:
-          $ref: '#/components/schemas/chainTimestamp'
+        slot:
+          type: integer
+          format: int32
+          minimum: 0
+        epoch:
+          type: integer
+          format: int32
+          minimum: 0
+        block:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         graffiti:
           type: string
           nullable: true
@@ -1975,7 +1961,7 @@ components:
           allOf:
             - $ref: '#/components/schemas/wei'
           nullable: true
-    
+
     proposalRewards:
       type: object
       properties:
@@ -2003,10 +1989,14 @@ components:
           $ref: '#/components/schemas/proposalRewards'
         slashings_penalty:
           $ref: '#/components/schemas/wei'
-        start:
-          $ref: '#/components/schemas/chainTimestamp'
-        end:
-          $ref: '#/components/schemas/chainTimestamp'
+        start_epoch:
+          type: integer
+          format: int64
+          minimum: 0
+        end_epoch:
+          type: integer
+          format: int64
+          minimum: 0
 
     GetValidatorSyncCommitteesResponse:
       type: object
@@ -2052,26 +2042,7 @@ components:
             - $ref: '#/components/schemas/GetValidatorWithdrawalsResponse.Type'
           nullable: true
         queues:
-          type: object
-          properties:
-            execution_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            execution_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            consensus_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
-            consensus_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
+          $ref: '#/components/schemas/clQueues'
         withdrawal_credentials:
           type: string
           format: byte
@@ -2155,8 +2126,6 @@ components:
     DataRecency:
       type: object
       properties:
-        time:
-          $ref: '#/components/schemas/chainTimestamp'
         epoch_finality:
           $ref: '#/components/schemas/Finality'
         slot_finality:
@@ -2183,26 +2152,7 @@ components:
         is_processed:
           type: boolean
         queues:
-          type: object
-          properties:
-            execution_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            execution_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-            consensus_layer_queued:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
-            consensus_layer_processed:
-              allOf:
-                - $ref: '#/components/schemas/chainTimestamp'
-              nullable: true
-              x-sortable: true
+          $ref: '#/components/schemas/clQueues'
         data_recency:
           $ref: '#/components/schemas/DataRecency'
 
@@ -2214,7 +2164,7 @@ components:
           format: int32
         message:
           type: string
-  
+
   securitySchemes:
     ApiKeyAuth:
       type: http
