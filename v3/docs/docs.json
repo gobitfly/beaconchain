@@ -18,13 +18,14 @@
   "favicon": "/favicon.ico",
   "navigation": {
     "tabs": [
-            {
-        "tab": "API Docs",
-        "openapi": "api-reference/openapi3.yaml"
-      },
       {
-        "tab": "Guides",
+        "tab": "API Docs",
+        "openapi": "api-reference/openapi3.yaml",
         "groups": [
+          {
+            "group": "API docs",
+            "openapi": "api-reference/openapi3.yaml"
+          },
           {
             "group": "Getting started",
             "pages": [
@@ -58,23 +59,27 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Hello World",
+        "pages": ["hello-world"]
       }
     ],
     "global": {
       "anchors": [
         {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Community",
+          "anchor": "Explorer",
           "href": "https://mintlify.com/community",
           "icon": "slack"
         },
         {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
+          "anchor": "StakingHub",
+          "href": "https://beaconcha.in",
+          "icon": "newspaper"
+        },
+        {
+          "anchor": "Discord",
+          "href": "https://beaconcha.in",
           "icon": "newspaper"
         }
       ]
@@ -99,15 +104,15 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {
