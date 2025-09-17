@@ -1,11 +1,11 @@
 ---
-title: "Beaconchain External API — Introduction"
-description: "Learn how to authenticate, make your first request, and understand responses using the Beaconchain External API."
+title: "Introduction"
+description: "Learn how to authenticate, make your first request, and understand responses using the Beaconchain API."
 ---
 
 ## What you can do
 
-Use the Beaconchain External API to fetch Ethereum validator analytics including APR, rewards, balances, attestations, withdrawals, and more. The API follows OpenAPI 3.0.4 and uses Bearer authentication.
+Use the Beaconchain API to fetch Ethereum validator analytics including APR, rewards, balances, attestations, withdrawals, and more. The API follows OpenAPI 3.0.4 and uses Bearer authentication.
 
 <Info>
 This page gives you a practical overview and a copy‑paste quickstart. See the full, auto‑generated reference in API Reference for all endpoints and schemas.
@@ -32,6 +32,10 @@ Authorization: Bearer YOUR_API_TOKEN
 X-Serverless-Authorization: Bearer YOUR_API_TOKEN
 ```
 
+<Note>
+You can create and manage API keys in your Beaconcha.in user portal. Sign up at https://beaconcha.in/register or log in at https://beaconcha.in/login.
+</Note>
+
 <Warning>
 Never include secrets in client-side code or commit them to version control.
 </Warning>
@@ -42,10 +46,13 @@ You can retrieve validator APR over a time window. Provide a network via the cha
 
 <Steps>
 <Step title="Get your API key">
-Contact your Beaconchain administrator to obtain an API token with access to the External API.
+Sign up or log in to your Beaconcha.in account to create and manage API keys in your user portal.
+
+- Sign up: https://beaconcha.in/register
+- Log in: https://beaconcha.in/login
 
 <Check>
-You should have a string that starts with ey... or similar.
+After creating a key, you’ll see a token string you can copy (typically starts with ey...).
 </Check>
 </Step>
 
