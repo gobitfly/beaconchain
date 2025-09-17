@@ -20,7 +20,6 @@
     "tabs": [
       {
         "tab": "API Docs",
-        "openapi": "api-reference/openapi3.yaml",
         "groups": [
           {
             "group": "API docs",
