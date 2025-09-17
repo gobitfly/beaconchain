@@ -30,7 +30,7 @@ require (
 	github.com/go-openapi/spec v0.20.14
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7
-	github.com/gobitfly/eth.store v0.0.0-20250513132239-9d10813d286e
+	github.com/gobitfly/eth.store v0.0.0-20250917083735-9e1ccf816f9c
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.2
 	github.com/gomodule/redigo v1.9.2

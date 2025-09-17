@@ -350,8 +350,10 @@ github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZ
 github.com/go-yaml/yaml v2.1.0+incompatible/go.mod h1:w2MrLa16VYP0jy6N7M5kHaCkaLENm+P+Tv+MfurjSw0=
 github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7 h1:qAEBlj4j25sJjsj5CQraL94rY9jyPIjCZ+hlu84n5l0=
 github.com/gobitfly/eth-rewards v0.1.2-0.20230403064929-411ddc40a5f7/go.mod h1:JrFv2uq5i+p6yEoRSHralEV139HkPV0wBjZZHWb4he8=
-github.com/gobitfly/eth.store v0.0.0-20250513132239-9d10813d286e h1:Au1oPIJZK9bYSaLII+QJ5qlk26RDzI5Wf26P4Z7aYWw=
-github.com/gobitfly/eth.store v0.0.0-20250513132239-9d10813d286e/go.mod h1:hqm5YJbQtjuqK9VjaVrLFqTdzY37L7SUdk3EEaEgxB4=
+github.com/gobitfly/eth.store v0.0.0-20250916122333-f43deb31afcb h1:RSZiTwUZXI4duokWys0NU6mvtDC5EgjZ8o1HIGj0vno=
+github.com/gobitfly/eth.store v0.0.0-20250916122333-f43deb31afcb/go.mod h1:hqm5YJbQtjuqK9VjaVrLFqTdzY37L7SUdk3EEaEgxB4=
+github.com/gobitfly/eth.store v0.0.0-20250917083735-9e1ccf816f9c h1:AnPe/vmnyCI3gIJCp6zjSb9NDyeus2JHUwcm6VkQxYE=
+github.com/gobitfly/eth.store v0.0.0-20250917083735-9e1ccf816f9c/go.mod h1:hqm5YJbQtjuqK9VjaVrLFqTdzY37L7SUdk3EEaEgxB4=
 github.com/gobwas/glob v0.2.3 h1:A4xDbljILXROh+kObIiy5kIaPYD8e96x1tgBhUI5J+Y=
 github.com/gobwas/glob v0.2.3/go.mod h1:d3Ez4x06l9bZtSvzIay5+Yzi0fmZzPgnTbPcKjJAkT8=
 github.com/goccy/go-json v0.10.4 h1:JSwxQzIqKfmFX1swYPpUThQZp/Ka4wzJdK0LWVytLPM=
