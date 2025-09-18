@@ -77,12 +77,10 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 	}
 	metrics.State.WithLabelValues("dashboard_data_exporter_finished_epoch").Set(float64(finishedEpoch))
 	// if finishedEpoch is not the same as the safeepoch we skip updating the rolling so resyncing after falling back is fast
-	/*
-		if safeEpoch := d.latestSafeEpoch.Load(); finishedEpoch != safeEpoch {
-			d.log.Infof("skipping rolling %s update, finished epoch %d, safe epoch %d", rolling, finishedEpoch, safeEpoch)
-			return nil
-		}
-	*/
+	if safeEpoch := d.latestSafeEpoch.Load(); finishedEpoch != safeEpoch {
+		d.log.Infof("skipping rolling %s update, finished epoch %d, safe epoch %d", rolling, finishedEpoch, safeEpoch)
+		return nil
+	}
 
 	// check if we have work to do
 	rollingGenerated, err := edb.CheckIfRollingIsGenerated(rolling, finishedEpoch)
