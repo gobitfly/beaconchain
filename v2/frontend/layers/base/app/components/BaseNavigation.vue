@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 
-const { navigateToV1Login } = useV1Login()
+defineProps<{
+  items: BaseNavigationItem[],
+}>()
+const {
+  navigateToV1Login,
+} = useV1Login()
 const { t: $t } = useTranslation()
 const emit = defineEmits<{
   (e: 'open'): void,
@@ -9,9 +14,8 @@ const emit = defineEmits<{
 const handleClick = () => {
   emit('open')
 }
-defineProps<{
-  items: BaseNavigationItem[],
-}>()
+const { hasSession } = useUserSession()
+const v1Domain = useV1Domain()
 </script>
 
 <template>
@@ -50,7 +54,15 @@ defineProps<{
           />
         </li>
       </ul>
+      <BaseButtonIcon
+        v-if="hasSession"
+        variant="secondary"
+        screenreader-text="base.action.open_user_menu"
+        name="user"
+        @click="navigateTo(`${v1Domain}/user/settings`, { external: true })"
+      />
       <BaseButton
+        v-else
         @click="navigateToV1Login"
       >
         {{ $t('base.common.log_in') }}

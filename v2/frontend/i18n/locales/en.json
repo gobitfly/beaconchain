@@ -1,5 +1,8 @@
 {
     "base": {
+        "action": {
+            "open_user_menu": "Open user menu"
+        },
         "beaconchain_homepage": "Beaconchain Homepage",
         "common": {
             "close": "Close",
