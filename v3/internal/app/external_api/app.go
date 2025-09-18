@@ -15,6 +15,7 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/ethereumnetworkrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
@@ -22,22 +23,25 @@ import (
 
 type ApiService struct {
 	model.UnimplementedExternalServiceServer
-	userRepository userrepo.Repository
-	limiter        *limits.Limiter
+	userRepository      userrepo.Repository
+	limiter             *limits.Limiter
+	ethereumNetworkRepo ethereumnetworkrepo.Repository
 }
 
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository userrepo.Repository,
+	ethereumNetworkRepo ethereumnetworkrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
-		userRepository: userRepository,
-		limiter:        limits.NewLimiter(),
+		userRepository:      userRepository,
+		limiter:             limits.NewLimiter(),
+		ethereumNetworkRepo: ethereumNetworkRepo,
 	}, nil
 }
 
-var _ api.ServerInterface = (*ApiService)(nil)
+var _ api.StrictServerInterface = (*ApiService)(nil)
 
 // Run
 // Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
@@ -52,6 +56,7 @@ func Run(
 	dbAPIKeyRepo := &apikeyrepo.DBRepository{}
 	userRepo := &userrepo.CachedRepository{}
 	apiKeyRepo := &apikeyrepo.CachedRepository{}
+	ethereumNetworkRepo := &ethereumnetworkrepo.DBRepository{}
 
 	dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
 
@@ -61,25 +66,30 @@ func Run(
 		dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 		userRepo.Initialize(dataSources.Redis, dbUserRepo)
 		apiKeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
+		ethereumNetworkRepo.Initialize(dataSources.RoChainDb)
 	}()
-	apiService, _ := InitDependencies(userRepo)
+
+	apiService, _ := InitDependencies(userRepo, ethereumNetworkRepo)
 
 	mux := http.NewServeMux()
-	siw := &api.ServerInterfaceWrapper{
-		Handler: apiService,
-		HandlerMiddlewares: []api.MiddlewareFunc{
-			middleware.RecoveryMiddleware(),
-			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, errorHandler),
-		},
+
+	hStrict := api.NewStrictHandlerWithOptions(apiService, nil, api.StrictHTTPServerOptions{
+		ResponseErrorHandlerFunc: errorHandler,
+		RequestErrorHandlerFunc:  errorHandler,
+	})
+
+	h := api.HandlerWithOptions(hStrict, api.StdHTTPServerOptions{
+		BaseRouter:       mux,
 		ErrorHandlerFunc: errorHandler,
-	}
+		Middlewares: []api.MiddlewareFunc{
+			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, errorHandler),
+			middleware.RecoveryMiddleware(),
+		},
+	})
 
 	healthHandler := initHealthHandler(&dataSources)
-
 	mux.HandleFunc("/healthz", healthHandler.ServeHealth)
 	mux.HandleFunc("/readyz", healthHandler.ServeReady)
-
-	h := api.HandlerFromMux(siw, mux)
 	// serveSwaggerStatics(mux)
 
 	go func() {
@@ -127,6 +137,7 @@ func errorHandler(w http.ResponseWriter, r *http.Request, err error) {
 	status := http.StatusInternalServerError
 	msg := common.GenericErrMsg
 
+	// Handle our custom API errors (user facing and internal)
 	var apiErr *common.APIError
 	if errors.As(err, &apiErr) {
 		status = apiErr.Status
@@ -135,7 +146,14 @@ func errorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		}
 		log.WarnWithFields(apiErr.Extras, fmt.Sprintf("API error: %s | Status: %d | Path: %s ", apiErr.Message, apiErr.Status, r.URL.Path))
 	} else {
-		log.Error(fmt.Sprintf("Internal error: %v | Path: %s", err, r.URL.Path))
+		// Bad request errors as thrown by generated server
+		switch e := err.(type) {
+		case *api.InvalidParamFormatError, *api.RequiredParamError:
+			status = http.StatusBadRequest
+			msg = e.Error()
+		default:
+			log.Error(fmt.Sprintf("Internal error: %v | Path: %s", err, r.URL.Path))
+		}
 	}
 
 	w.WriteHeader(status)

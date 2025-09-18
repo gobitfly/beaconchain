@@ -20,6 +20,7 @@ generate-external-api:
 	rm -f api/external-server/external-server.gen.go
 	rm -f api/external-server/external-types.gen.go
 	go get -tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+	go get github.com/oapi-codegen/nullable
 	go generate ./...
 generate-mocks:
 	go install github.com/vektra/mockery/v3@latest

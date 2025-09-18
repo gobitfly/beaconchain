@@ -1,21 +1,12 @@
 package app
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
 
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
 )
 
 // (GET /ping)
-func (ApiService) GetPing(w http.ResponseWriter, r *http.Request) {
-	resp := model.Pong{
-		Ping: "pong",
-	}
-
-	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+func (ApiService) GetPing(ctx context.Context, request model.GetPingRequestObject) (model.GetPingResponseObject, error) {
+	return model.GetPing200JSONResponse(model.Pong{}), nil
 }

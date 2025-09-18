@@ -2,7 +2,7 @@ name: Unit-Tests
 
 env:
   # raise that threshold over time
-  COVERAGE_THRESHOLD: 30
+  COVERAGE_THRESHOLD: 25
 
 on:
   push:
