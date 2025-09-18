@@ -190,6 +190,7 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 		return errors.Wrap(err, "failed to transfer all rolling sources")
 	}
 
+	now = time.Now()
 	// now we swap the tables
 	err = edb.SwapRollingTables(rolling)
 	if err != nil {
