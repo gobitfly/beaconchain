@@ -2360,7 +2360,7 @@ func MarkRollingAsGenerated(rolling Rollings, last_epoch int64) error {
 	if err != nil {
 		return fmt.Errorf("error preparing batch: %w", err)
 	}
-	if err := batch.Append(rolling, last_epoch, time.Now()); err != nil {
+	if err := batch.Append(string(rolling), last_epoch, time.Now()); err != nil {
 		return fmt.Errorf("error appending row to batch: %w", err)
 	}
 	if err := batch.Send(); err != nil {
