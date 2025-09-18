@@ -1,38 +1,11 @@
-import type {
-  InternalGetUserInfoResponse, UserInfo,
-} from '~/types/api/user'
-
-const userStore = defineStore('user-store', () => {
-  const data = ref<null | undefined | UserInfo>()
-  return { data }
-})
-
 export function useUserStore() {
+  const { data } = useUserSession()
   const { fetch } = useCustomFetch()
-  const { data } = storeToRefs(userStore())
   const router = useRouter()
-
-  const setUser = (user?: UserInfo) => {
-    data.value = user
-  }
-
-  async function getUser() {
-    try {
-      const res = await fetch<InternalGetUserInfoResponse>(
-        'USER',
-      )
-      setUser(res.data)
-      return res.data
-    }
-    catch {
-      setUser(undefined)
-      return null
-    }
-  }
 
   const doLogout = async () => {
     await fetch('LOGOUT')
-    setUser(undefined)
+    data.value = undefined
     router.replace('/')
   }
 
@@ -52,7 +25,6 @@ export function useUserStore() {
 
   return {
     doLogout,
-    getUser,
     hasV1Notifications,
     isLoggedIn,
     premium_perks,
