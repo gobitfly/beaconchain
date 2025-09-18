@@ -43,13 +43,17 @@ paths:
     get:
       tags:
         - Validator
-      summary: Returns the APR for a set of validators
+      summary: Returns the APR for a set of validators.
+      description: Must provide either start + end times or epochs. Must provide one of deposit_address, withdrawal_address or validator.
       parameters:
         - $ref: '#/components/parameters/chain'
         - $ref: '#/components/parameters/depositAddress'
         - $ref: '#/components/parameters/withdrawalAddress'
         - $ref: '#/components/parameters/validator'
-        - $ref: '#/components/parameters/timeRangeSelector'
+        - $ref: '#/components/parameters/startTs'
+        - $ref: '#/components/parameters/endTs'
+        - $ref: '#/components/parameters/startEpoch'
+        - $ref: '#/components/parameters/endEpoch'
         - name: calculation_period
           in: query
           required: true
@@ -75,13 +79,17 @@ paths:
     get:
       tags:
         - Validator
-      summary: Returns the cumulative rewards for a set of validators
+      summary: Returns the cumulative rewards for a set of validators.
+      description: Must provide either start + end times or epochs. Must provide one of deposit_address, withdrawal_address or validator.
       parameters:
         - $ref: '#/components/parameters/chain'
         - $ref: '#/components/parameters/depositAddress'
         - $ref: '#/components/parameters/withdrawalAddress'
         - $ref: '#/components/parameters/validator'
-        - $ref: '#/components/parameters/timeRangeSelector'
+        - $ref: '#/components/parameters/startTs'
+        - $ref: '#/components/parameters/endTs'
+        - $ref: '#/components/parameters/startEpoch'
+        - $ref: '#/components/parameters/endEpoch'
       responses:
         "200":
           description: A successful response.
@@ -126,13 +134,17 @@ paths:
     get:
       tags:
         - Validator
-      summary: Returns the beaconscore of a set of validators
+      summary: Returns the beaconscore of a set of validators.
+      description: Must provide either start + end times or epochs. Must provide one of deposit_address, withdrawal_address or validator.
       parameters:
         - $ref: '#/components/parameters/chain'
         - $ref: '#/components/parameters/depositAddress'
         - $ref: '#/components/parameters/withdrawalAddress'
         - $ref: '#/components/parameters/validator'
-        - $ref: '#/components/parameters/timeRangeSelector'
+        - $ref: '#/components/parameters/startTs'
+        - $ref: '#/components/parameters/endTs'
+        - $ref: '#/components/parameters/startEpoch'
+        - $ref: '#/components/parameters/endEpoch'
       responses:
         "200":
           description: A successful response.
@@ -158,6 +170,7 @@ paths:
         - $ref: '#/components/parameters/chain'
         - $ref: '#/components/parameters/cursor'
         - $ref: '#/components/parameters/pageSize'
+        - $ref: '#/components/parameters/epochQuery'
       responses:
         "200":
           description: A successful response.
@@ -251,13 +264,20 @@ paths:
     post:
       tags:
         - Validator
-      summary: Returns a list of the sync committees that validators have participated in
+      summary: Returns details about the validators' sync participation during a specific period
       requestBody:
         $ref: '#/components/requestBodies/validatorsSelector'
       parameters:
         - $ref: '#/components/parameters/chain'
         - $ref: '#/components/parameters/cursor'
         - $ref: '#/components/parameters/pageSize'
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
       responses:
         "200":
           description: A successful response.
@@ -322,8 +342,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/rpc.Status'
 
-  
-  
+
+
   ######## Network endpoints ########
 
   /v2/ethereum/epochs/{epoch}:
@@ -348,7 +368,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/rpc.Status'
 
-  /v2/ethereum/{epoch}/performance-summary:
+  /v2/ethereum/epochs/{epoch}/performance-summary:
     get:
       tags:
         - Network
@@ -628,7 +648,7 @@ paths:
     get:
       tags:
         - Network
-      summary: Returns statistics on general health of the chain
+      summary: Returns statistics on general service health
       parameters:
         - $ref: '#/components/parameters/chain'
       responses:
@@ -637,7 +657,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GetChainHealthResponse'
+                $ref: '#/components/schemas/GetHealthResponse'
         default:
           description: An unexpected error response.
           content:
@@ -649,10 +669,14 @@ paths:
     get:
       tags:
         - Network
-      summary: Returns statistics on chain slashings
+      summary: Returns statistics on chain slashings.
+      description: Must provide either start + end times or epochs.
       parameters:
         - $ref: '#/components/parameters/chain'
-        - $ref: '#/components/parameters/timeRangeSelector'
+        - $ref: '#/components/parameters/startTs'
+        - $ref: '#/components/parameters/endTs'
+        - $ref: '#/components/parameters/startSlot'
+        - $ref: '#/components/parameters/endSlot'
       responses:
         "200":
           description: A successful response.
@@ -667,14 +691,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/rpc.Status'
 
-  /v2/ethereum/performance:
+  /v2/ethereum/performance-summary:
     get:
       tags:
         - Network
-      summary: Returns the network-wide beaconscore over a specified time range
+      summary: Returns the network-wide beaconscore over a specified time range.
+      description: Must provide either start + end times or epochs.
       parameters:
         - $ref: '#/components/parameters/chain'
-        - $ref: '#/components/parameters/timeRangeSelector'
+        - $ref: '#/components/parameters/startTs'
+        - $ref: '#/components/parameters/endTs'
+        - $ref: '#/components/parameters/startEpoch'
+        - $ref: '#/components/parameters/endEpoch'
       responses:
         "200":
           description: A successful response.
@@ -788,20 +816,59 @@ components:
         $ref: '#/components/schemas/ExecutionLayerAddress'
 
     validator:
-      name: validator
+      name: validator_identifier
       in: query
       required: false
       schema:
         $ref: '#/components/schemas/validatorIndexPubkey'
 
-    timeRangeSelector:
-      name: time_range
+    startTs:
+      name: start_time
       in: query
-      required: true
-      style: form
-      explode: true
+      required: false
+      description: Start of the time range (inclusive)
       schema:
-        $ref: '#/components/schemas/timeRangeParam'
+        $ref: '#/components/schemas/timestamp'
+
+    endTs:
+      name: end_time
+      in: query
+      required: false
+      description: End of the time range (inclusive)
+      schema:
+        $ref: '#/components/schemas/timestamp'
+
+    startEpoch:
+      name: start_epoch
+      in: query
+      required: false
+      description: Start of the time range (inclusive)
+      schema:
+        $ref: '#/components/schemas/epochParam'
+
+    endEpoch:
+      name: end_epoch
+      in: query
+      required: false
+      description: End of the time range (inclusive)
+      schema:
+        $ref: '#/components/schemas/slotParam'
+
+    startSlot:
+      name: start_slot
+      in: query
+      required: false
+      description: Start of the time range (inclusive)
+      schema:
+        $ref: '#/components/schemas/slotParam'
+
+    endSlot:
+      name: end_slot
+      in: query
+      required: false
+      description: End of the time range (inclusive)
+      schema:
+        $ref: '#/components/schemas/slotParam'
 
   requestBodies:
     validatorsSelector:
@@ -892,43 +959,9 @@ components:
     ValidatorsByList:
       type: object
       properties:
-        validators:
+        validator_identifiers:
           $ref: '#/components/schemas/validatorIndexPubkeys'
       required: [validators]
-
-    timeRangeParam:
-      description: You must provide either (start + end), (start + duration), or (end + duration).
-      type: object
-      oneOf:
-        - type: object
-          properties:
-            start:
-              $ref: '#/components/schemas/timestampParam'
-            end:
-              $ref: '#/components/schemas/timestampParam'
-          required: [start, end]
-          additionalProperties: false
-        - type: object
-          properties:
-            start:
-              $ref: '#/components/schemas/timestampParam'
-            duration:
-              $ref: '#/components/schemas/durationParam'
-          required: [start, duration]
-          additionalProperties: false
-        - type: object
-          properties:
-            end:
-              $ref: '#/components/schemas/timestampParam'
-            duration:
-              $ref: '#/components/schemas/durationParam'
-          required: [end, duration]
-          additionalProperties: false
-      default:
-        end:
-          latest: true
-        duration:
-          days: 1
 
     epochParam:
       oneOf:
@@ -940,32 +973,15 @@ components:
             - latest
       default: latest
 
-    timestampParam:
-      description: Can be one of `epoch`, `slot`, `block`, `timestamp` or `latest`
-      type: object
-      properties:
-        epoch:
-          type: integer
-          minimum: 0
-        slot:
-          type: integer
-          minimum: 0
-        block:
-          type: integer
-          minimum: 0
-        timestamp:
-          $ref: "#/components/schemas/timestamp"
-        latest:
-          type: boolean
-      additionalProperties: false
+    slotParam:
       oneOf:
-        - required: [epoch]
-        - required: [slot]
-        - required: [block]
-        - required: [timestamp]
-        - required: [latest]
-      default:
-        latest: true
+        - type: integer
+          format: int32
+          minimum: 0
+        - type: string
+          enum:
+            - latest
+      default: latest
 
     durationParam:
       type: object
@@ -1075,7 +1091,7 @@ components:
           type: boolean
         queues:
           $ref: '#/components/schemas/clQueues'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     DutyStatus:
@@ -1126,7 +1142,7 @@ components:
         signature:
           type: string
           format: byte
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetBlockDepositsResponse:
@@ -1211,20 +1227,20 @@ components:
         logs_bloom:
           type: string
           format: byte
+        extra:
+          type: string
+          format: byte
         proof_of_work:
           nullable: true
           type: object
           properties:
-            extra:
-              type: string
-              format: byte
             difficulty:
               type: integer
               format: int64
-            random:
+            nonce:
               type: string
               format: byte
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetBlockWithdrawalsResponse:
@@ -1238,20 +1254,22 @@ components:
           $ref: '#/components/schemas/Paging'
       description: A Response containing basic information about the withdrawals.
 
-    GetChainHealthResponse:
+    GetHealthResponse:
       type: object
       properties:
         data:
-          $ref: '#/components/schemas/GetChainHealthResponse.Data'
-      description: A Response containing basic information about chain health.
+          $ref: '#/components/schemas/GetHealthResponse.Data'
+      description: A Response containing basic information about service health.
 
-    GetChainHealthResponse.Data:
+    GetHealthResponse.Data:
       type: object
       properties:
-        epoch_finality:
+        chain:
           $ref: '#/components/schemas/FinalityDetailed'
-        slot_finality:
+        explorer:
           $ref: '#/components/schemas/FinalityDetailed'
+        on_head:
+          type: boolean
 
     GetEpochResponse:
       type: object
@@ -1275,7 +1293,7 @@ components:
         voluntary_exit_count:
           type: integer
           format: int32
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetDutySummaryResponse:
@@ -1328,7 +1346,7 @@ components:
     GetBlockRewardResponse.Data:
       type: object
       properties:
-        fees:
+        priority_fees:
           $ref: '#/components/schemas/rewardDetails'
         mev:
           allOf:
@@ -1345,7 +1363,7 @@ components:
               $ref: '#/components/schemas/wei'
             uncle_inclusion_reward:
               $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetQueueStatsResponse:
@@ -1367,7 +1385,7 @@ components:
         estimated_clear_time:
           type: integer
           format: int64
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetSlashingsResponse:
@@ -1490,7 +1508,7 @@ components:
           type: string
           format: byte
           nullable: true
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetSlotWithdrawalsResponse:
@@ -1591,7 +1609,7 @@ components:
           format: int32
         status:
           $ref: '#/components/schemas/DutyStatus'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorBalanceResponse:
@@ -1614,7 +1632,7 @@ components:
           $ref: '#/components/schemas/wei'
         effective_balance:
           $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorDepositsResponse:
@@ -1646,8 +1664,8 @@ components:
         signature:
           type: string
           format: byte
-        validity:
-          $ref: '#/components/schemas/Validity'
+        DepositValidity:
+          $ref: '#/components/schemas/DepositValidity'
         type:
           allOf:
             - $ref: '#/components/schemas/GetValidatorDepositsResponse.Type'
@@ -1667,7 +1685,7 @@ components:
               $ref: '#/components/schemas/ExecutionLayerAddressDetails'
             depositor:
               $ref: '#/components/schemas/ExecutionLayerAddressDetails'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorDepositsResponse.RejectReason:
@@ -1730,7 +1748,7 @@ components:
               $ref: '#/components/schemas/wei'
             effective:
               $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorPerformanceDetailedResponse:
@@ -1779,7 +1797,7 @@ components:
           $ref: '#/components/schemas/performance'
         duties:
           $ref: '#/components/schemas/GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties.Duties'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorPerformanceDetailedResponse.ValidatorPerformanceDuties.Duties:
@@ -1899,7 +1917,7 @@ components:
               format: int32
         fees_burned:
           $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorRewardsDetailedResponse:
@@ -1924,9 +1942,7 @@ components:
           $ref: '#/components/schemas/rewardBreakdown'
         proposals:
           $ref: '#/components/schemas/proposalRewards'
-        slashings_penalty:
-          $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     rewardBreakdown:
@@ -1987,8 +2003,6 @@ components:
           $ref: '#/components/schemas/rewardBreakdown'
         proposals:
           $ref: '#/components/schemas/proposalRewards'
-        slashings_penalty:
-          $ref: '#/components/schemas/wei'
         start_epoch:
           type: integer
           format: int64
@@ -2004,9 +2018,15 @@ components:
         data:
           type: array
           items:
-            type: integer
-            format: int32
-          x-sortable: true
+            type: object
+            additionalProperties:
+              type: object
+              additionalProperties:
+                type: boolean
+          example:
+            - 8192: { 0: true, 100: false, 2000: true }
+            - 8193: { 0: true, 100: false, 2000: false }
+            - ...
         paging:
           $ref: '#/components/schemas/Paging'
       description: A Response containing detailed sync committee information of the validators.
@@ -2062,7 +2082,7 @@ components:
               $ref: '#/components/schemas/ExecutionLayerAddressDetails'
             fee:
               $ref: '#/components/schemas/wei'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     GetValidatorWithdrawalsResponse.RejectReason:
@@ -2093,43 +2113,56 @@ components:
         next_cursor:
           type: string
 
-    Validity:
+    DepositValidity:
       type: string
       enum:
         - valid
         - invalid
         - invalid_skipped
 
-    Finality:
+    FinalityDetailed:
+      type: object
+      properties:
+        head:
+          type: object
+          properties:
+            epoch:
+              type: integer
+              format: int32
+              minimum: 0
+            slot:
+              type: integer
+              format: int32
+              minimum: 0
+        justified:
+          type: object
+          properties:
+            epoch:
+              type: integer
+              format: int32
+              minimum: 0
+            slot:
+              type: integer
+              format: int32
+              minimum: 0
+        finalized:
+          type: object
+          properties:
+            epoch:
+              type: integer
+              format: int32
+              minimum: 0
+            slot:
+              type: integer
+              format: int32
+              minimum: 0
+
+    DataRecency:
       type: string
       enum:
         - unjustified
         - justified
         - finalized
-
-    FinalityDetailed:
-      type: object
-      properties:
-        head:
-          type: integer
-          format: int32
-          minimum: 0
-        justified:
-          type: integer
-          format: int32
-          minimum: 0
-        finalized:
-          type: integer
-          format: int32
-          minimum: 0
-
-    DataRecency:
-      type: object
-      properties:
-        epoch_finality:
-          $ref: '#/components/schemas/Finality'
-        slot_finality:
-          $ref: '#/components/schemas/Finality'
 
     Withdrawals:
       type: object
@@ -2153,7 +2186,7 @@ components:
           type: boolean
         queues:
           $ref: '#/components/schemas/clQueues'
-        data_recency:
+        data_references:
           $ref: '#/components/schemas/DataRecency'
 
     rpc.Status:

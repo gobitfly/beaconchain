@@ -30,8 +30,12 @@
             ]
           },
           {
-            "group": "API docs",
+            "group": "V2 API docs",
             "openapi": "api-reference/openapi3.yaml"
+          },
+          {
+            "group": "V1 API docs",
+            "openapi": "api-reference/v1swagger.yaml"
           },
           {
             "group": "Customization",
