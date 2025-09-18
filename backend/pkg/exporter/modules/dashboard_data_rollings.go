@@ -52,16 +52,6 @@ func (d *dashboardData) handleRollings() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to do rollings")
 	}
-	for _, rolling := range rollings {
-		rolling := rolling
-		eg.Go(func() error {
-			return d.swapRollingTables(rolling)
-		})
-	}
-	err = eg.Wait()
-	if err != nil {
-		return errors.Wrap(err, "failed to swap rolling tables")
-	}
 	return nil
 }
 
@@ -87,23 +77,46 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 	}
 	metrics.State.WithLabelValues("dashboard_data_exporter_finished_epoch").Set(float64(finishedEpoch))
 	// if finishedEpoch is not the same as the safeepoch we skip updating the rolling so resyncing after falling back is fast
-	if safeEpoch := d.latestSafeEpoch.Load(); finishedEpoch != safeEpoch {
-		d.log.Infof("skipping rolling %s update, finished epoch %d, safe epoch %d", rolling, finishedEpoch, safeEpoch)
-		return nil
-	}
-	rollingEpoch, err := edb.GetRollingLastEpoch(rolling)
+	/*
+		if safeEpoch := d.latestSafeEpoch.Load(); finishedEpoch != safeEpoch {
+			d.log.Infof("skipping rolling %s update, finished epoch %d, safe epoch %d", rolling, finishedEpoch, safeEpoch)
+			return nil
+		}
+	*/
+
+	// check if we have work to do
+	rollingGenerated, err := edb.CheckIfRollingIsGenerated(rolling, finishedEpoch)
 	if err != nil {
-		return errors.Wrap(err, "failed to get rolling last epoch")
+		return errors.Wrap(err, "failed to check if rolling is generated")
 	}
-	metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_epoch", rolling)).Set(float64(rollingEpoch))
-	if rollingEpoch >= finishedEpoch {
-		d.log.Debugf("rolling %s is up to date", rolling)
+	if rollingGenerated {
+		d.log.Debugf("rolling %s is already generated for epoch %d", rolling, finishedEpoch)
 		return nil
 	}
+
+	// metrics crap
+	defer func() {
+		rollingEpoch, err := edb.GetRollingLastEpoch(rolling)
+		if err != nil {
+			d.log.Error(err, "failed to get rolling last epoch", 0)
+			return
+		}
+		metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_epoch", rolling)).Set(float64(rollingEpoch))
+	}()
 	defer func() {
 		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_overall", rolling)).Observe(time.Since(start).Seconds())
 	}()
-	d.log.Infof("rolling %s is outdated, latest epoch %d, latest finished epoch %d", rolling, rollingEpoch, finishedEpoch)
+
+	// also cleanup crap
+	defer func() {
+		err := edb.NukeUnsafeRollingTable(rolling)
+		if err != nil {
+			d.log.Error(err, "failed to nuke unsafe rolling table", 0)
+		}
+	}()
+
+	//d.log.Infof("rolling %s is outdated, latest epoch %d, latest finished epoch %d", rolling, rollingEpoch, finishedEpoch)
+	d.log.Infof("rolling %s needs generation for epoch %d", rolling, finishedEpoch)
 
 	now := time.Now()
 	// next, nuke the unsafe rolling tables to prepare them for us to fill them
@@ -112,6 +125,7 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 		return errors.Wrap(err, "failed to nuke unsafe rolling table")
 	}
 	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_nuke_unsafe", rolling)).Observe(time.Since(now).Seconds())
+
 	// now we fetch the start & end for each pre-aggregated table we use
 	minTs := utils.EpochToTime(uint64(finishedEpoch)).Add(-rolling.GetDuration())
 	// we also need to add one epoch to the minTs because each epoch timestamp is the start of the epoch
@@ -141,6 +155,7 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_minmax", table)).Observe(time.Since(now).Seconds())
 		metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_minmax", rolling)).Observe(time.Since(now).Seconds())
 	}
+
 	// now the transfer logic for each source
 	eg := errgroup.Group{}
 	eg.SetLimit(int(utils.Config.DashboardExporter.RollingPartsInParallel))
@@ -154,6 +169,10 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 		eg.Go(func() error {
 			d.log.Infof("transferring rolling source %s to rolling %s", source, rolling)
 			now := time.Now()
+			// add caching for bounded source reads that dont change? so hourly read for the 7d can be reused for up to 9 rolling gen, for example
+			// daily could be reused for up to a day for >90d rollings
+			// basically if a min and max is defined it can be cached
+			// ye we should really be doing this
 			err := edb.TransferRollingSourceToRolling(rolling, source, *minmax)
 			if err != nil {
 				return errors.Wrap(err, "failed to transfer rolling source to rolling")
@@ -170,28 +189,21 @@ func (d *dashboardData) fillUnsafeRolling(rolling edb.Rollings) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer all rolling sources")
 	}
-	return nil
-}
 
-func (d *dashboardData) swapRollingTables(rolling edb.Rollings) error {
-	now := time.Now()
-	// swap or not, we want unsafe clean so clickhouse doesnt waste compute on it. if it fails the next attempt would nuke it at startup anyways
-	defer func() {
-		err := edb.NukeUnsafeRollingTable(rolling)
-		if err != nil {
-			d.log.Error(err, "failed to nuke unsafe rolling table", 0)
-		}
-	}()
-	err := edb.SwapRollingTables(rolling)
+	// now we swap the tables
+	err = edb.SwapRollingTables(rolling)
 	if err != nil {
 		return errors.Wrap(err, "failed to swap rolling tables")
 	}
-	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_swap", rolling)).Observe(time.Since(now).Seconds()) // update metric after run
+	metrics.TaskDuration.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_swap", rolling)).Observe(time.Since(now).Seconds())
 
-	rollingEpoch, err := edb.GetRollingLastEpoch(rolling)
+	// mark rolling as generated for this epoch
+	err = edb.MarkRollingAsGenerated(rolling, finishedEpoch)
 	if err != nil {
-		d.log.Error(err, "failed to get rolling last epoch", 0)
+		return errors.Wrap(err, "failed to mark rolling as generated")
 	}
-	metrics.State.WithLabelValues(fmt.Sprintf("dashboard_data_exporter_rolling_%s_epoch", rolling)).Set(float64(rollingEpoch))
+
+	d.log.Infof("completed rolling %s generation for epoch %d in %s", rolling, finishedEpoch, time.Since(start))
+
 	return nil
 }

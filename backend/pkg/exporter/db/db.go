@@ -2331,8 +2331,47 @@ func CheckIfAggregateIsBotchedEpochStart(a AggregateType, t []AggregateBackfillM
 	return is_dirty, nil
 }
 
+func CheckIfRollingIsGenerated(rolling Rollings, last_epoch int64) (bool, error) {
+	var exists bool
+	q := goqu.Dialect("postgres").Select(
+		goqu.COUNT(goqu.Star()).Gt(0).As("exists"),
+	).
+		From(goqu.T(ExporterRollingMetadataTableName)).
+		Where(
+			goqu.I("rolling_name").Eq(string(rolling)),
+			goqu.I("last_epoch").Gte(last_epoch),
+		)
+	sql, args, err := q.Prepared(true).ToSQL()
+	if err != nil {
+		return false, fmt.Errorf("error building query to check if rolling is generated: %w", err)
+	}
+
+	err = db.ClickHouseWriter.Get(&exists, sql, args...)
+	if err != nil {
+		return false, fmt.Errorf("error checking if rolling is generated: %w", err)
+	}
+	return exists, nil
+}
+
+func MarkRollingAsGenerated(rolling Rollings, last_epoch int64) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	batch, err := db.ClickHouseNativeWriter.PrepareBatch(ctx, `INSERT INTO `+ExporterRollingMetadataTableName)
+	if err != nil {
+		return fmt.Errorf("error preparing batch: %w", err)
+	}
+	if err := batch.Append(rolling, last_epoch); err != nil {
+		return fmt.Errorf("error appending row to batch: %w", err)
+	}
+	if err := batch.Send(); err != nil {
+		return fmt.Errorf("error sending batch: %w", err)
+	}
+	return nil
+}
+
 const ExporterMetadataTableName = "_exporter_metadata" // look i hate metadata tables as much as the next guy but this is a necessary evil
 const ExporterBackfillMetadataTableName = "_exporter_backfill_metadata"
+const ExporterRollingMetadataTableName = "_exporter_rolling_metadata"
 const ExporterAggregateBackfillMetadataTableName = "_exporter_aggregate_backfill_metadata"
 const EpochWriterSink = "_insert_sink_validator_dashboard_data_epoch"
 const BackfillRoiSink = "_insert_sink_backfill_validator_dashboard_data_roi"
