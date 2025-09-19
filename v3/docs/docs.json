@@ -35,7 +35,138 @@
           },
           {
             "group": "V1 API docs",
-            "openapi": "api-reference/v1swagger.yaml"
+            "openapi": "api-reference/v1swagger.yaml",
+            "pages": [
+              "v1/introduction",
+              {
+                "group": "Consensus Layer",
+                "expanded": true,
+                "pages": [
+                  {
+                    "group": "Epochs",
+                    "pages": [
+                      "GET /api/v1/epoch/{epoch}",
+                      "GET /api/v1/epoch/{epoch}/slots"
+                    ]
+                  },
+                  {
+                    "group": "Slots",
+                    "pages": [
+                      "GET /api/v1/slot/{slot}/attestations",
+                      "GET /api/v1/slot/{slot}/attesterslashings",
+                      "GET /api/v1/slot/{slot}/deposits",
+                      "GET /api/v1/slot/{slot}/proposerslashings",
+                      "GET /api/v1/slot/{slot}/voluntaryexits",
+                      "GET /api/v1/slot/{slot}/withdrawals",
+                      "GET /api/v1/slot/{slotOrHash}"
+                    ]
+                  },
+                  {
+                    "group": "Validators",
+                    "pages": [
+                      "GET /api/v1/rocketpool/validator/{indexOrPubkey}",
+                      "POST /api/v1/validator",
+                      "GET /api/v1/validator/{indexOrPubkey}",
+                      "GET /api/v1/validator/{indexOrPubkey}/attestationefficiency",
+                      "GET /api/v1/validator/{indexOrPubkey}/attestations",
+                      "GET /api/v1/validator/{indexOrPubkey}/balancehistory",
+                      "GET /api/v1/validator/{indexOrPubkey}/blsChange",
+                      "GET /api/v1/validator/{indexOrPubkey}/deposits",
+                      "GET /api/v1/validator/{indexOrPubkey}/incomedetailhistory",
+                      "GET /api/v1/validator/{indexOrPubkey}/proposals",
+                      "GET /api/v1/validator/{indexOrPubkey}/withdrawals",
+                      "GET /api/v1/validator/eth1/{eth1address}",
+                      "GET /api/v1/validator/stats/{index}",
+                      "GET /api/v1/validator/withdrawalCredentials/{withdrawalCredentialsOrEth1address}",
+                      "GET /api/v1/validators/proposalLuck",
+                      "GET /api/v1/validators/queue"
+                    ]
+                  },
+                  {
+                    "group": "Rewards",
+                    "pages": [
+                      "GET /api/v1/validator/{indexOrPubkey}/execution/performance",
+                      "GET /api/v1/validator/{indexOrPubkey}/performance",
+                      "GET /api/v1/validator/leaderboard"
+                    ]
+                  },
+                  {
+                    "group": "Symc Committees",
+                    "pages": [
+                      "GET /api/v1/sync_committee/{period}"
+                    ]
+                  },
+                  {
+                    "group": "Rocketpool",
+                    "pages": [
+                      "GET /api/v1/rocketpool/stats"
+                    ]
+                  },
+                  {
+                    "group": "ETH.Store®",
+                    "pages": [
+                      "GET /api/v1/ethstore/{day}"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Execution Layer",
+                "pages": [
+                  {
+                    "group": "Blocks",
+                    "pages": [
+                      "GET /api/v1/execution/{addressIndexOrPubkey}/produced",
+                      "GET /api/v1/execution/block/{blockNumber}"
+                    ]
+                  },
+                  {
+                    "group": "Addresses",
+                    "pages": [
+                      "GET /api/v1/execution/address/{address}",
+                      "GET /api/v1/execution/address/{address}/erc20tokens"
+                    ]
+                  },
+                  {
+                    "group": "Gas",
+                    "pages": [
+                      "GET /api/v1/execution/gasnow"
+                    ]
+                  },
+                  {
+                    "group": "Network",
+                    "pages": [
+                      "GET /api/v1/latestState"
+                    ]
+                  },
+                  {
+                    "group": "User",
+                    "pages": [
+                      "POST /api/v1/client/metrics",
+                      "POST /api/v1/mobile/notify/register",
+                      "POST /api/v1/user/dashboard/remove",
+                      "POST /api/v1/user/dashboard/save",
+                      "GET /api/v1/user/mobile/settings",
+                      "POST /api/v1/user/mobile/settings",
+                      "POST /api/v1/user/notifications",
+                      "GET /api/v1/user/stats/{offset}/{limit}",
+                      "POST /api/v1/user/token",
+                      "POST /api/v1/user/validator/{pubkey}/add",
+                      "POST /api/v1/user/validator/{pubkey}/remove",
+                      "GET /api/v1/user/validator/saved"
+                    ]
+                  },                  {
+                    "group": "Misc",
+                    "pages": [
+                      "GET /api/healthz",
+                      "GET /api/healthz-loadbalancer",
+                      "GET /api/v1/chart/{chart}",
+                      "GET /api/v1/graffitiwall"
+                    ]
+                  }
+                ]
+              }
+            ]
           },
           {
             "group": "Customization",
@@ -65,7 +196,9 @@
       },
       {
         "tab": "Hello World",
-        "pages": ["hello-world"]
+        "pages": [
+          "hello-world"
+        ]
       }
     ],
     "global": {
@@ -88,7 +221,6 @@
       ]
     }
   },
-
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
