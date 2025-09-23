@@ -556,12 +556,12 @@ func (h *HandlerService) PublicPostValidatorDashboardValidators(w http.ResponseW
 	var requestedValidators []types.VDBValidator
 	switch {
 	case req.Validators != nil:
-		requestedValidators, _ = v.checkValidators(req.Validators, forbidEmpty)
+		requestedIndices, requestedPublicKeys := v.checkValidators(req.Validators, forbidEmpty)
 		if err = v.AsError(); err != nil {
 			handleErr(w, r, err)
 			return
 		}
-		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, requestedValidators, nil)
+		requestedValidators, err = h.getDataAccessor(ctx).GetValidatorsFromSlices(ctx, requestedIndices, requestedPublicKeys)
 
 	case req.DepositAddress != "":
 		requestedValidators, err = h.getValidatorDashboardValidators(r, req.DepositAddress, "deposit_address", types.ReEthereumAddress, h.getDataAccessor(ctx).GetValidatorsByDepositAddress)
