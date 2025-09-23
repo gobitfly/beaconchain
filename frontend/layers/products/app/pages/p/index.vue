@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 
+useHead({
+  bodyAttrs: {
+    'data-theme': 'dark',
+  },
+})
+
 const isOpen = ref(false)
 const { t: $t } = useTranslation()
 const id = {
