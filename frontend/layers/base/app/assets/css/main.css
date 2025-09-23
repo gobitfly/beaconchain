@@ -59,8 +59,8 @@
   --font-weight-semibold: 600;
   
   --radius-xl: .75rem; /* 12px */
-  --radius-7xl: 1.5rem; /* 12px */
-  --radius-full: 2rem;
+  --radius-4xl: 1.5rem; /* 24px */
+  --radius-full: 2rem; /* 32px */
 
   --spacing-unset: unset;
   --spacing-xs: .25rem; /* 4px */

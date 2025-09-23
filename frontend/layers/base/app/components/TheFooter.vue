@@ -44,7 +44,7 @@ const resourceLinks: Link[] = [
 
 <template>
   <div
-    class="bg-gray-50 dark:bg-gray-950 flex flex-col gap-3xl sm:gap-5xl pt-3xl px-xl pb-7xl sm:px-5xl sm:py-7xl sm:rounded-7xl max-w-container-sm sm:mx-xl sm:mb-xl"
+    class="bg-gray-50 dark:bg-gray-950 flex flex-col gap-3xl sm:gap-5xl pt-3xl px-xl pb-7xl sm:px-5xl sm:py-7xl sm:rounded-4xl max-w-container-sm sm:mx-xl sm:mb-xl"
   >
     <NuxtLink
       to="/"
