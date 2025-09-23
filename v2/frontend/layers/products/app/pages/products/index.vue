@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 
+useHead({
+  bodyAttrs: {
+    // enforcing dark mode as light mode is not ready yet
+    'data-theme': 'dark',
+  },
+})
+
 const isOpen = ref(false)
 const { t: $t } = useTranslation()
 const id = {
@@ -26,7 +33,6 @@ const items: BaseNavigationItem[] = [
   },
 ]
 const navigationLeft = useTemplateRef<HTMLDialogElement>('navigationLeft')
-const { navigateToV1Login } = useV1Login()
 </script>
 
 <template>
@@ -67,7 +73,6 @@ const { navigateToV1Login } = useV1Login()
           is="h2"
           :id="id.explorer"
           size="lg"
-          class=""
         >
           {{ $t('products.landing_page.explorer.title') }}
         </BaseHeading>
@@ -77,7 +82,7 @@ const { navigateToV1Login } = useV1Login()
           trailing-icon="arrow-up-right"
           variant="branded"
           size="xl"
-          @click="navigateToV1Login"
+          to="/"
         >
           {{ $t('products.landing_page.explorer.action.go_to_explorer') }}
         </BaseButton>

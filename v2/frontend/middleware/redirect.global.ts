@@ -40,6 +40,7 @@ export default function ({
       return redirectToV1('/mobile')
     case 'p':
     case 'product':
+    case 'products':
       if (!has('feature-product-landing')) {
         return abortNavigation()
       }
