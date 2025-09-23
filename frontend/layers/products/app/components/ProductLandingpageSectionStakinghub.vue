@@ -1,6 +1,4 @@
 <script setup lang="ts">
-const { url } = useV1Login()
-
 const videoRef = useTemplateRef('videoRef')
 
 const playVideo = async () => {
@@ -54,7 +52,7 @@ onUnmounted(() => {
       trailing-icon="arrow-up-right"
       variant="branded"
       size="xl"
-      :to="url"
+      to="/products/stakinghub"
     >
       {{ $t('products.landing_page.staking_hub.action.go_to_stakinghub') }}
     </BaseButton>

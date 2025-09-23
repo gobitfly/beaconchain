@@ -31,7 +31,7 @@ const resourceLinks: Link[] = [
     href: 'https://shop.beaconcha.in/#!/', icon: 'shirt', text: $t('base.footer.resources.links.swag_shop'),
   },
   {
-    href: '/p/api/pricing', icon: 'code', text: $t('base.footer.resources.links.api_pricing'),
+    href: '/products/pricing', icon: 'code', text: $t('base.footer.resources.links.api_pricing'),
   },
   {
     href: '/contact', icon: 'mail-up', text: $t('base.footer.resources.links.contact_sales'),
