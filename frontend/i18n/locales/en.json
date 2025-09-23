@@ -1187,6 +1187,8 @@
                 "description": "Stay ahead of your validators—get alerts for validator duties, and monitor their performance in real time.",
                 "title": "Comprehensive staking insights on"
             },
+            "testimonials": {
+                "title": "Trusted By"
             }
         },
         "staking_hub": "StakingHub"
