@@ -1160,7 +1160,33 @@
                 "title": "Explore Transactions & Validator Staking on"
             },
             "staking_hub": {
+                "action": {
+                    "go_to_stakinghub": "Go to StakingHub"
+                },
+                "cards": {
+                    "notifications": {
+                        "action": "Set up Notifications",
+                        "description": "Set up alerts for what matters most — downtime, missed duties, rewards, and more. Get notified via email, push, or webhook, wherever you are.",
+                        "subtitle": "Never miss a validator event again",
+                        "title": "Notifications"
+                    },
+                    "staking_mobile_app": {
+                        "action-download-appstore": "Download the Beaconchain Dashboard App on the App Store",
+                        "action-download-playstore": "Download the Beaconchain Dashboard App on Play Store",
+                        "description": "Let us help you with that.Easily check on your validators with our Beaconchain Dashboard app. Wherever you are, whenever you want.",
+                        "subtitle": "Keeping the network secure is hard",
+                        "title": "Staking Mobile App"
+                    },
+                    "validator_dashboards": {
+                        "action": "Create your Dashboard",
+                        "description": "Let us make it simple. Add your validators to a personal dashboard and get clear insights into rewards, attestations, and missed duties — all in one place.",
+                        "subtitle": "Keeping track of your validators performance is tricky",
+                        "title": "Validator Dashboards"
+                    }
+                },
+                "description": "Stay ahead of your validators—get alerts for validator duties, and monitor their performance in real time.",
                 "title": "Comprehensive staking insights on"
+            },
             }
         },
         "staking_hub": "StakingHub"

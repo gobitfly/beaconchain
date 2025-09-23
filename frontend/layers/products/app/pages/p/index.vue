@@ -6,7 +6,7 @@ const { t: $t } = useTranslation()
 const id = {
   api: 'api',
   explorer: 'explorer',
-  stackingHub: 'stacking-hub',
+  stakingHub: 'staking-hub',
 }
 const items: BaseNavigationItem[] = [
   {
@@ -17,7 +17,7 @@ const items: BaseNavigationItem[] = [
   {
     icon: 'coins',
     label: $t('products.staking_hub'),
-    to: `#${id.stackingHub}`,
+    to: `#${id.stakingHub}`,
   },
   {
     icon: 'compass',
@@ -57,16 +57,11 @@ const { navigateToV1Login } = useV1Login()
           {{ $t('products.landing_page.api.title') }}
         </h2>
       </section>
-      <section class="mt-11xl p-md">
-        <h2
-          :id="id.stackingHub"
-          class="text-center "
-        >
-          {{ $t('products.landing_page.stacking_hub.title') }}
-        </h2>
-      </section>
-      <section
-        class="flex flex-col gap-4xl justify-center items-center mt-11xl text-center max-w-24xl mx-auto background-image p-md"
+      <ProductLandingpageSection>
+        <ProductLandingpageSectionStakinghub />
+      </ProductLandingpageSection>
+      <ProductLandingpageSection
+        class="background-image"
       >
         <BaseHeading
           is="h2"
@@ -164,7 +159,7 @@ const { navigateToV1Login } = useV1Login()
             </BaseText>
           </span>
         </div>
-      </section>
+      </ProductLandingpageSection>
     </NuxtLayout>
   </div>
 </template>

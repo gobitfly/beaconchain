@@ -13,7 +13,7 @@
 
   --breakpoint-sm: 40rem; /* 640px */
   --breakpoint-md: 48rem; /* 768px */
-  /* --breakpoint-lg: 64rem; */
+  --breakpoint-lg: 64rem; /* 1024px */
   /* --breakpoint-xl: 80rem; */
   /* --breakpoint-2xl: 96rem; */
 
@@ -55,6 +55,7 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   --font-urbanist: "Urbanist", sans-serif;
+  --font-weight-bold: 700;
   --font-weight-semibold: 600;
   
   --radius-xl: .75rem; /* 12px */
@@ -86,7 +87,8 @@
   --text-md--line-height: 1.5rem; /* 24px */
   --text-lg: 1.125rem; /* 18px */
   --text-lg--line-height: 1.75rem; /* 28px */
-
+  --text-xl: 1.25rem; /* 20px */
+  --text-xl--line-height: 1.5rem; /* 24px */
   --text-2xl: 1.5rem ; /* 24px */
   --text-2xl--line-height: 2rem; /* 32px */
 

@@ -27,7 +27,6 @@ export default defineNuxtConfig({
   icon: {
     mode: 'css',
     cssLayer: 'base',
-    size: '1.25rem',
     localApiEndpoint: '/api/bff/_nuxt_icon',
   },
   /* eslint-enable perfectionist/sort-objects */
