@@ -3,9 +3,12 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/getkin/kin-openapi/routers/gorillamux"
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
 	"github.com/gobitfly/beaconchain-backend/internal/app/apputils"
 	"github.com/gobitfly/beaconchain-backend/internal/app/external_api/middleware"
@@ -15,8 +18,10 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/ethereumnetworkrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
+	"github.com/gobitfly/beaconchain-backend/internal/ratelimit"
 	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 )
 
@@ -76,20 +81,27 @@ func Run(
 		RequestErrorHandlerFunc:  apputils.ErrorHandler,
 	})
 
-	h := model.HandlerWithOptions(hStrict, model.StdHTTPServerOptions{
-		BaseRouter:       mux,
-		ErrorHandlerFunc: apputils.ErrorHandler,
-		Middlewares: []model.MiddlewareFunc{
-			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, apputils.ErrorHandler),
-			httpmiddleware.RecoveryMiddleware(),
-		},
-	})
-
 	// configure validation middleware
 	spec, err := model.GetSwagger()
 	if err != nil {
 		log.Fatalf("Failed to load OpenAPI spec: %v", err)
 	}
+
+	rateLimits, err := buildEndpointRateLimitsMap(spec)
+	if err != nil {
+		log.Fatalf("failed to build endpoint rate limit map: %v", err)
+	}
+
+	h := model.HandlerWithOptions(hStrict, model.StdHTTPServerOptions{
+		BaseRouter:       mux,
+		ErrorHandlerFunc: apputils.ErrorHandler,
+		Middlewares: []model.MiddlewareFunc{
+			ratelimit.Middleware(dataSources.Redis, getEndpointRateLimit(spec, rateLimits), apputils.ErrorHandler),
+			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, apputils.ErrorHandler),
+			httpmiddleware.RecoveryMiddleware(),
+		},
+	})
+
 	validationMiddleware := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		ErrorHandlerWithOpts: apputils.ValidationErrorHandler,
 		Options: openapi3filter.Options{
@@ -132,34 +144,65 @@ func Run(
 // 		http.ServeFile(w, r, "./api/gen/api_service/v1/external.swagger.json")
 // 	})
 
-// 	// mount the Swagger UI that uses the OpenAPI specification path above
-// 	mux.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.Dir("./web/swagger-ui"))))
-// }
+type endpointRateLimitKey struct {
+	operationID string
+	tier        domain.Tier
+}
 
-// getEndpointRatelimit retrieves the rate limit for a specific endpoint and tier from the protobuf definition for the ExternalService.
-// func getEndpointRatelimit(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
-// 	service := model.File_api_service_v1_external_proto.Services().ByName("ExternalService")
-// 	methodName := strings.TrimPrefix(fullMethod, "/"+string(service.FullName())+"/")
-// 	method := service.Methods().ByName(protoreflect.Name(methodName))
-// 	if fullMethod == "/grpc.health.v1.Health/Check" || fullMethod == "/grpc.health.v1.Health/List" || fullMethod == "/grpc.health.v1.Health/Watch" {
-// 		return nil, nil
-// 	}
-// 	if method == nil {
-// 		return nil, fmt.Errorf("method not found: %s", methodName)
-// 	}
-// 	ratelimitOpts := proto.GetExtension(method.Options(), model.E_RateLimitsPerTier).(*model.RateLimitsPerTier)
-// 	if ratelimitOpts == nil {
-// 		return nil, fmt.Errorf("rate limit options not found for method: %s", methodName)
-// 	}
-// 	switch tier {
-// 	case domain.TierFree:
-// 		return ratelimitOpts.Free, nil
-// 	case domain.TierHobbyist:
-// 		return ratelimitOpts.Hobbyist, nil
-// 	case domain.TierBusiness:
-// 		return ratelimitOpts.Business, nil
-// 	case domain.TierScale:
-// 		return ratelimitOpts.Scale, nil
-// 	}
-// 	return nil, fmt.Errorf("unknown subscription tier: %s", tier)
-// }
+// buildEndpointRateLimitsMap builds a map of endpoint rate limits from the OpenAPI spec.
+func buildEndpointRateLimitsMap(spec *openapi3.T) (map[endpointRateLimitKey]domain.RateLimitSettings, error) {
+	endpointRateLimits := make(map[endpointRateLimitKey]domain.RateLimitSettings)
+	for _, pathItem := range spec.Paths.Map() {
+		for _, operation := range pathItem.Operations() {
+			extensions, ok := operation.Extensions["x-ratelimits"].(map[string]any)
+			if !ok {
+				continue // no rate limit defined
+			}
+			for tierName, tierInfo := range extensions {
+				// put all existing tier settings into the map
+				operationID := operation.OperationID
+				if operationID == "" {
+					return nil, fmt.Errorf("operationID is empty for endpoint with rate limit settings")
+				}
+				steadyRate, ok := tierInfo.(map[string]any)["steady_rate"].(float64)
+				if !ok {
+					return nil, fmt.Errorf("invalid steady_rate for tier %s in endpoint %s", tierName, operation.OperationID)
+				}
+				bucketCapacity, ok := tierInfo.(map[string]any)["bucket_capacity"].(float64)
+				if !ok {
+					return nil, fmt.Errorf("invalid bucket_capacity for tier %s in endpoint %s", tierName, operation.OperationID)
+				}
+
+				endpointRateLimits[endpointRateLimitKey{
+					operationID: operationID,
+					tier:        domain.Tier(strings.ToUpper(tierName)),
+				}] = domain.RateLimitSettings{
+					SteadyRate:     float32(steadyRate),
+					BucketCapacity: int(bucketCapacity),
+				}
+			}
+		}
+	}
+	return endpointRateLimits, nil
+}
+
+// getEndpointRateLimit returns a func that retrieves the rate limit for a specific endpoint and tier from the OpenAPI spec.
+func getEndpointRateLimit(spec *openapi3.T, rateLimits map[endpointRateLimitKey]domain.RateLimitSettings) ratelimit.GetEndpointSettingsFunc {
+	// router finds the operationID from the request
+	router, err := gorillamux.NewRouter(spec)
+	if err != nil {
+		log.Fatalf("failed to create router for rate limit middleware: %v", err)
+	}
+	return func(r *http.Request, tier domain.Tier) (string, *domain.RateLimitSettings) {
+		route, _, _ := router.FindRoute(r)
+		operationID := route.Operation.OperationID
+		settings, ok := rateLimits[endpointRateLimitKey{
+			operationID: operationID,
+			tier:        tier,
+		}]
+		if !ok {
+			return operationID, nil // no rate limit defined, middleware will apply global default
+		}
+		return operationID, &settings
+	}
+}

@@ -6,12 +6,7 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 )
 
-type RateLimitSettings struct {
-	SteadyRate     float32
-	BucketCapacity int
-}
-
-var rateLimits = map[domain.Tier]*RateLimitSettings{
+var rateLimits = map[domain.Tier]domain.RateLimitSettings{
 	domain.TierFree: {
 		SteadyRate:     0.5,
 		BucketCapacity: 3,
@@ -30,6 +25,6 @@ var rateLimits = map[domain.Tier]*RateLimitSettings{
 	},
 }
 
-func (s *Limiter) GetRateLimit(ctx context.Context, user domain.User) (*RateLimitSettings, error) {
+func (s *Limiter) GetRateLimit(ctx context.Context, user domain.User) (domain.RateLimitSettings, error) {
 	return getLimitGeneric(user, rateLimits)
 }

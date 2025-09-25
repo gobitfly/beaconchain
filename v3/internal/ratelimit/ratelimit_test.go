@@ -3,18 +3,17 @@ package ratelimit
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
-
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
 )
 
 // ------------------------------------------------
@@ -166,7 +165,7 @@ func TestIsWithinRateLimit_DifferentCallersDoNotShareBuckets(t *testing.T) {
 func TestIsWithinRateLimit_FailsOpen(t *testing.T) {
 	ctx, _, client, script := rateLimitTestSetup(t)
 	now := time.Now()
-	testRateLimit := &limits.RateLimitSettings{
+	testRateLimit := domain.RateLimitSettings{
 		BucketCapacity: 1,
 		SteadyRate:     1,
 	}
@@ -187,7 +186,7 @@ func TestIsWithinRateLimit_SetsExpirationCorrectly(t *testing.T) {
 	ctx, mr, client, script := rateLimitTestSetup(t)
 
 	now := time.Now()
-	testRateLimit := &limits.RateLimitSettings{
+	testRateLimit := domain.RateLimitSettings{
 		BucketCapacity: 10,
 		SteadyRate:     0.1,
 	}
@@ -215,11 +214,11 @@ func TestIsWithinRateLimit_SetsExpirationCorrectlyForMultipleEndpoints(t *testin
 	ctx, mr, client, script := rateLimitTestSetup(t)
 
 	now := time.Now()
-	testRateLimitA := &limits.RateLimitSettings{
+	testRateLimitA := domain.RateLimitSettings{
 		BucketCapacity: 10,
 		SteadyRate:     0.1,
 	}
-	testRateLimitB := &limits.RateLimitSettings{
+	testRateLimitB := domain.RateLimitSettings{
 		BucketCapacity: testRateLimitA.BucketCapacity,
 		SteadyRate:     testRateLimitA.SteadyRate / 10, // lower steady rate should refill slower -> higher TTL
 	}
@@ -277,10 +276,6 @@ func TestCalcRefillInterval(t *testing.T) {
 // ------------------------------------------------
 // Tests for GetRateLimitMiddleware
 
-var testHandler = func(_ context.Context, _ any) (any, error) {
-	return "ok", nil
-}
-
 type testScripterStub struct {
 	isRequestAllowed bool
 }
@@ -309,75 +304,98 @@ func (s *testScripterStub) ScriptLoad(ctx context.Context, script string) *redis
 
 var _ redis.Scripter = (*testScripterStub)(nil) // Ensure testScripterStub implements redis.Scripter
 
-func testGetEndpointRatelinit(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
-	return &limits.RateLimitSettings{
+func testGetEndpointRateLimit(r *http.Request, tier domain.Tier) (operationID string, settings *domain.RateLimitSettings) {
+	return "testOperationID", &domain.RateLimitSettings{
 		BucketCapacity: 5,
 		SteadyRate:     1,
-	}, nil
+	}
 }
 
-var testServerInfo = &grpc.UnaryServerInfo{}
 var testUser = domain.User{
 	ID:               123,
 	SubscriptionTier: domain.TierFree,
 }
 
+func testErrorHandler(t *testing.T) func(w http.ResponseWriter, r *http.Request, err error) {
+	return func(w http.ResponseWriter, r *http.Request, err error) {
+		t.Helper()
+		assert.Error(t, err)
+		if apiErr, ok := err.(*common.APIError); ok {
+			http.Error(w, apiErr.Message, apiErr.Status)
+			return
+		}
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+	}
+}
+
+var okHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("OK"))
+}
+
 func TestGetRateLimitMiddleware_SuccessWithUserInContext(t *testing.T) {
 	scripter := newTestScripterStub(true /* isRequestAllowed */)
-	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+	middleware := Middleware(scripter, testGetEndpointRateLimit, testErrorHandler(t))
 
 	ctx := auth.SetUserInContext(context.Background(), testUser)
 
-	response, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.NoError(t, err)
-	assert.Equal(t, "ok", response)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/test-endpoint", nil)
+	assert.NoError(t, err, "Expected to create HTTP request without error")
+
+	rr := httptest.NewRecorder()
+	handler := middleware(okHandler)
+
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusOK, rr.Code, "Expected request to be allowed by rate limit middleware")
 }
 
 func TestGetRateLimitMiddleware_SuccessfulRatelimit(t *testing.T) {
 	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+	middleware := Middleware(scripter, testGetEndpointRateLimit, testErrorHandler(t))
 
 	ctx := auth.SetUserInContext(context.Background(), testUser)
 
-	_, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.Error(t, err)
-	assert.Equal(t, common.Code(err), http.StatusTooManyRequests)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/test-endpoint", nil)
+	assert.NoError(t, err, "Expected to create HTTP request without error")
+
+	rr := httptest.NewRecorder()
+	handler := middleware(okHandler)
+
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code, "Expected request to be blocked by rate limit middleware")
 }
 
 func TestGetRateLimitMiddleware_ErrorWithoutUserInContext(t *testing.T) {
 	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	middleware := GetRateLimitMiddleware(scripter, testGetEndpointRatelinit)
+	middleware := Middleware(scripter, testGetEndpointRateLimit, testErrorHandler(t))
 
 	ctx := context.Background()
 
-	_, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.Error(t, err)
-	assert.Equal(t, common.Code(err), http.StatusInternalServerError)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/test-endpoint", nil)
+	assert.NoError(t, err, "Expected to create HTTP request without error")
+
+	rr := httptest.NewRecorder()
+	handler := middleware(okHandler)
+
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusInternalServerError, rr.Code, "Expected request to fail due to missing user in context")
 }
 
 func TestGetRateLimitMiddleware_SuccessWithNilRatelimitOpts(t *testing.T) {
 	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
-		return nil, nil // should cause fallback to global ratelimit
+	getRatelimitOpts := func(r *http.Request, tier domain.Tier) (operationID string, settings *domain.RateLimitSettings) {
+		return "test", nil // should cause fallback to global ratelimit
 	}
-	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
+	middleware := Middleware(scripter, getRatelimitOpts, testErrorHandler(t))
 
 	ctx := auth.SetUserInContext(context.Background(), testUser)
 
-	_, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.Error(t, err)
-	assert.Equal(t, common.Code(err), http.StatusTooManyRequests)
-}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "/test-endpoint", nil)
+	assert.NoError(t, err, "Expected to create HTTP request without error")
 
-func TestGetRateLimitMiddleware_ErrorRateLimitOpts(t *testing.T) {
-	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
-		return nil, common.NewAPIInternalError(http.StatusInternalServerError, "test error getting ratelimit opts")
-	}
-	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
+	rr := httptest.NewRecorder()
+	handler := middleware(okHandler)
 
-	ctx := auth.SetUserInContext(context.Background(), testUser)
-
-	_, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.Equal(t, common.Code(err), http.StatusInternalServerError)
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusTooManyRequests, rr.Code, "Expected request to be blocked by global rate limit")
 }

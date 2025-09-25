@@ -8,3 +8,8 @@ const (
 	TierBusiness Tier = "BUSINESS"
 	TierScale    Tier = "SCALE"
 )
+
+type RateLimitSettings struct {
+	SteadyRate     float32
+	BucketCapacity int
+}

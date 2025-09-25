@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -14,7 +15,6 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/shopspring/decimal"
-	"google.golang.org/grpc"
 
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 )
@@ -22,40 +22,51 @@ import (
 //go:embed ratelimit_script.lua
 var scriptStr string
 
-// GetRateLimitMiddleware returns a gRPC middleware that applies rate limiting based on the caller's tier and endpoint.
-// The service must pass a function to get the rate limit settings for a specific endpoint and tier.
-func GetRateLimitMiddleware(client redis.Scripter, getEndpointRatelimit func(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error)) grpc.UnaryServerInterceptor {
+// GetEndpointSettingsFunc extracts rate limit configuration from HTTP request.
+type GetEndpointSettingsFunc func(request *http.Request, tier domain.Tier) (operationID string, settings *domain.RateLimitSettings)
+
+// Middleware returns an HTTP middleware that applies rate limiting based on the caller's tier and endpoint.
+// The service must pass a function to get the rate limit settings for a specific endpoint through the HTTP request.
+// If `getEndpointSettings` returns a nil value for the settings, the global rate limit is applied to that endpoint.
+func Middleware(client redis.Scripter, getEndpointSettings GetEndpointSettingsFunc, errorHandler func(w http.ResponseWriter, r *http.Request, err error)) func(next http.Handler) http.Handler {
 	script := redis.NewScript(scriptStr)
 	limiter := limits.NewLimiter()
-	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
-		user, ok := auth.UserFromContext(ctx)
-		if !ok {
-			return nil, common.NewAPIInternalError(http.StatusInternalServerError, "no user in context")
-		}
-		globalRatelimit, _ := limiter.GetRateLimit(context.Background(), user)
-		endpointRatelimit, err := getEndpointRatelimit(info.FullMethod, user.SubscriptionTier)
-		if err != nil {
-			log.Error(fmt.Errorf("error getting rate limit options: %w", err))
-			return nil, common.NewAPIInternalError(http.StatusInternalServerError, "internal error: couldn't get rate limit options")
-		}
-		if endpointRatelimit == nil { // no rate limit defined for this endpoint, fallback to global rate limit
-			endpointRatelimit = globalRatelimit
-		}
-		isWithinRateLimit := isWithinRateLimit(ctx, client, script,
-			time.Now(),
-			strconv.FormatUint(user.ID, 10),
-			info.FullMethod,
-			globalRatelimit,
-			endpointRatelimit,
-		)
-		if !isWithinRateLimit {
-			return nil, common.NewAPIUserFacingError(http.StatusTooManyRequests, "rate limit exceeded") // already http since we removed grpc errors
-		}
-		return handler(ctx, req)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			user, ok := auth.UserFromContext(ctx)
+			if !ok {
+				errorHandler(w, r, errors.New("user not found in context"))
+				return
+			}
+			globalRateLimit, err := limiter.GetRateLimit(ctx, user)
+			if err != nil {
+				errorHandler(w, r, fmt.Errorf("failed to get global rate limit: %w", err))
+				return
+			}
+			operationID, endpointRateLimit := getEndpointSettings(r, user.SubscriptionTier)
+			if endpointRateLimit == nil {
+				endpointRateLimit = &globalRateLimit
+			}
+			hasToken := isWithinRateLimit(ctx, client, script,
+				time.Now(),
+				strconv.FormatUint(user.ID, 10),
+				operationID,
+				globalRateLimit,
+				*endpointRateLimit,
+			)
+			if !hasToken {
+				errorHandler(w, r, common.NewAPIUserFacingError(http.StatusTooManyRequests, "rate limit exceeded"))
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
 }
 
-// isWithinRateLimit checks if the caller is allowed to make a request based on the rate limit settings.
+// isWithinRateLimit attempts to get a token from the rate limit buckets.
+// Returns true if the request is allowed, false if rate limit is exceeded.
+// In case of an error (e.g., Redis outage), it logs the error and allows the request.
 func isWithinRateLimit(
 	ctx context.Context,
 	client redis.Scripter,
@@ -63,8 +74,8 @@ func isWithinRateLimit(
 	now time.Time,
 	callerID string,
 	endpointID string,
-	globalRateLimit *limits.RateLimitSettings,
-	endpointRateLimit *limits.RateLimitSettings,
+	globalRateLimit domain.RateLimitSettings,
+	endpointRateLimit domain.RateLimitSettings,
 ) bool {
 	globalRefillInterval := calcRefillInterval(globalRateLimit.SteadyRate)
 	endpointRefillInterval := calcRefillInterval(endpointRateLimit.SteadyRate)
@@ -88,6 +99,7 @@ func getCallerKey(callerID string) string {
 	return "ratelimit:" + callerID
 }
 
+// calcRefillInterval calculates the refill interval based on the steady rate (tokens per second).
 func calcRefillInterval(steadyRate float32) time.Duration {
 	if steadyRate <= 0 {
 		return 0

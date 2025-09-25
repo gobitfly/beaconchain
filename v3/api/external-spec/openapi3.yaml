@@ -54,6 +54,16 @@ paths:
   /blocks/{block_number}/transactions:
     get:
       operationId: GetBlockTransactions
+      x-ratelimits:
+        hobbyist:
+          steady_rate: 3
+          bucket_capacity: 20
+        business:
+          steady_rate: 6
+          bucket_capacity: 40
+        scale:
+          steady_rate: 12
+          bucket_capacity: 80
       parameters:
         - name: block_number
           in: path
