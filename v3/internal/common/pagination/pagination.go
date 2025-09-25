@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
 )
 
 // Handle is a service-layer level wrapper function that handles cursor-based pagination.
@@ -20,7 +22,8 @@ func Handle[Cursor any, Model any](
 	// parse cursor
 	cursor, err := fromBase64JSONString[Cursor](cursorStr)
 	if err != nil {
-		return nil, model.Paging{}, fmt.Errorf("failed to parse cursor: %w", err)
+		// assuming client error if cursor parsing fails
+		return nil, model.Paging{}, common.NewAPIUserFacingError(http.StatusBadRequest, "parameter \"cursor\" is invalid")
 	}
 
 	// fetch data

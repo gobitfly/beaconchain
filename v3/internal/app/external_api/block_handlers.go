@@ -20,7 +20,7 @@ func (service *ApiService) GetBlockTransactions(ctx context.Context, in model.Ge
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get block transactions: %w", err)
+		return nil, err
 	}
 
 	response := model.BlockTransactions{
