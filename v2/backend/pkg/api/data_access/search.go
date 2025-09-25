@@ -182,7 +182,7 @@ func (d *DataAccessService) GetSearchAddressByEnsName(ctx context.Context, chain
 	}
 	return &t.SearchAddress{
 		Address: t.Address{
-			Hash: t.Hash("0x" + hexutil.Encode(addressBytes)),
+			Hash: t.Hash(hexutil.Encode(addressBytes)),
 			Ens:  ensName,
 		},
 	}, nil
