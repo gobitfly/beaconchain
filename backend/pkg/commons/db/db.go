@@ -2174,9 +2174,9 @@ func GetValidatorDutiesInfo(startSlot uint64) ([]types.ValidatorDutyInfo, error)
 			blocks_attestations.slot AS attested_slot,
 			blocks.proposerslashingscount,
 			blocks.attesterslashingscount
-		FROM blocks
-		LEFT JOIN blocks_attestations ON blocks.slot = blocks_attestations.block_slot
-		WHERE blocks.slot >= $1
+		FROM blocks_attestations
+		LEFT JOIN blocks ON blocks_attestations.block_slot = blocks.slot
+		WHERE blocks_attestations.block_slot >= $1
 		`, startSlot)
 
 	return validatorDutyInfo, err
