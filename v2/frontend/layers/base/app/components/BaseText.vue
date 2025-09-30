@@ -3,23 +3,23 @@ const {
   is = 'span',
   size = 'md',
 } = defineProps<{
-  dimmed?: boolean,
   is?:
     | 'span',
   size?:
     | '2xl'
     | 'sm',
+  variant?: 'secondary',
 }>()
 </script>
 
 <template>
   <component
     :is
-    class="font-semibold text-pretty"
+    class=""
     :class="[
       size === 'sm' && 'text-sm',
       size === '2xl' && 'text-2xl',
-      dimmed && 'text-gray-400',
+      variant === 'secondary' && 'dark:text-gray-400 text-gray-600',
     ]"
   >
     <slot />

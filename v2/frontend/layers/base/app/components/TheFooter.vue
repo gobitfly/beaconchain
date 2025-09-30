@@ -145,8 +145,7 @@ const resourceLinks: Link[] = [
         <ul class="flex gap-md">
           <li>
             <BaseButtonIcon
-              is="a"
-              href="https://dsc.gg/beaconchain"
+              to="https://dsc.gg/beaconchain"
               name="brand-discord"
               variant="secondary"
               screenreader-text="base.footer.links.text_discord"
@@ -154,8 +153,7 @@ const resourceLinks: Link[] = [
           </li>
           <li>
             <BaseButtonIcon
-              is="a"
-              href="https://x.com/beaconcha_in"
+              to="https://x.com/beaconcha_in"
               name="brand-x"
               variant="secondary"
               screenreader-text="base.footer.links.text_x"
@@ -163,8 +161,7 @@ const resourceLinks: Link[] = [
           </li>
           <li>
             <BaseButtonIcon
-              is="a"
-              href="https://github.com/gobitfly"
+              to="https://github.com/gobitfly"
               name="brand-github"
               variant="secondary"
               screenreader-text="base.footer.links.text_github"
