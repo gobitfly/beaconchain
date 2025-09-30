@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 import { useBreakpoints } from '#layers/base/app/composables/useBreakpoints'
+import type { SearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
 
 useHead({
   bodyAttrs: {
@@ -35,6 +36,43 @@ const items: BaseNavigationItem[] = [
 ]
 const navigationLeft = useTemplateRef<HTMLDialogElement>('navigationLeft')
 const { sm } = useBreakpoints()
+
+const searchParams = ref<SearchParams>({
+  input: '',
+  networks: [
+    1,
+    560048,
+  ],
+  types: [
+    'address',
+    'address_by_ens_name',
+    'block',
+    'ens_name',
+    'epoch',
+    'slot',
+    'slot_by_block_root',
+    'slot_by_state_root',
+    'token',
+    'transaction',
+    'validators_by_deposit_address',
+    'validators_by_graffiti',
+    'validator_by_index',
+    'validator_by_public_key',
+    'validators_by_withdrawal_credential',
+  ],
+})
+
+const {
+  data,
+  error,
+  execute,
+  status,
+} = useFetch('/api/bff/search', {
+  body: searchParams,
+  immediate: false,
+  method: 'POST',
+  watch: false,
+})
 </script>
 
 <template>
@@ -300,12 +338,168 @@ const { sm } = useBreakpoints()
           </div>
         </ProductLandingpageSection>
       </div>
+      <section
+        class="flex flex-col gap-xl align-middle justify-center max-w-24xl mx-auto p-md h-screen max-h-[1400px] hero-section -mt-[76px] rounded-b-full"
+      >
+        <div class="hero-section__background-effects" />
+        <BaseHeading
+          is="h2"
+          size="lg"
+          class="text-center"
+        >
+          {{ $t('products.landing_page.search.title') }}
+        </BaseHeading>
+        <BlockchainSearchInput
+          v-model="searchParams"
+          class="w-screen sm:w-full max-w-[920px] -ml-md sm:mx-auto"
+          :results="data"
+          :is-loading="status === 'pending'"
+          :has-error="!!error"
+          @search="execute()"
+        />
+      </section>
+      <section class="mt-11xl p-md">
+        <h2
+          :id="id.api"
+          class="text-center "
+        >
+          {{ $t('products.landing_page.api.title') }}
+        </h2>
+      </section>
+      <ProductLandingpageSection>
+        <ProductLandingpageSectionStakinghub />
+      </ProductLandingpageSection>
+      <ProductLandingpageSection class="explorer-section">
+        <BaseHeading
+          is="h2"
+          :id="id.explorer"
+          size="lg"
+        >
+          {{ $t('products.landing_page.explorer.title') }}
+        </BaseHeading>
+        <p>{{ $t('products.landing_page.explorer.description') }}</p>
+        <BaseButton
+          leading-icon="compass"
+          trailing-icon="arrow-up-right"
+          variant="branded"
+          size="xl"
+          to="/"
+        >
+          {{ $t('products.landing_page.explorer.action.go_to_explorer') }}
+        </BaseButton>
+        <div class="flex justify-center flex-wrap gap-6xl mt-7xl w-full">
+          <span class="flex flex-col items-center min-w-[224px]">
+            <BaseIcon
+              name="clock"
+              class="size-6xl"
+            />
+            <BaseText
+              size="2xl"
+              class="mt-4xl"
+            >
+              {{ $t('products.landing_page.explorer.transaction_tracking.title') }}
+            </BaseText>
+            <BaseText
+              size="sm"
+              class="mt-md"
+              dimmed
+            >
+              {{ $t('products.landing_page.explorer.transaction_tracking.description') }}
+            </BaseText>
+          </span>
+          <span class="flex flex-col items-center min-w-[224px]">
+            <BaseIcon
+              name="wallet"
+              class="size-6xl"
+            />
+            <BaseText
+              size="2xl"
+              class="mt-4xl"
+            >
+              {{ $t('products.landing_page.explorer.wallet_tocken_insights.title') }}
+            </BaseText>
+            <BaseText
+              size="sm"
+              class="mt-md"
+              dimmed
+            >
+              {{ $t('products.landing_page.explorer.wallet_tocken_insights.description') }}
+            </BaseText>
+          </span>
+          <span class="flex flex-col items-center min-w-[224px]">
+            <BaseIcon
+              name="code"
+              class="size-6xl"
+            />
+            <BaseText
+              size="2xl"
+              class="mt-4xl"
+            >
+              {{ $t('products.landing_page.explorer.smart_contract_analysis.title') }}
+            </BaseText>
+            <BaseText
+              size="sm"
+              class="mt-md"
+              dimmed
+            >
+              {{ $t('products.landing_page.explorer.smart_contract_analysis.description') }}
+            </BaseText>
+          </span>
+          <span class="flex flex-col items-center min-w-[224px]">
+            <BaseIcon
+              name="gas-station"
+              class="size-6xl"
+            />
+            <BaseText
+              size="2xl"
+              class="mt-4xl"
+            >
+              {{ $t('products.landing_page.explorer.gas_fee_monitoring.title') }}
+            </BaseText>
+            <BaseText
+              size="sm"
+              class="mt-md"
+              dimmed
+            >
+              {{ $t('products.landing_page.explorer.gas_fee_monitoring.description') }}
+            </BaseText>
+          </span>
+        </div>
+      </ProductLandingpageSection>
     </NuxtLayout>
   </div>
 </template>
 
-<style scoped>
-.background-image {
+<style scoped lang="scss">
+.hero-section {
+  position: relative;
+}
+
+.hero-section__background-effects {
+  position: absolute;
+  content: '';
+  z-index: -2;
+  inset: 0;
+  margin: auto;
+  background:
+    linear-gradient(0deg, var(--color-black) 0%, rgba(16, 16, 16, 0.7) 85%, var(--color-black) 90%),
+    url('/assets-2usdf/img/bg-hero.webp');
+  background-size: cover;
+  background-position: left top;
+
+  &:before {
+    position: absolute;
+    content: '';
+    z-index: -1;
+    inset: 0;
+    width: 100vw;
+    backdrop-filter: blur(7px);
+    transform: translateX(-50%);
+    left: 50%;
+  }
+}
+
+.explorer-section {
   position: relative;
 
   &:before {
@@ -315,14 +509,12 @@ const { sm } = useBreakpoints()
     position: absolute;
     inset: 0;
     background:
-       linear-gradient(
-      to bottom,
-      var(--color-black) 0%,
-      transparent 30%,
-      transparent 70%,
-      var(--color-black) 100%
-    ),
-    url('/assets-2usdf/img/bg-chain.webp');
+      linear-gradient(to bottom,
+        var(--color-black) 0%,
+        transparent 30%,
+        transparent 70%,
+        var(--color-black) 100%),
+      url('/assets-2usdf/img/bg-chain.webp');
     background-size: cover;
     background-position: center;
   }
