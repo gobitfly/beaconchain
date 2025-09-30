@@ -65,7 +65,7 @@
         "feature-flags",
         "format.ts",
         "git",
-        "git-blame-ignore", 
+        "git-blame-ignore",
         "git-version",
         "healthz",
         "i18n",
@@ -83,7 +83,8 @@
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode"
+        "vscode",
+        "TheFooter"
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"
