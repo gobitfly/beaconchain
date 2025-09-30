@@ -3,6 +3,10 @@ import {
   ChainInfo,
 } from '~/types/network'
 
+/**
+ * @deprecated This composable is deprecated, as we don't base ourselves on a single network anymore.
+ * Use `networks.ts` from `@/layers/base/app/composables/networks` instead for multi-network support.
+ */
 export function useNetworkStore() {
   const { chainIdByDefault } = useRuntimeConfig().public
   if (!chainIdByDefault) throw createError(
