@@ -49,6 +49,7 @@
         "NotificationsTableEmpty",
         "PremiumProductBox",
         "PricingPremiumCompare",
+        "TheFooter",
         "a11y",
         "app",
         "base64url.ts",
@@ -74,6 +75,7 @@
         "middleware",
         "notifications",
         "nuxt.config",
+        "products",
         "qrCode",
         "useCurrency",
         "useCustomFetch",
@@ -83,8 +85,7 @@
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode",
-        "TheFooter"
+        "vscode"
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"
