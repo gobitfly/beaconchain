@@ -90,6 +90,27 @@ const {
           @close="isOpen = false"
         />
       </template>
+      <section
+        class="flex flex-col gap-xl align-middle justify-center max-w-24xl mx-auto p-md h-screen max-h-[1400px] hero-section -mt-[76px] rounded-b-full"
+      >
+        <div class="hero-section__background-effects" />
+        <BaseHeading
+          is="h2"
+          size="lg"
+          class="text-center"
+        >
+          {{ $t('products.landing_page.search.title') }}
+        </BaseHeading>
+        <BlockchainSearchInput
+          v-model="searchParams"
+          class="w-screen sm:w-full max-w-[920px] -ml-md sm:mx-auto"
+          :results="data"
+          :available-type-filters
+          :is-loading="status === 'pending'"
+          :has-error="!!error"
+          @search="execute()"
+        />
+      </section>
       <div class="flex flex-col gap-11xl">
         <section class="mt-11xl p-md">
           <h2 class="text-center">
@@ -338,26 +359,6 @@ const {
           </div>
         </ProductLandingpageSection>
       </div>
-      <section
-        class="flex flex-col gap-xl align-middle justify-center max-w-24xl mx-auto p-md h-screen max-h-[1400px] hero-section -mt-[76px] rounded-b-full"
-      >
-        <div class="hero-section__background-effects" />
-        <BaseHeading
-          is="h2"
-          size="lg"
-          class="text-center"
-        >
-          {{ $t('products.landing_page.search.title') }}
-        </BaseHeading>
-        <BlockchainSearchInput
-          v-model="searchParams"
-          class="w-screen sm:w-full max-w-[920px] -ml-md sm:mx-auto"
-          :results="data"
-          :is-loading="status === 'pending'"
-          :has-error="!!error"
-          @search="execute()"
-        />
-      </section>
       <section class="mt-11xl p-md">
         <h2
           :id="id.api"
