@@ -2229,12 +2229,15 @@ func GetValidatorDutiesInfo(startSlot uint64) ([]types.ValidatorDutyInfo, error)
 			blocks.status,
 			COALESCE(blocks.exec_block_number, 0) AS exec_block_number,
 			blocks.syncaggregate_bits,
-			blocks_attestations.validators,
-			blocks_attestations.slot AS attested_slot,
+			a.validators,
+			a.slot AS attested_slot,
 			blocks.proposerslashingscount,
 			blocks.attesterslashingscount
 		FROM blocks
-		LEFT JOIN blocks_attestations ON blocks.slot = blocks_attestations.block_slot
+		-- joining against a subquery instead of blocks_attestations for performance-reasons
+		LEFT JOIN (
+		    SELECT block_slot, slot, validators from blocks_attestations where block_slot >= $1
+		) a ON blocks.slot = a.block_slot
 		WHERE blocks.slot >= $1
 		`, startSlot)
 
