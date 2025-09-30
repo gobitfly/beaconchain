@@ -49,11 +49,15 @@ export default defineNuxtConfig({
   runtimeConfig: {
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,
+      apiServerHoodi: process.env.PRIVATE_API_SERVER_HOODI,
+      apiServerMainnet: process.env.PRIVATE_API_SERVER_MAINNET,
       legacyApiServer: process.env.PRIVATE_LEGACY_API_SERVER,
       ssrSecret: process.env.PRIVATE_SSR_SECRET || '',
     },
     public: {
       apiClient: process.env.PUBLIC_API_CLIENT,
+      apiClientHoodi: process.env.PUBLIC_API_CLIENT_HOODI,
+      apiClientMainnet: process.env.PUBLIC_API_CLIENT_MAINNET,
       apiKey: process.env.PUBLIC_API_KEY,
       chainIdByDefault: process.env.PUBLIC_CHAIN_ID_BY_DEFAULT,
       deploymentType: process.env.PUBLIC_DEPLOYMENT_TYPE as undefined,

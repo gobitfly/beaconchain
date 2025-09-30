@@ -1,3 +1,6 @@
+/**
+ * @deprecated This file is deprecated. Use `layers/base/app/utils/networks.ts` instead.
+ */
 export enum ChainFamily {
   Any = 'Any',
   Arbitrum = 'Arbitrum',
@@ -7,12 +10,14 @@ export enum ChainFamily {
   Optimism = 'Optimism',
 }
 
+/**
+ * @deprecated Most of these networks are not supported anymore.
+ * Use the `ChainIDs` from `layers/base/app/utils/networks.ts` instead.
+ */
 const ChainIDs = {
   Any: 0, // to organize data internally (example of use: some ahead-results in the search bar belong to all networks)
-
   Ethereum: 1,
   Gnosis: 100,
-
   Holesky: 17000,
   Hoodi: 560048,
   Pectra_Devnet_5: 7088110746,
@@ -20,6 +25,10 @@ const ChainIDs = {
   Sepolia: 11155111,
 } as const
 
+/**
+ * @deprecated Most of these networks are not supported anymore.
+ * Use the `chainIds` from `layers/base/app/utils/networks.ts` instead.
+ */
 export type ChainId = (typeof ChainIDs)[keyof typeof ChainIDs]
 
 export interface ChainInfoFields {

@@ -11,6 +11,8 @@
 @theme {
   --*: initial;
 
+  --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
   --breakpoint-sm: 40rem; /* 640px */
   --breakpoint-md: 48rem; /* 768px */
   --breakpoint-lg: 64rem; /* 1024px */
@@ -18,7 +20,9 @@
   /* --breakpoint-2xl: 96rem; */
 
 
+  --color-charcoal-50: #555555;
   --color-charcoal-400: #373737;
+  --color-charcoal-500: #303030;
   --color-charcoal-600: #282828;
   --color-charcoal-700: #212121;
 
@@ -35,6 +39,7 @@
   --color-gray-200: #BDBDBD;
   --color-gray-300: #A8A8A8;
   --color-gray-400: #888888;
+  --color-gray-500: #666666;
   --color-gray-600: #4C4C4C;
   --color-gray-700: #3B3B3B;
   --color-gray-900: #262626;
@@ -49,8 +54,9 @@
   --container-3xs: 16rem; /* 256px */
   /* --container-7xl: 80rem; 1280px -> this is in conflict with --spacing-7xl */
   --container-8xl: 90rem; /* 1440px */
+  --container-24xl: 80rem; /* 1280px */
+  --container-30xl: 120rem; /* 1920px */
   
-  --container-24xl: 80rem; /* 144px */
 
   /* --ease-in: cubic-bezier(0.4, 0, 1, 1); */
   /* --ease-out: cubic-bezier(0, 0, 0.2, 1); */
@@ -61,6 +67,7 @@
   --font-weight-semibold: 600;
   
   --radius-xl: .75rem; /* 12px */
+  --radius-3xl: 1.25rem; /* 20px */
   --radius-4xl: 1.5rem; /* 24px */
   --radius-full: 2rem; /* 32px */
 
@@ -81,8 +88,8 @@
 
   --text-xs: .75rem; /* 12px */
   --text-xs--line-height: 1rem; /* 16px */
-  /* --text-sm-tight: .875rem; 14px */
-  /* --text-sm-tight--line-height: 1rem;  16px */
+  --text-sm-tight: .875rem; /* 14px */
+  --text-sm-tight--line-height: 1rem; /*   16px */
   --text-sm: .875rem; /* 14px */
   --text-sm--line-height: 1.25rem; /* 20px */
   --text-md: 1rem; /* 16px */

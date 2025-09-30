@@ -6,7 +6,9 @@
         "beaconchain_homepage": "Beaconchain Homepage",
         "common": {
             "close": "Close",
+            "error_retry": "An error occurred. Please try again.",
             "log_in": "Log in",
+            "no_results": "No results found.",
             "open_navigation": "Open Navigation",
             "side_navigation": "Side Navigation"
         },
@@ -1204,7 +1206,23 @@
                 }
             },
             "search": {
-                "title": "Explore Transactions & Validator Staking on"
+                "input_label": "Search by Address / Tx hash / Block / Token / ENS",
+                "input_placeholder": "Search anything...",
+                "loading_message": "Loading search results...",
+                "title": "Explore Transactions & Validator Staking on",
+                "types": {
+                    "addresses": "Addresses",
+                    "blocks": "Blocks",
+                    "ens_names": "ENS Names",
+                    "epochs": "Epochs",
+                    "slots": "Slots",
+                    "tokens": "Tokens",
+                    "transactions": "Tx Hashes",
+                    "validator_deposit_addresses": "Validator Deposit Addresses",
+                    "validator_graffiti": "Validator Graffiti",
+                    "validator_withdrawal_credentials": "Validator Withdrawal Credentials",
+                    "validators": "Validators"
+                }
             },
             "staking_hub": {
                 "action": {
