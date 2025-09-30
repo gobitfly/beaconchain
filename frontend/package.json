@@ -34,7 +34,7 @@
         "eslint-plugin-newline-destructuring": "^1.2.2",
         "eslint-plugin-perfectionist": "^4.12.3",
         "git-describe": "^4.1.1",
-        "nuxt": "^4.0.3",
+        "nuxt": "^4.1.2",
         "postcss": "^8.5.3",
         "sass": "^1.87.0",
         "typescript": "^5.9.2",
