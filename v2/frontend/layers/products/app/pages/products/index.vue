@@ -105,7 +105,6 @@ const {
           v-model="searchParams"
           class="w-screen sm:w-full max-w-[920px] -ml-md sm:mx-auto"
           :results="data"
-          :available-type-filters
           :is-loading="status === 'pending'"
           :has-error="!!error"
           @search="execute()"
