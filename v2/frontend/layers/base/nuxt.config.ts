@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   modules: [
     '@nuxt/icon',
     '@nuxtjs/i18n',
+    'reka-ui/nuxt',
   ],
   $meta: {
     name: 'base',
@@ -28,6 +29,9 @@ export default defineNuxtConfig({
     mode: 'css',
     cssLayer: 'base',
     localApiEndpoint: '/api/bff/_nuxt_icon',
+  },
+  reka: {
+    prefix: 'Rk',
   },
   /* eslint-enable perfectionist/sort-objects */
 })
