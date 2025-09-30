@@ -1131,6 +1131,53 @@
         "explorer": "Explorer",
         "landing_page": {
             "api": {
+                "action": {
+                    "go_to_api": "Go to API"
+                },
+                "cards": {
+                    "api_docs": {
+                        "explorer_api": {
+                            "list": {
+                                "address_and_contract_analytics": "Address and contract analytics",
+                                "historical_gas_prices": "Historical gas prices and fees",
+                                "real_time_transactions": "Real-time transactions and blocks"
+                            },
+                            "title": "Explorer API"
+                        },
+                        "resource_management_api": {
+                            "list": {
+                                "add_remove_dashboards": "Add/remove dashboards",
+                                "configure_validator_notifications": "Configure validator notifications"
+                            },
+                            "title": "Resource Management API"
+                        },
+                        "stakinghub_api": {
+                            "list": {
+                                "real_time_staking_rewards_data": "Real-time staking rewards data",
+                                "validator_performance_metrics": "Validator performance metrics",
+                                "validator_status_and_lifecycle_events": "Validator status and lifecycle events"
+                            },
+                            "title": "Staking Hub API"
+                        },
+                        "subtitle": "Unlock the power of multichain with our comprehensive docs. Clear guides to power your blockchain apps.",
+                        "title": "API Docs"
+                    },
+                    "api_key": {
+                        "action": {
+                            "get_api_key": "Get your API Key"
+                        },
+                        "subtitle": "Access validator stats, rewards, and onchain data with one powerful API.",
+                        "title": "Staking & Multi-EVM Data Made Simple"
+                    },
+                    "api_pricing_plan": {
+                        "action": {
+                            "compare_plans": "Compare Plans"
+                        },
+                        "subtitle": "Start for free or choose a plan that suits you best",
+                        "title": "API Pricing Plan"
+                    }
+                },
+                "description": "Power your apps with unified blockchain data—access real-time and historical insights across execution and consensus layers.",
                 "title": "Unified API to access data on"
             },
             "explorer": {

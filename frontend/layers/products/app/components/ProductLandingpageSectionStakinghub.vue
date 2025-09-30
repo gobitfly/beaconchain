@@ -56,8 +56,9 @@ onUnmounted(() => {
     >
       {{ $t('products.landing_page.staking_hub.action.go_to_stakinghub') }}
     </BaseButton>
-    <div
-      class="grid grid-cols-1 md:grid-cols-3 md:flex-row gap-xl min-h-[var(--stakinghub-card-height)] lg:min-h-[var(--stakinghub-card-height-lg)]"
+    <BaseCardLayout
+      layout="1fr_1fr_1fr"
+      class="grid min-h-[var(--stakinghub-card-height)] lg:min-h-[var(--stakinghub-card-height-lg)]"
       style="--stakinghub-card-height: 31rem; --stakinghub-card-height-lg: 38.75rem;"
     >
       <BaseCard
@@ -167,6 +168,6 @@ onUnmounted(() => {
           </BaseButton>
         </template>
       </BaseCard>
-    </div>
+    </BaseCardLayout>
   </div>
 </template>

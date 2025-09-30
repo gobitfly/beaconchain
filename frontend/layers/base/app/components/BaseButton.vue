@@ -12,7 +12,7 @@ const {
     leadingIcon?: IconName,
     size?: 'md' | 'xl',
     trailingIcon?: IconName,
-    variant?: 'branded' | 'primary' | 'secondary',
+    variant?: 'branded' | 'primary' | 'quaternary' | 'secondary',
   }
   & (
     | { disabled?: boolean, to?: never }
@@ -31,6 +31,7 @@ const {
       variant === 'primary' && 'from-gray-700 to-gray-900 text-white dark:from-gray-100 dark:to-gray-300 dark:text-black opacity-90 hover:opacity-95',
       variant === 'secondary' && 'from-gray-300 to-gray-200 text-black dark:from-charcoal-600 dark:to-charcoal-700 dark:text-white opacity-90 hover:opacity-95',
       variant === 'branded' && 'from-brand-500 to-brand-700 text-white hover:opacity-90',
+      variant === 'quaternary' && 'text-black dark:text-white hover:opacity-95',
       size === 'md' && 'text-sm py-md px-sm',
       size === 'xl' && 'text-md py-xl px-3xl',
       full ? 'w-full' : 'w-fit',

@@ -14,7 +14,7 @@ useHead({
     <main>
       <slot />
     </main>
-    <footer>
+    <footer class="mt-11xl">
       <TheFooter />
     </footer>
   </div>
