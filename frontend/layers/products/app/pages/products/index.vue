@@ -34,7 +34,6 @@ const items: BaseNavigationItem[] = [
     to: `#${id.explorer}`,
   },
 ]
-const navigationLeft = useTemplateRef<HTMLDialogElement>('navigationLeft')
 const { sm } = useBreakpoints()
 
 const searchParams = ref<SearchParams>({
@@ -84,7 +83,6 @@ const {
           @open="isOpen = !isOpen"
         />
         <BaseNavigationLeft
-          ref="navigationLeft"
           :items
           :is-open
           @close="isOpen = false"
