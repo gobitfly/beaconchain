@@ -76,6 +76,7 @@
         "notifications",
         "nuxt.config",
         "products",
+        "products/pricing",
         "qrCode",
         "useCurrency",
         "useCustomFetch",
