@@ -18,6 +18,7 @@
   /* --breakpoint-2xl: 96rem; */
 
 
+  --color-charcoal-400: #373737;
   --color-charcoal-600: #282828;
   --color-charcoal-700: #212121;
 
@@ -34,6 +35,7 @@
   --color-gray-200: #BDBDBD;
   --color-gray-300: #A8A8A8;
   --color-gray-400: #888888;
+  --color-gray-600: #4C4C4C;
   --color-gray-700: #3B3B3B;
   --color-gray-900: #262626;
   --color-gray-950: #1A1919;
@@ -94,6 +96,9 @@
 
   --text-4xl: 2rem; /* 32px */
   --text-4xl--line-height: 3rem; /* 48px */
+
+  --text-6xl: 3rem; /* 48px */
+  --text-6xl--line-height: 3.5rem; /* 56px */
 }
 
 html {
