@@ -471,6 +471,7 @@ const {
 <style scoped lang="scss">
 .hero-section {
   position: relative;
+  pointer-events: none;
 }
 
 .hero-section__background-effects {
@@ -480,8 +481,8 @@ const {
   inset: 0;
   margin: auto;
   background:
-    linear-gradient(0deg, var(--color-black) 0%, rgba(16, 16, 16, 0.7) 85%, var(--color-black) 90%),
-    url('/assets-2usdf/img/bg-hero.webp');
+  linear-gradient(0deg, var(--color-black) 0%, rgba(16, 16, 16, 0.7) 85%, var(--color-black) 90%),
+  url('/assets-2usdf/img/bg-hero.webp');
   background-size: cover;
   background-position: left top;
 
