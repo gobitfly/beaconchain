@@ -88,9 +88,8 @@ const {
           @close="isOpen = false"
         />
       </template>
-      <section
-        class="flex flex-col gap-xl align-middle justify-center max-w-24xl mx-auto p-md h-screen max-h-[1400px] hero-section -mt-[76px] rounded-b-full"
-      >
+
+      <ProductLandingpageSection class="gap-xl hero-section h-[70vh] -mt-[76px]">
         <div class="hero-section__background-effects" />
         <BaseHeading
           is="h2"
@@ -107,8 +106,8 @@ const {
           :has-error="!!error"
           @search="execute()"
         />
-      </section>
-      <ProductLandingpageSection class="mt-11xl p-md">
+      </ProductLandingpageSection>
+      <ProductLandingpageSection class="p-md">
         <BaseHeading
           is="h2"
           :id="id.api"
