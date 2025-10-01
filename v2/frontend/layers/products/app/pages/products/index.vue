@@ -89,7 +89,7 @@ const {
         />
       </template>
 
-      <ProductLandingpageSection class="gap-xl hero-section h-[70vh] -mt-[76px]">
+      <ProductLandingpageSection class="gap-xl hero-section h-[70vh]">
         <div class="hero-section__background-effects" />
         <BaseHeading
           is="h2"
@@ -353,7 +353,6 @@ const {
 <style scoped lang="scss">
 .hero-section {
   position: relative;
-  pointer-events: none;
 }
 
 .hero-section__background-effects {
