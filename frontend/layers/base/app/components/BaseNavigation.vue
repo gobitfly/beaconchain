@@ -31,7 +31,7 @@ const v1Domain = useV1Domain()
         />
         <NuxtLink
           to="/"
-          class="flex gap-sm p-md rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 w-fit"
+          class="flex gap-sm p-md rounded-full w-fit"
         >
           <BaseScreenreaderOnly screenreader-text="base.beaconchain_homepage" />
           <TheLogoMark
