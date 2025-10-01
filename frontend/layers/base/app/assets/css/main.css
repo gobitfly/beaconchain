@@ -111,6 +111,13 @@
   --text-6xl--line-height: 3.5rem; /* 56px */
 }
 
+@layer base {
+  .base-layout :focus-visible {
+    outline: 2px solid var( --color-brand-300);
+    outline-offset: 2px;
+  }
+}
+
 html {
   transition-behavior: allow-discrete;
   interpolate-size: allow-keywords;
