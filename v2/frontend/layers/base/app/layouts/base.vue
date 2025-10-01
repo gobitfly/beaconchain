@@ -3,6 +3,7 @@ useHead({
   bodyAttrs: {
     class: 'dark:bg-black dark:text-white bg-white text-black',
   },
+  htmlAttrs: { class: 'base-layout' },
 })
 </script>
 

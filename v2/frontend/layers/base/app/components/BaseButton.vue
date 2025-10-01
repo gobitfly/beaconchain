@@ -26,7 +26,7 @@ const {
     :is="to ? NuxtLink : 'button'"
     :to
     :disabled
-    class="flex justify-center items-center bg-linear-to-b rounded-full font-semibold disabled:opacity-40 aria-disabled:opacity-40 aria-disabled:pointer-events-none active:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+    class="flex justify-center items-center bg-linear-to-b rounded-full font-semibold disabled:opacity-40 aria-disabled:opacity-40 aria-disabled:pointer-events-none active:opacity-80"
     :class="[
       variant === 'primary' && 'from-gray-700 to-gray-900 text-white dark:from-gray-100 dark:to-gray-300 dark:text-black opacity-90 hover:opacity-95',
       variant === 'secondary' && 'from-gray-300 to-gray-200 text-black dark:from-charcoal-600 dark:to-charcoal-700 dark:text-white opacity-90 hover:opacity-95',
