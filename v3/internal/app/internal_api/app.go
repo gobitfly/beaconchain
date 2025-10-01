@@ -4,22 +4,23 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 
 	"buf.build/go/protovalidate"
-	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
-	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
-	"google.golang.org/grpc/health/grpc_health_v1"
-
 	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/app/internal_api/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/sessionstorerepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
+
+	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -31,8 +32,6 @@ type ApiService struct {
 	limiter          *limits.Limiter
 }
 
-// InitDependencies
-// Initialize the repositories with proper databases
 func InitDependencies(
 	userRepository userrepo.Repository,
 	apiKeyRepository apikeyrepo.Repository,
@@ -49,7 +48,6 @@ func InitDependencies(
 func Run(
 	config config.ServiceConfig,
 ) {
-
 	log.Info("Starting server...")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GrpcPort))
@@ -61,6 +59,22 @@ func Run(
 	if err != nil {
 		log.Fatalf("failed to create validator: %v", err)
 	}
+
+	// OpenTelemetry + Google Cloud exporter (handles batching/retries/flush).
+	otelCounter, err := middleware.NewOtelCounter(
+		context.Background(),
+		config.Metrics.ProjectID,
+		os.Getenv("K_SERVICE"),
+		os.Getenv("K_REVISION"),
+	)
+	if err != nil {
+		log.Warnf("failed to init otel metrics: %v", err)
+	}
+	defer func() {
+		if otelCounter != nil {
+			_ = otelCounter.Close(context.Background())
+		}
+	}()
 
 	userDbRepo := &userrepo.DBRepository{}
 	apikeyRepo := &apikeyrepo.CachedRepository{}
@@ -83,6 +97,7 @@ func Run(
 	unaryInterceptors = append(unaryInterceptors, middleware.StripErrorMessageMiddleware())
 	unaryInterceptors = append(unaryInterceptors, middleware.RecoveryMiddleware())
 	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepo))
+	unaryInterceptors = append(unaryInterceptors, middleware.MetricsUnaryInterceptor(otelCounter))
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(unaryInterceptors...),

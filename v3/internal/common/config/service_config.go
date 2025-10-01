@@ -44,6 +44,11 @@ type DatabaseConfig struct {
 	} `yaml:"failovers"`
 }
 
+type MetricsConfig struct {
+	ProjectID   string `yaml:"projectID"`
+	Region      string `yaml:"region"`
+}
+
 type ServiceConfig struct {
 	Type               string
 	HttpPort           string `yaml:"httpPort"`
@@ -71,6 +76,7 @@ type ServiceConfig struct {
 	Bigtable            BigtableConfig `yaml:"bigtable"`
 	RawBigtable         BigtableConfig `yaml:"rawBigtable"`
 	Redis               RedisConfig    `yaml:"redis"`
+	Metrics             MetricsConfig  `yaml:"metrics"`
 }
 
 // Two kinds of configs:
