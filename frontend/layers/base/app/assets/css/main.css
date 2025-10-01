@@ -67,6 +67,7 @@
   --font-weight-bold: 700;
   --font-weight-semibold: 600;
   
+  --radius-xs: .25rem; /* 4px */
   --radius-md: .5rem; /* 8px */
   --radius-xl: .75rem; /* 12px */
   --radius-3xl: 1.25rem; /* 20px */
