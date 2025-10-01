@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
-import { useBreakpoints } from '#layers/base/app/composables/useBreakpoints'
 import type { BlockchainSearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
 
 useHead({
@@ -34,7 +33,6 @@ const items: BaseNavigationItem[] = [
     to: `#${id.explorer}`,
   },
 ]
-const { sm } = useBreakpoints()
 
 const searchTypes: BlockchainSearchParams['types'] = [
   'address',
@@ -225,22 +223,22 @@ const {
             :subtitle="$t('products.landing_page.api.cards.api_pricing_plan.subtitle')"
           >
             <BaseButton
-              v-if="sm"
               variant="quaternary"
               size="xl"
               trailing-icon="arrow-up-right"
               to="/products/pricing"
+              class="max-sm:hidden"
             >
               {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
             </BaseButton>
             <template #footer>
               <BaseButton
-                v-if="!sm"
                 variant="secondary"
                 size="xl"
                 full
                 trailing-icon="arrow-up-right"
                 to="/products/pricing"
+                class="sm:hidden"
               >
                 {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
               </BaseButton>
