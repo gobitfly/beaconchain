@@ -94,10 +94,8 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.staking_mobile_app.title')"
-        class="min-h-[var(--stakinghub-card-height)] isolate relative overflow-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300 [&>div:first-child]:relative [&>div:first-child]:z-10"
-        tabindex="0"
+        class="min-h-[var(--stakinghub-card-height)] isolate relative overflow-hidden[&>header:first-child]:relative [&>header:first-child]:z-10"
         @mouseenter="playOnInteraction"
-        @focus="playOnInteraction"
       >
         <video
           ref="videoRef"
@@ -124,24 +122,24 @@ onUnmounted(() => {
           <div class="flex gap-2xl justify-center items-start relative z-10">
             <NuxtLink
               to="https://apps.apple.com/app/beaconchain-dashboard/id1541822121"
-              class="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+              class="rounded-xs"
               target="_blank"
             >
               <span class="sr-only">{{ $t('products.landing_page.staking_hub.cards.staking_mobile_app.action-download-appstore') }}</span>
               <img
                 src="/assets-2usdf/img/app-store-btn.svg"
-                class="w-auto h-[2.56rem]"
+                class="h-[2.56rem]"
               >
             </NuxtLink>
             <NuxtLink
               to="https://play.google.com/store/apps/details?id=in.beaconcha.mobile"
-              class="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-300"
+              class="rounded-xs"
               target="_blank"
             >
               <span class="sr-only">{{ $t('products.landing_page.staking_hub.cards.staking_mobile_app.action-download-playstore') }}</span>
               <img
                 src="/assets-2usdf/img/play-store-btn.svg"
-                class="w-auto h-[2.875rem]"
+                class="h-[2.56rem]"
               >
             </NuxtLink>
           </div>
