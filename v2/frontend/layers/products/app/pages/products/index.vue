@@ -107,7 +107,7 @@ const {
           @search="execute()"
         />
       </ProductLandingpageSection>
-      <ProductLandingpageSection class="p-md">
+      <ProductLandingpageSection class="mt-11xl">
         <BaseHeading
           is="h2"
           :id="id.api"
@@ -246,10 +246,10 @@ const {
           </BaseCard>
         </BaseCardLayout>
       </ProductLandingpageSection>
-      <ProductLandingpageSection class="mt-11xl p-md">
+      <ProductLandingpageSection class="mt-11xl">
         <ProductLandingpageSectionStakinghub />
       </ProductLandingpageSection>
-      <ProductLandingpageSection class="mt-11xl p-md explorer-section">
+      <ProductLandingpageSection class="mt-11xl explorer-section">
         <BaseHeading
           is="h2"
           :id="id.explorer"
