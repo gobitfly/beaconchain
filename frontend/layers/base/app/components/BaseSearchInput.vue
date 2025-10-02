@@ -81,7 +81,7 @@ const groupedResults = computed(() => {
       />
 
       <RkComboboxContent
-        class="absolute dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
+        class="absolute z-10 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
       >
         <template v-if="$slots['dropdown-fixed-header']">
           <slot name="dropdown-fixed-header" />
