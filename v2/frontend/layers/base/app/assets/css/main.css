@@ -42,6 +42,7 @@
   --color-gray-500: #666666;
   --color-gray-600: #4C4C4C;
   --color-gray-700: #3B3B3B;
+  --color-gray-800: #2F2F2F;
   --color-gray-900: #262626;
   --color-gray-950: #1A1919;
   
@@ -66,6 +67,7 @@
   --font-weight-bold: 700;
   --font-weight-semibold: 600;
   
+  --radius-md: .5rem; /* 8px */
   --radius-xl: .75rem; /* 12px */
   --radius-3xl: 1.25rem; /* 20px */
   --radius-4xl: 1.5rem; /* 24px */
