@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 import { useBreakpoints } from '#layers/base/app/composables/useBreakpoints'
-import type { SearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
+import type { BlockchainSearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
 
 useHead({
   bodyAttrs: {
@@ -36,29 +36,30 @@ const items: BaseNavigationItem[] = [
 ]
 const { sm } = useBreakpoints()
 
-const searchParams = ref<SearchParams>({
+const searchTypes: BlockchainSearchParams['types'] = [
+  'address',
+  'address_by_ens_name',
+  'block',
+  'ens_name',
+  'epoch',
+  'slot',
+  'slot_by_block_root',
+  'slot_by_state_root',
+  'token',
+  'transaction',
+  'validators_by_deposit_address',
+  'validators_by_graffiti',
+  'validator_by_index',
+  'validator_by_public_key',
+  'validators_by_withdrawal_credential',
+]
+const searchParams = ref<BlockchainSearchParams>({
   input: '',
   networks: [
     1,
     560048,
   ],
-  types: [
-    'address',
-    'address_by_ens_name',
-    'block',
-    'ens_name',
-    'epoch',
-    'slot',
-    'slot_by_block_root',
-    'slot_by_state_root',
-    'token',
-    'transaction',
-    'validators_by_deposit_address',
-    'validators_by_graffiti',
-    'validator_by_index',
-    'validator_by_public_key',
-    'validators_by_withdrawal_credential',
-  ],
+  types: searchTypes,
 })
 
 const {
@@ -89,7 +90,7 @@ const {
         />
       </template>
 
-      <ProductLandingpageSection class="gap-xl hero-section h-[70vh]">
+      <ProductLandingpageSection class="px-[0px] sm:px-md gap-xl hero-section h-[70vh]">
         <div class="hero-section__background-effects" />
         <BaseHeading
           is="h2"
@@ -100,8 +101,9 @@ const {
         </BaseHeading>
         <BlockchainSearchInput
           v-model="searchParams"
-          class="w-screen sm:w-full max-w-[920px] -ml-md sm:mx-auto"
+          class="w-screen sm:w-full max-w-[920px] sm:mx-auto"
           :results="data"
+          :type-filters="searchTypes"
           :is-loading="status === 'pending'"
           :has-error="!!error"
           @search="execute()"
