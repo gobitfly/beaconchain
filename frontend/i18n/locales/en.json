@@ -5,6 +5,7 @@
         },
         "beaconchain_homepage": "Beaconchain Homepage",
         "common": {
+            "all": "All",
             "close": "Close",
             "error_retry": "An error occurred. Please try again.",
             "log_in": "Log in",
@@ -1206,6 +1207,7 @@
                 }
             },
             "search": {
+                "filter_aria_label": "Filter by type",
                 "input_label": "Search by Address / Tx hash / Block / Token / ENS",
                 "input_placeholder": "Search anything...",
                 "loading_message": "Loading search results...",
@@ -1221,7 +1223,7 @@
                     "validator_deposit_addresses": "Validator Deposit Addresses",
                     "validator_graffiti": "Validator Graffiti",
                     "validator_withdrawal_credentials": "Validator Withdrawal Credentials",
-                    "validators": "Validators"
+                    "validators_indices": "Validator Indices"
                 }
             },
             "staking_hub": {

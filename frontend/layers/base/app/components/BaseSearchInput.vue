@@ -59,6 +59,7 @@ const groupedResults = computed(() => {
       v-model:open="showDropdown"
       class="relative"
       ignore-filter
+      :reset-search-term-on-blur="false"
     >
       <RkLabel
         for="search-input"
@@ -79,9 +80,14 @@ const groupedResults = computed(() => {
         @update:model-value="(value) => { if (!value) hasSearched = false }"
       />
 
-      <RkComboboxContent class="absolute dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px] overflow-y-auto">
-        <!-- SLOTS FOR HISTORY AND FILTERS GO HERE -->
-        <RkComboboxViewport>
+      <RkComboboxContent
+        class="absolute dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
+      >
+        <template v-if="$slots['dropdown-fixed-header']">
+          <slot name="dropdown-fixed-header" />
+        </template>
+
+        <RkComboboxViewport tabindex="-1">
           <div class="py-lg">
             <slot
               v-if="isLoading"
@@ -101,11 +107,9 @@ const groupedResults = computed(() => {
             </slot>
 
             <slot v-else-if="!results?.length">
-              <RkComboboxEmpty>
-                <div class="dark:text-gray-400 px-2xl py-md font-semibold">
-                  {{ $t('base.common.no_results') }}
-                </div>
-              </RkComboboxEmpty>
+              <div class="dark:text-gray-400 px-2xl py-md font-semibold">
+                {{ $t('base.common.no_results') }}
+              </div>
             </slot>
 
             <template v-else-if="results?.length && groupBy">
