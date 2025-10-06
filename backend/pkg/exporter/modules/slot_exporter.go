@@ -502,6 +502,15 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 			return nil
 		})
 
+		// save the validator balances to clickhouse
+		g.Go(func() error {
+			err := db.SaveLegacyValidatorBalancesToClickhouse(epoch, block.Validators)
+			if err != nil {
+				return fmt.Errorf("error exporting validator balances to clickhouse for slot %v: %w", block.Slot, err)
+			}
+			return nil
+		})
+
 		// if we are exporting the head epoch, update the validator db table
 		if isHeadEpoch {
 			// this function sets exports the validator status into the db
