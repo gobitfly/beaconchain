@@ -1136,7 +1136,13 @@
         "yearly": "Yearly"
     },
     "products": {
-        "api": "API",
+        "api": {
+            "hero": {
+                "subtitle": "Power your apps with unified blockchain data—access real-time and historical insights across execution and consensus layers.",
+                "title": "Simple, Transparent Pricing"
+            },
+            "name": "API"
+        },
         "explorer": "Explorer",
         "landing_page": {
             "api": {

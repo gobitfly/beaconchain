@@ -11,7 +11,7 @@ const { t: $t } = useTranslation()
 
 const productLinks: Link[] = [
   {
-    href: '/products/api/docs', icon: 'file-code', text: $t('products.api'),
+    href: '/products/api/docs', icon: 'file-code', text: $t('products.api.name'),
   },
   {
     href: '/dashboard', icon: 'coins', text: $t('products.staking_hub'),
