@@ -87,7 +87,8 @@ var REQUIRES_LIST = map[string]misctypes.Requires{
 	"clear-raw-bigtable": {
 		RawBigtable: true,
 	},
-	"app-bundle": (&commands.AppBundleCommand{}).Requires(),
+	"app-bundle":              (&commands.AppBundleCommand{}).Requires(),
+	"migrate-legacy-balances": (&commands.MigrateLegacyBalancesCommand{}).Requires(),
 	"update-highest-active-validatorindex": {
 		Bigtable: true,
 		ClNode:   true,
@@ -105,8 +106,12 @@ func Run() {
 		FlagSet: fs,
 	}
 
+	migrateLegacyBalancesCommand := commands.MigrateLegacyBalancesCommand{
+		FlagSet: fs,
+	}
+
 	configPath := fs.String("config", "config/default.config.yml", "Path to the config file")
-	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, clear-raw-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex")
+	fs.StringVar(&opts.Command, "command", "", "command to run, available: updateAPIKey, applyDbSchema, initBigtableSchema, epoch-export, debug-rewards, debug-blocks, clear-bigtable, clear-raw-bigtable, index-old-eth1-blocks, update-aggregation-bits, historic-prices-export, index-missing-blocks, export-epoch-missed-slots, migrate-last-attestation-slot-bigtable, export-genesis-validators, update-block-finalization-sequentially, nameValidatorsByRanges, export-stats-totals, export-sync-committee-periods, export-sync-committee-validator-stats, partition-validator-stats, migrate-app-purchases, collect-notifications, collect-user-db-notifications, verify-fcm-tokens, app-bundle, update-highest-active-validatorindex, migrate-legacy-balances")
 	fs.Uint64Var(&opts.StartEpoch, "start-epoch", 0, "start epoch")
 	fs.Uint64Var(&opts.EndEpoch, "end-epoch", 0, "end epoch")
 	fs.Uint64Var(&opts.User, "user", 0, "user id")
@@ -133,6 +138,8 @@ func Run() {
 
 	statsPartitionCommand.ParseCommandOptions()
 	appBundleCommand.ParseCommandOptions()
+	migrateLegacyBalancesCommand.ParseCommandOptions()
+
 	_ = fs.Parse(os.Args[2:])
 
 	if *versionFlag {
@@ -221,6 +228,9 @@ func Run() {
 		db.ClickHouseWriter, db.ClickHouseReader = db.MustInitDB(&cfg.ClickHouse.WriterDatabase, &cfg.ClickHouse.ReaderDatabase, "clickhouse", "clickhouse")
 		defer db.ClickHouseReader.Close()
 		defer db.ClickHouseWriter.Close()
+
+		db.ClickHouseNativeWriter = db.MustInitClickhouseNative(&cfg.ClickHouse.WriterDatabase)
+		defer db.ClickHouseNativeWriter.Close()
 	}
 
 	// Initialize the persistent redis client
@@ -487,6 +497,8 @@ func Run() {
 	case "app-bundle":
 		appBundleCommand.Config.DryRun = opts.DryRun
 		err = appBundleCommand.Run()
+	case "migrate-legacy-balances":
+		err = migrateLegacyBalancesCommand.Run(rpcClient)
 	case "fix-ens":
 		err = fixEns(erigonClient)
 	case "fix-ens-addresses":
