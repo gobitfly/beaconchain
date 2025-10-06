@@ -76,7 +76,7 @@ const resourceLinks: Link[] = [
       <div class="flex flex-col gap-lg sm:w-1/4">
         <BaseHeading
           is="h3"
-          size="md"
+          size="xxs"
         >
           {{ $t('base.footer.services.title') }}
         </BaseHeading>
@@ -104,7 +104,7 @@ const resourceLinks: Link[] = [
       <div class="flex flex-col gap-lg sm:w-1/4">
         <BaseHeading
           is="h3"
-          size="md"
+          size="xxs"
         >
           {{ $t('base.footer.resources.title') }}
         </BaseHeading>
@@ -133,7 +133,7 @@ const resourceLinks: Link[] = [
       <div class="my-lg sm:my-unset sm:ml-auto flex flex-col gap-xl">
         <BaseHeading
           is="h3"
-          size="md"
+          size="xxs"
         >
           {{ $t('base.footer.links.title') }}
         </BaseHeading>

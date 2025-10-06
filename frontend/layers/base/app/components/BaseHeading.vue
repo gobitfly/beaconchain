@@ -7,7 +7,8 @@ defineProps<{
     | '2xl'
     | 'lg'
     | 'md'
-    | 'xs',
+    | 'xs'
+    | 'xxs',
 }>()
 </script>
 
@@ -18,8 +19,8 @@ defineProps<{
     :class="[
       size === '2xl' && 'text-6xl tracking-[-.09rem]',
       size === 'lg' && 'text-4xl tracking-[-.05rem]',
-      size === 'md' && 'text-md',
       size === 'xs' && 'text-xl tracking-[-0.0063rem]',
+      size === 'xxs' && 'text-md',
     ]"
   >
     <slot />
