@@ -8,7 +8,7 @@ const isOpen = ref(false)
 const items: BaseNavigationItem[] = [
   {
     icon: 'file-code-2',
-    label: $t('products.api'),
+    label: $t('products.api.name'),
     to: '/product#api',
   },
   {
@@ -47,7 +47,27 @@ const faqItems = tm('items') ?? []
           @close="isOpen = false"
         />
       </template>
-      <ProductLandingpageSection v-if="faqItems.length">
+      <ProductLandingpageSection class="mt-11xl">
+        <BaseHeading
+          is="h1"
+          size="xl"
+          class="text-center"
+        >
+          {{ $t('products.api.hero.title') }}
+        </BaseHeading>
+        <BaseText
+          is="p"
+          size="2xl"
+          font-weight="bold"
+          class="container text-center sm:text-balance"
+        >
+          {{ $t('products.api.hero.subtitle') }}
+        </BaseText>
+      </ProductLandingpageSection>
+      <ProductLandingpageSection
+        v-if="faqItems.length"
+        class="mt-11xl"
+      >
         <LazyProductPricingSectionFAQ
           :items="faqItems"
         />

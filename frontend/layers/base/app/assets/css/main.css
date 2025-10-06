@@ -127,7 +127,8 @@
 
   --text-4xl: 2rem; /* 32px */
   --text-4xl--line-height: 3rem; /* 48px */
-
+  --text-5xl: 2.5rem; /* 40px */
+  --text-5xl--line-height: 3.75rem; /* 44px */
   --text-6xl: 3rem; /* 48px */
   --text-6xl--line-height: 3.5rem; /* 56px */
 }

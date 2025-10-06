@@ -12,7 +12,7 @@ const id = {
 const items: BaseNavigationItem[] = [
   {
     icon: 'file-code-2',
-    label: $t('products.api'),
+    label: $t('products.api.name'),
     to: `#${id.api}`,
   },
   {
