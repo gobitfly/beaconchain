@@ -4,52 +4,54 @@
   text-overflow: ellipsis;
 }
 
-.truncate-text {
-  @include truncate-text;
-}
-
-.text-align-left {
-  text-align: left;
-}
-
-.pointer {
-  cursor: pointer;
-}
-
-.dots-before {
-  &:before {
-    content: "\2026";
+.validator-dashboard {
+  .truncate-text {
+    @include truncate-text;
   }
-}
 
-.dots-after {
-  &:after {
-    content: "\2026";
+  .text-align-left {
+    text-align: left;
   }
-}
 
-.no-wrap {
-  white-space: nowrap;
-}
+  .pointer {
+    cursor: pointer;
+  }
 
-.text-disabled {
-  color: var(--text-color-disabled);
-}
+  .dots-before {
+    &:before {
+      content: "\2026";
+    }
+  }
 
-.positive {
-  color: var(--positive-color);
-}
+  .dots-after {
+    &:after {
+      content: "\2026";
+    }
+  }
 
-.negative {
-  color: var(--negative-color);
-}
+  .no-wrap {
+    white-space: nowrap;
+  }
 
-.partial {
-  color: var(--partial-color);
-}
+  .text-disabled {
+    color: var(--text-color-disabled);
+  }
 
-.orphaned {
-  color: var(--orphaned-color);
+  .positive {
+    color: var(--positive-color);
+  }
+
+  .negative {
+    color: var(--negative-color);
+  }
+
+  .partial {
+    color: var(--partial-color);
+  }
+
+  .orphaned {
+    color: var(--orphaned-color);
+  }
 }
 
 @mixin positive-background() {
@@ -82,37 +84,39 @@
   color: var(--light-tag-contrast-color);
 }
 
-.text-positive {
-  color: var(--positive-color);
-}
-
-.text-negative {
-  color: var(--negative-color);
-}
-
-.text-equal {
-  color: var(--equal-color);
-}
-
-.comma {
-  &:before {
-    content: ",";
-  }
-}
-
-.slash-after {
-  &:after {
-    content: " / ";
-  }
-}
-
-.round-brackets {
-  &:before {
-    content: "(";
+.validator-dashboard {
+  .text-positive {
+    color: var(--positive-color);
   }
 
-  &:after {
-    content: ")";
+  .text-negative {
+    color: var(--negative-color);
+  }
+
+  .text-equal {
+    color: var(--equal-color);
+  }
+
+  .comma {
+    &:before {
+      content: ",";
+    }
+  }
+
+  .slash-after {
+    &:after {
+      content: " / ";
+    }
+  }
+
+  .round-brackets {
+    &:before {
+      content: "(";
+    }
+
+    &:after {
+      content: ")";
+    }
   }
 }
 
@@ -132,7 +136,7 @@
   }
 }
 
-.blinking-animation {
+.validator-dashboard .blinking-animation {
   animation: blinking 1s alternate infinite;
 }
 
@@ -150,6 +154,6 @@
   }
 }
 
-.delayed-fadein-animation {
+.validator-dashboard .delayed-fadein-animation {
   animation: delayed-fadein 2s;
 }
