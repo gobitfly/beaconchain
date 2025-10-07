@@ -1,4 +1,6 @@
 <script setup lang="ts" generic="SearchResultType extends Record<string, any>">
+import type { PointerDownOutsideEvent } from 'reka-ui'
+
 type GroupBy = keyof SearchResultType
 
 const {
@@ -48,6 +50,14 @@ const groupedResults = computed(() => {
 
   return Object.entries(groupedResults) as [SearchResultType[GroupBy], SearchResultType[]][]
 })
+
+const searchInput = useTemplateRef('search-input')
+const handleClickOutside = (e: PointerDownOutsideEvent) => {
+  if (e.target === searchInput.value?.$el) return
+
+  input.value = ''
+  hasSearched.value = false
+}
 </script>
 
 <template>
@@ -69,6 +79,7 @@ const groupedResults = computed(() => {
       </RkLabel>
       <RkComboboxInput
         id="search-input"
+        ref="search-input"
         v-model.trim="input"
         type="search"
         auto-focus
@@ -82,12 +93,17 @@ const groupedResults = computed(() => {
 
       <RkComboboxContent
         class="absolute z-10 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
+        @pointer-down-outside="handleClickOutside"
       >
         <template v-if="$slots['dropdown-fixed-header']">
           <slot name="dropdown-fixed-header" />
         </template>
 
-        <RkComboboxViewport tabindex="-1">
+        <div
+          role="presentation"
+          class="overflow-y-auto"
+          tabindex="-1"
+        >
           <div class="py-lg">
             <slot
               v-if="isLoading"
@@ -156,7 +172,7 @@ const groupedResults = computed(() => {
               </RkComboboxItem>
             </template>
           </div>
-        </RkComboboxViewport>
+        </div>
       </RkComboboxContent>
     </RkComboboxRoot>
   </form>
