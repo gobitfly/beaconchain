@@ -1174,10 +1174,20 @@
                     },
                     "api_pricing_plan": {
                         "action": {
-                            "compare_plans": "Compare Plans"
+                            "compare_plans": "Compare Plans",
+                            "contact_sales": "Contact Sales"
                         },
+                        "billing_cycle": "Billing Cycle",
+                        "details": {
+                            "contact_sales_explainer": "This is our Premium offering. Please contact our sales department to set your requirements",
+                            "cost_per_month": "Cost per Month",
+                            "cost_per_year": "Cost per Year",
+                            "requests_per_second": "Requests per Second"
+                        },
+                        "monthly": "Monthly",
                         "subtitle": "Start for free or choose a plan that suits you best",
-                        "title": "API Pricing Plan"
+                        "title": "API Pricing Plan",
+                        "yearly": "Yearly"
                     }
                 },
                 "description": "Power your apps with unified blockchain data—access real-time and historical insights across execution and consensus layers.",
@@ -1258,7 +1268,14 @@
                 "title": "Trusted By"
             }
         },
-        "staking_hub": "StakingHub"
+        "staking_hub": "StakingHub",
+        "tiers": {
+            "business": "Business",
+            "enterprise": "Enterprise",
+            "free": "Free",
+            "hobbyist": "Hobbyist",
+            "scale": "Scale"
+        }
     },
     "search_bar": {
         "account_placeholder": "Address or ENS name",
