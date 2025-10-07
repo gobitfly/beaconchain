@@ -1,8 +1,12 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+definePageMeta({
+  layout: 'base',
+})
+</script>
 
 <template>
   <div>
-    Page: contact-sales
+    Page: products/contact-sales
   </div>
 </template>
 

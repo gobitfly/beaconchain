@@ -4,8 +4,15 @@ import type { NuxtLinkProps } from '#app'
 import type { BaseHeadings } from '~/layers/base/app/components/BaseHeading.vue'
 import type { IconName } from '~/layers/base/app/components/BaseIcon.vue'
 
-defineProps<
+const {
+  borderRadius = '4xl',
+  elevation = '1',
+  gap = '2xl',
+} = defineProps<
   {
+    borderRadius?: '4xl' | 'xl',
+    elevation?: '1' | '2',
+    gap?: '5xl' | 'xl',
     titleIcon?: IconName,
   } & (
     | {
@@ -26,7 +33,17 @@ const id = useId()
 </script>
 
 <template>
-  <div class="dark:bg-gray-950 p-3xl rounded-4xl flex flex-col gap-2xl w-full">
+  <div
+    class="p-3xl rounded-4xl flex flex-col gap-2xl w-full border-1"
+    :class="[
+      elevation === '1' && 'dark:bg-gray-950 border-gray-900',
+      elevation === '2' && 'dark:bg-gray-900 border-gray-900',
+      borderRadius === '4xl' && 'rounded-4xl',
+      borderRadius === 'xl' && 'rounded-xl',
+      gap === 'xl' && 'gap-xl',
+      gap === '5xl' && 'gap-5xl',
+    ]"
+  >
     <slot name="header">
       <header
         v-if="title"
