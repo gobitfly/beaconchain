@@ -1,0 +1,26 @@
+{
+    "business":
+    {
+        "monthly_price": 9.99,
+        "requests_per_second": 1000000000,
+        "yearly_price": 99.99,
+        "yearly_price_with_discount": 99.99
+    },
+    "free":
+    {
+        "requests_per_second": 1000000000
+    },
+    "hobbyist": {
+        "monthly_price": 9.99,
+        "requests_per_second": 1000000000,
+        "yearly_price": 99.99,
+        "yearly_price_with_discount": 99.99
+    },
+    "scale":
+    {
+        "monthly_price": 9.99,
+        "requests_per_second": 1000000000,
+        "yearly_price": 99.99,
+        "yearly_price_with_discount": 99.99
+    }
+}

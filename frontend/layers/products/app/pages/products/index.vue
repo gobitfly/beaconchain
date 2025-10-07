@@ -221,13 +221,17 @@ const {
             :title="$t('products.landing_page.api.cards.api_pricing_plan.title')"
             title-icon="file-code-2"
             :subtitle="$t('products.landing_page.api.cards.api_pricing_plan.subtitle')"
+            class="sm:min-h-[20rem] sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_auto_1fr]"
           >
+            <ProductLandingpagePricing
+              class="sm:col-start-2 sm:-col-end-1 sm:row-start-1 sm:-row-end-1"
+            />
             <BaseButton
               variant="quaternary"
               size="xl"
               trailing-icon="arrow-up-right"
               to="/products/pricing"
-              class="max-sm:hidden"
+              class="max-sm:hidden sm:size-fit sm:-row-end-1 self-end"
             >
               {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
             </BaseButton>
@@ -238,7 +242,7 @@ const {
                 full
                 trailing-icon="arrow-up-right"
                 to="/products/pricing"
-                class="sm:hidden"
+                class="sm:hidden col-span-2 row-span-2"
               >
                 {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
               </BaseButton>

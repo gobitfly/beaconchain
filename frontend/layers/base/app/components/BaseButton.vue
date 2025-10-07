@@ -10,7 +10,7 @@ const {
   {
     full?: boolean,
     leadingIcon?: IconName,
-    size?: 'md' | 'xl',
+    size?: 'lg' | 'md' | 'xl',
     trailingIcon?: IconName,
     variant?: 'branded' | 'primary' | 'quaternary' | 'secondary',
   }
@@ -33,8 +33,9 @@ const {
       variant === 'branded' && 'from-brand-500 to-brand-700 text-white hover:opacity-90',
       variant === 'quaternary' && 'text-black dark:text-white hover:opacity-95',
       size === 'md' && 'text-sm py-md px-sm',
+      size === 'lg' && 'text-md py-lg px-2xl',
       size === 'xl' && 'text-md py-xl px-3xl',
-      full ? 'w-full' : 'w-fit',
+      full ? 'w-full' : 'min-w-fit',
     ]"
   >
     <LazyBaseIcon
