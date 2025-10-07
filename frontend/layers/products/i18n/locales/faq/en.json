@@ -1,0 +1,16 @@
+{
+    "items": [
+        {
+            "content": "ANSWER for .... Can I change my plan anytime?",
+            "title": "Can I change my plan anytime?"
+        },
+        {
+            "content": "Your requests will be throttled according to your plan limits. You can upgrade for higher limits.",
+            "title": "What happens if I exceed my rate limits?"
+        },
+        {
+            "content": "ANSWER for ..... Do you offer refunds?",
+            "title": "Do you offer refunds?"
+        }
+    ]
+}
