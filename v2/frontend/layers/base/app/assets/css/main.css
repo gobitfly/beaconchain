@@ -12,6 +12,26 @@
   --*: initial;
 
   --animate-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-slide-down: slideDown 300ms ease-out;
+  --animate-slide-up: slideUp 300ms ease-out;
+
+  @keyframes slideDown {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--slide-height);
+  }
+}
+
+  @keyframes slideUp {
+  from {
+    height: var(--slide-height);
+  }
+  to {
+    height: 0;
+  }
+}
 
   --breakpoint-sm: 40rem; /* 640px */
   --breakpoint-md: 48rem; /* 768px */
@@ -65,6 +85,7 @@
 
   --font-urbanist: "Urbanist", sans-serif;
   --font-weight-bold: 700;
+  --font-weight-medium: 500;
   --font-weight-semibold: 600;
   
   --radius-xs: .25rem; /* 4px */

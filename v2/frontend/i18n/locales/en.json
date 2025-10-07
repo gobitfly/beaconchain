@@ -1268,6 +1268,11 @@
                 "title": "Trusted By"
             }
         },
+        "pricing_page": {
+            "faq": {
+                "title": "Frequently Asked Questions"
+            }
+        },
         "staking_hub": "StakingHub",
         "tiers": {
             "business": "Business",
