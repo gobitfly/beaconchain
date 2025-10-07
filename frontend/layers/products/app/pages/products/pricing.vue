@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '~/layers/base/app/components/BaseNavigationItem.vue'
+import en from '#layers/products/i18n/locales/faq/en.json'
 
 useHead({
   bodyAttrs: {
@@ -27,6 +28,14 @@ const items: BaseNavigationItem[] = [
     to: 'products#explorer',
   },
 ]
+
+const messages = { 'en-US': en }
+const { tm } = useI18n({
+  // locale: 'en-US',
+  messages,
+})
+
+const faqItems = tm('items') ?? []
 </script>
 
 <template>
@@ -44,7 +53,11 @@ const items: BaseNavigationItem[] = [
           @close="isOpen = false"
         />
       </template>
-      Page: /products/pricing
+      <ProductLandingpageSection v-if="faqItems.length">
+        <LazyProductPricingSectionFAQ
+          :items="faqItems"
+        />
+      </ProductLandingpageSection>
     </NuxtLayout>
   </div>
 </template>

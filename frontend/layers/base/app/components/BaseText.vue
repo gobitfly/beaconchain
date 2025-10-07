@@ -4,6 +4,7 @@ const {
   size = 'md',
 } = defineProps<{
   is?:
+    | 'div'
     | 'p'
     | 'span',
   size?:
