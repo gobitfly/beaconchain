@@ -7,6 +7,7 @@
         "common": {
             "all": "All",
             "close": "Close",
+            "contact_sales": "Contact Sales",
             "error_retry": "An error occurred. Please try again.",
             "log_in": "Log in",
             "no_results": "No results found.",
@@ -1130,7 +1131,30 @@
         "yearly": "Yearly"
     },
     "products": {
-        "api": "API",
+        "api": {
+            "name": "API",
+            "plans": {
+                "enterprise": {
+                    "contact_sales": "Contact Sales",
+                    "description": "Custom solutions for large-scale operations. Get dedicated support, custom rate limits, and enterprise-grade SLA.",
+                    "perks": {
+                        "dedicated_support": {
+                            "description": "24/7 priority assistance",
+                            "title": "Dedicated support"
+                        },
+                        "rate_limit": {
+                            "description": "Custom rate limits",
+                            "title": "Unlimited API calls"
+                        },
+                        "sla": {
+                            "description": "Enterprise-grade reliability",
+                            "title": "99.99% SLA"
+                        }
+                    },
+                    "title": "Enterprise Plan"
+                }
+            }
+        },
         "explorer": "Explorer",
         "landing_page": {
             "api": {
