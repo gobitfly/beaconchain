@@ -61,7 +61,7 @@ const handleSelectFilter = (value: ChipItem['value']) => {
 
 <template>
   <ul
-    class="flex gap-md px-2xl py-lg"
+    class="flex flex-wrap gap-md px-2xl py-lg"
     role="group"
     :aria-label
   >
