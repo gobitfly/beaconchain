@@ -61,7 +61,7 @@ const values = [
         screenreader-title="products.landing_page.api.cards.api_pricing_plan.title"
         :class-list=" {
           tablist: 'p-xs font-semibold flex gap-xs bg-gray-100 dark:bg-black text-gray-600 dark:text-gray-400 rounded-4xl shadow-[0_-1px_0_0_rgba(255,255,255,0.18)_inset]',
-          tab: 'p-sm grow',
+          tab: 'p-sm grow rounded-4xl',
           activeTab: 'text-black dark:text-white',
           activeTabIndicator: 'dark:bg-gray-700 bg-gray-200 rounded-4xl text-white shadow-[0_2px_2px_0_rgba(0,0,0,0.25),_0_0.5px_0.5px_0_rgba(255,255,255,0.12)_inset]',
         }"
