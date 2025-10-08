@@ -95,7 +95,7 @@ const {
         />
         <BlockchainSearchInput
           v-model="searchParams"
-          class="w-screen sm:w-full max-w-[920px] sm:mx-auto"
+          class="w-[min(920px,100%)]"
           :results="data"
           :type-filters="searchTypes"
           :is-loading="status === 'pending'"
