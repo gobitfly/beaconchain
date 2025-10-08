@@ -77,15 +77,13 @@ const handleTypeFilterChange = () => {
     @search="handleSearch"
   >
     <template #dropdown-fixed-header>
-      <div class="hidden sm:block">
-        <BaseChipGroup
-          v-model="searchParams.types"
-          :items="chips"
-          :aria-label="$t('products.landing_page.search.filter_aria_label')"
-          @update:model-value="handleTypeFilterChange"
-        />
-        <hr class="mx-2xl text-gray-600">
-      </div>
+      <BaseChipGroup
+        v-model="searchParams.types"
+        :items="chips"
+        :aria-label="$t('products.landing_page.search.filter_aria_label')"
+        @update:model-value="handleTypeFilterChange"
+      />
+      <hr class="mx-2xl text-gray-600">
     </template>
 
     <template #result-group-label="{ label }">
