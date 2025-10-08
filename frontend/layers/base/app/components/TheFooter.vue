@@ -34,7 +34,7 @@ const resourceLinks: Link[] = [
     href: '/products/pricing', icon: 'code', text: $t('base.footer.resources.links.api_pricing'),
   },
   {
-    href: '/contact', icon: 'mail-up', text: $t('base.footer.resources.links.contact_sales'),
+    href: '/products/contact-sales', icon: 'mail-up', text: $t('base.footer.resources.links.contact_sales'),
   },
   {
     href: 'https://status.beaconcha.in/', icon: 'circle-check-filled', text: $t('base.footer.resources.links.site_status'),
