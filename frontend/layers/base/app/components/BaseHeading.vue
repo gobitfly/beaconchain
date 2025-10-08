@@ -1,5 +1,6 @@
 <script setup lang="ts">
 export type BaseHeadings = 'h2' | 'h3' | 'h4'
+
 defineProps<{
   is: BaseHeadings,
   size:
