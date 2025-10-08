@@ -90,13 +90,9 @@ const {
 
       <ProductLandingpageSection class="px-[0px] sm:px-md gap-xl hero-section h-[70vh]">
         <div class="hero-section__background-effects" />
-        <BaseHeading
-          is="h2"
-          size="lg"
-          class="text-center"
-        >
-          {{ $t('products.landing_page.search.title') }}
-        </BaseHeading>
+        <ProductLandingpageHeading
+          :headline="$t('products.landing_page.search.title')"
+        />
         <BlockchainSearchInput
           v-model="searchParams"
           class="w-screen sm:w-full max-w-[920px] sm:mx-auto"
@@ -108,13 +104,10 @@ const {
         />
       </ProductLandingpageSection>
       <ProductLandingpageSection class="mt-11xl">
-        <BaseHeading
-          is="h2"
+        <ProductLandingpageHeading
           :id="id.api"
-          size="lg"
-        >
-          {{ $t('products.landing_page.api.title') }}
-        </BaseHeading>
+          :headline="$t('products.landing_page.api.title')"
+        />
         <p>{{ $t('products.landing_page.api.description') }}</p>
         <BaseButton
           leading-icon="file-code-2"
@@ -254,13 +247,10 @@ const {
         <ProductLandingpageSectionStakinghub />
       </ProductLandingpageSection>
       <ProductLandingpageSection class="mt-11xl explorer-section">
-        <BaseHeading
-          is="h2"
+        <ProductLandingpageHeading
           :id="id.explorer"
-          size="lg"
-        >
-          {{ $t('products.landing_page.explorer.title') }}
-        </BaseHeading>
+          :headline="$t('products.landing_page.explorer.title')"
+        />
         <p>{{ $t('products.landing_page.explorer.description') }}</p>
         <BaseButton
           leading-icon="compass"
