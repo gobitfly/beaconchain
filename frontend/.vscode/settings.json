@@ -2,6 +2,7 @@
     "conventionalCommits.scopes": [
         "BaseNavigation",
         "BaseNavigationLeft",
+        "BaseSearchInput",
         "BcButton",
         "BcDataWrapper",
         "BcFormatAmount",
