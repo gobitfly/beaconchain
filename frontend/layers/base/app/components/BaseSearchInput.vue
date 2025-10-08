@@ -53,7 +53,7 @@ const groupedResults = computed(() => {
 <template>
   <form
     role="search"
-    class="base-search-input__form p-2xl"
+    class="base-search-input__form p-2xl isolate"
   >
     <RkComboboxRoot
       v-model:open="showDropdown"
