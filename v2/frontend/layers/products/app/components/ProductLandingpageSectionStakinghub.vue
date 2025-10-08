@@ -38,14 +38,11 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full flex flex-col gap-4xl justify-center items-center">
-    <BaseHeading
-      is="h2"
+    <p
       id="staking-hub"
-      size="lg"
       class="text-center "
-    >
-      {{ $t('products.landing_page.staking_hub.title') }}
-    </BaseHeading>
+      :headline="$t('products.landing_page.staking_hub.title')"
+    />
     <p>{{ $t('products.landing_page.staking_hub.description') }}</p>
     <BaseButton
       leading-icon="coins"
