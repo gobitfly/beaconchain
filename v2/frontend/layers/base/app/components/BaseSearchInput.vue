@@ -82,7 +82,6 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
         ref="search-input"
         v-model.trim="input"
         type="search"
-        auto-focus
         :aria-busy="isLoading"
         :placeholder
         class="search-input w-full text-2xl font-semibold rounded-3xl pt-3xl pr-5xl pb-6xl pl-2xl dark:bg-gray-950
