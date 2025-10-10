@@ -1161,7 +1161,7 @@
                                 "validator_performance_metrics": "Validator performance metrics",
                                 "validator_status_and_lifecycle_events": "Validator status and lifecycle events"
                             },
-                            "title": "Staking Hub API"
+                            "title": "StakingHub API"
                         },
                         "subtitle": "Unlock the power of multichain with our comprehensive docs. Clear guides to power your blockchain apps.",
                         "title": "API Docs"
