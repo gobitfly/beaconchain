@@ -91,7 +91,7 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
       />
 
       <RkComboboxContent
-        class="absolute z-10 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
+        class="absolute z-10 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px] overscroll-contain"
         @pointer-down-outside="handleClickOutside"
       >
         <template v-if="$slots['dropdown-fixed-header']">
