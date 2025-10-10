@@ -126,7 +126,7 @@ const {
             :title="$t('products.landing_page.api.cards.api_docs.title')"
             :subtitle="$t('products.landing_page.api.cards.api_docs.subtitle')"
             title-icon="file-code-2"
-            title-to="products/api/docs"
+            title-to="/products/api/docs"
           >
             <div class="grid grid-cols-2 lg:grid-cols-3 gap-5xl mt-7xl">
               <article class="flex flex-col gap-4xl">
