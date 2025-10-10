@@ -38,10 +38,12 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full flex flex-col gap-4xl justify-center items-center">
-    <p
+    <ProductLandingpageHeading
+      is="h2"
       id="staking-hub"
-      class="text-center "
       :headline="$t('products.landing_page.staking_hub.title')"
+      size="lg"
+      class="text-center "
     />
     <p>{{ $t('products.landing_page.staking_hub.description') }}</p>
     <BaseButton
