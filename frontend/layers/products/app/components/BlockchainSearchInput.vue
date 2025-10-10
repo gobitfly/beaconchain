@@ -80,6 +80,7 @@ const handleTypeFilterChange = () => {
       <BaseChipGroup
         v-model="searchParams.types"
         :items="chips"
+        class="overflow-x-auto overscroll-contain min-h-fit"
         :aria-label="$t('products.landing_page.search.filter_aria_label')"
         @update:model-value="handleTypeFilterChange"
       />
