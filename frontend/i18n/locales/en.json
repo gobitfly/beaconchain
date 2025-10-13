@@ -15,7 +15,7 @@
             "side_navigation": "Side Navigation"
         },
         "footer": {
-            "copyright": "© 2025 beaconcha.in. All rights reserved",
+            "copyright": "© {year} beaconcha.in. All rights reserved",
             "imprint": "Imprint",
             "links": {
                 "follow_us": "Follow us on social media to find out the latest updates on our progress.",
