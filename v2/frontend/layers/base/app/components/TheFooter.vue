@@ -194,7 +194,7 @@ const resourceLinks: Link[] = [
             {{ $t('base.footer.privacy') }}
           </NuxtLink>
         </div>
-        <span class="flex self-center sm:order-1">{{ $t('base.footer.copyright') }}</span>
+        <span class="flex self-center sm:order-1">{{ $t('base.footer.copyright', { year: new Date().getFullYear() }) }}</span>
       </div>
     </div>
   </div>
