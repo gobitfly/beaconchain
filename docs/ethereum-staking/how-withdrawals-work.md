@@ -1,0 +1,82 @@
+# How Ethereum validator withdrawals work
+
+If you have exited your validator and are waiting for your ETH, this guide explains what happens next, how long it can take, and how to confirm progress on beaconcha.in.
+
+## TL;DR
+
+- There are two kinds of withdrawals:
+  - Partial withdrawals: automatically skim any balance above your validator’s effective balance (typically 32 ETH unless you opted for a higher cap after Pectra; see below) to your withdrawal address.
+  - Full withdrawals: after you exit and become withdrawable, the protocol pays out your validator’s full effective balance to your withdrawal address.
+- You must have 0x01 or 0x02 withdrawal credentials (execution address) to receive either partial or full withdrawals.
+- Payouts are processed by the protocol in the background, at a limited rate per slot. This can take from minutes to multiple days depending on global queues.
+- You can verify status and payouts on beaconcha.in: use your validator page (status, epochs) and your withdrawal address page → Withdrawals tab.
+
+## The withdrawal lifecycle
+
+1. Active → Exiting
+   - You (or an authorized party) submit a voluntary exit for your validator.
+   - Your validator stays active until the exit is processed by the consensus layer (subject to churn limits).
+
+2. Exited → Withdrawable
+   - After the exit is finalized, the validator becomes withdrawable at a specific epoch (withdrawable_epoch).
+
+3. Withdrawable → Paid
+   - The consensus layer includes your validator in the withdrawal queue.
+   - The execution layer credits your withdrawal address in the block/slot where your withdrawal is processed.
+   - Credits appear as “Withdrawals” in the block, not as normal transactions.
+
+## Credential requirements (critical)
+
+- 0x01 or 0x02 withdrawal credentials (to an execution address) are required for both partial and full withdrawals to be paid.
+- If you still have 0x00 (BLS) credentials, you must perform a credential update to 0x01 first. Until then, the protocol cannot pay out to your execution address.
+
+## Partial vs full withdrawals
+
+- Partial withdrawals
+  - Trigger: Your validator’s actual balance exceeds its effective balance.
+  - Amount: Only the excess above effective balance is skimmed to your withdrawal address.
+  - Timing: Processed automatically and continuously by the protocol when eligible; batched at a limited rate per slot.
+
+- Full withdrawals
+  - Trigger: Your validator is exited, and has reached its withdrawable epoch.
+  - Amount: Your entire effective balance is paid to your withdrawal address in a withdrawal entry when processed; if a block hits its withdrawal limit, your entry is included in a later block.
+  - Timing: Subject to the same per-slot processing limits; can take up to several days.
+
+## How long will my payout take after exit?
+
+Timing depends on:
+- Exit churn: How many validators are exiting around the same time (there is a limit per epoch).
+- Withdrawal throughput: The protocol processes only a limited number of withdrawals each slot.
+- Your place in the queue.
+
+## FAQ
+
+- I exited but don’t see my ETH yet. What’s happening?
+  - Check your validator page: are you withdrawable yet? If yes, the payout is waiting for its turn in the withdrawal queue.
+
+- Will partial withdrawals continue after I exit?
+  - After you exit and become withdrawable, your full withdrawal is paid. Partial withdrawals are a mechanism for active validators; once fully withdrawn, the validator no longer receives partial skims.
+
+- Do withdrawals cost gas or require me to send a transaction?
+  - No. Withdrawals are protocol-driven credits included in blocks as part of the consensus process.
+
+- I still have 0x00 credentials—can I get paid?
+  - Not until you update to 0x01 credentials. Perform the credential change first; then partial/full withdrawals can be processed to your execution address.
+
+## Troubleshooting
+
+- My validator shows “exited” but not “withdrawable”
+  - Wait for finality and the withdrawable epoch. Large exit waves can add delay due to churn limits.
+
+- beaconcha.in shows a withdrawal to my address, but my wallet balance looks unchanged
+  - Some wallets cache balances—refresh and wait a few confirmations. Confirm the credit in the address’s Withdrawals tab and on the slot page.
+
+## Related resources
+
+- Deposit Process: ./deposit-process.md
+- Why validator withdrawals don’t show up as wallet transactions: ./validator-withdrawals-execution-layer.md
+- Rewards and Penalties: ../beaconcha.in-explorer/rewards-and-penalties.md
+- Attestation: ../beaconcha.in-explorer/attestation.md
+- beaconcha.in explorer: https://beaconcha.in/
+
+Tip: Keep your withdrawal address secure. Anyone with control of that address controls the withdrawn ETH.
