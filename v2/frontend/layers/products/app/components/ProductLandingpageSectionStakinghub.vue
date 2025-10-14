@@ -43,7 +43,7 @@ onUnmounted(() => {
       id="staking-hub"
       :headline="$t('products.landing_page.staking_hub.title')"
       size="lg"
-      class="text-center "
+      class="text-center"
     />
     <p>{{ $t('products.landing_page.staking_hub.description') }}</p>
     <BaseButton
@@ -93,7 +93,7 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.staking_mobile_app.title')"
-        class="min-h-[var(--stakinghub-card-height)] isolate relative overflow-hidden[&>header:first-child]:relative [&>header:first-child]:z-10"
+        class="min-h-[var(--stakinghub-card-height)] isolate relative overflow-hidden [&>header:first-child]:relative [&>header:first-child]:z-10 text-white"
         @mouseenter="playOnInteraction"
       >
         <video
@@ -111,7 +111,7 @@ onUnmounted(() => {
         </video>
         <!-- Dark overlay for text readability -->
         <div class="absolute top-[0] left-[0] w-full h-full bg-black/70 z-5" />
-        <div class="relative z-10 p-6 text-white flex flex-col gap-2xl">
+        <div class="relative z-10 p-6 flex flex-col gap-2xl">
           <p class="text-md font-semibold">
             {{ $t('products.landing_page.staking_hub.cards.staking_mobile_app.subtitle') }}
           </p>
@@ -148,7 +148,7 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.validator_dashboards.title')"
-        class="min-h-[var(--stakinghub-card-height)] bg-[url('/assets-2usdf/img/validator-bg.svg')] bg-[length:440px_440px] bg-[position:center_calc(100%+180px)] bg-no-repeat"
+        class="min-h-[var(--stakinghub-card-height)] bg-[url('/assets-2usdf/img/validator-bg.svg')] dark:bg-[url('/assets-2usdf/img/validator-bg-dark.svg')] bg-[length:440px_440px] bg-[position:center_calc(100%+180px)] bg-no-repeat"
       >
         <p class="text-md font-semibold">
           {{ $t('products.landing_page.staking_hub.cards.validator_dashboards.subtitle') }}

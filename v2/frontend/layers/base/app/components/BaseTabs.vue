@@ -9,6 +9,7 @@ const props = defineProps<{
     activeTabIndicator?: string,
     tab?: string,
     tablist?: string,
+    tabpanel?: string,
   },
   defaultSelectedTab?: number,
   hasFocusableElement?: boolean,
@@ -137,6 +138,7 @@ watch(selectedTab, (newValue, oldValue) => {
         <article
           v-if="selectedTab === index"
           :id="`${idTabPanel}-${index}`"
+          :class="classList?.tabpanel"
           tabindex="0"
           role="tabpanel"
           :aria-labelledby="`${idTab}-${index}`"

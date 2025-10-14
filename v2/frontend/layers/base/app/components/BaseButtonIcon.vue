@@ -31,9 +31,9 @@ const {
   <component
     :is="to ? NuxtLink : 'button'"
     :to
-    class="border border-transparent flex rounded-full bg-linear-to-b disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 size-fit"
+    class="border flex rounded-full bg-linear-to-b disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 size-fit"
     :class="[
-      variant === 'secondary' && 'from-gray-300 to-gray-200 dark:from-charcoal-600 dark:to-charcoal-700 opacity-90',
+      variant === 'secondary' && 'from-gray-300 to-gray-200 dark:from-charcoal-600 dark:to-charcoal-700 opacity-90 border-transparent',
       variant === 'tertiary' && 'dark:border-charcoal-400 border-gray-200',
       size === 'md' && 'p-md',
       size === 'lg' && 'p-md',
