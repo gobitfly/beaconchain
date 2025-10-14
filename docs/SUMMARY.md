@@ -29,5 +29,6 @@
 * [The Genesis Event](beaconcha.in-explorer/the-genesis-event.md)
 * [Ethereum Validator Keys](beaconcha.in-explorer/ethereum-2-keys.md)
 * [Deposit Process](ethereum-staking/deposit-process.md)
+* [Why validator withdrawals don’t show up as wallet transactions](ethereum-staking/validator-withdrawals-execution-layer.md)
 * [Rewards and Penalties](beaconcha.in-explorer/rewards-and-penalties.md)
 * [Attestation](beaconcha.in-explorer/attestation.md)
