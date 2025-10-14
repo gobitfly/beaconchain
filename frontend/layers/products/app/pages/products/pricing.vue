@@ -2,12 +2,6 @@
 import type { BaseNavigationItem } from '~/layers/base/app/components/BaseNavigationItem.vue'
 import en from '#layers/products/i18n/locales/faq/en.json'
 
-useHead({
-  bodyAttrs: {
-    // enforcing dark mode as light mode is not ready yet
-    'data-theme': 'dark',
-  },
-})
 const { t: $t } = useTranslation()
 
 const isOpen = ref(false)

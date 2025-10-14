@@ -26,7 +26,7 @@ const id = useId()
 </script>
 
 <template>
-  <div class="dark:bg-gray-950 p-3xl rounded-4xl flex flex-col gap-2xl w-full">
+  <div class="dark:bg-gray-950 border border-gray-100 dark:border-gray-900 p-3xl rounded-4xl flex flex-col gap-2xl w-full">
     <slot name="header">
       <header
         v-if="title"

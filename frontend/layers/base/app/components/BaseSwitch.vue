@@ -60,17 +60,20 @@ watch(modelValue, () => {
         :class="classList?.trackItem"
         class="relative"
       >
-        <span
-          class="relative z-10"
-        >
-          {{ values[0]?.label }}
+        <span class="relative z-10">
+          <slot
+            name="first"
+            :label="values[0]?.label"
+          >
+            {{ values[0]?.label }}
+          </slot>
         </span>
         <input
           :id="idFirstValue"
           v-model="modelValue"
           :value="values[0]?.key"
           type="radio"
-          class="appearance-none"
+          class="sr-only"
           :name
         >
         <span
@@ -85,16 +88,19 @@ watch(modelValue, () => {
         :class="classList?.trackItem"
         :for="idSecondValue"
       >
-        <span
-          class="relative z-10"
-        >
-          {{ values[1]?.label }}
+        <span class="relative z-10">
+          <slot
+            name="second"
+            :label="values[1]?.label"
+          >
+            {{ values[1]?.label }}
+          </slot>
         </span>
         <input
           :id="idSecondValue"
           v-model="modelValue"
           :value="values[1]?.key"
-          class="appearance-none"
+          class="sr-only"
           type="radio"
           :name
         >

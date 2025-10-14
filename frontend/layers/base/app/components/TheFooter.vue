@@ -40,11 +40,12 @@ const resourceLinks: Link[] = [
     href: 'https://status.beaconcha.in/', icon: 'circle-check-filled', text: $t('base.footer.resources.links.site_status'),
   },
 ]
+const colorMode = useColorMode()
 </script>
 
 <template>
   <div
-    class="bg-gray-50 dark:bg-gray-950 flex flex-col gap-3xl sm:gap-5xl pt-3xl px-xl pb-7xl sm:px-5xl sm:py-7xl sm:rounded-4xl sm:mb-xl max-w-24xl mx-auto"
+    class="bg-gray-50 dark:bg-gray-950 flex flex-col gap-3xl sm:gap-5xl pt-3xl px-xl pb-7xl sm:px-5xl sm:py-7xl sm:rounded-4xl sm:mb-xl max-w-24xl mx-auto [&_*:focus-visible]:rounded-3xl [&_*:focus-visible]:outline-offset-4"
   >
     <NuxtLink
       to="/"
@@ -168,6 +169,35 @@ const resourceLinks: Link[] = [
             />
           </li>
         </ul>
+        <BaseSwitch
+          v-model="colorMode.value"
+          class="w-fit -ml-[1px]"
+          :values="[
+            {
+              label: $t('base.footer.color_mode.light'),
+              key: 'light',
+            },
+            {
+              label: $t('base.footer.color_mode.dark'),
+              key: 'dark',
+            },
+          ]"
+          :class-list="{
+            trackItem: 'p-md +py-md +px-lg border border-transparent rounded-4xl text-gray-600 dark:text-gray-400 has-checked:text-black has-checked:dark:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-300',
+            track: 'border border-gray-100 dark:border-gray-900 flex gap-md [&>*]:grow text-center bg-white dark:bg-gray-950 rounded-4xl shadow-[0_1px_0.5px_0_rgba(255,255,255,0.08)_inset,0-1px_0_0_rgba(255,255,255,0.18)_inset]',
+            thumb: 'bg-gray-50 dark:bg-gray-800 rounded-4xl shadow-[0_2px_2px_0_rgba(0,0,0,0.25),_0_0.5px_0.5px_0_rgba(255,255,255,0.12)_inset]',
+          }"
+          screenreader-title="base.footer.color_mode.title"
+        >
+          <template #first=" { label } ">
+            <BaseIcon name="sun" />
+            <span class="sr-only">{{ label }}</span>
+          </template>
+          <template #second=" { label } ">
+            <BaseIcon name="moon" />
+            <span class="sr-only">{{ label }}</span>
+          </template>
+        </BaseSwitch>
       </div>
     </div>
 

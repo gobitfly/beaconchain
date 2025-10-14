@@ -19,7 +19,7 @@ const v1Domain = useV1Domain()
 </script>
 
 <template>
-  <nav class="p-2xl isolate">
+  <nav class="p-2xl isolate bg-gray-50 dark:bg-transparent">
     <div class="max-w-8xl mx-auto grid gap-2xl [&>*]:[grid-area:1/1]">
       <span class="flex gap-2xl items-center z-10 w-fit">
         <BaseButtonIcon
