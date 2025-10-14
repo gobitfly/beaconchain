@@ -1,0 +1,310 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Knowledge Base",
+  "favicon": "/images/favicon.ico",
+  "logo": {
+    "light": "/images/logo_light.png",
+    "dark": "/images/logo_dark.png",
+    "href": "https://docs.beaconcha.in"
+  },
+  "colors": {
+    "primary": "#ffaa31",
+    "light": "#ffaa31",
+    "dark": "#ffaa31"
+  },
+  "fonts": {
+    "heading": {
+      "family": "Barlow",
+      "weight": 500
+    },
+    "body": {
+      "family": "Inter",
+      "weight": 400
+    }
+  },
+  "background": {
+    "color": {
+      "light": "#fefdfb",
+      "dark": "#1e1c1f"
+    }
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Sign up",
+      "href": "https://beaconca.in/register"
+    },
+    "links": [
+      {
+        "label": "Login",
+        "href": "https://beaconcha.in/login"
+      }
+    ]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "welcome"
+            ]
+          },
+          {
+            "group": "Validator Dashboard",
+            "pages": [
+              "validator-dashboard/introduction",
+              "validator-dashboard/summary-table",
+              "validator-dashboard/slot-visualization",
+              "validator-dashboard/validator-groups",
+              "validator-dashboard/manage-validators",
+              {
+                "group": "Dashboard Management API",
+                "pages": [
+                  "validator-dashboard/manage-validators-api",
+                  "/validator-dashboard/manage-validators-api-endpoints/validators_post",
+                  "/validator-dashboard/manage-validators-api-endpoints/groups_delete",
+                  "/validator-dashboard/manage-validators-api-endpoints/validators_bulk_delete_post"
+                ]
+              },
+              "validator-dashboard/share-your-custom-dashboard",
+              "validator-dashboard/metric-validator-efficiency",
+              "validator-dashboard/migrating-legacy-dashboard"
+            ]
+          },
+          {
+            "group": "Notifications & Monitoring",
+            "pages": [
+              "notifications-monitoring/mobile-app-beacon-node",
+              "notifications-monitoring/notifications",
+              "notifications-monitoring/legacy-notifications"
+            ]
+          },
+          {
+            "group": "FAQs",
+            "expanded": false,
+            "pages": [
+              "faqs/how-withdrawals-work",
+              "faqs/validator-withdrawals-execution-layer",
+              "faqs/optimal-inclusion-distance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API",
+        "icon": "code",
+        "global": {
+          "anchors": [
+            {
+              "anchor": "API Pricing",
+              "href": "https://beaconcha.in/pricing",
+              "icon": "gem",
+              "color": {
+                "light": "#ffaa31",
+                "dark": "#ffaa31"
+              }
+            }
+          ]
+        },
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "api/overview"
+            ]
+          },
+          {
+            "group": "V1 API docs",
+            "openapi": "/api/v1/bundled.yaml",
+            "pages": [
+              {
+                "group": "Consensus Layer",
+                "expanded": false,
+                "pages": [
+                  {
+                    "group": "Network",
+                    "pages": [
+                      "GET /api/v1/latestState"
+                    ]
+                  },
+                  {
+                    "group": "Epochs",
+                    "pages": [
+                      "GET /api/v1/epoch/{epoch}",
+                      "GET /api/v1/epoch/{epoch}/slots"
+                    ]
+                  },
+                  {
+                    "group": "Slots",
+                    "pages": [
+                      "GET /api/v1/slot/{slotOrHash}",
+                      "GET /api/v1/slot/{slot}/attestations",
+                      "GET /api/v1/slot/{slot}/attesterslashings",
+                      "GET /api/v1/slot/{slot}/deposits",
+                      "GET /api/v1/slot/{slot}/proposerslashings",
+                      "GET /api/v1/slot/{slot}/voluntaryexits",
+                      "GET /api/v1/slot/{slot}/withdrawals"
+                    ]
+                  },
+                  {
+                    "group": "Validators",
+                    "pages": [
+                      "GET /api/v1/validator/{indexOrPubkey}",
+                      "POST /api/v1/validator",
+                      "GET /api/v1/validator/{indexOrPubkey}/attestationefficiency",
+                      "GET /api/v1/validator/{indexOrPubkey}/attestations",
+                      "GET /api/v1/validator/{indexOrPubkey}/balancehistory",
+                      "GET /api/v1/validator/{indexOrPubkey}/blsChange",
+                      "GET /api/v1/validator/{indexOrPubkey}/deposits",
+                      "GET /api/v1/validator/{indexOrPubkey}/incomedetailhistory",
+                      "GET /api/v1/validator/{indexOrPubkey}/proposals",
+                      "GET /api/v1/validator/{indexOrPubkey}/withdrawals",
+                      "GET /api/v1/validator/eth1/{eth1address}",
+                      "GET /api/v1/validator/stats/{index}",
+                      "GET /api/v1/validator/withdrawalCredentials/{withdrawalCredentialsOrEth1address}",
+                      "GET /api/v1/validators/proposalLuck",
+                      "GET /api/v1/validators/queue",
+                      "GET /api/v1/eth1deposit/{txhash}"
+                    ]
+                  },
+                  {
+                    "group": "Rewards",
+                    "pages": [
+                      "GET /api/v1/validator/{indexOrPubkey}/execution/performance",
+                      "GET /api/v1/validator/{indexOrPubkey}/performance",
+                      "GET /api/v1/validator/leaderboard"
+                    ]
+                  },
+                  {
+                    "group": "Sync Committees",
+                    "pages": [
+                      "GET /api/v1/sync_committee/{period}"
+                    ]
+                  },
+                  {
+                    "group": "Rocketpool",
+                    "pages": [
+                      "GET /api/v1/rocketpool/stats",
+                      "GET /api/v1/rocketpool/validator/{indexOrPubkey}"
+                    ]
+                  },
+                  {
+                    "group": "ETH.Store®",
+                    "pages": [
+                      "GET /api/v1/ethstore/{day}"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Execution Layer",
+                "pages": [
+                  {
+                    "group": "Blocks",
+                    "pages": [
+                      "GET /api/v1/execution/{addressIndexOrPubkey}/produced",
+                      "GET /api/v1/execution/block/{blockNumber}"
+                    ]
+                  },
+                  {
+                    "group": "Addresses",
+                    "pages": [
+                      "GET /api/v1/execution/address/{address}",
+                      "GET /api/v1/execution/address/{address}/erc20tokens"
+                    ]
+                  },
+                  {
+                    "group": "Gas",
+                    "pages": [
+                      "GET /api/v1/execution/gasnow"
+                    ]
+                  },
+                  {
+                    "group": "ENS",
+                    "pages": [
+                      "GET /api/v1/ens/lookup/{domain}"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Misc",
+                "pages": [
+                  "GET /api/healthz",
+                  "GET /api/healthz-loadbalancer",
+                  "GET /api/v1/chart/{chart}",
+                  "GET /api/v1/graffitiwall"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "icon": "clock-rotate-left",
+        "groups": [
+          {
+            "group": "Changelog",
+            "pages": [
+              "changelog/product-updates"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Legal",
+        "icon": "file-text",
+        "groups": [
+          {
+            "group": "Legal",
+            "pages": [
+              "legal/terms",
+              "legal/privacy"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/beaconcha_in",
+      "github": "https://github.com/gobitfly",
+      "discord": "https://dsc.gg/beaconchain"
+    },
+    "links": [
+      {
+        "header": "General",
+        "items": [
+          {
+            "label": "API Pricing",
+            "href": "https://beaconcha.in/pricing"
+          },
+          {
+            "label": "API Status",
+            "href": "https://status.beaconcha.in/"
+          }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "Terms",
+            "href": "https://docs.beaconcha.in/legal/terms"
+          },
+          {
+            "label": "Privacy",
+            "href": "https://docs.beaconcha.in/legal/privacy"
+          }
+        ]
+      }
+    ]
+  }
+}

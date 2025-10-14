@@ -1,0 +1,28 @@
+---
+title: Getting Started
+description: Advanced and reliable API for accessing comprehensive Ethereum blockchain data.
+---
+
+- **Free Usage Policy:** The API is free to use under a fair use policy,
+with rate limits of 10 requests per minute per IP.
+
+- **Caching:** All responses are cached for 1 minute.
+
+- **Higher Usage Plans:** For higher usage plans, visit:
+[beaconcha.in/pricing](https://beaconcha.in/pricing). An API key is
+required to use these plans.
+
+
+### API Key Usage
+
+API keys can be obtained at
+[/user/settings](https://beaconcha.in/user/settings) and must be included in the request header.
+
+
+#### Example
+
+```bash
+
+curl -H 'apikey: <your_key>' https://beaconcha.in/api/v1/slot/1
+
+```

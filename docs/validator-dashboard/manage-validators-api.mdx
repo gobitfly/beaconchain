@@ -1,0 +1,37 @@
+---
+description: Manage your validators via API
+title: API Introduction
+---
+
+# ⚒️ Manage Validators [API]
+
+<Note>
+To modify the validator dashboard via API, make sure you have an active [**Orca**](https://beaconcha.in/premium) subscription.
+</Note>
+
+After creating a [validator dashboard](https://beaconcha.in/dashboard) and the desired [validator groups](./validator-groups) through the UI, you can add and assign validators to groups using our API.
+
+***
+- The Group ID is shown in the Group Manage modal on the Dashboard (see [validator groups](./validator-groups))
+- The Dashboard ID is visible in the dashboard URL
+- The API key is only visible in your account settings: https://beaconcha.in/user/settings#api
+
+<Warning>
+Adjust the base URL for your target network:
+- Mainnet: beaconcha.in
+- Hoodi: hoodi.beaconcha.in
+</Warning>
+
+## Add validators to a dashboard
+Use the [POST endpoint](/validator-dashboard/manage-validators-api-endpoints/validators_post) to add validators to a dashboard. Provide the API key as a query parameter and a JSON body. See the API spec below for the exact payload shape.
+
+## Remove validators from a group
+Use the [DELETE endpoint](/validator-dashboard/manage-validators-api-endpoints/groups_delete) to remove validators from a specific group.
+
+## Bulk delete validators from a dashboard
+Use the [bulk deletions endpoint](/validator-dashboard/manage-validators-api-endpoints/validators_bulk_delete_post) to remove many validators at once.
+
+<Tip>
+Looking for how to create and manage groups in the UI? See [validator groups](/validator-dashboard/validator-groups).
+</Tip>
+
