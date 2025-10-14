@@ -10,7 +10,7 @@ The validator **Efficiency** / **Beaconscore** metric is a comprehensive measure
 2. [**Block proposals**](metric-validator-efficiency.md#proposer-efficiency)
 3. [**Sync committees**](metric-validator-efficiency.md#sync-efficiency)
 
-This metric is designed to provide a holistic view of a validator's effectiveness. \
+This metric is designed to provide a holistic view of a validator's effectiveness.
 
 Validator efficiency can be calculated over an arbitrary timeframe. The longer the timeframe, the closer it is expected to approach the duty weighting as defined in the consensus layer specification. For shorter timeframes however (down to a single epoch), these values can vary significantly: A block proposal or sync committee participation can completely dominate the resulting efficiency in these cases.&#x20;
 
@@ -18,7 +18,7 @@ In order to calculate the efficiency over multiple epochs correctly, the respect
 
 ***
 
-**Components of Efficiency**\
+**Components of Efficiency**
 
 
 
