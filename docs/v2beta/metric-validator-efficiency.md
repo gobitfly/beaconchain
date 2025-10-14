@@ -1,17 +1,16 @@
 ---
-description: Efficiency, a metric to measure validator performance
+description: Efficiency aka. Beaconscore, a metric to measure validator performance
 ---
 
-# 📈 Metric: Validator Efficiency
+# 📈 Metric: Validator Efficiency aka. Beaconscore
 
-The validator **Efficiency** metric is a comprehensive measure of validator performance, integrating multiple components:&#x20;
+The validator **Efficiency** / **Beaconscore** metric is a comprehensive measure of validator performance, integrating multiple components:&#x20;
 
 1. [**Attestations**](metric-validator-efficiency.md#attester-efficiency)
 2. [**Block proposals**](metric-validator-efficiency.md#proposer-efficiency)
 3. [**Sync committees**](metric-validator-efficiency.md#sync-efficiency)
 
 This metric is designed to provide a holistic view of a validator's effectiveness. \
-\
 
 Validator efficiency can be calculated over an arbitrary timeframe. The longer the timeframe, the closer it is expected to approach the duty weighting as defined in the consensus layer specification. For shorter timeframes however (down to a single epoch), these values can vary significantly: A block proposal or sync committee participation can completely dominate the resulting efficiency in these cases.&#x20;
 
@@ -100,7 +99,7 @@ sync_efficiency = sync_actualReward / sync_idealReward
 
 ***
 
-### Example Efficiency calculation
+### Example Efficiency / Beaconscore calculation
 
 
 When a validator has **attestations, block proposals, and sync committees**, the efficiency is calculated as:
@@ -111,4 +110,10 @@ efficiency = (attester_actualReward + proposer_actualReward + sync_actualReward)
 ```
 {% endcode %}
 
-When a validator did not participate in a sync committee and/or did not propose a block, the respective rewards & ideal rewards are set to 0
+When a validator did not participate in a sync committee and/or did not propose a block, the respective rewards & ideal rewards are set to 0.
+
+
+***
+
+## Benchmark values
+Validators on the Ethereum mainnet should target an efficiency / Beaconscore of 99% or higher. A value above 99.5% can be considered exceptional in terms of validator performance. Values below 98 indicate an issue with the validator that needs further investigation.
