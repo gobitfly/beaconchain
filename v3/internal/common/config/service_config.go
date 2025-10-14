@@ -45,14 +45,13 @@ type DatabaseConfig struct {
 }
 
 type MetricsConfig struct {
-	ProjectID   string `yaml:"projectID"`
-	Region      string `yaml:"region"`
+	ProjectID string `yaml:"projectID"`
+	Region    string `yaml:"region"`
 }
 
 type ServiceConfig struct {
 	Type               string
 	HttpPort           string `yaml:"httpPort"`
-	GrpcPort           string `yaml:"grpcPort"`
 	ExposeSchema       bool   `yaml:"exposeSchema"`
 	InternalServiceUri string `yaml:"internalServiceUri"` // output only
 	ExternalServiceUri string `yaml:"externalServiceUri"` // output only
@@ -64,12 +63,12 @@ type ServiceConfig struct {
 	ReaderChainDatabaseHoodi   DatabaseConfig `yaml:"readerChainDatabaseHoodi"`
 	WriterChainDatabaseHoodi   DatabaseConfig `yaml:"writerChainDatabaseHoodi"`
 
-	ReaderClickhouseMainnet    DatabaseConfig `yaml:"readerClickhouseMainnet"`
-	WriterClickhouseMainnet    DatabaseConfig `yaml:"writerClickhouseMainnet"`
-	ReaderClickhouseGnosis     DatabaseConfig `yaml:"readerClickhouseGnosis"`
-	WriterClickhouseGnosis     DatabaseConfig `yaml:"writerClickhouseGnosis"`
-	ReaderClickhouseHoodi      DatabaseConfig `yaml:"readerClickhouseHoodi"`
-	WriterClickhouseHoodi      DatabaseConfig `yaml:"writerClickhouseHoodi"`
+	ReaderClickhouseMainnet DatabaseConfig `yaml:"readerClickhouseMainnet"`
+	WriterClickhouseMainnet DatabaseConfig `yaml:"writerClickhouseMainnet"`
+	ReaderClickhouseGnosis  DatabaseConfig `yaml:"readerClickhouseGnosis"`
+	WriterClickhouseGnosis  DatabaseConfig `yaml:"writerClickhouseGnosis"`
+	ReaderClickhouseHoodi   DatabaseConfig `yaml:"readerClickhouseHoodi"`
+	WriterClickhouseHoodi   DatabaseConfig `yaml:"writerClickhouseHoodi"`
 
 	ReaderAdminDatabase DatabaseConfig `yaml:"readerAdminDatabase"`
 	WriterAdminDatabase DatabaseConfig `yaml:"writerAdminDatabase"`

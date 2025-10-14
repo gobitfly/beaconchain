@@ -1,5 +1,5 @@
 syntax = "proto3";
-package domain_models.v1;
+package model.v1;
 
 option go_package = "github.com/gobitfly/beaconchain-backend/model";
 

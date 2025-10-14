@@ -1,35 +1,8 @@
 package common
 
-import (
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-)
+import "net/http"
 
 const GenericErrMsg = "internal server error. please try again later."
-
-// ==== Internal API Errors ====
-
-// InternalUserFacingError is a trusted, user-facing error type
-// use status.Errorf instead if you want an error that should not be exposed to the user and catched in the middleware.
-type InternalUserFacingError struct {
-	Message string
-	Code    codes.Code
-}
-
-func (e *InternalUserFacingError) Error() string {
-	return e.Message
-}
-
-func (e *InternalUserFacingError) GRPCStatus() *status.Status {
-	return status.New(e.Code, e.Message)
-}
-
-func NewInternalUserFacingError(code codes.Code, message string) error {
-	return &InternalUserFacingError{
-		Message: message,
-		Code:    code,
-	}
-}
 
 // ===== External API Errors =====
 
@@ -66,4 +39,14 @@ func NewAPIError(status int, vis ErrorVisibility, msg string) *APIError {
 
 func NewAPIErrorWithExtras(status int, vis ErrorVisibility, msg string, extras map[string]interface{}) *APIError {
 	return &APIError{Status: status, Message: msg, Visibility: vis, Extras: extras}
+}
+
+func Code(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+	if apiErr, ok := err.(*APIError); ok {
+		return apiErr.Status
+	}
+	return http.StatusInternalServerError
 }

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	model "github.com/gobitfly/beaconchain-backend/domain/gen"
+	"github.com/gobitfly/beaconchain-backend/domain/gen/model/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"

@@ -4,12 +4,11 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/gobitfly/beaconchain-backend/api/external/model"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 )
 
 // RecoveryMiddleware recovers from panics in HTTP handlers and returns 500.
-func RecoveryMiddleware() model.MiddlewareFunc {
+func RecoveryMiddleware() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			defer func() {

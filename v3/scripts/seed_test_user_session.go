@@ -20,7 +20,7 @@ const (
 func main() {
 	var host = "localhost"
 	var port = 6479
-	var userID = 1337
+	var userID = uint64(1337)
 	var premTier = "diamond"
 
 	fmt.Println("This utility will create a test user session in Redis.")
@@ -42,7 +42,7 @@ func main() {
 	fmt.Print("Enter User ID (default: 1337): ")
 	fmt.Scanln(&userID)
 	if userID == 0 {
-		userID = 1337
+		userID = uint64(1337)
 	}
 
 	fmt.Print("Enter Subscription Premium Tier (default: diamond): ")
@@ -83,5 +83,5 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Printf("✅ Session written to Redis key: %s\n", redisKey)
+	fmt.Printf("✅ Session written to Redis. Session ID: %s\n", sessionID)
 }

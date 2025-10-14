@@ -1,9 +1,8 @@
 # yaml-language-server: $schema=../../../../configuration-schema.json
 package: model
 generate:
-  std-http-server: true
-  embedded-spec: true
-  strict-server: true
-output: external-server.gen.go
+  models: true
+output: internal-types.gen.go
 output-options:
+  prefer-skip-optional-pointer: true
   nullable-type: true

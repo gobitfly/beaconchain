@@ -3,23 +3,22 @@ package app
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	model "github.com/gobitfly/beaconchain-backend/api/inhouse/model"
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/auth/apikey"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
-
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -52,18 +51,31 @@ func newService(apiKeyRepo *apikeyrepo.MockRepository) *ApiService {
 	}
 }
 
+func getPtr(s string) *string {
+	return &s
+}
+
+func checkHTTPError(t *testing.T, err error, expectedStatus int) {
+	require.Error(t, err)
+	code := common.Code(err)
+	assert.Equal(t, expectedStatus, code)
+}
+
+// --- TestApiService_CreateAPIKey ---
 func TestApiService_CreateAPIKey(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        *model.CreateAPIKeyRequest
+		input        model.CreateAPIKeyRequestObject
 		setupMocks   func(*apikeyrepo.MockRepository)
 		expectErr    bool
-		expectCode   codes.Code
+		expectedCode int
 		expectedName string
 	}{
 		{
-			name:  "success",
-			input: &model.CreateAPIKeyRequest{Name: "test-key"},
+			name: "success",
+			input: model.CreateAPIKeyRequestObject{
+				Body: &model.CreateAPIKeyJSONRequestBody{Name: "test-key"},
+			},
 			setupMocks: func(apiKeyRepo *apikeyrepo.MockRepository) {
 				apiKeyRepo.On("GetAll", mock.Anything, uint64(1337), (*string)(nil)).
 					Return([]apikey.APIKey{}, nil)
@@ -73,28 +85,32 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 			expectedName: "test-key",
 		},
 		{
-			name:  "duplicate",
-			input: &model.CreateAPIKeyRequest{Name: "dupe"},
+			name: "duplicate",
+			input: model.CreateAPIKeyRequestObject{
+				Body: &model.CreateAPIKeyJSONRequestBody{Name: "dupe"},
+			},
 			setupMocks: func(apiKeyRepo *apikeyrepo.MockRepository) {
 				apiKeyRepo.On("GetAll", mock.Anything, uint64(1337), (*string)(nil)).
 					Return([]apikey.APIKey{}, nil)
 				apiKeyRepo.On("Create", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
 					Return(apikey.APIKey{}, domain.ErrDuplicate)
 			},
-			expectErr:  true,
-			expectCode: codes.AlreadyExists,
+			expectErr:    true,
+			expectedCode: http.StatusConflict,
 		},
 		{
-			name:  "max keys reached",
-			input: &model.CreateAPIKeyRequest{Name: "max-key"},
+			name: "max keys reached",
+			input: model.CreateAPIKeyRequestObject{
+				Body: &model.CreateAPIKeyJSONRequestBody{Name: "max-key"},
+			},
 			setupMocks: func(apiKeyRepo *apikeyrepo.MockRepository) {
 				apiKeyRepo.On("GetAll", mock.Anything, uint64(1337), (*string)(nil)).
 					Return([]apikey.APIKey{testKey}, nil)
 				apiKeyRepo.On("Create", mock.Anything, uint64(1337), mock.AnythingOfType("apikey.APIKey")).
 					Return(apikey.APIKey{}, errors.New("should not be called"))
 			},
-			expectErr:  true,
-			expectCode: codes.ResourceExhausted,
+			expectErr:    true,
+			expectedCode: http.StatusForbidden,
 		},
 	}
 
@@ -109,40 +125,42 @@ func TestApiService_CreateAPIKey(t *testing.T) {
 			resp, err := svc.CreateAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
-				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				checkHTTPError(t, err, tt.expectedCode)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedName, resp.ApiKey.Name)
+				concreteResp, ok := resp.(model.CreateAPIKey200JSONResponse)
+				require.True(t, ok, "Response should be CreateAPIKey200JSONResponse")
+				assert.Equal(t, tt.expectedName, concreteResp.ApiKey.Name)
 			}
 		})
 	}
 }
 
+// --- TestApiService_DeleteAPIKey ---
 func TestApiService_DeleteAPIKey(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      *model.DeleteAPIKeyRequest
-		setupMock  func(*apikeyrepo.MockRepository)
-		expectErr  bool
-		expectCode codes.Code
+		name         string
+		input        model.DeleteAPIKeyRequestObject
+		setupMock    func(*apikeyrepo.MockRepository)
+		expectErr    bool
+		expectedCode int
 	}{
 		{
 			name:  "success",
-			input: &model.DeleteAPIKeyRequest{Name: "exists"},
+			input: model.DeleteAPIKeyRequestObject{Name: "exists"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("Delete", mock.Anything, uint64(1337), "exists").Return(nil)
 			},
+			expectedCode: http.StatusNoContent, // 204 response has no body
 		},
 		{
 			name:  "not found",
-			input: &model.DeleteAPIKeyRequest{Name: "missing"},
+			input: model.DeleteAPIKeyRequestObject{Name: "missing"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("Delete", mock.Anything, uint64(1337), "missing").Return(domain.ErrNotFound)
 			},
-			expectErr:  true,
-			expectCode: codes.NotFound,
+			expectErr:    true,
+			expectedCode: http.StatusNotFound,
 		},
 	}
 
@@ -152,33 +170,33 @@ func TestApiService_DeleteAPIKey(t *testing.T) {
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
 
-			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
-			resp, err := svc.DeleteAPIKey(context, tt.input)
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
+			resp, err := svc.DeleteAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
-				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				checkHTTPError(t, err, tt.expectedCode)
 			} else {
 				require.NoError(t, err)
-				assert.NotNil(t, resp)
+				_, ok := resp.(model.DeleteAPIKey204Response)
+				assert.True(t, ok, "Response should be DeleteAPIKey204Response")
 			}
 		})
 	}
 }
 
+// --- TestApiService_DisableAPIKey ---
 func TestApiService_DisableAPIKey(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        *model.DisableAPIKeyRequest
+		input        model.DisableAPIKeyRequestObject
 		setupMock    func(*apikeyrepo.MockRepository)
 		expectErr    bool
-		expectCode   codes.Code
+		expectedCode int
 		expectedName string
 	}{
 		{
 			name:  "success",
-			input: &model.DisableAPIKeyRequest{Name: "ok"},
+			input: model.DisableAPIKeyRequestObject{Name: "ok"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("ok")).Return([]apikey.APIKey{testKey}, nil)
 				repo.On("Disable", mock.Anything, uint64(1337), "ok").Return(disabledKey, nil)
@@ -187,20 +205,20 @@ func TestApiService_DisableAPIKey(t *testing.T) {
 		},
 		{
 			name:  "not found",
-			input: &model.DisableAPIKeyRequest{Name: "nf"},
+			input: model.DisableAPIKeyRequestObject{Name: "nf"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("nf")).Return([]apikey.APIKey{}, nil)
 				repo.On("Disable", mock.Anything, uint64(1337), "nf").Return(apikey.APIKey{}, errors.New("should not be called"))
 			},
-			expectErr:  true,
-			expectCode: codes.NotFound,
+			expectErr:    true,
+			expectedCode: http.StatusNotFound,
 		},
 		{
-			name:  "disable disabled",
-			input: &model.DisableAPIKeyRequest{Name: "disabled-key"},
+			name:  "disable disabled (idempotent)",
+			input: model.DisableAPIKeyRequestObject{Name: "disabled-key"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("disabled-key")).Return([]apikey.APIKey{disabledKey}, nil)
-				repo.On("Disable", mock.Anything, uint64(1337), "disabled-key").Return([]apikey.APIKey{}, errors.New("should not be called"))
+				// Disable should not be called
 			},
 			expectedName: "disabled-key",
 		},
@@ -211,33 +229,34 @@ func TestApiService_DisableAPIKey(t *testing.T) {
 			mockRepo := new(apikeyrepo.MockRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
-			resp, err := svc.DisableAPIKey(context, tt.input)
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
+			resp, err := svc.DisableAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
-				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				checkHTTPError(t, err, tt.expectedCode)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedName, resp.ApiKey.Name)
+				concreteResp, ok := resp.(model.DisableAPIKey200JSONResponse)
+				require.True(t, ok, "Response should be DisableAPIKey200JSONResponse")
+				assert.Equal(t, tt.expectedName, concreteResp.ApiKey.Name)
 			}
 		})
 	}
 }
 
+// --- TestApiService_EnableAPIKey ---
 func TestApiService_EnableAPIKey(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        *model.EnableAPIKeyRequest
+		input        model.EnableAPIKeyRequestObject // Changed type
 		setupMock    func(*apikeyrepo.MockRepository)
 		expectErr    bool
-		expectCode   codes.Code
+		expectedCode int
 		expectedName string
 	}{
 		{
 			name:  "success",
-			input: &model.EnableAPIKeyRequest{Name: "enable"},
+			input: model.EnableAPIKeyRequestObject{Name: "enable"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("enable")).Return([]apikey.APIKey{disabledKey}, nil)
 				repo.On("Enable", mock.Anything, uint64(1337), "enable").Return(testKey, nil)
@@ -246,20 +265,20 @@ func TestApiService_EnableAPIKey(t *testing.T) {
 		},
 		{
 			name:  "not found",
-			input: &model.EnableAPIKeyRequest{Name: "nope"},
+			input: model.EnableAPIKeyRequestObject{Name: "nope"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("nope")).Return([]apikey.APIKey{}, nil)
-				repo.On("Enable", mock.Anything, uint64(1337), "nope").Return(apikey.APIKey{}, errors.New("should not be called"))
+				// Enable should not be called
 			},
-			expectErr:  true,
-			expectCode: codes.NotFound,
+			expectErr:    true,
+			expectedCode: http.StatusNotFound,
 		},
 		{
-			name:  "enable enabled",
-			input: &model.EnableAPIKeyRequest{Name: "test-key"},
+			name:  "enable enabled (idempotent)",
+			input: model.EnableAPIKeyRequestObject{Name: "test-key"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), getPtr("test-key")).Return([]apikey.APIKey{testKey}, nil)
-				repo.On("Enable", mock.Anything, uint64(1337), "test-key").Return([]apikey.APIKey{}, errors.New("should not be called"))
+				// Enable should not be called
 			},
 			expectedName: "test-key",
 		},
@@ -270,27 +289,28 @@ func TestApiService_EnableAPIKey(t *testing.T) {
 			mockRepo := new(apikeyrepo.MockRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
-			resp, err := svc.EnableAPIKey(context, tt.input)
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
+			resp, err := svc.EnableAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
-				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				checkHTTPError(t, err, tt.expectedCode)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedName, resp.ApiKey.Name)
+				concreteResp, ok := resp.(model.EnableAPIKey200JSONResponse)
+				require.True(t, ok, "Response should be EnableAPIKey200JSONResponse")
+				assert.Equal(t, tt.expectedName, concreteResp.ApiKey.Name)
 			}
 		})
 	}
 }
 
+// --- TestApiService_GetAPIKeys ---
 func TestApiService_GetAPIKeys(t *testing.T) {
 	tests := []struct {
 		name         string
 		setupMock    func(*apikeyrepo.MockRepository)
 		expectErr    bool
-		expectCode   codes.Code
+		expectedCode int
 		expectedName string
 	}{
 		{
@@ -305,8 +325,8 @@ func TestApiService_GetAPIKeys(t *testing.T) {
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				repo.On("GetAll", mock.Anything, uint64(1337), (*string)(nil)).Return([]apikey.APIKey{}, errors.New("fail"))
 			},
-			expectErr:  true,
-			expectCode: codes.Internal,
+			expectErr:    true,
+			expectedCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -315,33 +335,35 @@ func TestApiService_GetAPIKeys(t *testing.T) {
 			mockRepo := new(apikeyrepo.MockRepository)
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
-			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
-			resp, err := svc.GetAPIKeys(context, &model.GetAPIKeysRequest{})
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
+			resp, err := svc.GetAPIKeys(ctx, model.GetAPIKeysRequestObject{})
 
 			if tt.expectErr {
 				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				checkHTTPError(t, err, tt.expectedCode)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedName, resp.ApiKeys[0].Name)
+				concreteResp, ok := resp.(model.GetAPIKeys200JSONResponse)
+				require.True(t, ok, "Response should be GetAPIKeys200JSONResponse")
+				assert.Equal(t, tt.expectedName, concreteResp.ApiKeys[0].Name)
 			}
 		})
 	}
 }
 
+// --- TestApiService_GetAPIKey ---
 func TestApiService_GetAPIKey(t *testing.T) {
 	tests := []struct {
 		name         string
-		input        *model.GetAPIKeyRequest
+		input        model.GetAPIKeyRequestObject
 		setupMock    func(*apikeyrepo.MockRepository)
 		expectErr    bool
-		expectCode   codes.Code
+		expectedCode int
 		expectedName string
 	}{
 		{
 			name:  "success",
-			input: &model.GetAPIKeyRequest{Name: "filtered-key"},
+			input: model.GetAPIKeyRequestObject{Name: "filtered-key"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				name := "filtered-key"
 				repo.On("GetAll", mock.Anything, uint64(1337), &name).
@@ -351,23 +373,23 @@ func TestApiService_GetAPIKey(t *testing.T) {
 		},
 		{
 			name:  "not found",
-			input: &model.GetAPIKeyRequest{Name: "not-found"},
+			input: model.GetAPIKeyRequestObject{Name: "not-found"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				name := "not-found"
 				repo.On("GetAll", mock.Anything, uint64(1337), &name).Return([]apikey.APIKey{}, nil)
 			},
-			expectErr:  true,
-			expectCode: codes.NotFound,
+			expectErr:    true,
+			expectedCode: http.StatusNotFound,
 		},
 		{
 			name:  "db error",
-			input: &model.GetAPIKeyRequest{Name: "db-error"},
+			input: model.GetAPIKeyRequestObject{Name: "db-error"},
 			setupMock: func(repo *apikeyrepo.MockRepository) {
 				name := "db-error"
 				repo.On("GetAll", mock.Anything, uint64(1337), &name).Return([]apikey.APIKey{}, errors.New("db error"))
 			},
-			expectErr:  true,
-			expectCode: codes.Internal,
+			expectErr:    true,
+			expectedCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -377,21 +399,22 @@ func TestApiService_GetAPIKey(t *testing.T) {
 			tt.setupMock(mockRepo)
 			svc := newService(mockRepo)
 
-			context := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
-			resp, err := svc.GetAPIKey(context, tt.input)
+			ctx := auth.SetUserInContext(context.Background(), domain.User{ID: 1337})
+			resp, err := svc.GetAPIKey(ctx, tt.input)
 
 			if tt.expectErr {
-				require.Error(t, err)
-				st, _ := status.FromError(err)
-				assert.Equal(t, tt.expectCode, st.Code())
+				if tt.expectedCode == http.StatusInternalServerError {
+					require.Error(t, err)
+					checkHTTPError(t, err, tt.expectedCode)
+				} else {
+					checkHTTPError(t, err, tt.expectedCode)
+				}
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedName, resp.ApiKey.Name)
+				concreteResp, ok := resp.(model.GetAPIKey200JSONResponse)
+				require.True(t, ok, "Response should be GetAPIKey200JSONResponse")
+				assert.Equal(t, tt.expectedName, concreteResp.ApiKey.Name)
 			}
 		})
 	}
-}
-
-func getPtr(s string) *string {
-	return &s
 }

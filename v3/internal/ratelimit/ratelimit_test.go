@@ -2,19 +2,19 @@ package ratelimit
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis/v8"
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+
 	"github.com/gobitfly/beaconchain-backend/internal/auth"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // ------------------------------------------------
@@ -166,7 +166,7 @@ func TestIsWithinRateLimit_DifferentCallersDoNotShareBuckets(t *testing.T) {
 func TestIsWithinRateLimit_FailsOpen(t *testing.T) {
 	ctx, _, client, script := rateLimitTestSetup(t)
 	now := time.Now()
-	testRateLimit := &model.RateLimitSettings{
+	testRateLimit := &limits.RateLimitSettings{
 		BucketCapacity: 1,
 		SteadyRate:     1,
 	}
@@ -187,7 +187,7 @@ func TestIsWithinRateLimit_SetsExpirationCorrectly(t *testing.T) {
 	ctx, mr, client, script := rateLimitTestSetup(t)
 
 	now := time.Now()
-	testRateLimit := &model.RateLimitSettings{
+	testRateLimit := &limits.RateLimitSettings{
 		BucketCapacity: 10,
 		SteadyRate:     0.1,
 	}
@@ -215,11 +215,11 @@ func TestIsWithinRateLimit_SetsExpirationCorrectlyForMultipleEndpoints(t *testin
 	ctx, mr, client, script := rateLimitTestSetup(t)
 
 	now := time.Now()
-	testRateLimitA := &model.RateLimitSettings{
+	testRateLimitA := &limits.RateLimitSettings{
 		BucketCapacity: 10,
 		SteadyRate:     0.1,
 	}
-	testRateLimitB := &model.RateLimitSettings{
+	testRateLimitB := &limits.RateLimitSettings{
 		BucketCapacity: testRateLimitA.BucketCapacity,
 		SteadyRate:     testRateLimitA.SteadyRate / 10, // lower steady rate should refill slower -> higher TTL
 	}
@@ -309,8 +309,8 @@ func (s *testScripterStub) ScriptLoad(ctx context.Context, script string) *redis
 
 var _ redis.Scripter = (*testScripterStub)(nil) // Ensure testScripterStub implements redis.Scripter
 
-func testGetEndpointRatelinit(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
-	return &model.RateLimitSettings{
+func testGetEndpointRatelinit(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
+	return &limits.RateLimitSettings{
 		BucketCapacity: 5,
 		SteadyRate:     1,
 	}, nil
@@ -341,7 +341,7 @@ func TestGetRateLimitMiddleware_SuccessfulRatelimit(t *testing.T) {
 
 	_, err := middleware(ctx, nil, testServerInfo, testHandler)
 	assert.Error(t, err)
-	assert.Equal(t, status.Code(err), codes.ResourceExhausted)
+	assert.Equal(t, common.Code(err), http.StatusTooManyRequests)
 }
 
 func TestGetRateLimitMiddleware_ErrorWithoutUserInContext(t *testing.T) {
@@ -352,12 +352,12 @@ func TestGetRateLimitMiddleware_ErrorWithoutUserInContext(t *testing.T) {
 
 	_, err := middleware(ctx, nil, testServerInfo, testHandler)
 	assert.Error(t, err)
-	assert.Equal(t, status.Code(err), codes.Internal)
+	assert.Equal(t, common.Code(err), http.StatusInternalServerError)
 }
 
 func TestGetRateLimitMiddleware_SuccessWithNilRatelimitOpts(t *testing.T) {
 	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
+	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
 		return nil, nil // should cause fallback to global ratelimit
 	}
 	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
@@ -366,18 +366,18 @@ func TestGetRateLimitMiddleware_SuccessWithNilRatelimitOpts(t *testing.T) {
 
 	_, err := middleware(ctx, nil, testServerInfo, testHandler)
 	assert.Error(t, err)
-	assert.Equal(t, status.Code(err), codes.ResourceExhausted)
+	assert.Equal(t, common.Code(err), http.StatusTooManyRequests)
 }
 
 func TestGetRateLimitMiddleware_ErrorRateLimitOpts(t *testing.T) {
 	scripter := newTestScripterStub(false /* isRequestAllowed */)
-	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*model.RateLimitSettings, error) {
-		return nil, status.Error(codes.Internal, "testerr")
+	getRatelimitOpts := func(fullMethod string, tier domain.Tier) (*limits.RateLimitSettings, error) {
+		return nil, common.NewAPIInternalError(http.StatusInternalServerError, "test error getting ratelimit opts")
 	}
 	middleware := GetRateLimitMiddleware(scripter, getRatelimitOpts)
 
 	ctx := auth.SetUserInContext(context.Background(), testUser)
 
 	_, err := middleware(ctx, nil, testServerInfo, testHandler)
-	assert.Equal(t, status.Code(err), codes.Internal)
+	assert.Equal(t, common.Code(err), http.StatusInternalServerError)
 }

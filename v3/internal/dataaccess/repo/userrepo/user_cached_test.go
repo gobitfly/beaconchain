@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/go-redis/redismock/v8"
-	model "github.com/gobitfly/beaconchain-backend/domain/gen"
+	"github.com/gobitfly/beaconchain-backend/domain/gen/model/v1"
 
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/stretchr/testify/assert"

@@ -25,7 +25,7 @@ jobs:
       - name: unit tests
         run: |
           export TERM=xterm
-          go test $(go list ./... | grep -Ev "test|cmd|api/gen|domain/gen|internal/log")  -coverprofile=coverage.out -covermode=atomic -race
+          go test $(go list ./... | grep -Ev "test|cmd|domain/gen|internal/log|api/external|api/inhouse")  -coverprofile=coverage.out -covermode=atomic -race
 
       - name: coverage
         run: |

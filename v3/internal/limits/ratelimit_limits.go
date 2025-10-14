@@ -3,11 +3,15 @@ package limits
 import (
 	"context"
 
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 )
 
-var rateLimits = map[domain.Tier]*model.RateLimitSettings{
+type RateLimitSettings struct {
+	SteadyRate     float32
+	BucketCapacity int
+}
+
+var rateLimits = map[domain.Tier]*RateLimitSettings{
 	domain.TierFree: {
 		SteadyRate:     0.5,
 		BucketCapacity: 3,
@@ -26,6 +30,6 @@ var rateLimits = map[domain.Tier]*model.RateLimitSettings{
 	},
 }
 
-func (s *Limiter) GetRateLimit(ctx context.Context, user domain.User) (*model.RateLimitSettings, error) {
+func (s *Limiter) GetRateLimit(ctx context.Context, user domain.User) (*RateLimitSettings, error) {
 	return getLimitGeneric(user, rateLimits)
 }

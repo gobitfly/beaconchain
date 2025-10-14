@@ -54,7 +54,6 @@ services:
         condition: service_started
     environment:
       - BIGTABLE_EMULATOR_HOST=littlebigtable:9000
-      - GRPCPORT=8080
     build:
       context: ..
       dockerfile: build/package/Dockerfile

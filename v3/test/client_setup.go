@@ -7,14 +7,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gobitfly/beaconchain-backend/api/external/client"
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	extclient "github.com/gobitfly/beaconchain-backend/api/external/client"
+	inhouseclient "github.com/gobitfly/beaconchain-backend/api/inhouse/client"
 	"github.com/gobitfly/beaconchain-backend/test/testUtils"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
-func setupExternalAPIClient(t *testing.T) (context.Context, *client.ClientWithResponses) {
+func setupExternalAPIClient(t *testing.T) (context.Context, *extclient.ClientWithResponses) {
 	apiKey := os.Getenv("API_KEY_ORCA_TEST")
 	if apiKey == "" {
 		t.Fatal("API_KEY_ORCA_TEST environment variable is not set")
@@ -22,15 +20,15 @@ func setupExternalAPIClient(t *testing.T) (context.Context, *client.ClientWithRe
 	return setupExternalAPIClientWithAuth(apiKey)
 }
 
-func setupExternalAPIClientWithAuth(apiKey string) (context.Context, *client.ClientWithResponses) {
+func setupExternalAPIClientWithAuth(apiKey string) (context.Context, *extclient.ClientWithResponses) {
 	authFn := func(ctx context.Context, req *http.Request) error {
 		req.Header.Set("Authorization", "Bearer "+apiKey)
 		return nil
 	}
 
-	cl, err := client.NewClientWithResponses(
+	cl, err := extclient.NewClientWithResponses(
 		fmt.Sprintf("http://%s", testUtils.GetExternalHTTPUrl()),
-		client.WithRequestEditorFn(authFn),
+		extclient.WithRequestEditorFn(authFn),
 	)
 	if err != nil {
 		panic(err)
@@ -39,13 +37,27 @@ func setupExternalAPIClientWithAuth(apiKey string) (context.Context, *client.Cli
 	return context.Background(), cl
 }
 
-func setupInternalAPIClient(t *testing.T) (context.Context, model.InternalServiceClient) {
-	conn, err := grpc.NewClient(testUtils.GetInternalGRPCUrl(), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		t.Fatalf("failed to connect to gRPC server: %v", err)
+func setupInhouseAPIClient(t *testing.T) (context.Context, *inhouseclient.ClientWithResponses) {
+	sessionID := os.Getenv("SESSION_ID_ORCA_TEST")
+	if sessionID == "" {
+		t.Fatal("SESSION_ID_ORCA_TEST environment variable is not set")
 	}
-	t.Cleanup(func() {
-		_ = conn.Close()
-	})
-	return context.Background(), model.NewInternalServiceClient(conn)
+	return setupInhouseAPIClientWithAuth(sessionID)
+}
+
+func setupInhouseAPIClientWithAuth(sessionID string) (context.Context, *inhouseclient.ClientWithResponses) {
+	authFn := func(ctx context.Context, req *http.Request) error {
+		req.Header.Set("Cookie", "session_id="+sessionID)
+		return nil
+	}
+
+	cl, err := inhouseclient.NewClientWithResponses(
+		fmt.Sprintf("http://%s", testUtils.GetInternalHTTPUrl()),
+		inhouseclient.WithRequestEditorFn(authFn),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return context.Background(), cl
 }

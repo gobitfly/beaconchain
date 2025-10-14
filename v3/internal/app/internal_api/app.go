@@ -3,12 +3,15 @@ package app
 import (
 	"context"
 	"fmt"
-	"net"
+	"net/http"
 	"os"
+	"time"
 
-	"buf.build/go/protovalidate"
-	model "github.com/gobitfly/beaconchain-backend/api/gen/api_service/v1"
+	"github.com/getkin/kin-openapi/openapi3filter"
+	model "github.com/gobitfly/beaconchain-backend/api/inhouse/model"
+	"github.com/gobitfly/beaconchain-backend/internal/app/apputils"
 	"github.com/gobitfly/beaconchain-backend/internal/app/internal_api/middleware"
+	httpmiddleware "github.com/gobitfly/beaconchain-backend/internal/app/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
@@ -16,17 +19,10 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
-
-	protovalidate_middleware "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
+	nethttpmiddleware "github.com/oapi-codegen/nethttp-middleware"
 )
 
 type ApiService struct {
-	model.UnimplementedInternalServiceServer
 	userRepository   userrepo.Repository
 	apiKeyRepository apikeyrepo.Repository
 	limiter          *limits.Limiter
@@ -43,6 +39,8 @@ func InitDependencies(
 	}, nil
 }
 
+var _ model.StrictServerInterface = (*ApiService)(nil)
+
 // Run
 // Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
@@ -50,18 +48,8 @@ func Run(
 ) {
 	log.Info("Starting server...")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", config.GrpcPort))
-	if err != nil {
-		log.Infof("failed to listen: %v", err)
-	}
-
-	validator, err := protovalidate.New()
-	if err != nil {
-		log.Fatalf("failed to create validator: %v", err)
-	}
-
 	// OpenTelemetry + Google Cloud exporter (handles batching/retries/flush).
-	otelCounter, err := middleware.NewOtelCounter(
+	otelCounter, err := httpmiddleware.NewOtelCounter(
 		context.Background(),
 		config.Metrics.ProjectID,
 		os.Getenv("K_SERVICE"),
@@ -80,11 +68,11 @@ func Run(
 	apikeyRepo := &apikeyrepo.CachedRepository{}
 	sessionStoreRepo := &sessionstorerepo.DBRepository{}
 	dbAPIKeyRepo := &apikeyrepo.DBRepository{}
+	dataSources := data_sources.ApiDataSources{}
+	dataSources.InitApiConnections(&config)
 
 	// init async
 	go func() {
-		dataSources := data_sources.ApiDataSources{}
-		dataSources.InitApiConnections(&config)
 		userDbRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 		dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 		apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
@@ -92,52 +80,60 @@ func Run(
 	}()
 	apiService, _ := InitDependencies(userDbRepo, apikeyRepo)
 
-	var unaryInterceptors []grpc.UnaryServerInterceptor
-	unaryInterceptors = append(unaryInterceptors, protovalidate_middleware.UnaryServerInterceptor(validator))
-	unaryInterceptors = append(unaryInterceptors, middleware.StripErrorMessageMiddleware())
-	unaryInterceptors = append(unaryInterceptors, middleware.RecoveryMiddleware())
-	unaryInterceptors = append(unaryInterceptors, middleware.AuthUserInjectorInterceptor(sessionStoreRepo))
-	unaryInterceptors = append(unaryInterceptors, middleware.MetricsUnaryInterceptor(otelCounter))
+	mux := http.NewServeMux()
 
-	grpcServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(unaryInterceptors...),
-	)
+	hStrict := model.NewStrictHandlerWithOptions(apiService, nil, model.StrictHTTPServerOptions{
+		ResponseErrorHandlerFunc: apputils.ErrorHandler,
+		RequestErrorHandlerFunc:  apputils.ErrorHandler,
+	})
 
-	// Unsecured on application level, authenticated via gcp access management
-	if config.ExposeSchema {
-		reflection.Register(grpcServer)
+	h := model.HandlerWithOptions(hStrict, model.StdHTTPServerOptions{
+		BaseRouter:       mux,
+		ErrorHandlerFunc: apputils.ErrorHandler,
+		Middlewares: []model.MiddlewareFunc{
+			middleware.AuthUserInjectorMiddleware(sessionStoreRepo, apputils.ErrorHandler),
+			httpmiddleware.RecoveryMiddleware(),
+			httpmiddleware.MetricsHTTPMiddleware(otelCounter),
+		},
+	})
+
+	// configure validation middleware
+	spec, err := model.GetSwagger()
+	if err != nil {
+		defer func() {
+			log.Fatalf("Failed to load OpenAPI spec: %v", err)
+		}()
+		return
 	}
+	validationMiddleware := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
+		ErrorHandlerWithOpts: apputils.ValidationErrorHandler,
+		Options: openapi3filter.Options{
+			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc, // we do our own auth in a separate middleware
+		},
+	})
+	// validation MUST wrap the server handler, so it runs before the server reads the request query
+	// since the middleware sets the default values directly on the request var
+	h = validationMiddleware(h)
 
-	model.RegisterInternalServiceServer(grpcServer, apiService)
-	grpc_health_v1.RegisterHealthServer(grpcServer, apiService)
+	healthHandler := apputils.InitHealthHandler(&dataSources)
+	mux.HandleFunc("/healthz", healthHandler.ServeHealth)
+	mux.HandleFunc("/readyz", healthHandler.ServeReady)
+	// serveSwaggerStatics(mux)
 
 	go func() {
-		log.Infof("gRPC server listening at %v", lis.Addr())
-		if err := grpcServer.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+		s := &http.Server{
+			Handler:           h,
+			Addr:              fmt.Sprintf(":%s", config.HttpPort),
+			ReadHeaderTimeout: 5 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			ReadTimeout:       10 * time.Second,
+			WriteTimeout:      10 * time.Second,
 		}
+
+		log.Infof("HTTP server listening on %s", s.Addr)
+		log.Fatal(s.ListenAndServe())
 	}()
 
 	log.Infof("To close connection CTRL+C :-)")
 	select {} // block
-}
-
-func (s *ApiService) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	resp := grpc_health_v1.HealthCheckResponse_SERVING
-
-	if s.userRepository.Ping() != nil {
-		resp = grpc_health_v1.HealthCheckResponse_NOT_SERVING
-	}
-
-	return &grpc_health_v1.HealthCheckResponse{
-		Status: resp,
-	}, nil
-}
-
-func (s *ApiService) List(ctx context.Context, req *grpc_health_v1.HealthListRequest) (*grpc_health_v1.HealthListResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "List not implemented")
-}
-
-func (s *ApiService) Watch(*grpc_health_v1.HealthCheckRequest, grpc.ServerStreamingServer[grpc_health_v1.HealthCheckResponse]) error {
-	return status.Errorf(codes.Unimplemented, "Watch not implemented")
 }

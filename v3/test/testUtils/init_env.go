@@ -38,9 +38,9 @@ func GetBaseDomain() string {
 	return baseURL
 }
 
-func GetInternalGRPCUrl() string {
+func GetInternalHTTPUrl() string {
 	baseURL := GetBaseDomain()
-	port := os.Getenv("INTERNAL_GRPC_PORT")
+	port := os.Getenv("INTERNAL_HTTP_PORT")
 	if port == "" {
 		port = "9090"
 	}

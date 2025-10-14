@@ -72,6 +72,9 @@ func NewOtelCounter(ctx context.Context, projectID, serviceName, revision string
 }
 
 func (o *OtelCounter) Inc(method, code string) {
+	if o == nil {
+		return
+	}
 	o.record(method, code)
 }
 

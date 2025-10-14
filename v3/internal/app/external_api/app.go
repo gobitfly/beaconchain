@@ -1,20 +1,15 @@
 package app
 
 import (
-	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
-	externalspec "github.com/gobitfly/beaconchain-backend/api/external-spec"
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
+	"github.com/gobitfly/beaconchain-backend/internal/app/apputils"
 	"github.com/gobitfly/beaconchain-backend/internal/app/external_api/middleware"
-	"github.com/gobitfly/beaconchain-backend/internal/common"
+	httpmiddleware "github.com/gobitfly/beaconchain-backend/internal/app/middleware"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
@@ -77,26 +72,26 @@ func Run(
 	mux := http.NewServeMux()
 
 	hStrict := model.NewStrictHandlerWithOptions(apiService, nil, model.StrictHTTPServerOptions{
-		ResponseErrorHandlerFunc: errorHandler,
-		RequestErrorHandlerFunc:  errorHandler,
+		ResponseErrorHandlerFunc: apputils.ErrorHandler,
+		RequestErrorHandlerFunc:  apputils.ErrorHandler,
 	})
 
 	h := model.HandlerWithOptions(hStrict, model.StdHTTPServerOptions{
 		BaseRouter:       mux,
-		ErrorHandlerFunc: errorHandler,
+		ErrorHandlerFunc: apputils.ErrorHandler,
 		Middlewares: []model.MiddlewareFunc{
-			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, errorHandler),
-			middleware.RecoveryMiddleware(),
+			middleware.AuthUserInjectorMiddleware(userRepo, apiKeyRepo, apputils.ErrorHandler),
+			httpmiddleware.RecoveryMiddleware(),
 		},
 	})
 
 	// configure validation middleware
-	spec, err := openapi3.NewLoader().LoadFromData(externalspec.RawBytes)
+	spec, err := model.GetSwagger()
 	if err != nil {
 		log.Fatalf("Failed to load OpenAPI spec: %v", err)
 	}
 	validationMiddleware := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
-		ErrorHandlerWithOpts: validationErrorHandler,
+		ErrorHandlerWithOpts: apputils.ValidationErrorHandler,
 		Options: openapi3filter.Options{
 			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc, // we do our own auth in a separate middleware
 		},
@@ -105,7 +100,7 @@ func Run(
 	// since the middleware sets the default values directly on the request var
 	h = validationMiddleware(h)
 
-	healthHandler := initHealthHandler(&dataSources)
+	healthHandler := apputils.InitHealthHandler(&dataSources)
 	mux.HandleFunc("/healthz", healthHandler.ServeHealth)
 	mux.HandleFunc("/readyz", healthHandler.ServeReady)
 	// serveSwaggerStatics(mux)
@@ -126,72 +121,6 @@ func Run(
 
 	log.Infof("To close connection CTRL+C :-)")
 	select {} // block
-}
-
-func initHealthHandler(dataSources *data_sources.ApiDataSources) *HealthHandler {
-	timeout := 10 * time.Second
-
-	return NewHealthHandler(map[string]Pingable{
-		"Redis":     WithTimeout(func(ctx context.Context) error { return dataSources.Redis.Ping(ctx).Err() }, timeout),
-		"RoAdminDb": WithTimeout(dataSources.RoAdminDb.DB.PingContext, timeout),
-		"RwAdminDb": WithTimeout(dataSources.RwAdminDb.DB.PingContext, timeout),
-		"RoChDb":    WithTimeout(dataSources.RoChDb.DB.PingContext, timeout),
-		"RwChDb":    WithTimeout(dataSources.RwChDb.DB.PingContext, timeout),
-	})
-}
-
-func WithTimeout(p Pingable, d time.Duration) Pingable {
-	return func(ctx context.Context) error {
-		ctx, cancel := context.WithTimeout(ctx, d)
-		defer cancel()
-		return p.PingContext(ctx)
-	}
-}
-
-func errorHandler(w http.ResponseWriter, r *http.Request, err error) {
-	w.Header().Set("Content-Type", "application/json")
-
-	// Default response
-	status := http.StatusInternalServerError
-	msg := common.GenericErrMsg
-
-	// Handle our custom API errors (user facing and internal)
-	var apiErr *common.APIError
-	if errors.As(err, &apiErr) {
-		status = apiErr.Status
-		if apiErr.Visibility == common.ErrorVisibilityUser {
-			msg = apiErr.Message
-		}
-		log.WarnWithFields(apiErr.Extras, fmt.Sprintf("API error: %s | Status: %d | Path: %s ", apiErr.Message, apiErr.Status, r.URL.Path))
-	} else {
-		// Bad request errors as thrown by generated server
-		switch e := err.(type) {
-		case *model.InvalidParamFormatError, *model.RequiredParamError:
-			status = http.StatusBadRequest
-			msg = e.Error()
-		default:
-			log.Error(fmt.Sprintf("Internal error: %v | Path: %s", err, r.URL.Path))
-		}
-	}
-
-	w.WriteHeader(status)
-	if encodeErr := json.NewEncoder(w).Encode(map[string]string{"error": msg}); encodeErr != nil {
-		log.Error(fmt.Sprintf("failed to encode error response: %v", encodeErr))
-	}
-}
-
-// used by oapi-codegen nethttpmiddleware for validation errors
-func validationErrorHandler(_ context.Context, err error, w http.ResponseWriter, r *http.Request, _ nethttpmiddleware.ErrorHandlerOpts) {
-	// we only expect request errors from validation
-	if err, ok := err.(*openapi3filter.RequestError); !ok {
-		// should never happen
-		errorHandler(w, r, common.NewAPIInternalError(http.StatusInternalServerError, fmt.Sprintf("unexpected err in validation middleware: %v", err)))
-		return
-	}
-	// Split up the verbose error by lines and return the first one
-	// openapi errors seem to be multi-line with a decent message on the first
-	errorLines := strings.Split(err.Error(), "\n")
-	errorHandler(w, r, common.NewAPIUserFacingError(http.StatusBadRequest, errorLines[0]))
 }
 
 // serveSwaggerStatics
