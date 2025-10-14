@@ -116,4 +116,4 @@ When a validator did not participate in a sync committee and/or did not propose 
 ***
 
 ## Benchmark values
-Validators on the Ethereum mainnet should target an efficiency / Beaconscore of 99% or higher. A value above 99.5% can be considered exceptional in terms of validator performance. Values below 98 indicate an issue with the validator that needs further investigation.
+Target a validator efficiency (Beacon score) of at least 99% on Ethereum mainnet. Performance above 99.5% is considered exceptional. Scores below 98% generally indicate an underlying issue and warrant further investigation.
