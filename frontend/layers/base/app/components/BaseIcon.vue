@@ -16,7 +16,9 @@ const customize = (content: string) => {
 
 <template>
   <Icon
+    aria-hidden="true"
     :name="`tabler:${name}`"
     :customize
+    mode="svg"
   />
 </template>

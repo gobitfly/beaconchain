@@ -47,8 +47,8 @@ const values = [
         screenreader-title="products.landing_page.api.cards.api_pricing_plan.billing_cycle"
         :values
         :class-list="{
-          trackItem: 'py-md px-lg rounded-4xl text-gray-600 dark:text-gray-400  has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-300',
-          track: 'p-px border border-transparent flex gap-md [&>*]:grow text-center text-md bg-white dark:bg-gray-950 rounded-4xl shadow-[0_1px_0.5px_0_rgba(255,255,255,0.08)_inset,0-1px_0_0_rgba(255,255,255,0.18)_inset] font-semibold',
+          trackItem: 'py-md px-lg rounded-4xl text-gray-600 dark:text-gray-400 has-checked:text-black has-checked:dark:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand-300',
+          track: 'p-px border border-gray-100 dark:border-gray-900 flex gap-md [&>*]:grow text-center text-md bg-white dark:bg-gray-950 rounded-4xl shadow-[0_1px_0.5px_0_rgba(255,255,255,0.08)_inset,0-1px_0_0_rgba(255,255,255,0.18)_inset] font-semibold',
           thumb: 'bg-gray-50 dark:bg-gray-800 rounded-4xl shadow-[0_2px_2px_0_rgba(0,0,0,0.25),_0_0.5px_0.5px_0_rgba(255,255,255,0.12)_inset]',
         }"
       />
@@ -63,7 +63,8 @@ const values = [
           tablist: 'p-xs font-semibold flex gap-xs bg-gray-100 dark:bg-black text-gray-600 dark:text-gray-400 rounded-4xl shadow-[0_-1px_0_0_rgba(255,255,255,0.18)_inset]',
           tab: 'p-sm grow rounded-4xl',
           activeTab: 'text-black dark:text-white',
-          activeTabIndicator: 'dark:bg-gray-700 bg-gray-200 rounded-4xl text-white shadow-[0_2px_2px_0_rgba(0,0,0,0.25),_0_0.5px_0.5px_0_rgba(255,255,255,0.12)_inset]',
+          activeTabIndicator: 'dark:bg-gray-700 bg-gray-50 rounded-4xl text-white shadow-[0_2px_2px_0_rgba(0,0,0,0.25),_0_0.5px_0.5px_0_rgba(255,255,255,0.12)_inset]',
+          tabpanel: 'rounded-4xl',
         }"
         :tabs
       >

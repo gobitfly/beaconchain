@@ -2,13 +2,6 @@
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
 import type { BlockchainSearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
 
-useHead({
-  bodyAttrs: {
-    // enforcing dark mode as light mode is not ready yet
-    'data-theme': 'dark',
-  },
-})
-
 const isOpen = ref(false)
 const { t: $t } = useTranslation()
 const id = {
@@ -350,16 +343,21 @@ const {
 }
 
 .hero-section__background-effects {
+  --background-gradient: linear-gradient(var(--color-white) 5%, color-mix(in oklab, var(--color-white) 50%, transparent) , var(--color-white) 95%);
   position: absolute;
   content: '';
   z-index: -2;
   inset: 0;
   margin: auto;
   background:
-  linear-gradient(0deg, var(--color-black) 0%, rgba(16, 16, 16, 0.7) 85%, var(--color-black) 90%),
+  var(--background-gradient),
   url('/assets-2usdf/img/bg-hero.webp');
   background-size: cover;
   background-position: left top;
+
+  [data-theme=dark] & {
+    --background-gradient: linear-gradient(0deg, var(--color-black) 0%, rgba(16, 16, 16, 0.85) 85%, var(--color-black) 90%);
+  }
 
   &:before {
     position: absolute;
@@ -374,23 +372,28 @@ const {
 }
 
 .explorer-section {
+  --background-gradient:
+  linear-gradient(var(--color-white) 5%, color-mix(in oklab, var(--color-white) 10%, transparent) , var(--color-white) 95%),
+  linear-gradient(to right, var(--color-white) 1%,transparent, var(--color-white) 99%);
   position: relative;
 
   &:before {
     z-index: -1;
-    opacity: 0.1;
+    opacity: 0.4;
     content: '';
     position: absolute;
     inset: 0;
     background:
-      linear-gradient(to bottom,
-        var(--color-black) 0%,
-        transparent 30%,
-        transparent 70%,
-        var(--color-black) 100%),
+      var(--background-gradient),
       url('/assets-2usdf/img/bg-chain.webp');
     background-size: cover;
     background-position: center;
+  }
+    [data-theme=dark] & {
+    --background-gradient:
+        linear-gradient(to bottom, var(--color-black) 0%, transparent 30%, transparent 70%,var(--color-black) 100%),
+        linear-gradient(to right, var(--color-black) 1%,transparent, var(--color-black) 99%);
+
   }
 }
 </style>

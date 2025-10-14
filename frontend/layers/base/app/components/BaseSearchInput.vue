@@ -85,7 +85,7 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
         :aria-busy="isLoading"
         :placeholder
         class="search-input w-full text-2xl font-semibold rounded-3xl pt-3xl pr-5xl pb-6xl pl-2xl dark:bg-gray-950
-        dark:focus:bg-black placeholder:dark:text-gray-500 dark:text-white border-1 dark:border-charcoal-500
+        bg-white dark:focus:bg-black placeholder:dark:text-gray-500 dark:text-white border border-gray-500 dark:border-charcoal-500
         dark:focus:border-charcoal-50 dark:focus-within:outline-0"
         @update:model-value="(value) => { if (!value) hasSearched = false }"
       />

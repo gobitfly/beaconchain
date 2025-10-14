@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useHead({
   bodyAttrs: {
-    class: 'dark:bg-black dark:text-white bg-white text-black',
+    class: 'dark:bg-black dark:text-white bg-white text-black transition-colors duration-1500 ',
   },
   htmlAttrs: { class: 'base-layout' },
 })
