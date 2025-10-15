@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "@nuxtjs/color-mode": "^3.5.2",
         "@tailwindcss/vite": "^4.1.12",
         "reka-ui": "^2.5.0",
         "tailwindcss": "^4.1.12"

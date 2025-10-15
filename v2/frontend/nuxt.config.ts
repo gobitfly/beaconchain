@@ -28,7 +28,6 @@ export default defineNuxtConfig({
   /* eslint-disable perfectionist/sort-objects  -- as there is a conflict with `nuxt specific eslint rules` */
   modules: [
     '@nuxtjs/i18n',
-    '@nuxtjs/color-mode',
     [
       '@pinia/nuxt',
       { storesDirs: [ './stores/**' ] },
@@ -40,12 +39,6 @@ export default defineNuxtConfig({
   ],
   ssr: process.env.ENABLE_SSR !== 'FALSE',
   devtools: { enabled: true },
-  colorMode: {
-    fallback: 'dark',
-    preference: 'dark',
-    dataValue: 'theme',
-    storageKey: 'theme',
-  },
   runtimeConfig: {
     private: {
       apiServer: process.env.PRIVATE_API_SERVER,

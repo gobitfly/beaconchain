@@ -136,7 +136,9 @@ const { t: $t } = useTranslation()
       <span class="main-footer__meta_seperator">
         |
       </span>
-      <BcThemeToggle />
+      <ClientOnly>
+        <BaseColormode />
+      </ClientOnly>
     </p>
   </footer>
 </template>
