@@ -12,34 +12,37 @@ const { values } = defineProps<{
   screenreaderTitle: TranslationInput,
   values: T,
 }>()
-const idFirstValue = useId()
-const idSecondValue = useId()
+const id = useId()
 const name = useId()
-const modelValue = defineModel<typeof values[number]['key']>()
+const modelValue = defineModel<typeof values[number]['key']>({ required: true })
+const defaultValue = modelValue.value
 const { t: $t } = useTranslation()
-const thumb = useTemplateRef('thumb')
+const thumbs = useTemplateRef('thumb')
 const track = useTemplateRef('track')
 
 const moveThumb = () => {
   const activeTrackItem = track.value?.querySelector(':has(input[type="radio"]:checked)')
+  const thumb = thumbs.value?.[0]
   if (!activeTrackItem) return
-  if (!thumb.value) return
+  if (!thumb) return
 
-  const { x: initialX } = thumb.value.getBoundingClientRect()
+  const { x: initialX } = thumb.getBoundingClientRect()
   const { x } = activeTrackItem.getBoundingClientRect()
 
   // this should rather have been done via view transition api
   // but it currently lacks `firefox support`
   // and also there was a flickering issue
-  const animation = thumb.value.animate([ {
+  const animation = thumb.animate([ {
     transform: `translateX(${x - initialX}px)`,
   } ],
   { duration: 180 },
   )
   return animation.finished.then(() => {
-    activeTrackItem.appendChild(thumb.value!)
+    if (!thumb) return
+    activeTrackItem.appendChild(thumb)
   })
 }
+
 watch(modelValue, () => {
   moveThumb()
 })
@@ -56,54 +59,35 @@ watch(modelValue, () => {
       v-bind="$attrs"
     >
       <label
-        :for="idFirstValue"
+        v-for="(value, index) in values"
+        :key="value.key"
+        :for="`${id}-${index}`"
         :class="classList?.trackItem"
         class="relative"
       >
         <span class="relative z-10">
           <slot
-            name="first"
-            :label="values[0]?.label"
+            :name="value.key"
+            :label="values[index]?.label"
           >
-            {{ values[0]?.label }}
+            {{ values[index]?.label }}
           </slot>
         </span>
         <input
-          :id="idFirstValue"
+          :id="`${id}-${index}`"
           v-model="modelValue"
-          :value="values[0]?.key"
+          :value="values[index]?.key"
           type="radio"
           class="sr-only"
           :name
         >
         <span
+          v-if="value.key === defaultValue"
           ref="thumb"
           class="absolute inset-[0] z-0"
           aria-hidden="true"
           :class="classList?.thumb"
         />
-      </label>
-      <label
-        class="relative"
-        :class="classList?.trackItem"
-        :for="idSecondValue"
-      >
-        <span class="relative z-10">
-          <slot
-            name="second"
-            :label="values[1]?.label"
-          >
-            {{ values[1]?.label }}
-          </slot>
-        </span>
-        <input
-          :id="idSecondValue"
-          v-model="modelValue"
-          :value="values[1]?.key"
-          class="sr-only"
-          type="radio"
-          :name
-        >
       </label>
     </div>
   </fieldset>
