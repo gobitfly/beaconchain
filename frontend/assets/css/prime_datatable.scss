@@ -4,7 +4,7 @@
   --expander-col-width: 53px;
   --table-header-background: var(--grey-4);
 
-  &.dark-mode {
+  &[data-theme=dark] {
     --table-header-background: var(--very-dark-grey);
   }
 }

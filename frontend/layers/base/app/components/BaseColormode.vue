@@ -4,6 +4,10 @@ const cookie = useBcCookie<'dark' | 'light'>('theme')
 colorMode.preference = cookie.value || 'dark'
 const handleUpdate = () => {
   cookie.value = colorMode.preference as 'dark' | 'light'
+  // due to a bug in @nuxtjs/color-mode
+  // `data-theme` does not update when user comes back to the app
+  // using browser back/forward buttons
+  document.documentElement.dataset.theme = colorMode.preference
 }
 </script>
 

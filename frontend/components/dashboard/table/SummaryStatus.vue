@@ -78,7 +78,7 @@ const mapped = computed(() => {
 /* unfortunatly we can't use our css variables here as the rgba conversion is done during build process and there is no css native possibility */
 @include set-pulse-anmiation(#4e7451);
 
-.dark-mode {
+[data-theme=dark] {
   @include set-pulse-anmiation(#7dc382);
 }
 

@@ -108,7 +108,7 @@ const toggle = () => {
   }
 }
 
-.dark-mode .bc-toggle .bg {
+[data-theme=dark] .bc-toggle .bg {
   background-color: var(--graphite);
   border-color: var(--graphite);
 }
