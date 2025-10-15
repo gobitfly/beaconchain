@@ -2,7 +2,7 @@
 definePageMeta({
   layout: 'base',
   middleware: () => {
-    return navigateTo('https://bitflyexplorergmbh.mintlify.app/api-reference/', { external: true })
+    return navigateTo('https://docs.beaconcha.in ', { external: true })
   },
 })
 </script>
