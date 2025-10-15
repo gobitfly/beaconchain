@@ -10,7 +10,7 @@
   height: 75%;
 }
 
-.dark-mode {
+[data-theme=dark] {
   .gradient-blur {
     background: linear-gradient(rgba(35, 32, 36, 0), rgba(35, 32, 36, 1));
   }

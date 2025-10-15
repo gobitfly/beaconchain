@@ -428,7 +428,7 @@ onUnmounted(() => {
   }
 }
 
-.dark-mode {
+[data-theme=dark] {
   .bc-tooltip {
     &.special {
       --tt-bg-color: var(--light-black);

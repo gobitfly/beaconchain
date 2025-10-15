@@ -154,7 +154,7 @@
   --toast-background-error-color: var(--pastel-red);
   --toast-border-error-color: var(--bold-red);
 
-  &.dark-mode {
+  &[data-theme=dark] {
     --primary-color: var(--primary-orange);
     --primary-contrast-color: var(--light-black);
     --primary-contrast-color-discreet: var(--dark-grey);
