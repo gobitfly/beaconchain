@@ -9,6 +9,7 @@ type CookieName
     | 'bc-cookies-preference'
     | 'bc-user-dashboards'
     | 'bc-validator-dashboard-key'
+    | 'theme'
 
 // for now without the other `type overload` there is no way to use
 // `readonly` feature of `useCookieNuxt` (we might adapt this if needed)
