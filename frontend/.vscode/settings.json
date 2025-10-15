@@ -63,6 +63,7 @@
         "dashboard",
         "deps",
         "dialog",
+        "docs",
         "en.json",
         "eslint",
         "feature-flags",
@@ -88,7 +89,7 @@
         "useStripeProvider",
         "useWindowSize",
         "variables.scss",
-        "vscode" 
+        "vscode"
     ],
     "editor.codeActionsOnSave": {
         "source.fixAll.eslint": "always"
