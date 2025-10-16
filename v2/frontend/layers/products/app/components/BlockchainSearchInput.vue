@@ -21,6 +21,7 @@ const { t: $t } = useTranslation()
 
 const emit = defineEmits<{
   (e: 'search', input: string): void,
+  (e: 'click:example', type: 'address' | 'token' | 'transaction' | 'validator'): void,
 }>()
 
 const searchParams = defineModel<BlockchainSearchParams>({
@@ -108,6 +109,44 @@ watch(hasResults, () => {
     :results="resultsOrHistory"
     @search="handleSearch"
   >
+    <template #search-examples>
+      <div class="flex items-center">
+        <section class="flex gap-lg">
+          <div class="py-xs px-md border-gray-400 font-semibold text-gray-400">
+            {{ $t('products.landing_page.search.examples.title') }}
+          </div>
+          <BaseChip
+            :is-selected="false"
+            icon="switch-horizontal"
+            :aria-label="$t('products.landing_page.search.examples.transaction')"
+            @click="emit('click:example', 'transaction')"
+          >
+            {{ $t('products.landing_page.search.examples.tx') }}
+          </BaseChip>
+          <BaseChip
+            :is-selected="false"
+            icon="hash"
+            @click="emit('click:example', 'address')"
+          >
+            {{ $t('products.landing_page.search.examples.address') }}
+          </BaseChip>
+          <BaseChip
+            :is-selected="false"
+            icon="stack-2"
+            @click="emit('click:example', 'validator')"
+          >
+            {{ $t('products.landing_page.search.examples.validator') }}
+          </BaseChip>
+          <BaseChip
+            :is-selected="false"
+            icon="hexagon"
+            @click="emit('click:example', 'token')"
+          >
+            {{ $t('products.landing_page.search.examples.token') }}
+          </BaseChip>
+        </section>
+      </div>
+    </template>
     <template #dropdown-fixed-header="{ idSearchInput }">
       <div
         class="min-h-fit overflow-x-auto overscroll-contain flex gap-md items-center px-2xl py-lg"
