@@ -33,9 +33,6 @@ watchDebounced(
   async () => {
     emit('search', input.value)
   },
-  {
-    immediate: false,
-  },
 )
 
 const groupedResults = computed(() => {
@@ -182,6 +179,13 @@ const idSearchInput = useId()
         </div>
       </RkComboboxContent>
     </RkComboboxRoot>
+
+    <div
+      v-if="$slots['search-examples']"
+      class="overflow-x-auto p-2xl z-10 bg-gray-50 dark:bg-gray-950 mt-xl rounded-xl shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.18)]"
+    >
+      <slot name="search-examples" />
+    </div>
   </form>
 </template>
 
@@ -191,6 +195,7 @@ form {
 
   &:before {
     position: absolute;
+    z-index: -1;
     content: '';
     top: 0;
     left: 0;

@@ -44,12 +44,13 @@ const searchTypes: BlockchainSearchParams['types'] = [
   'validator_by_public_key',
   'validators_by_withdrawal_credential',
 ]
+const networks = [
+  1,
+  560048,
+] satisfies ChainId[]
 const searchParams = ref<BlockchainSearchParams>({
   input: '',
-  networks: [
-    1,
-    560048,
-  ],
+  networks,
   types: searchTypes,
 })
 
@@ -70,6 +71,37 @@ const handleSearch = (input: string) => {
     return clear()
   }
   execute()
+}
+
+const handleExampleClick = (type: 'address' | 'token' | 'transaction' | 'validator') => {
+  if (type === 'address') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '0x5AbfEc25f74Cd88437631A7731906932776356f9',
+      types: [ 'address' ],
+    }
+  }
+  if (type === 'token') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '0x26D5Bd2dfEDa983ECD6c39899e69DAE6431Dffbb',
+      types: [ 'token' ],
+    }
+  }
+  if (type === 'transaction') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '0x4978b2aeed51747c2fd1d681e7da3fd73e7ef328c3634c1a2dc1e7829f1c2622',
+      types: [ 'transaction' ],
+    }
+  }
+  if (type === 'validator') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '5',
+      types: [ 'validator_by_index' ],
+    }
+  }
 }
 </script>
 
@@ -101,6 +133,7 @@ const handleSearch = (input: string) => {
           :is-loading="status === 'pending'"
           :has-error="!!error"
           @search="handleSearch"
+          @click:example="handleExampleClick"
         />
       </ProductLandingpageSection>
       <ProductLandingpageSection class="mt-11xl">
