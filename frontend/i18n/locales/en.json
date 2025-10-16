@@ -1230,6 +1230,16 @@
                 }
             },
             "search": {
+                "examples": {
+                    "address": "Address",
+                    "latest_block": "Latest Block",
+                    "latest_epoch": "Latest Epoch",
+                    "title": "Examples:",
+                    "token": "Token",
+                    "transaction": "Transaction",
+                    "tx": "TX",
+                    "validator": "Validator"
+                },
                 "filter_aria_label": "Filter by type",
                 "history": {
                     "action": {
