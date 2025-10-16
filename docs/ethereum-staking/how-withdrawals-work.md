@@ -73,10 +73,10 @@ Timing depends on:
 
 ## Related resources
 
-- Deposit Process: ./deposit-process.md
-- Why validator withdrawals don’t show up as wallet transactions: ./validator-withdrawals-execution-layer.md
-- Rewards and Penalties: ../beaconcha.in-explorer/rewards-and-penalties.md
-- Attestation: ../beaconcha.in-explorer/attestation.md
-- beaconcha.in explorer: https://beaconcha.in/
+- [Deposit Process](./deposit-process.md)
+- [Why validator withdrawals don’t show up as wallet transactions](./validator-withdrawals-execution-layer.md)
+- [Rewards and Penalties](../beaconcha.in-explorer/rewards-and-penalties.md)
+- [Attestation](../beaconcha.in-explorer/attestation.md)
+- [beaconcha.in explorer](https://beaconcha.in/)
 
 Tip: Keep your withdrawal address secure. Anyone with control of that address controls the withdrawn ETH.
