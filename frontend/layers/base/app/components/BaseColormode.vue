@@ -34,11 +34,17 @@ const handleUpdate = () => {
     @update:model-value="handleUpdate"
   >
     <template #light=" { label } ">
-      <BaseIcon name="sun" />
+      <BaseIcon
+        name="sun"
+        class="relative z-10"
+      />
       <span class="sr-only">{{ label }}</span>
     </template>
     <template #dark=" { label } ">
-      <BaseIcon name="moon" />
+      <BaseIcon
+        name="moon"
+        class="relative z-10"
+      />
       <span class="sr-only">{{ label }}</span>
     </template>
   </BaseSwitch>
