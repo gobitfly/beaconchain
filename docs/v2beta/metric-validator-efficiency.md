@@ -28,7 +28,7 @@ Huge thanks to [Ben Edington](https://x.com/benjaminion\_xyz) for providing [htt
 
 ### **Attester Efficiency** 
 
-84.4% (= 54/64)  of validators' rewards come from attestations. Every epoch (\~6.4 minutes), a validator proposes an attestation (vote) to the network.&#x20;
+84.4% (= 54/64)  of validators' rewards come from attestations. Every epoch (\~6.4 minutes), a validator publishes an attestation (vote) to the network.
 
 These attestations contain valuable information about the consensus layer and are rewarded based on their correctness and inclusion delay.
 
