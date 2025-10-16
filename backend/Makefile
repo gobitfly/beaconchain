@@ -30,3 +30,12 @@ frontend-types:
 
 addhooks:
 	git config core.hooksPath hooks
+
+.PHONY: docker-build-amd64-bc
+docker-build-amd64-bc:
+	mkdir -p bin
+	docker buildx build --platform linux/amd64 --load -t beaconchain-backend:amd64 -f Dockerfile --cache-to=type=local,dest=/tmp/.buildx-cache --cache-from=type=local,src=/tmp/.buildx-cache ..
+	docker create --platform linux/amd64 --name tmp-bc-extract beaconchain-backend:amd64
+	docker cp tmp-bc-extract:/usr/local/bin/bc ./bin/bc
+	docker rm -f tmp-bc-extract
+	docker rmi -f beaconchain-backend:amd64

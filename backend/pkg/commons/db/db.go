@@ -2576,3 +2576,47 @@ func HasEventsForEpoch(epoch uint64) (bool, error) {
 
 	return count > 0, nil
 }
+
+func GetGapsInEth1DepositsTable() ([]types.GapInEth1DepositsTableRow, error) {
+	// the query converts the little endian encoded merkle tree index into a number and
+	// checks for gaps in the continuous series
+	query := `
+		WITH deposit_idx AS (
+			SELECT
+				(
+					SELECT SUM((get_byte(ed.merkletree_index, i)::bigint) << (8 * i))
+					FROM generate_series(0, length(ed.merkletree_index) - 1) AS gs(i)
+				) AS idx,
+				ed.block_number
+			FROM eth1_deposits AS ed
+		),
+			 ordered AS (
+				 SELECT
+					 idx,
+					 block_number,
+					 lag(idx) OVER (ORDER BY idx DESC)               AS prev_idx,
+					 lag(block_number) OVER (ORDER BY idx DESC)      AS prev_block_number
+				 FROM deposit_idx
+			 )
+		SELECT
+			prev_idx            AS higher_idx,
+			prev_block_number   AS to_block,
+			idx                 AS lower_idx,
+			block_number        AS from_block,
+			(prev_idx - idx - 1) AS missing_count,
+			(idx + 1)            AS missing_low,   -- first missing value
+			(prev_idx - 1)       AS missing_high   -- last missing value
+		FROM ordered
+		WHERE prev_idx IS NOT NULL
+		  AND (prev_idx - idx) > 1
+		ORDER BY higher_idx DESC;
+	`
+	var res []types.GapInEth1DepositsTableRow
+
+	err := ReaderDb.Select(&res, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

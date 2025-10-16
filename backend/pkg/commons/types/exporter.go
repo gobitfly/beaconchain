@@ -777,3 +777,18 @@ type SlashingInfo struct {
 	SlashedValidatorPubkey []byte `db:"slashedvalidator_pubkey"`
 	Reason                 string `db:"reason"`
 }
+
+type GapInEth1DepositsTableRow struct {
+	HigherIndex  int64 `db:"higher_idx"`
+	ToBlock      int64 `db:"to_block"`
+	LowerIndex   int64 `db:"lower_idx"`
+	FromBlock    int64 `db:"from_block"`
+	MissingCount int64 `db:"missing_count"`
+	MissingLow   int64 `db:"missing_low"`
+	MissingHigh  int64 `db:"missing_high"`
+}
+
+func (gap GapInEth1DepositsTableRow) String() string {
+	return fmt.Sprintf("{HigherIndex: %d, ToBlock: %d, Index: %d, FromBlock: %d, MissingCount: %d, MissingLow: %d, MissingHigh: %d}",
+		gap.HigherIndex, gap.ToBlock, gap.LowerIndex, gap.FromBlock, gap.MissingCount, gap.MissingLow, gap.MissingHigh)
+}
