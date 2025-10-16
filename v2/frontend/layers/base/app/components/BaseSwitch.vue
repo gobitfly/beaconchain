@@ -27,13 +27,17 @@ const moveThumb = () => {
   if (!thumb) return
 
   const { x: initialX } = thumb.getBoundingClientRect()
-  const { x } = activeTrackItem.getBoundingClientRect()
+  const {
+    width,
+    x,
+  } = activeTrackItem.getBoundingClientRect()
 
   // this should rather have been done via view transition api
   // but it currently lacks `firefox support`
   // and also there was a flickering issue
   const animation = thumb.animate([ {
     transform: `translateX(${x - initialX}px)`,
+    width: `${width}px`,
   } ],
   { duration: 180 },
   )
@@ -49,7 +53,9 @@ watch(modelValue, () => {
 </script>
 
 <template>
-  <fieldset class="isolate">
+  <fieldset
+    class="isolate"
+  >
     <legend class="sr-only">
       {{ $t(screenreaderTitle as string) }}
     </legend>

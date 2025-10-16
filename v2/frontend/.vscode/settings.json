@@ -3,6 +3,7 @@
         "BaseNavigation",
         "BaseNavigationLeft",
         "BaseSearchInput",
+        "BaseSwitch",
         "BcButton",
         "BcDataWrapper",
         "BcFormatAmount",
