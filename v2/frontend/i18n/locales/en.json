@@ -5,14 +5,17 @@
         },
         "beaconchain_homepage": "Beaconchain Homepage",
         "common": {
+            "action": {
+                "try_again": "Try again"
+            },
             "all": "All",
             "close": "Close",
-            "error_retry": "An error occurred. Please try again.",
             "ethereum": "Ethereum",
             "log_in": "Log in",
             "no_results": "No results found.",
             "open_navigation": "Open Navigation",
-            "side_navigation": "Side Navigation"
+            "side_navigation": "Side Navigation",
+            "something_went_wrong": "Something went wrong."
         },
         "footer": {
             "color_mode": {
@@ -1230,6 +1233,13 @@
             },
             "search": {
                 "filter_aria_label": "Filter by type",
+                "history": {
+                    "action": {
+                        "toggle_history": "Toggle Search History"
+                    },
+                    "recent": "Search History"
+
+                },
                 "input_label": "Search by Address / Tx hash / Block / Token / ENS",
                 "input_placeholder": "Search anything...",
                 "loading_message": "Loading search results...",

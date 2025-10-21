@@ -20,7 +20,7 @@ const {
 const { t: $t } = useTranslation()
 
 const emit = defineEmits<{
-  (e: 'search'): void,
+  (e: 'search', input: string): void,
 }>()
 
 const searchParams = defineModel<BlockchainSearchParams>({
@@ -50,8 +50,9 @@ const chips: { label: string, value: BlockchainSearchParams['types'][number] }[]
   },
 ]
 
-const handleSearch = () => {
-  emit('search')
+const handleSearch = (input: string) => {
+  isHistoryVisible.value = false
+  emit('search', input)
 }
 
 const handleTypeFilterChange = () => {
@@ -61,29 +62,80 @@ const handleTypeFilterChange = () => {
     searchParams.value.types = typeFilters
   }
 
-  handleSearch()
+  handleSearch(searchParams.value.input)
 }
+const history = useLocalStorage<string[]>('bc-search-history-product-landing', [])
+// using localHistory instead of history directly to avoid
+// that the search history in the UI is updated before navigating away
+const localHistory = ref<InternalPostSearchResponseWithChainId['data']>(history.value.map(item => JSON.parse(item)))
+const hasHistory = computed(() => !!localHistory.value.length)
+const hasResults = computed(() => results !== undefined)
+
+const isHistoryVisible = ref<boolean>(!hasResults.value && hasHistory.value)
+const resultsOrHistory = computed(() => {
+  if ((!hasResults.value && hasHistory.value) || isHistoryVisible.value) {
+    return localHistory.value
+  }
+  return results
+})
+const toggleHistory = () => {
+  isHistoryVisible.value = !isHistoryVisible.value
+  localHistory.value = history.value.map(item => JSON.parse(item))
+}
+const handleClick = (searchResult: InternalPostSearchResponseWithChainId['data'][number]) => {
+  const currentEntry = JSON.stringify(searchResult)
+  if (history.value.length >= 10) {
+    history.value.pop()
+  }
+  history.value = history.value.filter(entry => entry !== currentEntry)
+  history.value.unshift(currentEntry)
+}
+watch(hasResults, () => {
+  if (!hasHistory.value) return
+  if (hasResults.value) return
+  isHistoryVisible.value = true
+})
 </script>
 
 <template>
   <BaseSearchInput
     v-model="searchParams.input"
-    :is-loading
-    :has-error
+    :is-loading="isHistoryVisible ? false : isLoading"
+    :has-error="isHistoryVisible ? false : hasError"
     :label="$t('products.landing_page.search.input_label')"
     :placeholder="$t('products.landing_page.search.input_placeholder')"
     :group-by="'type'"
-    :results
+    :results="resultsOrHistory"
     @search="handleSearch"
   >
-    <template #dropdown-fixed-header>
-      <BaseChipGroup
-        v-model="searchParams.types"
-        :items="chips"
-        class="overflow-x-auto overscroll-contain min-h-fit"
-        :aria-label="$t('products.landing_page.search.filter_aria_label')"
-        @update:model-value="handleTypeFilterChange"
-      />
+    <template #dropdown-fixed-header="{ idSearchInput }">
+      <div
+        class="min-h-fit overflow-x-auto overscroll-contain flex gap-md items-center px-2xl py-lg"
+        @keydown.enter.stop
+      >
+        <BaseButtonIcon
+          v-if="hasHistory"
+          :aria-controls="idSearchInput"
+          :is-disabled="!hasResults"
+          role="switch"
+          screenreader-text="products.landing_page.search.history.action.toggle_history"
+          name="history"
+          :aria-checked="`${isHistoryVisible}`"
+          variant="secondary"
+          @click="toggleHistory"
+        />
+        <BaseChipGroup
+          v-if="!isHistoryVisible"
+          v-model="searchParams.types"
+          :aria-controls="idSearchInput"
+          :items="chips"
+          :aria-label="$t('products.landing_page.search.filter_aria_label')"
+          @update:model-value="handleTypeFilterChange"
+        />
+        <span v-else>
+          {{ $t('products.landing_page.search.history.recent') }}
+        </span>
+      </div>
       <hr class="mx-2xl text-gray-600">
     </template>
 
@@ -107,7 +159,10 @@ const handleTypeFilterChange = () => {
     </template>
 
     <template #result-item="{ result }">
-      <BlockchainSearchResultItem :result />
+      <BlockchainSearchResultItem
+        :result
+        @click="handleClick(result)"
+      />
     </template>
 
     <template #loading-content>
