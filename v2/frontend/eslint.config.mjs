@@ -126,7 +126,15 @@ export default withNuxt({
   .append(
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
     {
+      files: [ '**/*.json' ],
       rules: {
+        '@stylistic/no-multiple-empty-lines': [
+          'error',
+          {
+            max: 0,
+          },
+        ],
+        '@stylistic/no-trailing-spaces': 'error',
         'jsonc/indent': [
           'error',
           4,
