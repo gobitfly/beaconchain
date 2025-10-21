@@ -154,16 +154,16 @@ func buildEndpointRateLimitsMap(spec *openapi3.T) (map[endpointRateLimitKey]doma
 	endpointRateLimits := make(map[endpointRateLimitKey]domain.RateLimitSettings)
 	for _, pathItem := range spec.Paths.Map() {
 		for _, operation := range pathItem.Operations() {
+			// put all existing tier settings into the map
+			operationID := operation.OperationID
+			if operationID == "" {
+				return nil, fmt.Errorf("operationID is empty for endpoint with rate limit settings")
+			}
 			extensions, ok := operation.Extensions["x-ratelimits"].(map[string]any)
 			if !ok {
 				continue // no rate limit defined
 			}
 			for tierName, tierInfo := range extensions {
-				// put all existing tier settings into the map
-				operationID := operation.OperationID
-				if operationID == "" {
-					return nil, fmt.Errorf("operationID is empty for endpoint with rate limit settings")
-				}
 				steadyRate, ok := tierInfo.(map[string]any)["steady_rate"].(float64)
 				if !ok {
 					return nil, fmt.Errorf("invalid steady_rate for tier %s in endpoint %s", tierName, operation.OperationID)
