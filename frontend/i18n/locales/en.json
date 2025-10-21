@@ -779,7 +779,6 @@
                     "validator_offline": "Validator offline",
                     "validator_offline_reminder": "Validator offline reminder",
                     "withdrawal": "Withdrawal"
-
                 },
                 "heading_webhook": "Edit Webhook",
                 "info_send_via_discord": {
@@ -953,7 +952,6 @@
                 "erc20_token_transfers": {
                     "label": "ERC20 token transfers"
                 },
-
                 "erc721_token_transfers": {
                     "label": "ERC721 token transfers"
                 },
@@ -1238,7 +1236,6 @@
                         "toggle_history": "Toggle Search History"
                     },
                     "recent": "Search History"
-
                 },
                 "input_label": "Search by Address / Tx hash / Block / Token / ENS",
                 "input_placeholder": "Search anything...",
