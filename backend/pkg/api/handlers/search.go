@@ -127,12 +127,12 @@ func init() {
 			handlerFunc:  handleSearchTransaction,
 		},
 		blockKey: {
-			regex:        types.ReInteger,
+			regex:        types.ReIntegerOrLatest,
 			responseType: string(blockKey),
 			handlerFunc:  handleSearchBlock,
 		},
 		slotKey: {
-			regex:        types.ReInteger,
+			regex:        types.ReIntegerOrLatest,
 			responseType: "slot",
 			handlerFunc:  handleSearchSlot,
 		},
@@ -147,7 +147,7 @@ func init() {
 			handlerFunc:  handleSearchSlotByStateRoot,
 		},
 		epochKey: {
-			regex:        types.ReInteger,
+			regex:        types.ReIntegerOrLatest,
 			responseType: string(epochKey),
 			handlerFunc:  handleSearchEpoch,
 		},
@@ -376,6 +376,13 @@ func handleSearchTransaction(ctx context.Context, h *HandlerService, input strin
 }
 
 func handleSearchBlock(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	if input == "latest" {
+		result, err := h.daService.GetLatestBlock(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return asSearchResult(blockKey, chainId, &types.SearchBlock{BlockNumber: result}, nil)
+	}
 	blockNumber, err := strconv.ParseUint(input, 10, 64)
 	if err != nil {
 		return nil, err
@@ -385,6 +392,13 @@ func handleSearchBlock(ctx context.Context, h *HandlerService, input string, cha
 }
 
 func handleSearchSlot(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	if input == "latest" {
+		result, err := h.daService.GetLatestSlot(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return asSearchResult(slotKey, chainId, &types.SearchSlot{Slot: result}, nil)
+	}
 	slot, err := strconv.ParseUint(input, 10, 64)
 	if err != nil {
 		return nil, err
@@ -412,6 +426,14 @@ func handleSearchSlotByStateRoot(ctx context.Context, h *HandlerService, input s
 }
 
 func handleSearchEpoch(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	if input == "latest" {
+		result, err := h.daService.GetLatestSlot(ctx)
+		if err != nil {
+			return nil, err
+		}
+		epoch := result / h.cfg.ClConfig.SlotsPerEpoch
+		return asSearchResult(epochKey, chainId, &types.SearchEpoch{Epoch: epoch}, nil)
+	}
 	epoch, err := strconv.ParseUint(input, 10, 64)
 	if err != nil {
 		return nil, err

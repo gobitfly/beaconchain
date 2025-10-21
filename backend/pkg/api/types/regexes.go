@@ -5,6 +5,7 @@ import "regexp"
 var (
 	ReName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
 	ReInteger                      = regexp.MustCompile(`^[0-9]+$`)
+	ReIntegerOrLatest              = regexp.MustCompile(`^(latest|[0-9]+)$`)
 	ReValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	ReValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	ReValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)

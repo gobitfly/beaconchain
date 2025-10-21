@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -23,8 +24,19 @@ func (d *DataAccessService) GetLatestFinalizedEpoch(ctx context.Context) (uint64
 }
 
 func (d *DataAccessService) GetLatestBlock(ctx context.Context) (uint64, error) {
-	// @DATA-ACCESS implement
-	return d.dummy.GetLatestBlock(ctx)
+	ds := goqu.Dialect("postgres").
+		From(goqu.T("blocks")).
+		Select(goqu.MAX(goqu.C("exec_block_number")))
+
+	res, err := runQuery[uint64](ctx, d.readerDb, ds)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Warn("no EL block found")
+			return 0, nil
+		}
+		return 0, fmt.Errorf("failed to get latest existing block height: %w", err)
+	}
+	return res, nil
 }
 
 func (d *DataAccessService) GetBlockHeightAt(ctx context.Context, slot uint64) (uint64, error) {
