@@ -122,7 +122,7 @@ func init() {
 			handlerFunc:  handleSearchEnsName,
 		},
 		transactionKey: {
-			regex:        types.ReTransactionHash,
+			regex:        types.ReTransactionHashOrLatest,
 			responseType: string(transactionKey),
 			handlerFunc:  handleSearchTransaction,
 		},
@@ -366,7 +366,16 @@ func handleSearchEnsName(ctx context.Context, h *HandlerService, input string, c
 	return asSearchResult(ensNameKey, chainId, result, err)
 }
 
+const latestSearch = "/latest"
+
 func handleSearchTransaction(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
+	if input == latestSearch {
+		result, err := h.daService.GetLatestTransaction(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return asSearchResult(transactionKey, chainId, &types.SearchTransaction{TransactionHash: result}, nil)
+	}
 	transactionHash, err := hex.DecodeString(strings.TrimPrefix(input, "0x"))
 	if err != nil {
 		return nil, err
@@ -376,7 +385,7 @@ func handleSearchTransaction(ctx context.Context, h *HandlerService, input strin
 }
 
 func handleSearchBlock(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
-	if input == "latest" {
+	if input == latestSearch {
 		result, err := h.daService.GetLatestBlock(ctx)
 		if err != nil {
 			return nil, err
@@ -392,7 +401,7 @@ func handleSearchBlock(ctx context.Context, h *HandlerService, input string, cha
 }
 
 func handleSearchSlot(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
-	if input == "latest" {
+	if input == latestSearch {
 		result, err := h.daService.GetLatestSlot(ctx)
 		if err != nil {
 			return nil, err
@@ -426,7 +435,7 @@ func handleSearchSlotByStateRoot(ctx context.Context, h *HandlerService, input s
 }
 
 func handleSearchEpoch(ctx context.Context, h *HandlerService, input string, chainId uint64) (*types.SearchResult, error) {
-	if input == "latest" {
+	if input == latestSearch {
 		result, err := h.daService.GetLatestSlot(ctx)
 		if err != nil {
 			return nil, err
