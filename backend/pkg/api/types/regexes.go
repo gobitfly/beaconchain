@@ -5,7 +5,7 @@ import "regexp"
 var (
 	ReName                         = regexp.MustCompile(`^[a-zA-Z0-9_\-.\ ]*$`)
 	ReInteger                      = regexp.MustCompile(`^[0-9]+$`)
-	ReIntegerOrLatest              = regexp.MustCompile(`^(latest|[0-9]+)$`)
+	ReIntegerOrLatest              = regexp.MustCompile(`^(\/latest|[0-9]+)$`)
 	ReValidatorDashboardPublicId   = regexp.MustCompile(`^v-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	ReValidatorPublicKeyWithPrefix = regexp.MustCompile(`^0x[0-9a-fA-F]{96}$`)
 	ReValidatorPublicKey           = regexp.MustCompile(`^(0x)?[0-9a-fA-F]{96}$`)
@@ -14,6 +14,7 @@ var (
 	ReWithdrawalCredential         = regexp.MustCompile(`^(0x)?0[012][0-9a-fA-F]{62}$`)
 	Re64ByteHash                   = regexp.MustCompile(`^0x[0-9a-fA-F]{64}$`)
 	ReTransactionHash              = Re64ByteHash
+	ReTransactionHashOrLatest      = regexp.MustCompile(`^(\/latest|0x[0-9a-fA-F]{64})$`)
 	ReEnsName                      = regexp.MustCompile(`^.+\.eth$`)
 	ReGraffiti                     = regexp.MustCompile(`^.{2,32}$`) // at least 2 characters, so that queries won't time out
 	ReGraffitiHex                  = regexp.MustCompile(`^(0x)?([0-9a-fA-F]{2}){32}$`)

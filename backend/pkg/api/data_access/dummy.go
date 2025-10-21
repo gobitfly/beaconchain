@@ -165,6 +165,10 @@ func (*DummyService) GetLatestBlock(ctx context.Context) (uint64, error) {
 	return getDummyData[uint64](ctx)
 }
 
+func (*DummyService) GetLatestTransaction(ctx context.Context) (t.Hash, error) {
+	return getDummyData[t.Hash](ctx)
+}
+
 func (*DummyService) GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error) {
 	return getDummyData[[]t.EthConversionRate](ctx)
 }

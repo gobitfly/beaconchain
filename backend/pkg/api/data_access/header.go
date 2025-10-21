@@ -6,8 +6,10 @@ import (
 	"fmt"
 
 	"github.com/doug-martin/goqu/v9"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/price"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
@@ -37,6 +39,23 @@ func (d *DataAccessService) GetLatestBlock(ctx context.Context) (uint64, error) 
 		return 0, fmt.Errorf("failed to get latest existing block height: %w", err)
 	}
 	return res, nil
+}
+
+func (d *DataAccessService) GetLatestTransaction(ctx context.Context) (t.Hash, error) {
+	indexedBlock, err := d.bigtable.GetMostRecentBlockFromDataTable()
+	if err != nil {
+		return "", fmt.Errorf("failed to get latest block: %w", err)
+	}
+	block, err := d.bigtable.GetBlockFromBlocksTable(indexedBlock.GetNumber())
+	if err != nil {
+		if err == db.ErrBlockNotFound {
+			err = db.ErrNotFound
+		}
+		return "", fmt.Errorf("failed to get latest block from bigtable: %w", err)
+	}
+	transactions := block.GetTransactions()
+	hash := transactions[len(transactions)-1].GetHash()
+	return t.Hash(hexutil.Encode(hash)), nil
 }
 
 func (d *DataAccessService) GetBlockHeightAt(ctx context.Context, slot uint64) (uint64, error) {
