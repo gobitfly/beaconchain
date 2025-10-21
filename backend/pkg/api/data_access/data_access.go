@@ -39,6 +39,7 @@ type DataAccessor interface {
 	GetLatestFinalizedEpoch(ctx context.Context) (uint64, error)
 	GetLatestSlot(ctx context.Context) (uint64, error)
 	GetLatestBlock(ctx context.Context) (uint64, error)
+	GetLatestTransaction(ctx context.Context) (t.Hash, error)
 	GetLatestExchangeRates(ctx context.Context) ([]t.EthConversionRate, error)
 
 	GetProductSummary(ctx context.Context) (*t.ProductSummary, error)
