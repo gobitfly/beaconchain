@@ -140,6 +140,12 @@
   }
 }
 
+@layer reset {
+  input::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
 html {
   transition-behavior: allow-discrete;
   interpolate-size: allow-keywords;
