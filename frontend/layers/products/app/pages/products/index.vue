@@ -54,6 +54,7 @@ const searchParams = ref<BlockchainSearchParams>({
 })
 
 const {
+  clear,
   data,
   error,
   execute,
@@ -64,6 +65,12 @@ const {
   method: 'POST',
   watch: false,
 })
+const handleSearch = (input: string) => {
+  if (!input.length) {
+    return clear()
+  }
+  execute()
+}
 </script>
 
 <template>
@@ -93,7 +100,7 @@ const {
           :type-filters="searchTypes"
           :is-loading="status === 'pending'"
           :has-error="!!error"
-          @search="execute()"
+          @search="handleSearch"
         />
       </ProductLandingpageSection>
       <ProductLandingpageSection class="mt-11xl">

@@ -31,17 +31,13 @@ const input = defineModel<string>({
 watchDebounced(
   input,
   async () => {
-    if (input.value.length) {
-      emit('search', input.value)
-      hasSearched.value = true
-    }
+    emit('search', input.value)
   },
   {
     immediate: false,
   },
 )
 
-const showDropdown = computed(() => isLoading || hasSearched.value)
 const groupedResults = computed(() => {
   if (!results?.length) return
   if (!groupBy) return
@@ -58,6 +54,7 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
   input.value = ''
   hasSearched.value = false
 }
+const idSearchInput = useId()
 </script>
 
 <template>
@@ -66,19 +63,19 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
     class="base-search-input__form p-2xl isolate"
   >
     <RkComboboxRoot
-      v-model:open="showDropdown"
+      :open-on-focus="!!results?.length"
       class="relative"
       ignore-filter
       :reset-search-term-on-blur="false"
     >
       <RkLabel
-        for="search-input"
+        :for="idSearchInput"
         class="absolute bottom-2xl left-2xl dark:text-gray-400 text-sm-tight"
       >
         {{ label }}
       </RkLabel>
       <RkComboboxInput
-        id="search-input"
+        :id="idSearchInput"
         ref="search-input"
         v-model.trim="input"
         type="search"
@@ -89,13 +86,16 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
         dark:focus:border-charcoal-50 dark:focus-within:outline-0"
         @update:model-value="(value) => { if (!value) hasSearched = false }"
       />
-
       <RkComboboxContent
+        v-if="results !== undefined || isLoading || hasError"
         class="absolute z-10 bg-gray-50 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
         @pointer-down-outside="handleClickOutside"
+        @focus-outside.prevent
       >
-        <slot name="dropdown-fixed-header" />
-
+        <slot
+          name="dropdown-fixed-header"
+          :id-search-input
+        />
         <div
           role="presentation"
           class="overflow-y-auto overscroll-contain"
@@ -113,17 +113,27 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
             >
               <div
                 role="alert"
-                class="px-2xl py-md dark:text-gray-400 "
+                class="px-2xl py-md dark:text-gray-400 flex items-center"
               >
-                {{ $t('base.common.error_retry') }}
+                <div>
+                  {{ $t('base.common.something_went_wrong') }}
+                </div>
+                <BaseButton
+                  trailing-icon="rotate"
+                  variant="quaternary"
+                  @click="$emit('search', input)"
+                >
+                  {{ $t('base.common.action.try_again') }}
+                </BaseButton>
               </div>
             </slot>
 
-            <slot v-else-if="!results?.length">
-              <div class="dark:text-gray-400 px-2xl py-md font-semibold">
-                {{ $t('base.common.no_results') }}
-              </div>
-            </slot>
+            <div
+              v-else-if="!results?.length"
+              class="dark:text-gray-400 px-2xl py-md font-semibold"
+            >
+              {{ $t('base.common.no_results') }}
+            </div>
 
             <template v-else-if="results?.length && groupBy">
               <RkComboboxGroup
@@ -176,10 +186,6 @@ const handleClickOutside = (e: PointerDownOutsideEvent) => {
 </template>
 
 <style lang="scss" scoped>
-.search-input::-webkit-search-cancel-button {
-  display: none;
-}
-
 form {
   position: relative;
 

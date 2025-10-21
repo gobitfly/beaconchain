@@ -6,6 +6,7 @@ import type { IconName } from '~/layers/base/app/components/BaseIcon.vue'
 
 const {
   size = 'md',
+  to,
 } = defineProps<(
   {
     // eslint-disable-next-line vue/prop-name-casing -- conditional props for props like `ariaLabel` do not work
@@ -19,17 +20,21 @@ const {
   }
 )
 & {
+  isDisabled?: boolean,
   name: IconName,
   size?: 'lg' | 'md',
   to?: NuxtLinkProps['to'],
   variant: 'secondary' | 'tertiary',
 }
 >()
+const isButton = computed(() => !to)
 </script>
 
 <template>
   <component
-    :is="to ? NuxtLink : 'button'"
+    :is="isButton ? 'button' : NuxtLink"
+    :type="isButton ? 'button' : undefined"
+    :disabled="isDisabled"
     :to
     class="border flex rounded-full bg-linear-to-b disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 size-fit"
     :class="[

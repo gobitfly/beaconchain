@@ -43,7 +43,13 @@ const {
       :name="leadingIcon"
       class=""
     />
-    <span class="px-lg">
+    <span
+      :class="[
+        size === 'xl' && 'px-lg',
+        size === 'lg' && 'px-md',
+        size === 'md' && 'px-xs',
+      ]"
+    >
       <slot />
     </span>
     <LazyBaseIcon
