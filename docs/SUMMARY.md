@@ -16,7 +16,7 @@
 
 ## Validator Tagging
 
-* [Overview](validator-tagging/validator-tagging.md)
+* [Overview](validator-tagging/overview.md)
 
 ## v1 beaconcha.in Explorer
 
