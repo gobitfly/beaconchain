@@ -257,7 +257,7 @@ watch(
               field="efficiency"
               :sortable="true"
               body-class="efficiency-column"
-              :header="$t('dashboard.validator.col.efficiency')"
+              :header="$t('dashboard.validator.col.beaconscore')"
             >
               <template #body="slotProps">
                 <DashboardTableSummaryValue
