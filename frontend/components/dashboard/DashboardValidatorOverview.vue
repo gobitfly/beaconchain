@@ -139,11 +139,22 @@ const aprInfos = [
       :infos="efficiencyInfos"
       :title="$t('dashboard.validator.overview.24h_beaconscore')"
     >
-      {{
-        formatPercent(overview?.efficiency.last_24h ?? 0, {
-          maximumFractionDigits: 2,
-        })
-      }}
+      <BcTooltip
+        tooltip-class="tooltip"
+      >
+        {{
+          formatPercent(overview?.efficiency.last_24h ?? 0, {
+            maximumFractionDigits: 2,
+          })
+        }}
+        <template #tooltip>
+          <BcTranslation
+            keypath="dashboard.beaconscore.template"
+            linkpath="dashboard.beaconscore.link"
+            :to="externalLink.knowledgeBase.beaconScore"
+          />
+        </template>
+      </BcTooltip>
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :title="$t('dashboard.validator.overview.30d_rewards')"
