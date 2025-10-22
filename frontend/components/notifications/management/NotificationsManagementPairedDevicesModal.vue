@@ -57,7 +57,7 @@ const handleToggleNotifications = ({
           class="link"
           to="/mobile"
         >
-          {{ $t('notifications.general.paired_devices.info_empty._link') }}
+          {{ $t('notifications.general.paired_devices.info_empty.link') }}
         </BcLink>
       </BcText>
     </div>

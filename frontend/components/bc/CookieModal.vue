@@ -29,7 +29,7 @@ const visible = computed(() => cookiePreference.value === undefined)
       <BcTranslation
         class="text-container"
         keypath="cookies.text.template"
-        linkpath="cookies.text._link"
+        linkpath="cookies.text.link"
         to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
       />
       <div class="button-container">

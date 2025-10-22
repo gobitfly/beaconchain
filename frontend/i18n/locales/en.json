@@ -148,8 +148,8 @@
         "accept_all": "Accept All",
         "only_necessary": "Only Necessary",
         "text": {
-            "_link": "cookies",
-            "template": "By using our site you agree to our use of {_link} to deliver a better user experience."
+            "link": "cookies",
+            "template": "By using our site you agree to our use of {link} to deliver a better user experience."
         }
     },
     "currency": {
@@ -255,8 +255,8 @@
             "text": "Create your own dashboard to get the most out of beaconcha.in"
         },
         "subsciprion_limit_reached": {
-            "_link": "Learn more about our subscription plans and dashboard addon-ons on our pricing page.",
-            "template": "This dashboard exceeds the stake limit so no more validators can be added. {_link}"
+            "link": "Learn more about our subscription plans and dashboard addon-ons on our pricing page.",
+            "template": "This dashboard exceeds the stake limit so no more validators can be added. {link}"
         },
         "subsciprion_limit_reached_title": "Maximum stake exceeded",
         "table": {
@@ -267,8 +267,8 @@
         },
         "title": "Dashboard",
         "truncated_validators": {
-            "_link": "Learn more about how to upgrade and unlock full validator insights and premium features on our pricing page.",
-            "template": "This dashboard displays a truncated list of validators, as their total stake exceeds the free plan limit. {_link}"
+            "link": "Learn more about how to upgrade and unlock full validator insights and premium features on our pricing page.",
+            "template": "This dashboard displays a truncated list of validators, as their total stake exceeds the free plan limit. {link}"
         },
         "validator": {
             "blocks": {
@@ -782,8 +782,8 @@
                 },
                 "heading_webhook": "Edit Webhook",
                 "info_send_via_discord": {
-                    "_link": "Discord webhook",
-                    "template": "Enable this to receive notifications via Discord. Ensure you have a {_link} set up."
+                    "link": "Discord webhook",
+                    "template": "Enable this to receive notifications via Discord. Ensure you have a {link} set up."
                 },
                 "label_send_via_discord": "Send via Discord",
                 "label_webhook_url": "Webhook URL",
@@ -867,7 +867,7 @@
             "paired_devices": {
                 "device": "Device",
                 "info_empty":{
-                    "_link": "Click here to pair a device",
+                    "link": "Click here to pair a device",
                     "template": "Currently there are no devices paired."
                 },
                 "mobile_notifications": "Mobile notifications",
@@ -938,12 +938,12 @@
                 "validator_groups": "Most notified validator groups"
             },
             "notifications_activate_premium": {
-                "_link": "here",
-                "template": "Click {_link} to activate"
+                "link": "here",
+                "template": "Click {link} to activate"
             },
             "notifications_download_app": {
-                "_link": "mobile app",
-                "template": "Download the {_link} to activate"
+                "link": "mobile app",
+                "template": "Download the {link} to activate"
             },
             "push": "Push"
         },
@@ -1017,8 +1017,8 @@
                 },
                 "validator_is_offline": {
                     "info": {
-                        "_list": "Once the validator has been offline for 3 epochs\nOnce you are back online again",
-                        "template": "We will trigger a notification: {_list}"
+                        "list": "Once the validator has been offline for 3 epochs\nOnce you are back online again",
+                        "template": "We will trigger a notification: {list}"
                     },
                     "label": "Validator is offline"
                 },
@@ -1051,8 +1051,8 @@
                 "select_addon": "Select Add-On"
             },
             "contact_support":{
-                "_link": "support",
-                "template": "Contact our {_link} for a higher limit"
+                "link": "support",
+                "template": "Contact our {link} for a higher limit"
             },
             "currently_active": "Currently active: {amount}",
             "effective_balance": "+{amount} Max Stake per Dashboard",
