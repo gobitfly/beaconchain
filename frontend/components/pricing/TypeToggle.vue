@@ -16,9 +16,6 @@ const { t: $t } = useTranslation()
       <div class="label">
         {{ $t("pricing.api_keys") }}
       </div>
-      <div class="subtext">
-        {{ $t("common.coming_soon") }}
-      </div>
     </div>
   </div>
 </template>
