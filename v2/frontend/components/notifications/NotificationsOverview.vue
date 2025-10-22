@@ -74,7 +74,7 @@ const emit = defineEmits<{
           <BcTranslation
             keypath="notifications.overview.notifications_activate_premium.template"
             linkpath="notifications.overview.notifications_activate_premium.link"
-            to="https://discord.com/developers/docs/resources/webhook"
+            :to="externalLink.docs.discordWebhook"
           >
             <template #link>
               <BcButtonText

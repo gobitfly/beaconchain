@@ -145,7 +145,7 @@ const id = useId()
           <BcTranslation
             keypath="notifications.dashboards.dialog.info_send_via_discord.template"
             linkpath="notifications.dashboards.dialog.info_send_via_discord.link"
-            to="https://discord.com/developers/docs/resources/webhook"
+            :to="externalLink.docs.discordWebhook"
           />
         </template>
       </BcInputCheckbox>

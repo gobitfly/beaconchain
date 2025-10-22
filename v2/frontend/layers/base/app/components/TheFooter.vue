@@ -28,7 +28,7 @@ const resourceLinks: Link[] = [
     href: '/premium', icon: 'ufo', text: $t('base.footer.resources.links.beaconchain_premium'),
   },
   {
-    href: 'https://shop.beaconcha.in/#!/', icon: 'shirt', text: $t('base.footer.resources.links.swag_shop'),
+    href: externalLink.beaconchain.shop, icon: 'shirt', text: $t('base.footer.resources.links.swag_shop'),
   },
   {
     href: '/products/pricing', icon: 'code', text: $t('base.footer.resources.links.api_pricing'),
@@ -37,7 +37,7 @@ const resourceLinks: Link[] = [
     href: '/products/contact-sales', icon: 'mail-up', text: $t('base.footer.resources.links.contact_sales'),
   },
   {
-    href: 'https://status.beaconcha.in/', icon: 'circle-check-filled', text: $t('base.footer.resources.links.site_status'),
+    href: externalLink.beaconchain.status, icon: 'circle-check-filled', text: $t('base.footer.resources.links.site_status'),
   },
 ]
 </script>
@@ -145,7 +145,7 @@ const resourceLinks: Link[] = [
         <ul class="flex gap-md">
           <li>
             <BaseButtonIcon
-              to="https://dsc.gg/beaconchain"
+              :to="externalLink.beaconchain.discord"
               name="brand-discord"
               variant="secondary"
               screenreader-text="base.footer.links.text_discord"
@@ -153,7 +153,7 @@ const resourceLinks: Link[] = [
           </li>
           <li>
             <BaseButtonIcon
-              to="https://x.com/beaconcha_in"
+              :to="externalLink.beaconchain.x"
               name="brand-x"
               variant="secondary"
               screenreader-text="base.footer.links.text_x"
@@ -161,7 +161,7 @@ const resourceLinks: Link[] = [
           </li>
           <li>
             <BaseButtonIcon
-              to="https://github.com/gobitfly"
+              :to="externalLink.beaconchain.github.organization"
               name="brand-github"
               variant="secondary"
               screenreader-text="base.footer.links.text_github"
@@ -179,19 +179,19 @@ const resourceLinks: Link[] = [
       <div class="flex flex-col sm:flex-row gap-xl text-xs sm:justify-between">
         <div class="flex justify-around sm:order-2 sm:w-1/2">
           <NuxtLink
-            to="https://beaconcha.in/imprint"
+            :to="externalLink.beaconchain.imprint"
             class="hover:text-link-500"
           >
             {{ $t('base.footer.imprint') }}
           </NuxtLink>
           <NuxtLink
-            to="https://storage.googleapis.com/legal.beaconcha.in/tos.pdf"
+            :to="externalLink.beaconchain.termsOfService"
             class="hover:text-link-500"
           >
             {{ $t('base.footer.terms_of_service') }}
           </NuxtLink>
           <NuxtLink
-            to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
+            :to="externalLink.beaconchain.privacyPolicy"
             class="hover:text-link-500"
           >
             {{ $t('base.footer.privacy') }}
