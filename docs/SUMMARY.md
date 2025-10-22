@@ -2,7 +2,7 @@
 
 * [👋 Welcome](README.md)
 
-## 🖥️ v2 beaconcha.in explorer \[BETA] <a href="#v2beta" id="v2beta"></a>
+## 🖥️ v2 beaconcha.in explorer
 
 * [🎉 Introducing v2-beta](v2beta/introduction.md)
 * [🦸 Summary view](v2beta/summary-table.md)
@@ -13,6 +13,9 @@
 * [🤝 Share your custom dashboard](v2beta/share-your-custom-dashboard.md)
 * [📈 Metric: Validator Efficiency](v2beta/metric-validator-efficiency.md)
 * [⏰ Notifications v2](v2beta/wip-notifications-v2.md)
+
+## Validator Tagging
+* [Validator Tagging](validator-tagging/validator-tagging.md)
 
 ## v1 beaconcha.in Explorer
 
