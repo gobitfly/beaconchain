@@ -428,7 +428,7 @@ paths:
 
         Query by slot number, block root hash or "latest" / "finalized".
       parameters:
-        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/slotParam'
       requestBody:
         $ref : "#/components/requestBodies/JustChain"
       responses:
@@ -458,7 +458,7 @@ paths:
         Provides status information about sync committee duties for a specific slot for each validator. 
         The validator filter is optional; if omitted, results include all validators assigned sync duties for the slot.
       parameters:
-        - $ref: '#/components/parameters/slot'
+        - $ref: '#/components/parameters/slotParam'
       requestBody:
         $ref : "#/components/requestBodies/optionalValidatorChainCursorPageSize"
       responses:
@@ -538,7 +538,7 @@ paths:
   #       - Network
   #     summary: Return basic information on the slot. This endpoint supports historic slots as well as scheduled slots.
   #     parameters:
-  #       - $ref: '#/components/parameters/slot'
+  #       - $ref: '#/components/parameters/slotParam'
   #       - $ref: '#/components/parameters/chain'
   #     responses:
   #       "200":
@@ -574,7 +574,7 @@ paths:
   #       - Network
   #     summary: Returns basic information on the Attestations for a specific slot
   #     parameters:
-  #       - $ref: '#/components/parameters/slot'
+  #       - $ref: '#/components/parameters/slotParam'
   #       - $ref: '#/components/parameters/chain'
   #     responses:
   #       "200":
@@ -592,7 +592,7 @@ paths:
   #       - Network
   #     summary: Returns detailed information on the Attestations for a specific slot
   #     parameters:
-  #       - $ref: '#/components/parameters/slot'
+  #       - $ref: '#/components/parameters/slotParam'
   #       - $ref: '#/components/parameters/chain'
   #     responses:
   #       "200":
@@ -817,7 +817,7 @@ paths:
         $ref : "#/components/requestBodies/JustChain"
       responses:
         "200":
-          $ref: '#/components/responses/ChainState'
+          $ref: '#/components/responses/EthereumState'
         "400":
           $ref: '#/components/responses/BadRequest'
         "401":
@@ -1004,7 +1004,7 @@ components:
                 $ref: '#/components/schemas/PerformanceSummary.Data'
             description: A Response containing performance summary information of the entire network.
 
-    ChainState:
+    EthereumState:
       description: A successful response.
       content:
         application/json:
@@ -1012,7 +1012,7 @@ components:
             type: object
             properties:
               data:
-                $ref: '#/components/schemas/ChainState.Data'
+                $ref: '#/components/schemas/EthereumState.Data'
             description: A Response containing the current state of the chain.
 
     ValidatorPerformanceDetailed:
@@ -1391,7 +1391,7 @@ components:
   # links:
   # callbacks:
   parameters:
-    slot:
+    slotParam:
       name: slot
       in: path
       required: true
@@ -1446,8 +1446,7 @@ components:
       schema:
         oneOf:
           - $ref : '#/components/schemas/SyncCommitteePeriod'
-          - type: string
-            enum: [latest, next]
+          - $ref : '#/components/schemas/SyncCommitteeView'
 
     # chain:
     #   name: chain
@@ -2159,6 +2158,9 @@ components:
         The graffiti is limited to 32 bytes and is returned as a base64-encoded string here.
         If no graffiti was included, this field will be null.
 
+    SyncCommitteeView:
+      type: string
+      enum: [latest, next]
     SyncCommitteePeriod:
       description: |
         The sync committee period number.
@@ -3021,7 +3023,7 @@ components:
           $ref : '#/components/schemas/Epoch'
 
 
-    ChainState.Data:
+    EthereumState.Data:
       type: object
       properties:
         chain_health:
