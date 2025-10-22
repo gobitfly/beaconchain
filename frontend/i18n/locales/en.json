@@ -170,6 +170,10 @@
     },
     "dashboard": {
         "account_dashboard": "Account Dashboard",
+        "beaconscore": {
+            "link": "knowledge base article",
+            "template": "Read more about how we calculate the BeaconScore in our {link}"
+        },
         "creation": {
             "network": {
                 "subtitle": "What network are your validators on?"

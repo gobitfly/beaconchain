@@ -257,8 +257,26 @@ watch(
               field="efficiency"
               :sortable="true"
               body-class="efficiency-column"
-              :header="$t('dashboard.validator.col.beaconscore')"
             >
+              <template #header>
+                <div class="validators-header">
+                  <div>{{ $t("dashboard.validator.col.beaconscore") }}</div>
+                  <BcTooltip
+                    class="info"
+                    tooltip-class="summary-info-tooltip"
+                    @click.stop
+                  >
+                    <template #tooltip>
+                      <BcTranslation
+                        keypath="dashboard.beaconscore.template"
+                        linkpath="dashboard.beaconscore.link"
+                        :to="externalLink.knowledgeBase.beaconScore"
+                      />
+                    </template>
+                    <BcIcon name="circle-info" />
+                  </BcTooltip>
+                </div>
+              </template>
               <template #body="slotProps">
                 <DashboardTableSummaryValue
                   :class="slotProps.data.className"
@@ -376,7 +394,7 @@ watch(
     position: relative;
 
     .info {
-      top: 8px;
+      top: calc(50% - 9px);
       right: -50px;
     }
   }
@@ -407,6 +425,7 @@ watch(
   .status-column,
   .efficiency-column {
     padding: 7px !important;
+    min-width: 170px;
   }
 
   .validator-column {
