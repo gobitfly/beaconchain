@@ -15,7 +15,8 @@
 * [⏰ Notifications v2](v2beta/wip-notifications-v2.md)
 
 ## Validator Tagging
-* [Validator Tagging](validator-tagging/validator-tagging.md)
+
+* [Overview](validator-tagging/validator-tagging.md)
 
 ## v1 beaconcha.in Explorer
 
