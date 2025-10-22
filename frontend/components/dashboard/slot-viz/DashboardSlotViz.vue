@@ -98,7 +98,7 @@ watch(
         dont-open-permanently
       >
         <BcLink
-          to="https://kb.beaconcha.in/v2beta/slot-visualization#how-does-it-work"
+          :to="externalLink.knowledgeBase.slotVisualization"
           target="_blank"
           class="link"
         >

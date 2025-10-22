@@ -2,7 +2,7 @@
 definePageMeta({
   layout: 'base',
   middleware: () => {
-    return navigateTo('https://docs.beaconcha.in ', { external: true })
+    return navigateTo(externalLink.beaconchain.apiDocs, { external: true })
   },
 })
 </script>

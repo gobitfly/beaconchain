@@ -21,13 +21,13 @@ export default function ({
     case 'address':
       return redirectToV1(`/address/${params.id || params.slug?.[1]}`)
     case 'beaconchain-dashboard-mobile-app-on-github':
-      return redirect('https://github.com/gobitfly/eth2-beaconchain-explorer-app')
+      return redirect(externalLink.beaconchain.github.mobileApp)
     case 'beaconchain-on-discord':
-      return redirect('https://dsc.gg/beaconchain')
+      return redirect(externalLink.beaconchain.discord)
     case 'beaconchain-on-github':
-      return redirect('https://github.com/gobitfly/beaconchain')
+      return redirect(externalLink.beaconchain.github.beaconchain)
     case 'beaconchain-on-x':
-      return redirect('https://x.com/beaconcha_in')
+      return redirect(externalLink.beaconchain.x)
     case 'block':
       return redirectToV1(`/block/${params.id || params.slug?.[1]}`)
     case 'epoch':
@@ -46,17 +46,17 @@ export default function ({
       }
       break
     case 'privacy':
-      return redirect('https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf')
+      return redirect(externalLink.beaconchain.privacyPolicy)
     case 'requestReset':
       return redirectToV1('/requestReset')
     case 'shop':
-      return redirect('https://shop.beaconcha.in')
+      return redirect(externalLink.beaconchain.shop)
     case 'slot':
       return redirectToV1(`/slot/${params.id || params.slug?.[1]}`)
     case 'status':
-      return redirect('https://status.beaconcha.in/')
+      return redirect(externalLink.beaconchain.status)
     case 'terms':
-      return redirect('https://storage.googleapis.com/legal.beaconcha.in/tos.pdf')
+      return redirect(externalLink.beaconchain.termsOfService)
     case 'tx':
       return redirectToV1(`/tx/${params.id || params.slug?.[1]}`)
     case 'validator':
