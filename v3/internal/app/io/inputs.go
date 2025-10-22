@@ -52,8 +52,6 @@ func AsChain(chain model.Chain) (domain.Chain, error) {
 		return domain.ChainMainnet, nil
 	case model.Hoodi:
 		return domain.ChainHoodi, nil
-	case model.Sepolia:
-		return domain.ChainSepolia, nil
 	default:
 		return domain.ChainUnknown, fmt.Errorf("unsupported chain: %s", chain)
 	}

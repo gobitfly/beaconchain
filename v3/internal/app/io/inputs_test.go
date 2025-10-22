@@ -142,7 +142,6 @@ func TestAsChain(t *testing.T) {
 		{"mainnet string resolves", model.Mainnet, domain.ChainMainnet, false},
 		{"empty string defaults to mainnet", model.Chain(""), domain.ChainMainnet, false},
 		{"hoodi resolves", model.Hoodi, domain.ChainHoodi, false},
-		{"sepolia resolves", model.Sepolia, domain.ChainSepolia, false},
 		{"unsupported chain errors", model.Chain("randomchain"), domain.ChainUnknown, true},
 	}
 

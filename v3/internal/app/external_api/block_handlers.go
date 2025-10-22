@@ -1,16 +1,6 @@
 package app
 
-import (
-	"context"
-	"fmt"
-
-	model "github.com/gobitfly/beaconchain-backend/api/external/model"
-	"github.com/gobitfly/beaconchain-backend/internal/common/islices"
-	"github.com/gobitfly/beaconchain-backend/internal/common/pagination"
-	"github.com/gobitfly/beaconchain-backend/internal/domain"
-)
-
-func (service *ApiService) GetBlockTransactions(ctx context.Context, in model.GetBlockTransactionsRequestObject) (model.GetBlockTransactionsResponseObject, error) {
+/* func (service *ApiService) GetBlockTransactions(ctx context.Context, in model.GetBlockTransactionsRequestObject) (model.GetBlockTransactionsResponseObject, error) {
 	data, paging, err := pagination.Handle(
 		in.Params.Cursor,
 		in.Params.PageSize,
@@ -59,3 +49,4 @@ func mockGetBlockTransactions(_ context.Context, block int, cursor *domain.Block
 	}
 	return txs, nil
 }
+*/
