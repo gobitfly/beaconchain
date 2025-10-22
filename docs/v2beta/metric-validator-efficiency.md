@@ -1,10 +1,10 @@
 ---
-description: Efficiency aka. Beaconscore, a metric to measure validator performance
+description: Efficiency aka. BeaconScore, a metric to measure validator performance
 ---
 
-# 📈 Metric: Validator Efficiency aka. Beaconscore
+# 📈 Metric: Validator Efficiency aka. BeaconScore
 
-The validator **Efficiency** / **Beaconscore** metric is a comprehensive measure of validator performance, integrating multiple components:&#x20;
+The validator **Efficiency** / **BeaconScore** metric is a comprehensive measure of validator performance, integrating multiple components:&#x20;
 
 1. [**Attestations**](metric-validator-efficiency.md#attester-efficiency)
 2. [**Block proposals**](metric-validator-efficiency.md#proposer-efficiency)
@@ -26,7 +26,7 @@ In order to calculate the efficiency over multiple epochs correctly, the respect
 Huge thanks to [Ben Edington](https://x.com/benjaminion\_xyz) for providing [https://eth2book.info/capella/](https://eth2book.info/capella/)
 {% endhint %}
 
-### **Attester Efficiency** 
+### Attester Efficiency
 
 84.4% (= 54/64)  of validators' rewards come from attestations. Every epoch (\~6.4 minutes), a validator publishes an attestation (vote) to the network.
 
@@ -99,7 +99,7 @@ sync_efficiency = sync_actualReward / sync_idealReward
 
 ***
 
-### Example Efficiency / Beaconscore calculation
+### Example Efficiency / BeaconScore calculation
 
 
 When a validator has **attestations, block proposals, and sync committees**, the efficiency is calculated as:
@@ -116,4 +116,4 @@ When a validator did not participate in a sync committee and/or did not propose 
 ***
 
 ## Benchmark values
-Target a validator efficiency (Beaconscore) of at least 99% on Ethereum mainnet. Performance above 99.5% is considered exceptional. Scores below 98% generally indicate an underlying issue and warrant further investigation.
+Target a validator efficiency (BeaconScore) of at least 99% on Ethereum mainnet. Performance above 99.5% is considered exceptional. Scores below 98% generally indicate an underlying issue and warrant further investigation.
