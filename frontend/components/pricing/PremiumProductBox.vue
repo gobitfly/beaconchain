@@ -202,7 +202,6 @@ const minorFeatures = computed<Feature[]>(() => {
     {
       available: product?.premium_perks.manage_dashboard_via_api,
       name: $t('pricing.premium_product.manage_dashboard_via_api'),
-      subtext: $t('pricing.premium_product.coming_soon'),
     },
   ]
 })

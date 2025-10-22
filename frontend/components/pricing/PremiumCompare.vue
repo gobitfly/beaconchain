@@ -106,8 +106,6 @@ const rows = computed(() => {
     rows.push(row)
   }
 
-  const comingSoon = $t('pricing.premium_product.coming_soon')
-
   addRow('header')
 
   addRow('group', 'general')
@@ -119,7 +117,7 @@ const rows = computed(() => {
   addRow('perc', 'effective_balance_per_dashboard')
   addRow('perc', 'validator_groups_per_dashboard')
   addRow('perc', 'share_custom_dashboards')
-  addRow('perc', 'manage_dashboard_via_api', undefined, comingSoon)
+  addRow('perc', 'manage_dashboard_via_api')
   addRow(
     'perc',
     'bulk_adding',
