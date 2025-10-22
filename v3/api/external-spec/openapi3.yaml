@@ -293,6 +293,7 @@ paths:
 
   /v2/ethereum/validators/proposals: # low prio
     post:
+      operationId: GetValidatorProposals
       tags:
         - Validator
       summary: Proposals
@@ -317,6 +318,7 @@ paths:
 
   /v2/ethereum/validators/attestations: # low prio
     post:
+      operationId: GetValidatorAttestations
       tags:
         - Validator
       summary: Attestations
@@ -343,6 +345,7 @@ paths:
 
   /v2/ethereum/validators/deposits: # mid priority
     post:
+      operationId: GetValidatorDeposits
       tags:
         - Validator
       summary: Deposits
@@ -367,6 +370,7 @@ paths:
 
   /v2/ethereum/validators/withdrawals: # mid priority
     post:
+      operationId: GetValidatorWithdrawals
       tags:
         - Validator
       summary: Withdrawals
