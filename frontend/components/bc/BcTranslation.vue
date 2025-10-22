@@ -13,13 +13,13 @@ defineProps<{
    *
    * @example
    *
-   * Translation key has to be under `${keypath}._link`
+   * Translation key has to be under `${keypath}.link`
    *
    *  // en.json
    * {
    *  "notifications": {
-   *   "template": "For further information {_link}"
-   *   "_link": "Click here"
+   *   "template": "For further information {link}"
+   *   "link": "Click here"
    * }
    */
   to?: string,
@@ -32,16 +32,16 @@ defineProps<{
     scope="global"
     :tag="tag || 'span'"
   >
-    <template #_bold>
+    <template #bold>
       <span
         v-if="boldpath"
         class="bc-translation-bold"
       >{{ $t(boldpath) }}</span>
     </template>
-    <template #_link>
+    <template #link>
       <slot
         v-if="to && linkpath"
-        name="_link"
+        name="link"
       >
         <BcLink
           class="link"
@@ -52,9 +52,9 @@ defineProps<{
         </BcLink>
       </slot>
     </template>
-    <template #_list>
+    <template #list>
       <slot
-        name="_list"
+        name="list"
         :listpath
       >
         <ul v-if="listpath">

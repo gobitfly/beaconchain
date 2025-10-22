@@ -428,7 +428,7 @@ const isTruncated = computed(() => 'isTruncated' in route.query)
         >
           <BcTranslation
             keypath="dashboard.subsciprion_limit_reached.template"
-            linkpath="dashboard.subsciprion_limit_reached._link"
+            linkpath="dashboard.subsciprion_limit_reached.link"
             to="/premium"
           />
         </BcNotificationBanner>
@@ -438,7 +438,7 @@ const isTruncated = computed(() => 'isTruncated' in route.query)
         >
           <LazyBcTranslation
             keypath="dashboard.truncated_validators.template"
-            linkpath="dashboard.truncated_validators._link"
+            linkpath="dashboard.truncated_validators.link"
             to="/premium"
           />
         </BcNotificationBanner>

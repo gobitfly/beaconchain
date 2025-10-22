@@ -144,7 +144,7 @@ const id = useId()
         <template #tooltip>
           <BcTranslation
             keypath="notifications.dashboards.dialog.info_send_via_discord.template"
-            linkpath="notifications.dashboards.dialog.info_send_via_discord._link"
+            linkpath="notifications.dashboards.dialog.info_send_via_discord.link"
             to="https://discord.com/developers/docs/resources/webhook"
           />
         </template>
