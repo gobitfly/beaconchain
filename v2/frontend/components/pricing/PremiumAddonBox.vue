@@ -258,7 +258,7 @@ const handleSubmitPurchase = async () => {
           <BcTranslation
             v-if="isQuantityLimitReached"
             keypath="pricing.addons.contact_support.template"
-            linkpath="pricing.addons.contact_support._link"
+            linkpath="pricing.addons.contact_support.link"
             to="https://dsc.gg/beaconchain"
           />
         </span>

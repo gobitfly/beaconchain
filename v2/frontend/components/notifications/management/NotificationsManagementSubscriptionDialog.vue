@@ -106,7 +106,7 @@ const { hasRocketPool } = useNetworkStore()
           <template #info>
             <BcTranslation
               keypath="notifications.subscriptions.validators.validator_is_offline.info.template"
-              listpath="notifications.subscriptions.validators.validator_is_offline.info._list"
+              listpath="notifications.subscriptions.validators.validator_is_offline.info.list"
             />
           </template>
         </BcSettingsRow>

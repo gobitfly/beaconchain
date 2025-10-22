@@ -73,16 +73,16 @@ const emit = defineEmits<{
         >
           <BcTranslation
             keypath="notifications.overview.notifications_activate_premium.template"
-            linkpath="notifications.overview.notifications_activate_premium._link"
+            linkpath="notifications.overview.notifications_activate_premium.link"
             to="https://discord.com/developers/docs/resources/webhook"
           >
-            <template #_link>
+            <template #link>
               <BcButtonText
                 class="link"
                 :aria-label="$t('notifications.overview.email_activate')"
                 @click="emit('openDialog')"
               >
-                {{ $t('notifications.overview.notifications_activate_premium._link') }}
+                {{ $t('notifications.overview.notifications_activate_premium.link') }}
               </BcButtonText>
             </template>
           </BcTranslation>
@@ -101,7 +101,7 @@ const emit = defineEmits<{
         >
           <BcTranslation
             keypath="notifications.overview.notifications_download_app.template"
-            linkpath="notifications.overview.notifications_download_app._link"
+            linkpath="notifications.overview.notifications_download_app.link"
             to="/mobile"
           />
         </div>
