@@ -1411,7 +1411,7 @@ components:
       schema:
         oneOf:
           - $ref: '#/components/schemas/Slot'
-          - $ref: '#/components/schemas/chainView'
+          - $ref: '#/components/schemas/ChainView'
           - $ref: '#/components/schemas/ConsensusLayerBlockRoot'
         default: latest
 
@@ -1422,7 +1422,7 @@ components:
       schema:
         oneOf:
           - $ref: '#/components/schemas/Slot'
-          - $ref: '#/components/schemas/chainViewFinalized'
+          - $ref: '#/components/schemas/ChainViewFinalized'
           - $ref: '#/components/schemas/ConsensusLayerBlockRoot'
         default: finalized
 
@@ -1434,7 +1434,7 @@ components:
         oneOf:
           - type: integer
             minimum: 0
-          - $ref: '#/components/schemas/chainView'
+          - $ref: '#/components/schemas/ChainView'
           - $ref: '#/components/schemas/ExecutionLayerBlockHash'
         default: latest
 
@@ -1806,16 +1806,17 @@ components:
       description: Amount in wei (1 ETH = 10^18 wei)
       pattern: ^(0|-?[1-9][0-9]*)$
 
-    chainView:
+    ChainView:
       type: string
       enum:
         - latest
         - finalized
+      default: latest
       description: |
         - "latest": Refers to the most recent block, which may be subject to reorganization.
         - "finalized": Refers to the latest block that has been finalized and is not subject to change.
-    
-    chainViewFinalized:
+
+    ChainViewFinalized:
       type: string
       enum:
         - finalized
@@ -1887,32 +1888,21 @@ components:
 
     epochParam:
       oneOf:
+        - $ref: '#/components/schemas/ChainView'
         - $ref: '#/components/schemas/Epoch'
-        - type: string
-          enum:
-            - latest
-            - finalized
-      default: latest
 
     epochParamNullable:
       oneOf:
         - $ref: '#/components/schemas/Epoch'
-        - type: string
-          enum:
-            - latest
-            - finalized
+        - $ref: '#/components/schemas/ChainView'
       default: null
       description: The epoch filter is optional. If not specified, results will include all epochs.
       nullable: true
 
     slotParam:
       oneOf:
+        - $ref: '#/components/schemas/ChainView'
         - $ref: '#/components/schemas/Slot'
-        - type: string
-          enum:
-            - latest
-            - finalized
-      default: latest
 
     transactionHash:
       type: string

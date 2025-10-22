@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/ethereumnetworkrepo"
@@ -15,22 +14,34 @@ var (
 	ErrInvalidParam = errors.New("invalid parameter")
 )
 
-const (
-	InputSlotHead      = "head"
-	InputSlotFinalized = "finalized"
-)
-
-// ResolveSlot returns a slot number either from a named view ("head"/"finalized")
+// ResolveEpoch returns an epoch number either from a named view ("head"/"finalized")
 // or directly from a numeric string.
 func ResolveSlot(
 	ctx context.Context,
 	repo ethereumnetworkrepo.LatestStateRepository,
 	chain domain.Chain,
-	input string,
+	input model.SlotParam,
 ) (int, error) {
-	return resolveParam(ctx, repo, chain, input, func(state domain.LatestState) int {
-		return state.Slot
-	})
+	intParam, err := input.AsSlot()
+	if err == nil {
+		return intParam, nil
+	}
+
+	stringParam, err := input.AsChainView()
+	if err != nil {
+		return 0, ErrInvalidParam
+	}
+
+	view, ok := parseView(stringParam)
+	if !ok {
+		return 0, ErrInvalidParam
+	}
+
+	state, err := repo.GetLatestState(ctx, chain, view)
+	if err != nil {
+		return 0, err
+	}
+	return state.Epoch, nil
 }
 
 // ResolveEpoch returns an epoch number either from a named view ("head"/"finalized")
@@ -39,11 +50,28 @@ func ResolveEpoch(
 	ctx context.Context,
 	repo ethereumnetworkrepo.LatestStateRepository,
 	chain domain.Chain,
-	input string,
+	input model.EpochParam,
 ) (int, error) {
-	return resolveParam(ctx, repo, chain, input, func(state domain.LatestState) int {
-		return state.Epoch
-	})
+	intParam, err := input.AsEpoch()
+	if err == nil {
+		return intParam, nil
+	}
+
+	stringParam, err := input.AsChainView()
+	if err != nil {
+		return 0, ErrInvalidParam
+	}
+
+	view, ok := parseView(stringParam)
+	if !ok {
+		return 0, ErrInvalidParam
+	}
+
+	state, err := repo.GetLatestState(ctx, chain, view)
+	if err != nil {
+		return 0, err
+	}
+	return state.Epoch, nil
 }
 
 func AsChain(chain model.Chain) (domain.Chain, error) {
@@ -57,35 +85,11 @@ func AsChain(chain model.Chain) (domain.Chain, error) {
 	}
 }
 
-// --- helpers ---
-
-func resolveParam(
-	ctx context.Context,
-	repo ethereumnetworkrepo.LatestStateRepository,
-	chain domain.Chain,
-	input string,
-	extract func(domain.LatestState) int,
-) (int, error) {
-	if view, ok := parseView(input); ok {
-		state, err := repo.GetLatestState(ctx, chain, view)
-		if err != nil {
-			return 0, err
-		}
-		return extract(state), nil
-	}
-
-	val, err := strconv.ParseInt(input, 10, 32)
-	if err != nil {
-		return 0, errors.Join(ErrInvalidParam, err)
-	}
-	return int(val), nil
-}
-
-func parseView(input string) (domain.ConsensusView, bool) {
+func parseView(input model.ChainView) (domain.ConsensusView, bool) {
 	switch input {
-	case InputSlotHead:
+	case model.ChainViewLatest:
 		return domain.ConsensusViewHead, true
-	case InputSlotFinalized:
+	case model.ChainViewFinalized:
 		return domain.ConsensusViewFinalized, true
 	default:
 		return domain.ConsensusViewHead, false

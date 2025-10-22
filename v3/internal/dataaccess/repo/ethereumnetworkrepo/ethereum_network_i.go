@@ -8,7 +8,7 @@ import (
 
 type Repository interface {
 	LatestStateRepository
-	GetSlot(ctx context.Context, chain domain.Chain, slot int) (*domain.Slot, error)
+	GetSlot(ctx context.Context, chain domain.Chain, slot int) (domain.Slot, error)
 }
 
 type LatestStateRepository interface {

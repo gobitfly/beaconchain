@@ -27,37 +27,37 @@ func (r *DBRepository) selectDatabase(chain domain.Chain) *sqlx.DB {
 }
 
 type getSlotResult struct {
-	AttestationCount         int32  `db:"attestationscount"`
-	AttestationSlashingCount int32  `db:"attesterslashingscount"`
-	ProposerSlashingCount    int32  `db:"proposerslashingscount"`
+	AttestationCount         int    `db:"attestationscount"`
+	AttestationSlashingCount int    `db:"attesterslashingscount"`
+	ProposerSlashingCount    int    `db:"proposerslashingscount"`
 	BlockRoot                []byte `db:"blockroot"`
 	Graffiti                 []byte `db:"graffiti"`
-	Proposer                 int32  `db:"proposer"`
+	Proposer                 int    `db:"proposer"`
 	ProposerPubkey           []byte `db:"proposer_pubkey"`
 	Status                   string `db:"status"`
 	Finalized                bool   `db:"finalized"`
 
 	// Events (aggregated)
-	ConsolidationAggrQueuedCount     int64 `db:"ca_queued_consolidation_count"`
-	ConsolidationAggrQueuedAmount    int64 `db:"ca_queued_consolidation_amount"`
-	ConsolidationAggrProcessedCount  int64 `db:"ca_processed_consolidation_count"`
-	ConsolidationAggrProcessedAmount int64 `db:"ca_processed_consolidation_amount"`
+	ConsolidationAggrQueuedCount     int `db:"ca_queued_consolidation_count"`
+	ConsolidationAggrQueuedAmount    int `db:"ca_queued_consolidation_amount"`
+	ConsolidationAggrProcessedCount  int `db:"ca_processed_consolidation_count"`
+	ConsolidationAggrProcessedAmount int `db:"ca_processed_consolidation_amount"`
 
-	DepositAggrQueuedCount     int64 `db:"da_queued_deposit_count"`
-	DepositAggrQueuedAmount    int64 `db:"da_queued_deposit_amount"`
-	DepositAggrProcessedCount  int64 `db:"da_processed_deposit_count"`
-	DepositAggrProcessedAmount int64 `db:"da_processed_deposit_amount"`
+	DepositAggrQueuedCount     int `db:"da_queued_deposit_count"`
+	DepositAggrQueuedAmount    int `db:"da_queued_deposit_amount"`
+	DepositAggrProcessedCount  int `db:"da_processed_deposit_count"`
+	DepositAggrProcessedAmount int `db:"da_processed_deposit_amount"`
 
-	ManualWithdrawalsAggrProcessedCount  int64 `db:"mwa_processed_manual_withdrawn_count"`
-	ManualWithdrawalsAggrProcessedAmount int64 `db:"mwa_processed_manual_withdrawn_amount"`
-	ManualWithdrawalsAggrQueuedCount     int64 `db:"mwa_queued_manual_withdrawn_count"`
-	ManualWithdrawalsAggrQueuedAmount    int64 `db:"mwa_queued_manual_withdrawn_amount"`
+	ManualWithdrawalsAggrProcessedCount  int `db:"mwa_processed_manual_withdrawn_count"`
+	ManualWithdrawalsAggrProcessedAmount int `db:"mwa_processed_manual_withdrawn_amount"`
+	ManualWithdrawalsAggrQueuedCount     int `db:"mwa_queued_manual_withdrawn_count"`
+	ManualWithdrawalsAggrQueuedAmount    int `db:"mwa_queued_manual_withdrawn_amount"`
 
-	AutoWithdrawalsAggrProcessedCount  int64 `db:"awa_processed_auto_withdrawn_count"`
-	AutoWithdrawalsAggrProcessedAmount int64 `db:"awa_processed_auto_withdrawn_amount"`
+	AutoWithdrawalsAggrProcessedCount  int `db:"awa_processed_auto_withdrawn_count"`
+	AutoWithdrawalsAggrProcessedAmount int `db:"awa_processed_auto_withdrawn_amount"`
 }
 
-func (r *DBRepository) GetSlot(ctx context.Context, chain domain.Chain, slot int) (*domain.Slot, error) {
+func (r *DBRepository) GetSlot(ctx context.Context, chain domain.Chain, slot int) (domain.Slot, error) {
 	query := goqu.Dialect("postgres").
 		From(goqu.T("blocks").As("b")).
 		With("ca_queued", consolidationAggregationCTE(slot, SlotEventQueued)).
@@ -124,14 +124,14 @@ func (r *DBRepository) GetSlot(ctx context.Context, chain domain.Chain, slot int
 
 	result, err := repo.RunQuery[getSlotResult](ctx, r.selectDatabase(chain), query)
 	if err != nil {
-		return nil, err
+		return domain.Slot{}, err
 	}
 
 	return transformSlotToDomain(slot, result), nil
 }
 
-func transformSlotToDomain(slot int, result getSlotResult) *domain.Slot {
-	return &domain.Slot{
+func transformSlotToDomain(slot int, result getSlotResult) domain.Slot {
+	return domain.Slot{
 		Slot:                     slot,
 		AttestationSlashingCount: result.AttestationSlashingCount,
 		ProposerSlashingCount:    result.ProposerSlashingCount,

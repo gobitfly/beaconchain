@@ -28,9 +28,9 @@ func (c Chain) GetChainID() int {
 
 type Slot struct {
 	Slot                     int
-	AttestationSlashingCount int32
-	ProposerSlashingCount    int32
-	AttestationCount         int32
+	AttestationSlashingCount int
+	ProposerSlashingCount    int
+	AttestationCount         int
 	BlockRoot                []byte
 
 	ProcessedAutoWithdrawals   ClEventDetails
@@ -51,13 +51,13 @@ type Slot struct {
 type DutyStatus string
 
 type Validator struct {
-	Index  int32
+	Index  int
 	Pubkey []byte
 }
 
 type ClEventDetails struct {
-	Count  int64
-	Amount int64
+	Count  int
+	Amount int
 }
 
 type LatestState struct {

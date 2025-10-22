@@ -2,13 +2,16 @@ package app
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
+	"github.com/gobitfly/beaconchain-backend/internal/app/io"
+	"github.com/gobitfly/beaconchain-backend/internal/common"
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
 )
 
-/* func (service *ApiService) GetV2EthereumSlotsSlot(ctx context.Context, in model.GetV2EthereumSlotsSlotRequestObject) (model.GetV2EthereumSlotsSlotResponseObject, error) {
-	chain, err := io.AsChain(in.Params.Chain)
-	model.GetNetworkConfigRequestObject
+func (service *ApiService) GetSlot(ctx context.Context, in model.GetSlotRequestObject) (model.GetSlotResponseObject, error) {
+	chain, err := io.AsChain(in.Body.Chain)
 	if err != nil {
 		return nil, common.NewAPIUserFacingError(http.StatusBadRequest, "Invalid chain parameter")
 	}
@@ -18,56 +21,55 @@ import (
 		return nil, common.NewAPIUserFacingError(http.StatusBadRequest, "Invalid slot parameter")
 	}
 
-	slotData, err := service.ethereumNetworkRepo.GetSlot(ctx, chain, resolvedSlot)
+	slot, err := service.ethereumNetworkRepo.GetSlot(ctx, chain, resolvedSlot)
 	if err != nil {
 		return nil, common.NewAPIUserFacingError(http.StatusInternalServerError, "Failed to get slot data")
 	}
 
-	return model.GetV2EthereumSlotsSlot200JSONResponse(model.GetSlotResponse{Data: transformSlotToModel(slotData)}), nil
+	transformedSlot := transformSlotToModel(slot)
+	response := model.GetSlot200JSONResponse{}
+	response.Data = &transformedSlot
+	return response, nil
 }
-
-func transformSlotToModel(slot *domain.Slot) model.GetSlotResponseData {
-	return model.GetSlotResponseData{
+func transformSlotToModel(slot domain.Slot) model.SlotOverviewData {
+	return model.SlotOverviewData{
 		AttestationCount: slot.AttestationCount,
 		// TODO: Missing ProposerSlashingCount in spec
-		AttestationSlashingCount: slot.AttestationSlashingCount,
-		BlockRoot:                slot.BlockRoot,
+		BlockRoot: model.ConsensusLayerBlockRoot(slot.BlockRoot),
 		// expected spec-change:
 		// DataRecency: model.DataRecency{
 		// 	IsEpochFinalized: slot.Finalized,
 		// },
-		Graffiti: slot.Graffiti,
+		Graffiti: model.Graffiti(slot.Graffiti),
 		Proposer: model.Validator{
-			Index:  slot.Proposer.Index,
-			Pubkey: model.ValidatorPubkey(slot.Proposer.Pubkey),
+			Index:     slot.Proposer.Index,
+			PublicKey: model.ValidatorPublicKey(slot.Proposer.Pubkey),
 		},
 		Status: model.DutyStatus(slot.Status),
 		// TODO: convert slot to time for a given chain
 		// TODO: events
 	}
-} */
+}
 
-func (service *ApiService) GetNetworkConfig(ctx context.Context, request model.GetNetworkConfigRequestObject) (model.GetNetworkConfigResponseObject, error) {
+func (service *ApiService) GetNetworkConfig(ctx context.Context, in model.GetNetworkConfigRequestObject) (model.GetNetworkConfigResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetPerformanceSummary(ctx context.Context, request model.GetPerformanceSummaryRequestObject) (model.GetPerformanceSummaryResponseObject, error) {
+func (service *ApiService) GetPerformanceSummary(ctx context.Context, in model.GetPerformanceSummaryRequestObject) (model.GetPerformanceSummaryResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetQueueStats(ctx context.Context, request model.GetQueueStatsRequestObject) (model.GetQueueStatsResponseObject, error) {
+func (service *ApiService) GetQueueStats(ctx context.Context, in model.GetQueueStatsRequestObject) (model.GetQueueStatsResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetSlot(ctx context.Context, request model.GetSlotRequestObject) (model.GetSlotResponseObject, error) {
+
+func (service *ApiService) GetSyncCommitteeDutiesForSlot(ctx context.Context, in model.GetSyncCommitteeDutiesForSlotRequestObject) (model.GetSyncCommitteeDutiesForSlotResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetSyncCommitteeDutiesForSlot(ctx context.Context, request model.GetSyncCommitteeDutiesForSlotRequestObject) (model.GetSyncCommitteeDutiesForSlotResponseObject, error) {
+func (service *ApiService) GetChainState(ctx context.Context, in model.GetChainStateRequestObject) (model.GetChainStateResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetChainState(ctx context.Context, request model.GetChainStateRequestObject) (model.GetChainStateResponseObject, error) {
+func (service *ApiService) GetSyncCommitteeForPeriod(ctx context.Context, in model.GetSyncCommitteeForPeriodRequestObject) (model.GetSyncCommitteeForPeriodResponseObject, error) {
 	return nil, nil
 }
-func (service *ApiService) GetSyncCommitteeForPeriod(ctx context.Context, request model.GetSyncCommitteeForPeriodRequestObject) (model.GetSyncCommitteeForPeriodResponseObject, error) {
-	return nil, nil
-}
-func (service *ApiService) GetSyncCommitteeValidatorsForPeriod(ctx context.Context, request model.GetSyncCommitteeValidatorsForPeriodRequestObject) (model.GetSyncCommitteeValidatorsForPeriodResponseObject, error) {
+func (service *ApiService) GetSyncCommitteeValidatorsForPeriod(ctx context.Context, in model.GetSyncCommitteeValidatorsForPeriodRequestObject) (model.GetSyncCommitteeValidatorsForPeriodResponseObject, error) {
 	return nil, nil
 }

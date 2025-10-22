@@ -27,41 +27,51 @@ func (m *mockLatestStateRepo) GetLatestState(ctx context.Context, chain domain.C
 }
 
 func TestResolveSlot(t *testing.T) {
+	var latestParam, finalizedParam, numberParam, badParam model.SlotParam
+	err := latestParam.FromChainView("latest")
+	assert.NoError(t, err)
+	err = finalizedParam.FromChainView("finalized")
+	assert.NoError(t, err)
+	err = numberParam.FromSlot(42)
+	assert.NoError(t, err)
+	err = badParam.FromChainView("bad")
+	assert.NoError(t, err)
+
 	tests := []struct {
 		name    string
-		input   string
+		input   model.SlotParam
 		repo    ethereumnetworkrepo.LatestStateRepository
 		want    int
 		wantErr bool
 	}{
 		{
 			name:  "head view resolves from repo",
-			input: "head",
-			repo:  &mockLatestStateRepo{state: domain.LatestState{Slot: 123}},
-			want:  123,
+			input: latestParam,
+			repo:  &mockLatestStateRepo{state: domain.LatestState{Epoch: 10}},
+			want:  10,
 		},
 		{
 			name:  "finalized view resolves from repo",
-			input: "finalized",
-			repo:  &mockLatestStateRepo{state: domain.LatestState{Slot: 456}},
-			want:  456,
+			input: finalizedParam,
+			repo:  &mockLatestStateRepo{state: domain.LatestState{Epoch: 20}},
+			want:  20,
 		},
 		{
 			name:  "numeric input parses directly",
-			input: "789",
-			repo:  &mockLatestStateRepo{}, // not used
-			want:  789,
+			input: numberParam,
+			repo:  &mockLatestStateRepo{},
+			want:  42,
 		},
 		{
 			name:    "invalid numeric input returns error",
-			input:   "notanumber",
+			input:   badParam,
 			repo:    &mockLatestStateRepo{},
 			wantErr: true,
 		},
 		{
 			name:    "repo error returned",
-			input:   "head",
-			repo:    &mockLatestStateRepo{err: errors.New("db down")},
+			input:   finalizedParam,
+			repo:    &mockLatestStateRepo{err: errors.New("repo fail")},
 			wantErr: true,
 		},
 	}
@@ -80,40 +90,49 @@ func TestResolveSlot(t *testing.T) {
 }
 
 func TestResolveEpoch(t *testing.T) {
+	var latestParam, finalizedParam, numberParam, badParam model.EpochParam
+	err := latestParam.FromChainView("latest")
+	assert.NoError(t, err)
+	err = finalizedParam.FromChainView("finalized")
+	assert.NoError(t, err)
+	err = numberParam.FromEpoch(42)
+	assert.NoError(t, err)
+	err = badParam.FromChainView("bad")
+	assert.NoError(t, err)
 	tests := []struct {
 		name    string
-		input   string
+		input   model.EpochParam
 		repo    ethereumnetworkrepo.LatestStateRepository
 		want    int
 		wantErr bool
 	}{
 		{
 			name:  "head view resolves from repo",
-			input: "head",
+			input: latestParam,
 			repo:  &mockLatestStateRepo{state: domain.LatestState{Epoch: 10}},
 			want:  10,
 		},
 		{
 			name:  "finalized view resolves from repo",
-			input: "finalized",
+			input: finalizedParam,
 			repo:  &mockLatestStateRepo{state: domain.LatestState{Epoch: 20}},
 			want:  20,
 		},
 		{
 			name:  "numeric input parses directly",
-			input: "42",
+			input: numberParam,
 			repo:  &mockLatestStateRepo{},
 			want:  42,
 		},
 		{
 			name:    "invalid numeric input returns error",
-			input:   "bad",
+			input:   badParam,
 			repo:    &mockLatestStateRepo{},
 			wantErr: true,
 		},
 		{
 			name:    "repo error returned",
-			input:   "finalized",
+			input:   finalizedParam,
 			repo:    &mockLatestStateRepo{err: errors.New("repo fail")},
 			wantErr: true,
 		},
