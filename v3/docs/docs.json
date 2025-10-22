@@ -24,14 +24,19 @@
           {
             "group": "Getting started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "use cases",
+              "ratelimits",
+              "errors"
             ]
           },
           {
             "group": "V2 API docs",
-            "openapi": "api-reference/openapi3.yaml"
+            "openapi": "api-reference/openapi3.yaml",
+            "pages": [
+              "authentication",
+              "demos"
+            ]
           },
           {
             "group": "V1 API docs",
@@ -40,7 +45,7 @@
               "v1/introduction",
               {
                 "group": "Consensus Layer",
-                "expanded": true,
+                "expanded": false,
                 "pages": [
                   {
                     "group": "Epochs",
@@ -167,37 +172,13 @@
                 ]
               }
             ]
-          },
-          {
-            "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
-            ]
           }
         ]
       },
       {
-        "tab": "Hello World",
+        "tab": "Knowledgebase",
         "pages": [
-          "hello-world"
+          "Knowledgebase"
         ]
       }
     ],
@@ -206,7 +187,7 @@
         {
           "anchor": "Pricing",
           "href": "https://mintlify.com/community",
-          "icon": "newspaper"
+          "icon": "gem"
         },
         {
           "anchor": "SLA Policy",
@@ -216,9 +197,14 @@
         {
           "anchor": "Support",
           "href": "https://beaconcha.in",
-          "icon": "newspaper"
+          "icon": "Discord"
         }
       ]
+    }
+  },
+  "api": {
+    "params": { 
+      "expanded": "all" 
     }
   },
   "logo": {
@@ -226,9 +212,11 @@
     "dark": "/logo/dark.svg"
   },
   "navbar": {
+    "appearance": "system",
     "links": [
       {
-        "label": "Explorer",
+        "icon": "discord",
+        "label": "Get help",
         "href": "https://dashboard.mintlify.com"
       }
     ],
@@ -251,9 +239,28 @@
     ]
   },
   "footer": {
-    "socials": {
-      "x": "https://x.com/beaconcha_in",
-      "github": "https://github.com/gobitfly"
-    }
+  "socials": {
+    "x": "https://x.com/beaconcha_in",
+    "github": "https://github.com/gobitfly",
+    "discord": "https://dsc.gg/beaconchain"
+  },
+  "links": [
+    {
+      "header": "General",
+      "items": [
+        { "label": "API Pricing", "href": "https://beaconcha.in/pricing" },
+        { "label": "API Status", "href": "https://status.beaconcha.in/" }
+      ]
+    },
+    {
+      "header": "Legal",
+      "items": [
+        { "label": "Imprint", "href": "https://beaconcha.in/imprint" },
+        { "label": "Terms", "href": "https://storage.googleapis.com/legal.beaconcha.in/tos.pdf" },
+        { "label": "Privacy", "href": "https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf" },
+        { "label": "SLA Policy", "href": "https://TODO.com" }
+        ]
+      }
+    ]
   }
 }

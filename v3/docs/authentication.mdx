@@ -1,0 +1,127 @@
+---
+title: "Authentication"
+description: "Learn how to authenticate, make your first request, and understand responses using the Beaconchain API."
+---
+
+## What you can do
+
+Use the Beaconchain API to fetch Ethereum validator analytics including APR, rewards, balances, attestations, withdrawals, and more. The API follows OpenAPI 3.0.4 and uses Bearer authentication.
+
+<Info>
+This page gives you a practical overview and a copy‑paste quickstart. See the full, auto‑generated reference in API Reference for all endpoints and schemas.
+</Info>
+
+## Base URLs
+
+- Staging: https://api-external-616724563735.us-central1.run.app
+- Local development: http://localhost:8080
+
+<Tip>
+Start in Staging to validate your integration before pointing production traffic.
+</Tip>
+
+## Authentication
+
+All requests require a Bearer token in the Authorization header. Some deployments may also require an additional header for serverless authorization.
+
+```http Required
+Authorization: Bearer YOUR_API_TOKEN
+```
+
+```http Optional (if enabled)
+X-Serverless-Authorization: Bearer YOUR_API_TOKEN
+```
+
+<Note>
+You can create and manage API keys in your Beaconcha.in user portal. Sign up at https://beaconcha.in/register or log in at https://beaconcha.in/login.
+</Note>
+
+<Warning>
+Never include secrets in client-side code or commit them to version control.
+</Warning>
+
+## Make your first request
+
+You can retrieve validator APR over a time window. Provide a network via the chain parameter and a validator selector (validator index or pubkey, deposit_address, or withdrawal_address).
+
+<Steps>
+<Step title="Get your API key">
+Sign up or log in to your Beaconcha.in account to create and manage API keys in your user portal.
+
+- Sign up: https://beaconcha.in/register
+- Log in: https://beaconcha.in/login
+
+<Check>
+After creating a key, you’ll see a token string you can copy (typically starts with ey...).
+</Check>
+</Step>
+
+<Step title="Choose a base URL">
+Use Staging by default: https://api-external-616724563735.us-central1.run.app
+</Step>
+
+<Step title="Call the APR endpoint">
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $API_TOKEN" \
+  "https://api-external-616724563735.us-central1.run.app/v2/ethereum/validators/apr?chain=mainnet&validator=12345&time_range[start_epoch]=200000&time_range[end_epoch]=200256&calculation_period=backwards"
+```
+
+<Check>
+You receive HTTP 200 and a JSON response containing execution_layer, consensus_layer, total, start_epoch, and end_epoch.
+</Check>
+</Step>
+</Steps>
+
+## Common parameters
+
+<AccordionGroup>
+<Accordion title="chain (required)">
+- mainnet (default)
+- hoodi
+- sepolia
+</Accordion>
+
+<Accordion title="validator selector (mutually exclusive)">
+Provide only one of the following in query:
+- validator — index or pubkey
+- deposit_address — execution layer address
+- withdrawal_address — execution layer address
+</Accordion>
+
+<Accordion title="Pagination">
+Some list endpoints support cursor-based pagination.
+
+- cursor — pass the string from paging.next_cursor to get the next page
+- page_size — 1 to 100 (default 10)
+</Accordion>
+</AccordionGroup>
+
+## Errors and status codes
+
+On errors, the API returns a JSON body using the rpc.Status schema.
+
+<Warning>
+On authentication failure you receive HTTP 401 with a JSON body containing code and message.
+</Warning>
+
+<Info>
+Standard HTTP status codes indicate success or failure (e.g., 200 success, 400 validation error, 401 unauthorized, 404 not found, 429 too many requests, 5xx server errors).
+</Info>
+
+## Explore the API
+
+<CardGroup cols={2}>
+<Card title="API Reference" icon="book" href="/TODO">
+Browse all endpoints and schemas generated from the OpenAPI spec.
+</Card>
+
+<Card title="Validator endpoints" icon="shield-halved" href="/TODO">
+Start with APR, rewards, balance, attestations, and withdrawals.
+</Card>
+</CardGroup>
+
+<Tip>
+Use the API Reference to try endpoints interactively and view live request/response shapes.
+</Tip>
