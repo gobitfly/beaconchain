@@ -137,7 +137,7 @@ const aprInfos = [
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :infos="efficiencyInfos"
-      :title="$t('dashboard.validator.overview.24h_efficiency')"
+      :title="$t('dashboard.validator.overview.24h_beaconscore')"
     >
       {{
         formatPercent(overview?.efficiency.last_24h ?? 0, {

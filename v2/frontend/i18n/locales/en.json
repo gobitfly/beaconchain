@@ -347,12 +347,12 @@
             "col": {
                 "amount": "Amount",
                 "balance": "Balance",
+                "beaconscore": "BeaconScore",
                 "block_processed": "Block Processed",
                 "block_queued": "Block Queued",
                 "cl_rewards": "Cl Rewards",
                 "depositor": "Depositor",
                 "duty": "Duty",
-                "efficiency": "Efficiency",
                 "el_rewards": "El Rewards",
                 "group": "Group",
                 "index": "Index",
@@ -439,9 +439,9 @@
                 "validators_limit_exceeded": "Cannot add validators. The maximum effective balance of the validators exceeds your plan's limit."
             },
             "overview": {
-                "24h_efficiency": "24h Efficiency",
-                "30d_apr": "30d APR",
-                "30d_rewards": "30d Rewards",
+                "24h_beaconscore": "BeaconScore (24h)",
+                "30d_apr": "APR (30d)",
+                "30d_rewards": "Rewards (30d)",
                 "online_validators": "Online Validators",
                 "open_validator_overview_modal": "Open Validator Overview",
                 "validators_balance": {
@@ -524,7 +524,7 @@
                     "all_groups": "All Groups",
                     "average": "Network Average",
                     "efficiency": {
-                        "all": "Efficiency",
+                        "all": "BeaconScore",
                         "attestation": "Attestation Eff.",
                         "proposal": "Proposal Eff.",
                         "sync": "Sync Eff."
@@ -542,7 +542,7 @@
                     "attestations_head": "Head",
                     "attestations_source": "Source",
                     "attestations_target": "Target",
-                    "efficiency": "Efficiency",
+                    "efficiency": "BeaconScore",
                     "luck": "Luck",
                     "missed_rewards": "Missed rewards",
                     "proposal_efficiency": "Proposal Efficiency",
