@@ -30,7 +30,7 @@ const visible = computed(() => cookiePreference.value === undefined)
         class="text-container"
         keypath="cookies.text.template"
         linkpath="cookies.text.link"
-        to="https://storage.googleapis.com/legal.beaconcha.in/privacy.pdf"
+        :to="externalLink.beaconchain.privacyPolicy"
       />
       <div class="button-container">
         <div

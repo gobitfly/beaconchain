@@ -120,7 +120,7 @@ onUnmounted(() => {
         <template #footer>
           <div class="flex gap-2xl justify-center items-start relative z-10">
             <NuxtLink
-              to="https://apps.apple.com/app/beaconchain-dashboard/id1541822121"
+              :to="externalLink.beaconchain.store.apple"
               class="rounded-xs"
               target="_blank"
             >
@@ -131,7 +131,7 @@ onUnmounted(() => {
               >
             </NuxtLink>
             <NuxtLink
-              to="https://play.google.com/store/apps/details?id=in.beaconcha.mobile"
+              :to="externalLink.beaconchain.store.google"
               class="rounded-xs"
               target="_blank"
             >
