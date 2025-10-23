@@ -17,6 +17,7 @@
         "BcTablePager",
         "BcToggle",
         "BcTooltip",
+        "BlockchainSearchInput",
         "DashboardChartSummary",
         "DashboardChartSummaryFilter",
         "DashboardChartSummaryTooltip",
