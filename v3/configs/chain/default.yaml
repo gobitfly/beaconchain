@@ -10,6 +10,7 @@
 # Note that we explicitly don't define `ChainSpec.CHAIN_ID` here, as each chain should have its own configuration
 ChainSpec:
   SECONDS_PER_SLOT: 12
+  SLOTS_PER_EPOCH: 32
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256
   SHARD_COMMITTEE_PERIOD: 256
 

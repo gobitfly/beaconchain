@@ -27,6 +27,7 @@ import (
 )
 
 type ApiService struct {
+	chainConfigs        config.ChainConfigs
 	userRepository      userrepo.Repository
 	limiter             *limits.Limiter
 	ethereumNetworkRepo ethereumnetworkrepo.Repository
@@ -36,11 +37,13 @@ type ApiService struct {
 // InitDependencies
 // Initialize the repositories with proper databases
 func InitDependencies(
+	chainConfigs config.ChainConfigs,
 	userRepository userrepo.Repository,
 	ethereumNetworkRepo ethereumnetworkrepo.Repository,
 	validatorRepository validatorrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
+		chainConfigs:        chainConfigs,
 		userRepository:      userRepository,
 		limiter:             limits.NewLimiter(),
 		ethereumNetworkRepo: ethereumNetworkRepo,
@@ -54,7 +57,10 @@ var _ model.StrictServerInterface = (*ApiService)(nil)
 // Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
 	config config.ServiceConfig,
+	chainConfigs config.ChainConfigs,
 ) {
+
+	log.Infof("chainconfigs %+v", chainConfigs)
 	log.Info("Starting server...")
 
 	dataSources := data_sources.ApiDataSources{}
@@ -78,7 +84,7 @@ func Run(
 		validatorRepo.Initialize(dataSources.RoChainDb, dataSources.RoChDb)
 	}()
 
-	apiService, _ := InitDependencies(userRepo, ethereumNetworkRepo, validatorRepo)
+	apiService, _ := InitDependencies(chainConfigs, userRepo, ethereumNetworkRepo, validatorRepo)
 
 	mux := http.NewServeMux()
 

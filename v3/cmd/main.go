@@ -14,11 +14,12 @@ import (
  */
 func main() {
 	serviceConfig := config.LoadServiceConfig()
+	chainConfigs := config.LoadChainConfigs()
 	switch serviceConfig.Type {
 	case "external":
-		app_external.Run(*serviceConfig)
+		app_external.Run(*serviceConfig, chainConfigs)
 	case "internal":
-		app_internal.Run(*serviceConfig)
+		app_internal.Run(*serviceConfig, chainConfigs)
 	default:
 		log.Infof("Unknown API type: %s\n", serviceConfig.Type)
 		os.Exit(1)

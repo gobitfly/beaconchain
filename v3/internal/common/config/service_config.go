@@ -83,7 +83,7 @@ type ServiceConfig struct {
 // 3. Service Config, which is used to define the parameters that the service itself runs with.
 
 func LoadServiceConfig() *ServiceConfig {
-
+	viper := viper.New()
 	// using standard library "flag" package
 	env := flag.String("environment", "Development", "Name of the environment")
 	apiType := flag.String("type", "external", "api to launch (internal or external)")

@@ -23,16 +23,19 @@ import (
 )
 
 type ApiService struct {
+	chainConfigs     config.ChainConfigs
 	userRepository   userrepo.Repository
 	apiKeyRepository apikeyrepo.Repository
 	limiter          *limits.Limiter
 }
 
 func InitDependencies(
+	chainConfigs config.ChainConfigs,
 	userRepository userrepo.Repository,
 	apiKeyRepository apikeyrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
+		chainConfigs:     chainConfigs,
 		userRepository:   userRepository,
 		apiKeyRepository: apiKeyRepository,
 		limiter:          limits.NewLimiter(),
@@ -45,6 +48,7 @@ var _ model.StrictServerInterface = (*ApiService)(nil)
 // Takes as input a ServiceExecution configuration, and launches a gRPC reverse-proxied HTTP service.
 func Run(
 	config config.ServiceConfig,
+	chainConfigs config.ChainConfigs,
 ) {
 	log.Info("Starting server...")
 
@@ -78,7 +82,7 @@ func Run(
 		apikeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
 		sessionStoreRepo.Initialize(dataSources.Redis)
 	}()
-	apiService, _ := InitDependencies(userDbRepo, apikeyRepo)
+	apiService, _ := InitDependencies(chainConfigs, userDbRepo, apikeyRepo)
 
 	mux := http.NewServeMux()
 

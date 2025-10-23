@@ -1,31 +1,31 @@
 package config
 
 import (
+	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
 	"github.com/spf13/viper"
 )
 
-// Chain
+// ChainConfig
 // This should be kept as simple and high-level as possible.
-type Chain struct {
-	Name    ChainName
-	ChainId uint64
-}
-
-// ChainName
-// Config for defining various chain names
-type ChainName string
-
-const (
-	Mainnet  ChainName = "mainnet"
-	Holesky  ChainName = "holesky"
-	Optimism ChainName = "optimism"
-)
-
 type ChainConfig struct {
+	ID               uint64 `mapstructure:"CHAIN_ID"`
+	GenesisTimestamp int    `mapstructure:"GENESIS_TIMESTAMP"`
+	SecondsPerSlot   int    `mapstructure:"SECONDS_PER_SLOT"`
+	SlotsPerEpoch    int    `mapstructure:"SLOTS_PER_EPOCH"`
 }
 
-func (chain Chain) LoadChainConfig() {
+type ChainConfigs map[domain.Chain]ChainConfig
+
+func LoadChainConfigs() ChainConfigs {
+	return ChainConfigs{
+		domain.ChainMainnet: LoadChainConfig("mainnet"),
+		domain.ChainHoodi:   LoadChainConfig("hoodi"),
+	}
+}
+
+func LoadChainConfig(name string) ChainConfig {
+	viper := viper.New()
 	// "configs/chain/default.yaml"
 	viper.AddConfigPath("configs/chain")
 	viper.SetConfigName("default")
@@ -38,7 +38,7 @@ func (chain Chain) LoadChainConfig() {
 	}
 
 	// Now load in the override config file. It replaces anything which exists in both
-	viper.SetConfigName(string(chain.Name))
+	viper.SetConfigName(name)
 	err = viper.MergeInConfig()
 	if err != nil {
 		log.Fatalf("Error reading config file, %s", err)
@@ -48,4 +48,12 @@ func (chain Chain) LoadChainConfig() {
 	viper.AutomaticEnv()
 
 	logDebugConfigKeys()
+
+	var chain ChainConfig
+	err = viper.UnmarshalKey("ChainSpec", &chain)
+	if err != nil {
+		log.Fatalf("unable to decode into struct, %v", err)
+	}
+
+	return chain
 }
