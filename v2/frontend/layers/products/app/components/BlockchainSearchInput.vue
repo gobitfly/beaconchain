@@ -71,10 +71,11 @@ const history = useLocalStorage<string[]>('bc-search-history-product-landing', [
 const localHistory = ref<InternalPostSearchResponseWithChainId['data']>(history.value.map(item => JSON.parse(item)))
 const hasHistory = computed(() => !!localHistory.value.length)
 const hasResults = computed(() => results !== undefined)
+const hasInput = computed(() => searchParams.value.input.length > 0)
 
 const isHistoryVisible = ref<boolean>(!hasResults.value && hasHistory.value)
 const resultsOrHistory = computed(() => {
-  if ((!hasResults.value && hasHistory.value) || isHistoryVisible.value) {
+  if ((!hasInput.value && hasHistory.value) || isHistoryVisible.value) {
     return localHistory.value
   }
   return results
@@ -83,7 +84,7 @@ const toggleHistory = () => {
   isHistoryVisible.value = !isHistoryVisible.value
   localHistory.value = history.value.map(item => JSON.parse(item))
 }
-const handleClick = (searchResult: InternalPostSearchResponseWithChainId['data'][number]) => {
+const handleSelect = (searchResult: InternalPostSearchResponseWithChainId['data'][number]) => {
   const currentEntry = JSON.stringify(searchResult)
   if (history.value.length >= 10) {
     history.value.pop()
@@ -96,10 +97,18 @@ watch(hasResults, () => {
   if (hasResults.value) return
   isHistoryVisible.value = true
 })
+const searchInput = useTemplateRef<ComponentPublicInstance | null>('searchInput')
+const handleClickExample = (type: 'address' | 'token' | 'transaction' | 'validator') => {
+  emit('click:example', type)
+  isHistoryVisible.value = false
+  const input = searchInput.value?.$el.querySelector('input')
+  input?.focus()
+}
 </script>
 
 <template>
   <BaseSearchInput
+    ref="searchInput"
     v-model="searchParams.input"
     :is-loading="isHistoryVisible ? false : isLoading"
     :has-error="isHistoryVisible ? false : hasError"
@@ -133,7 +142,7 @@ watch(hasResults, () => {
           <BaseChip
             :is-selected="false"
             icon="stack-2"
-            @click="emit('click:example', 'validator')"
+            @click="handleClickExample('validator')"
           >
             {{ $t('products.landing_page.search.examples.validator') }}
           </BaseChip>
@@ -200,7 +209,7 @@ watch(hasResults, () => {
     <template #result-item="{ result }">
       <BlockchainSearchResultItem
         :result
-        @click="handleClick(result)"
+        @click="handleSelect(result)"
       />
     </template>
 
