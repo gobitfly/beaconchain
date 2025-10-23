@@ -128,14 +128,14 @@ const handleClickExample = (type: 'address' | 'token' | 'transaction' | 'validat
             :is-selected="false"
             icon="switch-horizontal"
             :aria-label="$t('products.landing_page.search.examples.transaction')"
-            @click="emit('click:example', 'transaction')"
+            @click="handleClickExample('transaction')"
           >
             {{ $t('products.landing_page.search.examples.tx') }}
           </BaseChip>
           <BaseChip
             :is-selected="false"
             icon="hash"
-            @click="emit('click:example', 'address')"
+            @click="handleClickExample('address')"
           >
             {{ $t('products.landing_page.search.examples.address') }}
           </BaseChip>
@@ -149,7 +149,7 @@ const handleClickExample = (type: 'address' | 'token' | 'transaction' | 'validat
           <BaseChip
             :is-selected="false"
             icon="hexagon"
-            @click="emit('click:example', 'token')"
+            @click="handleClickExample('token')"
           >
             {{ $t('products.landing_page.search.examples.token') }}
           </BaseChip>
