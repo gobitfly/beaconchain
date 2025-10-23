@@ -19,9 +19,11 @@ const {
 
 const { t: $t } = useTranslation()
 
+export type BlockchainSearchFilters = 'address' | 'block' | 'epoch' | 'slot' | 'token' | 'transaction' | 'validator'
+
 const emit = defineEmits<{
   (e: 'search', input: string): void,
-  (e: 'click:example', type: 'address' | 'token' | 'transaction' | 'validator'): void,
+  (e: 'click:example', type: BlockchainSearchFilters): void,
 }>()
 
 const searchParams = defineModel<BlockchainSearchParams>({
@@ -34,20 +36,28 @@ const chips: { label: string, value: BlockchainSearchParams['types'][number] }[]
     value: 'address',
   },
   {
+    label: $t('products.landing_page.search.types.blocks'),
+    value: 'block',
+  },
+  {
+    label: $t('products.landing_page.search.types.epochs'),
+    value: 'epoch',
+  },
+  {
+    label: $t('products.landing_page.search.types.slots'),
+    value: 'slot',
+  },
+  {
+    label: $t('products.landing_page.search.types.tokens'),
+    value: 'token',
+  },
+  {
     label: $t('products.landing_page.search.types.transactions'),
     value: 'transaction',
   },
   {
     label: $t('products.landing_page.search.types.validators_indices'),
     value: 'validator_by_index',
-  },
-  {
-    label: $t('products.landing_page.search.types.blocks'),
-    value: 'block',
-  },
-  {
-    label: $t('products.landing_page.search.types.tokens'),
-    value: 'token',
   },
 ]
 
@@ -98,7 +108,7 @@ watch(hasResults, () => {
   isHistoryVisible.value = true
 })
 const searchInput = useTemplateRef<ComponentPublicInstance | null>('searchInput')
-const handleClickExample = (type: 'address' | 'token' | 'transaction' | 'validator') => {
+const handleClickExample = (type: BlockchainSearchFilters) => {
   emit('click:example', type)
   isHistoryVisible.value = false
   const input = searchInput.value?.$el.querySelector('input')
