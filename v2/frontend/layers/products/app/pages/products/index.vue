@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { BaseNavigationItem } from '#layers/base/app/components/BaseNavigationItem.vue'
-import type { BlockchainSearchParams } from '~/layers/products/app/components/BlockchainSearchInput.vue'
+import type {
+  BlockchainSearchFilters,
+  BlockchainSearchParams,
+} from '~/layers/products/app/components/BlockchainSearchInput.vue'
 
 const isOpen = ref(false)
 const { t: $t } = useTranslation()
@@ -73,7 +76,7 @@ const handleSearch = (input: string) => {
   execute()
 }
 
-const handleExampleClick = (type: 'address' | 'token' | 'transaction' | 'validator') => {
+const handleExampleClick = (type: BlockchainSearchFilters) => {
   if (type === 'address') {
     searchParams.value = {
       ...searchParams.value,
