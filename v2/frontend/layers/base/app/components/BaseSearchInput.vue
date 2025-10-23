@@ -149,7 +149,7 @@ const idSearchInput = useId()
                   :key="JSON.stringify(result)"
                   as-child
                   :value="JSON.stringify(result)"
-                  class="dark:data-[highlighted]:bg-gray-900 px-2xl py-md font-semibold"
+                  class="dark:data-[highlighted]:bg-gray-900 data-[highlighted]:bg-gray-100  px-2xl py-md font-semibold"
                   @select.prevent
                 >
                   <slot
@@ -166,7 +166,7 @@ const idSearchInput = useId()
                 :key="JSON.stringify(result)"
                 as-child
                 :value="JSON.stringify(result)"
-                class="dark:data-[highlighted]:bg-gray-900 px-2xl py-md font-semibold"
+                class="dark:data-[highlighted]:bg-gray-900 data-[highlighted]:bg-gray-100  px-2xl py-md font-semibold"
                 @select.prevent
               >
                 <slot
