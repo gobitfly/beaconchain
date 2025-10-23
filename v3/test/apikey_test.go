@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gobitfly/beaconchain-backend/api/external/client"
+	extclient "github.com/gobitfly/beaconchain-backend/api/external/client"
 	inhouseclient "github.com/gobitfly/beaconchain-backend/api/inhouse/client"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
@@ -53,7 +53,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("use key (no cache hit)", func(t *testing.T) {
 			ctx, extClient := setupExternalAPIClientWithAuth(*key.JSON200.RawApiKey)
-			resp, err := extClient.GetPing(ctx)
+			resp, err := ping(ctx, extClient)
 			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
@@ -68,7 +68,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("use key (cache hit)", func(t *testing.T) {
 			ctx, extClient := setupExternalAPIClientWithAuth(*key.JSON200.RawApiKey)
-			resp, err := extClient.GetPing(ctx)
+			resp, err := ping(ctx, extClient)
 			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
@@ -91,7 +91,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("disabled key cannot be used", func(t *testing.T) {
 			ctx, extClient := setupExternalAPIClientWithAuth(*key.JSON200.RawApiKey)
-			resp, err := extClient.GetPing(ctx)
+			resp, err := ping(ctx, extClient)
 			assert.Nil(t, resp.Body.Close())
 			assert.Nil(t, err)
 			assert.Equal(t, 401, resp.StatusCode)
@@ -118,7 +118,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("enabled key can be used again", func(t *testing.T) {
 			ctx, extClient := setupExternalAPIClientWithAuth(*key.JSON200.RawApiKey)
-			resp, err := extClient.GetPing(ctx)
+			resp, err := ping(ctx, extClient)
 			assert.Nil(t, resp.Body.Close())
 			assert.NoError(t, err)
 		})
@@ -138,7 +138,7 @@ func TestAPIKeyLifecycle(t *testing.T) {
 
 		t.Run("deleted key cannot be used", func(t *testing.T) {
 			ctx, extClient := setupExternalAPIClientWithAuth(*key.JSON200.RawApiKey)
-			resp, err := extClient.GetPing(ctx)
+			resp, err := ping(ctx, extClient)
 			assert.Nil(t, resp.Body.Close())
 			assert.Nil(t, err)
 			assert.Equal(t, 401, resp.StatusCode)
@@ -197,15 +197,17 @@ func TestAPIKeyInvalidUsages(t *testing.T) {
 	var testAPIKeyInvalid = apiKeyMgmt.newTestKey("invalid")
 	t.Run("invalid key cannot be used", func(t *testing.T) {
 		ctx, extClient := setupExternalAPIClientWithAuth(testAPIKeyInvalid)
-		resp, err := extClient.GetPing(ctx)
+		resp, err := ping(ctx, extClient)
 		assert.Nil(t, resp.Body.Close())
 		assert.Nil(t, err)
 		assert.Equal(t, 401, resp.StatusCode)
 	})
 
 	t.Run("usage without key", func(t *testing.T) {
-		cl, _ := client.NewClient(fmt.Sprintf("http://%s", testUtils.GetExternalHTTPUrl()))
-		resp, err := cl.GetPing(context.Background())
+		cl, _ := extclient.NewClientWithResponses(
+			fmt.Sprintf("http://%s", testUtils.GetExternalHTTPUrl()),
+		)
+		resp, err := ping(context.Background(), cl)
 		assert.Nil(t, resp.Body.Close())
 		assert.Nil(t, err)
 		assert.Equal(t, 401, resp.StatusCode)

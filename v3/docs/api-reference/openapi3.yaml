@@ -12,15 +12,6 @@ security:
   - GCPAuth: []
   
 paths:
-  /ping:
-    get:
-      responses:
-        '200':
-          description: pet response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pong'
   /v2/ethereum/validators: # low prio
     post:
       tags:
@@ -1626,14 +1617,6 @@ components:
                   - validator
 
   schemas:
-    Pong:
-      type: object
-      required:
-        - ping
-      properties:
-        ping:
-          type: string
-          example: pong
     PagingRangeTemplate:
       type: object
       properties:

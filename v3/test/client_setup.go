@@ -37,6 +37,10 @@ func setupExternalAPIClientWithAuth(apiKey string) (context.Context, *extclient.
 	return context.Background(), cl
 }
 
+func ping(ctx context.Context, client *extclient.ClientWithResponses) (*http.Response, error) {
+	return client.GetChainState(ctx, extclient.GetChainStateJSONRequestBody{})
+}
+
 func setupInhouseAPIClient(t *testing.T) (context.Context, *inhouseclient.ClientWithResponses) {
 	sessionID := os.Getenv("SESSION_ID_ORCA_TEST")
 	if sessionID == "" {

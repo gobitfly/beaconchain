@@ -24,7 +24,7 @@ func TestRateLimit(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			resp, err := client.GetPing(ctx)
+			resp, err := ping(ctx, client)
 			assert.Nil(t, resp.Body.Close())
 			if err != nil {
 				results <- &http.Response{StatusCode: http.StatusInternalServerError}
