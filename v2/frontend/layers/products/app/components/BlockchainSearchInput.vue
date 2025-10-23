@@ -19,7 +19,7 @@ const {
 
 const { t: $t } = useTranslation()
 
-export type BlockchainSearchFilters = 'address' | 'block' | 'epoch' | 'slot' | 'token' | 'transaction' | 'validator'
+export type BlockchainSearchFilters = 'address' | 'block' | 'epoch' | 'latest_block' | 'latest_epoch' | 'slot' | 'token' | 'transaction' | 'validator'
 
 const emit = defineEmits<{
   (e: 'search', input: string): void,
@@ -131,7 +131,21 @@ const handleClickExample = (type: BlockchainSearchFilters) => {
     <template #search-examples>
       <div class="flex items-center">
         <section class="flex gap-lg">
-          <div class="py-xs px-md border-gray-400 font-semibold text-gray-400">
+          <BaseChip
+            :is-selected="false"
+            icon="cube"
+            @click="handleClickExample('latest_block')"
+          >
+            {{ $t('products.landing_page.search.examples.latest_block') }}
+          </BaseChip>
+          <BaseChip
+            :is-selected="false"
+            icon="chart-line"
+            @click="handleClickExample('latest_epoch')"
+          >
+            {{ $t('products.landing_page.search.examples.latest_epoch') }}
+          </BaseChip>
+          <div class="py-xs px-md border-l border-gray-400 font-semibold text-gray-400">
             {{ $t('products.landing_page.search.examples.title') }}
           </div>
           <BaseChip
