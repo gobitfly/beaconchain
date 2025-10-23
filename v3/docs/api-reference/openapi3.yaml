@@ -1841,15 +1841,7 @@ components:
       title: Withdrawal
       properties:
         withdrawal:
-          description: |
-            Specifies the withdrawal credential used to select validators.
-            - For withdrawal credentials with prefix "0x01" or "0x02", you may provide either the full 32-byte withdrawal credential or, for convenience, just the execution address (20-byte hex string, standard Ethereum address).
-            - For withdrawal credentials with prefix "0x00" (BLS withdrawal credentials), only the full 32-byte withdrawal credential is accepted, as there is no associated execution address.
-          oneOf:
-            - $ref: '#/components/schemas/ExecutionLayerAddress'
-              title: Execution Address
-            - $ref: '#/components/schemas/withdrawalCredentialPrimitive'
-              title: Full Withdrawal Credential
+          $ref: '#/components/schemas/AddressOrCredential'
       required: [withdrawal]
 
 
@@ -1962,8 +1954,14 @@ components:
 
     withdrawalCredentialPrimitive:
       type: string
-      pattern: ^0x[a-fA-F0-9]{64}$
+      pattern: ^(0x)?0[012][0-9a-fA-F]{62}$
       description: A full 32-byte withdrawal credential represented as a hex string with 0x prefix.
+
+    AddressOrCredential:
+      type: string
+      pattern: ^(0x)?[0-9a-fA-F]{40}$|^(0x)?0[012][0-9a-fA-F]{62}$
+      description: |
+        Either an execution layer address (20-byte hex string with 0x prefix) or a full 32-byte withdrawal credential.
 
     withdrawalCredentialPrefix:
       type: string

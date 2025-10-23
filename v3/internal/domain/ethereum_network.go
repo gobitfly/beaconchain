@@ -82,3 +82,5 @@ type BlockTransaction struct {
 type BlockTransactionCursor struct {
 	Idx int
 }
+type EthereumAddress []byte
+type WithdrawalCredential []byte
