@@ -7,23 +7,10 @@ import (
 	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
-	"github.com/jmoiron/sqlx"
 )
 
 type DBRepository struct {
-	roChainDb *sqlx.DB
-}
-
-func (r *DBRepository) Initialize(roChainDb *sqlx.DB) {
-	r.roChainDb = roChainDb
-}
-
-func (r *DBRepository) selectDatabase(chain domain.Chain) *sqlx.DB {
-	if chain == domain.ChainMainnet {
-		return r.roChainDb
-	}
-	// TODO: add chains once supported
-	return r.roChainDb
+	repo.ChainReader
 }
 
 type getSlotResult struct {
@@ -122,7 +109,7 @@ func (r *DBRepository) GetSlot(ctx context.Context, chain domain.Chain, slot int
 		// Validator
 		Join(goqu.T("validators"), goqu.On(goqu.L("validators.validatorindex = b.proposer")))
 
-	result, err := repo.RunQuery[getSlotResult](ctx, r.selectDatabase(chain), query)
+	result, err := repo.RunQuery[getSlotResult](ctx, r.SelectPostgres(chain), query)
 	if err != nil {
 		return domain.Slot{}, err
 	}
@@ -243,7 +230,7 @@ func (r *DBRepository) GetLatestState(ctx context.Context, chain domain.Chain, v
 			maxSlotDs.As("slot"),
 			maxEpochDs.As("epoch"),
 		)
-	result, err := repo.RunQuery[domain.LatestState](ctx, r.selectDatabase(chain), ds)
+	result, err := repo.RunQuery[domain.LatestState](ctx, r.SelectPostgres(chain), ds)
 	if err != nil {
 		return domain.LatestState{}, err
 	}

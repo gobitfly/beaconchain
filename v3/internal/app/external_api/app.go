@@ -18,6 +18,7 @@ import (
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/apikeyrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/ethereumnetworkrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/userrepo"
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/validatorrepo"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/gobitfly/beaconchain-backend/internal/limits"
 	"github.com/gobitfly/beaconchain-backend/internal/log"
@@ -29,6 +30,7 @@ type ApiService struct {
 	userRepository      userrepo.Repository
 	limiter             *limits.Limiter
 	ethereumNetworkRepo ethereumnetworkrepo.Repository
+	validatorRepository validatorrepo.Repository
 }
 
 // InitDependencies
@@ -36,11 +38,13 @@ type ApiService struct {
 func InitDependencies(
 	userRepository userrepo.Repository,
 	ethereumNetworkRepo ethereumnetworkrepo.Repository,
+	validatorRepository validatorrepo.Repository,
 ) (*ApiService, error) {
 	return &ApiService{
 		userRepository:      userRepository,
 		limiter:             limits.NewLimiter(),
 		ethereumNetworkRepo: ethereumNetworkRepo,
+		validatorRepository: validatorRepository,
 	}, nil
 }
 
@@ -60,6 +64,7 @@ func Run(
 	userRepo := &userrepo.CachedRepository{}
 	apiKeyRepo := &apikeyrepo.CachedRepository{}
 	ethereumNetworkRepo := &ethereumnetworkrepo.DBRepository{}
+	validatorRepo := &validatorrepo.DBRepository{}
 
 	dataSources.InitApiConnections(&config) // initialize blocking as middlewares depend on it
 
@@ -69,10 +74,11 @@ func Run(
 		dbAPIKeyRepo.Initialize(dataSources.RoAdminDb, dataSources.RwAdminDb)
 		userRepo.Initialize(dataSources.Redis, dbUserRepo)
 		apiKeyRepo.Initialize(dataSources.Redis, dbAPIKeyRepo)
-		ethereumNetworkRepo.Initialize(dataSources.RoChainDb)
+		ethereumNetworkRepo.Initialize(dataSources.RoChainDb, dataSources.RoChDb)
+		validatorRepo.Initialize(dataSources.RoChainDb, dataSources.RoChDb)
 	}()
 
-	apiService, _ := InitDependencies(userRepo, ethereumNetworkRepo)
+	apiService, _ := InitDependencies(userRepo, ethereumNetworkRepo, validatorRepo)
 
 	mux := http.NewServeMux()
 

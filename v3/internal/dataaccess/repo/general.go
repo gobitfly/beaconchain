@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/data_sources"
 	"github.com/gobitfly/beaconchain-backend/internal/domain"
 	"github.com/jackc/pgconn"
 	"github.com/jmoiron/sqlx"
@@ -91,4 +92,28 @@ func mapError(err error) error {
 	default:
 		return err
 	}
+}
+
+// ChainReader is a helper struct to be embedded in repositories needing to read from chain databases.
+type ChainReader struct {
+	roPostgres   *sqlx.DB
+	roClickhouse *sqlx.DB
+}
+
+// Initialize sets up the read-only connections for the repository.
+func (r *ChainReader) Initialize(postgres data_sources.ChainRoConnection, clickhouse data_sources.ClickhouseRoConnection) {
+	r.roPostgres = postgres
+	r.roClickhouse = clickhouse
+}
+
+// SelectPostgres selects the Postgres DB for the given chain.
+func (r *ChainReader) SelectPostgres(chain domain.Chain) *sqlx.DB {
+	// TODO: add chains once supported
+	return r.roPostgres
+}
+
+// SelectClickhouse selects the Clickhouse DB for the given chain.
+func (r *ChainReader) SelectClickhouse(chain domain.Chain) *sqlx.DB {
+	// TODO: add chains once supported
+	return r.roClickhouse
 }
