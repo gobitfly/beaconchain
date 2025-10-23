@@ -571,11 +571,11 @@
                 "tooltip": {
                     "amount_of_rounds": "(amount of rounds)",
                     "amount_of_validators": "(amount of validators)",
-                    "equal": "{name}'s efficiency is at the network average of {average}",
+                    "equal": "{name}'s BeaconScore is at the network average of {average}",
                     "estimated_loss": "Estimated loss based on avg. network performance.",
-                    "higher": "{name}'s efficiency is above the network average of {average}",
+                    "higher": "{name}'s BeaconScore is above the network average of {average}",
                     "live": "Validators missing two consecutive attestations are considered offline.",
-                    "lower": "{name}'s efficiency is below the network average of {average}"
+                    "lower": "{name}'s BeaconScore is below the network average of {average}"
                 },
                 "total_group_name": "Total Efficiency",
                 "validator_status_popout": "Open validator status details"
