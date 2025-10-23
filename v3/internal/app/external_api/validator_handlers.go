@@ -74,7 +74,7 @@ func transformValidatorBalanceToModel(balance domain.ValidatorBalance, finality 
 	return model.ValidatorBalancesData{
 		Validator: model.Validator{
 			Index:     balance.ValidatorIndex,
-			PublicKey: model.ValidatorPublicKey(balance.ValidatorPublicKey),
+			PublicKey: io.EncodeHexString(balance.ValidatorPublicKey),
 		},
 		Balance: model.ValidatorBalance{
 			Current:   balance.CurrentBalance.String(),
