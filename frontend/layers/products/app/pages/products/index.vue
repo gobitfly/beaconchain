@@ -84,6 +84,20 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
       types: [ 'address' ],
     }
   }
+  if (type === 'latest_block') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '/latest',
+      types: [ 'block' ],
+    }
+  }
+  if (type === 'latest_epoch') {
+    searchParams.value = {
+      ...searchParams.value,
+      input: '/latest',
+      types: [ 'epoch' ],
+    }
+  }
   if (type === 'token') {
     searchParams.value = {
       ...searchParams.value,
