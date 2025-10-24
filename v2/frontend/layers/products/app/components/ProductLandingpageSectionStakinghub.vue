@@ -57,14 +57,14 @@ onUnmounted(() => {
     </BaseButton>
     <BaseCardLayout
       layout="1fr_1fr_1fr"
-      class="grid min-h-[var(--stakinghub-card-height)] lg:min-h-[var(--stakinghub-card-height-lg)]"
+      class="grid min-h-(--stakinghub-card-height) lg:min-h-(--stakinghub-card-height-lg)"
       style="--stakinghub-card-height: 31rem; --stakinghub-card-height-lg: 38.75rem;"
     >
       <BaseCard
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.notifications.title')"
-        class="min-h-[var(--stakinghub-card-height)]"
+        class="min-h-(--stakinghub-card-height)"
       >
         <p class="text-md font-semibold">
           {{ $t('products.landing_page.staking_hub.cards.notifications.subtitle') }}
@@ -72,7 +72,7 @@ onUnmounted(() => {
         <p class="text-sm">
           {{ $t('products.landing_page.staking_hub.cards.notifications.description') }}
         </p>
-        <div class="flex flex-grow items-center justify-center px-5xl">
+        <div class="flex grow items-center justify-center px-5xl">
           <BaseIcon
             name="bell"
             class="size-[6.25rem]"
@@ -93,7 +93,7 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.staking_mobile_app.title')"
-        class="relative isolate min-h-[var(--stakinghub-card-height)] overflow-hidden text-white [&>header:first-child]:relative [&>header:first-child]:z-10"
+        class="relative isolate min-h-(--stakinghub-card-height) overflow-hidden text-white [&>header:first-child]:relative [&>header:first-child]:z-10"
         @mouseenter="playOnInteraction"
       >
         <video
@@ -148,7 +148,7 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.validator_dashboards.title')"
-        class="min-h-[var(--stakinghub-card-height)] bg-[url('/assets-2usdf/img/validator-bg.svg')] bg-[length:440px_440px] bg-[position:center_calc(100%+180px)] bg-no-repeat dark:bg-[url('/assets-2usdf/img/validator-bg-dark.svg')]"
+        class="min-h-(--stakinghub-card-height) bg-[url('/assets-2usdf/img/validator-bg.svg')] bg-size-[440px_440px] bg-position-[center_calc(100%+180px)] bg-no-repeat dark:bg-[url('/assets-2usdf/img/validator-bg-dark.svg')]"
       >
         <p class="text-md font-semibold">
           {{ $t('products.landing_page.staking_hub.cards.validator_dashboards.subtitle') }}
