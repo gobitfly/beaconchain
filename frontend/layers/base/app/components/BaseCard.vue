@@ -26,16 +26,16 @@ const id = useId()
 </script>
 
 <template>
-  <div class="dark:bg-gray-950 border border-gray-100 dark:border-gray-900 p-3xl rounded-4xl flex flex-col gap-2xl w-full">
+  <div class="flex w-full flex-col gap-2xl rounded-4xl border border-gray-100 p-3xl dark:border-gray-900 dark:bg-gray-950">
     <slot name="header">
       <header
         v-if="title"
-        class="flex gap-md justify-between"
+        class="flex justify-between gap-md"
       >
         <LazyBaseIcon
           v-if="titleIcon"
           :name="titleIcon"
-          class="shrink-0 text-2xl justify-self-end"
+          class="shrink-0 justify-self-end text-2xl"
         />
         <span class="grow">
           <LazyBaseHeading
@@ -68,7 +68,7 @@ const id = useId()
     <slot />
     <div
       v-if="$slots.footer"
-      class="pt-3xl mt-auto"
+      class="mt-auto pt-3xl"
     >
       <slot name="footer" />
     </div>

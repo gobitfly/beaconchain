@@ -2,7 +2,7 @@
 
 <template>
   <section
-    class="flex flex-col gap-4xl justify-center items-center max-w-24xl mx-auto p-md"
+    class="mx-auto flex max-w-24xl flex-col items-center justify-center gap-4xl p-md"
   >
     <slot />
   </section>

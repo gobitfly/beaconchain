@@ -137,7 +137,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
         />
       </template>
 
-      <ProductLandingpageSection class="px-[0px] sm:px-md gap-xl hero-section h-[70vh]">
+      <ProductLandingpageSection class="hero-section h-[70vh] gap-xl px-[0px] sm:px-md">
         <div class="hero-section__background-effects" />
         <ProductLandingpageHeading
           :headline="$t('products.landing_page.search.title')"
@@ -178,7 +178,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
             title-icon="file-code-2"
             title-to="/products/api/docs"
           >
-            <div class="grid grid-cols-2 lg:grid-cols-3 gap-5xl mt-7xl">
+            <div class="mt-7xl grid grid-cols-2 gap-5xl lg:grid-cols-3">
               <article class="flex flex-col gap-4xl">
                 <ProductLandingIconApiExplorer
                   class="size-6xl"
@@ -264,7 +264,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
             :title="$t('products.landing_page.api.cards.api_pricing_plan.title')"
             title-icon="file-code-2"
             :subtitle="$t('products.landing_page.api.cards.api_pricing_plan.subtitle')"
-            class="sm:min-h-[20rem] sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_auto_1fr]"
+            class="sm:grid sm:min-h-[20rem] sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_auto_1fr]"
           >
             <ProductLandingpagePricing
               class="sm:col-start-2 sm:-col-end-1 sm:row-start-1 sm:-row-end-1"
@@ -274,7 +274,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
               size="xl"
               trailing-icon="arrow-up-right"
               to="/products/pricing"
-              class="max-sm:hidden sm:size-fit sm:-row-end-1 self-end"
+              class="self-end max-sm:hidden sm:-row-end-1 sm:size-fit"
             >
               {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
             </BaseButton>
@@ -285,7 +285,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
                 full
                 trailing-icon="arrow-up-right"
                 to="/products/pricing"
-                class="sm:hidden col-span-2 row-span-2"
+                class="col-span-2 row-span-2 sm:hidden"
               >
                 {{ $t('products.landing_page.api.cards.api_pricing_plan.action.compare_plans') }}
               </BaseButton>
@@ -296,7 +296,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
       <ProductLandingpageSection class="mt-11xl">
         <ProductLandingpageSectionStakinghub />
       </ProductLandingpageSection>
-      <ProductLandingpageSection class="mt-11xl explorer-section">
+      <ProductLandingpageSection class="explorer-section mt-11xl">
         <ProductLandingpageHeading
           :id="id.explorer"
           :headline="$t('products.landing_page.explorer.title')"
@@ -311,8 +311,8 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
         >
           {{ $t('products.landing_page.explorer.action.go_to_explorer') }}
         </BaseButton>
-        <div class="flex justify-center flex-wrap gap-6xl mt-7xl w-full">
-          <span class="flex flex-col items-center min-w-[224px]">
+        <div class="mt-7xl flex w-full flex-wrap justify-center gap-6xl">
+          <span class="flex min-w-[224px] flex-col items-center">
             <BaseIcon
               name="clock"
               class="size-6xl"
@@ -331,7 +331,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
               {{ $t('products.landing_page.explorer.transaction_tracking.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center min-w-[224px]">
+          <span class="flex min-w-[224px] flex-col items-center">
             <BaseIcon
               name="wallet"
               class="size-6xl"
@@ -350,7 +350,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
               {{ $t('products.landing_page.explorer.wallet_tocken_insights.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center min-w-[224px]">
+          <span class="flex min-w-[224px] flex-col items-center">
             <BaseIcon
               name="code"
               class="size-6xl"
@@ -369,7 +369,7 @@ const handleExampleClick = (type: BlockchainSearchFilters) => {
               {{ $t('products.landing_page.explorer.smart_contract_analysis.description') }}
             </BaseText>
           </span>
-          <span class="flex flex-col items-center min-w-[224px]">
+          <span class="flex min-w-[224px] flex-col items-center">
             <BaseIcon
               name="gas-station"
               class="size-6xl"

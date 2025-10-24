@@ -37,7 +37,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="w-full flex flex-col gap-4xl justify-center items-center">
+  <div class="flex w-full flex-col items-center justify-center gap-4xl">
     <ProductLandingpageHeading
       is="h2"
       id="staking-hub"
@@ -72,7 +72,7 @@ onUnmounted(() => {
         <p class="text-sm">
           {{ $t('products.landing_page.staking_hub.cards.notifications.description') }}
         </p>
-        <div class="flex-grow px-5xl flex items-center justify-center">
+        <div class="flex flex-grow items-center justify-center px-5xl">
           <BaseIcon
             name="bell"
             class="size-[6.25rem]"
@@ -93,13 +93,13 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.staking_mobile_app.title')"
-        class="min-h-[var(--stakinghub-card-height)] isolate relative overflow-hidden [&>header:first-child]:relative [&>header:first-child]:z-10 text-white"
+        class="relative isolate min-h-[var(--stakinghub-card-height)] overflow-hidden text-white [&>header:first-child]:relative [&>header:first-child]:z-10"
         @mouseenter="playOnInteraction"
       >
         <video
           ref="videoRef"
           poster="/assets-2usdf/img/rotating-mobile-frame.webp"
-          class="absolute top-[0] left-[0] w-full h-full object-cover z-0"
+          class="absolute top-[0] left-[0] z-0 h-full w-full object-cover"
           muted
           playsinline
           preload="metadata"
@@ -110,15 +110,15 @@ onUnmounted(() => {
           >
         </video>
         <!-- Dark overlay for text readability -->
-        <div class="absolute top-[0] left-[0] w-full h-full bg-black/70 z-5" />
-        <div class="relative z-10 p-6 flex flex-col gap-2xl">
+        <div class="absolute top-[0] left-[0] z-5 h-full w-full bg-black/70" />
+        <div class="p-6 relative z-10 flex flex-col gap-2xl">
           <p class="text-md font-semibold">
             {{ $t('products.landing_page.staking_hub.cards.staking_mobile_app.subtitle') }}
           </p>
           <p>{{ $t('products.landing_page.staking_hub.cards.staking_mobile_app.description') }}</p>
         </div>
         <template #footer>
-          <div class="flex gap-2xl justify-center items-start relative z-10">
+          <div class="relative z-10 flex items-start justify-center gap-2xl">
             <NuxtLink
               :to="externalLink.beaconchain.store.apple"
               class="rounded-xs"
@@ -148,7 +148,7 @@ onUnmounted(() => {
         title-is="h3"
         title-icon="file-code"
         :title="$t('products.landing_page.staking_hub.cards.validator_dashboards.title')"
-        class="min-h-[var(--stakinghub-card-height)] bg-[url('/assets-2usdf/img/validator-bg.svg')] dark:bg-[url('/assets-2usdf/img/validator-bg-dark.svg')] bg-[length:440px_440px] bg-[position:center_calc(100%+180px)] bg-no-repeat"
+        class="min-h-[var(--stakinghub-card-height)] bg-[url('/assets-2usdf/img/validator-bg.svg')] bg-[length:440px_440px] bg-[position:center_calc(100%+180px)] bg-no-repeat dark:bg-[url('/assets-2usdf/img/validator-bg-dark.svg')]"
       >
         <p class="text-md font-semibold">
           {{ $t('products.landing_page.staking_hub.cards.validator_dashboards.subtitle') }}

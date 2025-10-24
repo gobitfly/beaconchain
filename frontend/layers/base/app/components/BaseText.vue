@@ -25,7 +25,7 @@ const {
       size === 'sm' && 'text-sm',
       size === 'md' && 'text-md',
       size === '2xl' && 'text-2xl',
-      variant === 'secondary' && 'dark:text-gray-400 text-gray-600',
+      variant === 'secondary' && 'text-gray-600 dark:text-gray-400',
       fontWeight === 'bold' && 'font-bold',
     ]"
   >

@@ -22,7 +22,7 @@ const { t: $t } = useTranslation()
             ? $t('products.landing_page.api.cards.api_pricing_plan.details.cost_per_year')
             : $t('products.landing_page.api.cards.api_pricing_plan.details.cost_per_month') }}
       </BaseText>
-      <div class="mt-lg font-bold flex gap-lg items-baseline">
+      <div class="mt-lg flex items-baseline gap-lg font-bold">
         <template v-if="priceWithDiscount === undefined">
           <span class="text-2xl">
             {{ formatFiatCurrency(price, { trailingZeroDisplay: 'stripIfInteger' }) }}
@@ -54,7 +54,7 @@ const { t: $t } = useTranslation()
       >
         {{ $t('products.landing_page.api.cards.api_pricing_plan.details.requests_per_second') }}
       </BaseText>
-      <div class="mt-lg font-bold text-2xl">
+      <div class="mt-lg text-2xl font-bold">
         {{ formatNumber(requestsPerSecond) }}
       </div>
     </section>
