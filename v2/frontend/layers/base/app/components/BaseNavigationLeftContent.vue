@@ -45,7 +45,7 @@ watchEffect(() => {
   <div
     ref="navigation"
     :open="isOpen"
-    class="bg-white dark:bg-black fixed inset-[0] right-auto h-screen p-2xl w-3xs border-r border-r-gray-200 dark:border-r-gray-700"
+    class="fixed inset-[0] right-auto h-screen w-3xs border-r border-r-gray-200 bg-white p-2xl dark:border-r-gray-700 dark:bg-black"
     @keydown.escape="close"
   >
     <BaseScreenreaderOnly

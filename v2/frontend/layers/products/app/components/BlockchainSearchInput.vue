@@ -145,7 +145,7 @@ const handleClickExample = (type: BlockchainSearchFilters) => {
           >
             {{ $t('products.landing_page.search.examples.latest_epoch') }}
           </BaseChip>
-          <div class="py-xs px-md border-l border-gray-400 font-semibold text-gray-400">
+          <div class="border-l border-gray-400 px-md py-xs font-semibold text-gray-400">
             {{ $t('products.landing_page.search.examples.title') }}
           </div>
           <BaseChip
@@ -182,7 +182,7 @@ const handleClickExample = (type: BlockchainSearchFilters) => {
     </template>
     <template #dropdown-fixed-header="{ idSearchInput }">
       <div
-        class="min-h-fit overflow-x-auto overscroll-contain flex gap-md items-center px-2xl py-lg"
+        class="flex min-h-fit items-center gap-md overflow-x-auto overscroll-contain px-2xl py-lg"
         @keydown.enter.stop
       >
         <BaseButtonIcon

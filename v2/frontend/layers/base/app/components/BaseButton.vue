@@ -26,15 +26,15 @@ const {
     :is="to ? NuxtLink : 'button'"
     :to
     :disabled
-    class="flex justify-center items-center bg-linear-to-b rounded-full font-semibold disabled:opacity-40 aria-disabled:opacity-40 aria-disabled:pointer-events-none active:opacity-80"
+    class="flex items-center justify-center rounded-full bg-linear-to-b font-semibold active:opacity-80 disabled:opacity-40 aria-disabled:pointer-events-none aria-disabled:opacity-40"
     :class="[
-      variant === 'primary' && 'from-gray-700 to-gray-900 text-white dark:from-gray-100 dark:to-gray-300 dark:text-black opacity-90 hover:opacity-95',
-      variant === 'secondary' && 'from-gray-300 to-gray-200 text-black dark:from-charcoal-600 dark:to-charcoal-700 dark:text-white opacity-90 hover:opacity-95',
+      variant === 'primary' && 'from-gray-700 to-gray-900 text-white opacity-90 hover:opacity-95 dark:from-gray-100 dark:to-gray-300 dark:text-black',
+      variant === 'secondary' && 'from-gray-300 to-gray-200 text-black opacity-90 hover:opacity-95 dark:from-charcoal-600 dark:to-charcoal-700 dark:text-white',
       variant === 'branded' && 'from-brand-500 to-brand-700 text-white hover:opacity-90',
-      variant === 'quaternary' && 'text-black dark:text-white hover:opacity-95',
-      size === 'md' && 'text-sm py-md px-sm',
-      size === 'lg' && 'text-md py-lg px-2xl',
-      size === 'xl' && 'text-md py-xl px-3xl',
+      variant === 'quaternary' && 'text-black hover:opacity-95 dark:text-white',
+      size === 'md' && 'px-sm py-md text-sm',
+      size === 'lg' && 'px-2xl py-lg text-md',
+      size === 'xl' && 'px-3xl py-xl text-md',
       full ? 'w-full' : 'min-w-fit',
     ]"
   >

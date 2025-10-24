@@ -57,7 +57,7 @@ const idSearchInput = useId()
 <template>
   <form
     role="search"
-    class="base-search-input__form p-2xl isolate"
+    class="base-search-input__form isolate p-2xl"
   >
     <RkComboboxRoot
       :open-on-focus="!!results?.length"
@@ -67,7 +67,7 @@ const idSearchInput = useId()
     >
       <RkLabel
         :for="idSearchInput"
-        class="absolute bottom-2xl left-2xl dark:text-gray-400 text-sm-tight"
+        class="absolute bottom-2xl left-2xl text-sm-tight dark:text-gray-400"
       >
         {{ label }}
       </RkLabel>
@@ -78,14 +78,14 @@ const idSearchInput = useId()
         type="search"
         :aria-busy="isLoading"
         :placeholder
-        class="w-full text-2xl font-semibold rounded-3xl pt-3xl pr-5xl pb-6xl pl-2xl dark:bg-gray-950
-        bg-white dark:focus:bg-black placeholder:dark:text-gray-500 dark:text-white border border-gray-500 dark:border-charcoal-500
-        dark:focus:border-charcoal-50 dark:focus-within:outline-0"
+        class="w-full rounded-3xl border border-gray-500 bg-white pt-3xl pr-5xl pb-6xl pl-2xl
+        text-2xl font-semibold dark:border-charcoal-500 dark:bg-gray-950 dark:text-white placeholder:dark:text-gray-500 dark:focus-within:outline-0
+        dark:focus:border-charcoal-50 dark:focus:bg-black"
         @update:model-value="(value) => { if (!value) hasSearched = false }"
       />
       <RkComboboxContent
         v-if="results !== undefined || isLoading || hasError"
-        class="absolute z-10 bg-gray-50 dark:bg-gray-950 mt-xl rounded-xl w-full max-h-[400px]"
+        class="absolute z-10 mt-xl max-h-[400px] w-full rounded-xl bg-gray-50 dark:bg-gray-950"
         @pointer-down-outside="handleClickOutside"
         @focus-outside.prevent
       >
@@ -110,7 +110,7 @@ const idSearchInput = useId()
             >
               <div
                 role="alert"
-                class="px-2xl py-md dark:text-gray-400 flex items-center"
+                class="flex items-center px-2xl py-md dark:text-gray-400"
               >
                 <div>
                   {{ $t('base.common.something_went_wrong') }}
@@ -127,7 +127,7 @@ const idSearchInput = useId()
 
             <div
               v-else-if="!results?.length"
-              class="dark:text-gray-400 px-2xl py-md font-semibold"
+              class="px-2xl py-md font-semibold dark:text-gray-400"
             >
               {{ $t('base.common.no_results') }}
             </div>
@@ -149,7 +149,7 @@ const idSearchInput = useId()
                   :key="JSON.stringify(result)"
                   as-child
                   :value="JSON.stringify(result)"
-                  class="dark:data-[highlighted]:bg-gray-900 data-[highlighted]:bg-gray-100  px-2xl py-md font-semibold"
+                  class="px-2xl py-md  font-semibold data-highlighted:bg-gray-100 dark:data-highlighted:bg-gray-900"
                   @select.prevent
                 >
                   <slot
@@ -166,9 +166,10 @@ const idSearchInput = useId()
                 :key="JSON.stringify(result)"
                 as-child
                 :value="JSON.stringify(result)"
-                class="dark:data-[highlighted]:bg-gray-900 data-[highlighted]:bg-gray-100  px-2xl py-md font-semibold"
-                @select.prevent
+                class="px-2xl py-md  font-semibold data-highlighted:bg-gray-100 dark:data-highlighted:bg-gray-900"
               >
+                @select.prevent
+                >
                 <slot
                   name="result-item"
                   :result
@@ -182,7 +183,7 @@ const idSearchInput = useId()
 
     <div
       v-if="$slots['search-examples']"
-      class="overflow-x-auto p-2xl z-10 bg-gray-50 dark:bg-gray-950 mt-xl rounded-xl shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.18)]"
+      class="z-10 mt-xl overflow-x-auto rounded-xl bg-gray-50 p-2xl shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.18)] dark:bg-gray-950"
     >
       <slot name="search-examples" />
     </div>

@@ -40,7 +40,7 @@ const values = [
 </script>
 
 <template>
-  <div class="flex flex-col gap-3xl justify-between">
+  <div class="flex flex-col justify-between gap-3xl">
     <section>
       <BaseSwitch
         v-model="billingCycle"
@@ -104,7 +104,7 @@ const values = [
           />
         </template>
         <template #tabpanel-enterprise>
-          <div class="flex sm:grid-cols-[2fr_1fr] gap-lg mt-xl">
+          <div class="mt-xl flex gap-lg sm:grid-cols-[2fr_1fr]">
             <span
               class=""
             >{{ $t('products.landing_page.api.cards.api_pricing_plan.details.contact_sales_explainer') }}</span>

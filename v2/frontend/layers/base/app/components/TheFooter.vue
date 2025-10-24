@@ -44,7 +44,7 @@ const resourceLinks: Link[] = [
 
 <template>
   <div
-    class="bg-gray-50 dark:bg-gray-950 flex flex-col gap-3xl sm:gap-5xl pt-3xl px-xl pb-7xl sm:px-5xl sm:py-7xl sm:rounded-4xl sm:mb-xl max-w-24xl mx-auto [&_*:focus-visible]:rounded-3xl [&_*:focus-visible]:outline-offset-4"
+    class="mx-auto flex max-w-24xl flex-col gap-3xl bg-gray-50 px-xl pt-3xl pb-7xl sm:mb-xl sm:gap-5xl sm:rounded-4xl sm:px-5xl sm:py-7xl dark:bg-gray-950 [&_*:focus-visible]:rounded-3xl [&_*:focus-visible]:outline-offset-4"
   >
     <NuxtLink
       to="/"
@@ -72,7 +72,7 @@ const resourceLinks: Link[] = [
       </span>
     </NuxtLink>
 
-    <div class="flex flex-col sm:flex-row gap-3xl">
+    <div class="flex flex-col gap-3xl sm:flex-row">
       <div class="flex flex-col gap-lg sm:w-1/4">
         <BaseHeading
           is="h3"
@@ -84,7 +84,7 @@ const resourceLinks: Link[] = [
           <li
             v-for="link in productLinks"
             :key="link.href"
-            class="text-xs w-fit"
+            class="w-fit text-xs"
           >
             <NuxtLink
               :to="link.href"
@@ -112,7 +112,7 @@ const resourceLinks: Link[] = [
           <li
             v-for="link in resourceLinks"
             :key="link.href"
-            class="text-xs w-fit"
+            class="w-fit text-xs"
           >
             <NuxtLink
               :to="link.href"
@@ -130,7 +130,7 @@ const resourceLinks: Link[] = [
         </ul>
       </div>
 
-      <div class="my-lg sm:my-unset sm:ml-auto flex flex-col gap-xl">
+      <div class="my-lg flex flex-col gap-xl sm:my-unset sm:ml-auto">
         <BaseHeading
           is="h3"
           size="xxs"
@@ -169,14 +169,14 @@ const resourceLinks: Link[] = [
           </li>
         </ul>
         <BaseColormode
-          class="-ml-[1px]"
+          class="-ml-1"
         />
       </div>
     </div>
 
     <div class="flex flex-col gap-lg">
       <hr class="dark:text-gray-400">
-      <div class="flex flex-col sm:flex-row gap-xl text-xs sm:justify-between">
+      <div class="flex flex-col gap-xl text-xs sm:flex-row sm:justify-between">
         <div class="flex justify-around sm:order-2 sm:w-1/2">
           <NuxtLink
             :to="externalLink.beaconchain.imprint"

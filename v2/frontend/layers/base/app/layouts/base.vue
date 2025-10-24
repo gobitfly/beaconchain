@@ -8,7 +8,7 @@ useHead({
 </script>
 
 <template>
-  <div class="font-urbanist antialiased grid h-dvh grid-rows-[auto_1fr_auto]">
+  <div class="grid h-dvh grid-rows-[auto_1fr_auto] font-urbanist antialiased">
     <header>
       <slot name="header" />
     </header>

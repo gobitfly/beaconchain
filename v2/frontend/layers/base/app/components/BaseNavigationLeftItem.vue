@@ -6,7 +6,7 @@ defineProps<BaseNavigationItem>()
 
 <template>
   <NuxtLink
-    class="font-semibold flex gap-md items-center p-lg opacity-90 hover:opacity-95 text-sm rounded-xl"
+    class="flex items-center gap-md rounded-xl p-lg text-sm font-semibold opacity-90 hover:opacity-95"
     :to
   >
     <BaseIcon :name="icon" />

@@ -1,11 +1,11 @@
 <template>
-  <div class="py-3xl w-full">
+  <div class="w-full py-3xl">
     <BaseCard>
-      <div class="flex flex-col text-center gap-y-4xl">
+      <div class="flex flex-col gap-y-4xl text-center">
         <p class="text-xl">
           {{ $t('products.landing_page.testimonials.title') }}
         </p>
-        <div class="flex flex-wrap sm:flex-row gap-x-5xl gap-y-3xl justify-center">
+        <div class="flex flex-wrap justify-center gap-x-5xl gap-y-3xl sm:flex-row">
           <div
             v-for="i in 5"
             :key="i"
