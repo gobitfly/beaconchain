@@ -19,9 +19,9 @@ const v1Domain = useV1Domain()
 </script>
 
 <template>
-  <nav class="p-2xl isolate bg-gray-50 dark:bg-transparent">
-    <div class="max-w-8xl mx-auto grid gap-2xl [&>*]:[grid-area:1/1]">
-      <span class="flex gap-2xl items-center z-10 w-fit">
+  <nav class="isolate bg-gray-50 p-2xl dark:bg-transparent">
+    <div class="mx-auto grid max-w-8xl gap-2xl [&>*]:[grid-area:1/1]">
+      <span class="z-10 flex w-fit items-center gap-2xl">
         <BaseButtonIcon
           screenreader-text="base.common.open_navigation"
           class="sm:hidden"
@@ -31,7 +31,7 @@ const v1Domain = useV1Domain()
         />
         <NuxtLink
           to="/"
-          class="flex gap-sm p-md rounded-full w-fit"
+          class="flex w-fit gap-sm rounded-full p-md"
         >
           <BaseScreenreaderOnly screenreader-text="base.beaconchain_homepage" />
           <TheLogoMark
@@ -44,7 +44,7 @@ const v1Domain = useV1Domain()
           />
         </NuxtLink>
       </span>
-      <ul class="hidden sm:flex gap-xl justify-center">
+      <ul class="hidden justify-center gap-xl sm:flex">
         <li
           v-for="{ icon, label, to } in items"
           :key="label"

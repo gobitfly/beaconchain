@@ -16,7 +16,7 @@ defineProps<
         <BaseIcon
           name="check"
           aria-hidden="true"
-          class="shrink-0 text-lg mt-[.125rem]"
+          class="mt-[.125rem] shrink-0 text-lg"
         />
       </slot>
       <span class="">

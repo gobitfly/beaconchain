@@ -118,7 +118,7 @@ watch(selectedTab, (newValue, oldValue) => {
         <span
           v-if="index === defaultSelectedTab"
           ref="activeTabIndicator"
-          class="absolute inset-[0] activeTabIndicator z-0"
+          class="activeTabIndicator absolute inset-[0] z-0"
           aria-hidden="true"
           :class="classList?.activeTabIndicator"
         />

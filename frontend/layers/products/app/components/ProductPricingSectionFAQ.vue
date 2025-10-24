@@ -7,7 +7,7 @@ const { items } = defineProps<{
 </script>
 
 <template>
-  <div class="w-full flex flex-col gap-4xl justify-center py-8xl">
+  <div class="py-8xl flex w-full flex-col justify-center gap-4xl">
     <BaseHeading
       is="h2"
       id="staking-hub"

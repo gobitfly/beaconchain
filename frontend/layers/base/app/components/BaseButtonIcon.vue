@@ -36,10 +36,10 @@ const isButton = computed(() => !to)
     :type="isButton ? 'button' : undefined"
     :disabled="isDisabled"
     :to
-    class="border flex rounded-full bg-linear-to-b disabled:opacity-40 aria-disabled:opacity-40 active:opacity-80 size-fit"
+    class="flex size-fit rounded-full border bg-linear-to-b active:opacity-80 disabled:opacity-40 aria-disabled:opacity-40"
     :class="[
-      variant === 'secondary' && 'from-gray-300 to-gray-200 dark:from-charcoal-600 dark:to-charcoal-700 opacity-90 border-transparent',
-      variant === 'tertiary' && 'dark:border-charcoal-400 border-gray-200',
+      variant === 'secondary' && 'border-transparent from-gray-300 to-gray-200 opacity-90 dark:from-charcoal-600 dark:to-charcoal-700',
+      variant === 'tertiary' && 'border-gray-200 dark:border-charcoal-400',
       size === 'md' && 'p-md',
       size === 'lg' && 'p-md',
     ]"

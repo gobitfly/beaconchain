@@ -13,7 +13,7 @@ defineProps<BaseNavigationItem>()
 
 <template>
   <NuxtLink
-    class="font-semibold flex gap-md items-center py-sm px-md bg-linear-to-b rounded-full border border-gray-200 dark:border-transparent dark:from-charcoal-600 dark:to-charcoal-700 opacity-90 hover:opacity-95 text-sm"
+    class="flex items-center gap-md rounded-full border border-gray-200 bg-linear-to-b px-md py-sm text-sm font-semibold opacity-90 hover:opacity-95 dark:border-transparent dark:from-charcoal-600 dark:to-charcoal-700"
     :to
   >
     <BaseIcon :name="icon" />
