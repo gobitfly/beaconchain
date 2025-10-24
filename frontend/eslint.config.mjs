@@ -4,6 +4,8 @@ import perfectionist from 'eslint-plugin-perfectionist'
 import stylistic from '@stylistic/eslint-plugin'
 import eslintPluginJsonc from 'eslint-plugin-jsonc'
 
+import tailwindcss from 'eslint-plugin-tailwindcss'
+
 import withNuxt from './.nuxt/eslint.config.mjs'
 
 export default withNuxt({
@@ -123,6 +125,25 @@ export default withNuxt({
       },
     },
   )
+  .append({
+    files: [ 'layers/**/*.vue' ],
+    plugins: { tailwindcss },
+    rules: {
+      'tailwindcss/classnames-order': [ 'error' ],
+      'tailwindcss/enforces-negative-arbitrary-values': [ 'error' ],
+      'tailwindcss/enforces-shorthand': [ 'error' ],
+      'tailwindcss/no-contradicting-classname': [ 'error' ],
+      'tailwindcss/no-unnecessary-arbitrary-value': [ 'error' ],
+      //  the goal should be that we enable these one day
+      // 'tailwindcss/no-arbitrary-value': [ 'error' ],
+      // 'tailwindcss/no-custom-classname': [ 'error' ],
+    },
+    settings: {
+      tailwindcss: {
+        config: new URL('./layers/base/app/assets/css/main.css', import.meta.url).pathname,
+      },
+    },
+  })
   .append(
     ...eslintPluginJsonc.configs['flat/recommended-with-json'],
     {
