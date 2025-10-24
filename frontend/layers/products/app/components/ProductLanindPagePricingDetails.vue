@@ -44,7 +44,7 @@ const { t: $t } = useTranslation()
         </template>
       </div>
     </section>
-    <section class="w-[1px] bg-gray-600 dark:bg-gray-200" />
+    <section class="w-px bg-gray-600 dark:bg-gray-200" />
     <section
       class="my-md"
     >

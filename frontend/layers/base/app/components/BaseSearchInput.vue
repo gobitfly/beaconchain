@@ -168,8 +168,6 @@ const idSearchInput = useId()
                 :value="JSON.stringify(result)"
                 class="px-2xl py-md  font-semibold data-highlighted:bg-gray-100 dark:data-highlighted:bg-gray-900"
               >
-                @select.prevent
-                >
                 <slot
                   name="result-item"
                   :result
