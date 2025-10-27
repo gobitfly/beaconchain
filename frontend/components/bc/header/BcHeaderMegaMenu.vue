@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MenuItem } from 'primevue/menuitem'
+import type { IconName } from '~/layers/base/app/components/BaseIcon.vue'
 
 import {
   mobileHeaderThreshold, smallHeaderThreshold,
@@ -29,35 +30,64 @@ const items = computed(() => {
 
   list = [
     {
+      items: [ [ {
+        items: [
+          {
+            icon: 'key-filled',
+            label: $t('header.megamenu.api_key_management'),
+            url: `${v1Domain}/user/settings#api`,
+          },
+          {
+            icon: 'book-filled',
+            label: $t('header.megamenu.api_docs'),
+            url: `${v1Domain}/api/v1/docs`,
+          },
+          {
+            icon: 'coins',
+            label: $t('header.megamenu.api_pricing'),
+            url: `${v1Domain}/pricing`,
+          },
+        ],
+      } ] ],
+      label: $t('products.api.name'),
+      root: true,
+    },
+    {
       label: $t('header.megamenu.dashboard'),
+      root: true,
       url: '/dashboard',
     },
     {
       label: $t('header.megamenu.explorer'),
+      root: true,
       url: `${v1Domain}`,
-
     },
     {
       label: $t('header.megamenu.premium'),
+      root: true,
       url: '/premium',
     },
     ...(hasV1Notifications.value
       ? [
           {
             label: $t('header.megamenu.notifications_v1'),
+            root: true,
             url: `${v1Domain}/user/notifications`,
           },
           {
             label: $t('header.megamenu.notifications_v2'),
+            root: true,
             url: '/notifications',
           },
         ]
       : [ {
           label: $t('header.megamenu.notifications'),
+          root: true,
           url: '/notifications',
         } ]
     ),
   ]
+
   if (isMobile.value) {
     if (isLoggedIn.value) {
       list.push({
@@ -98,44 +128,53 @@ defineExpose({
       :breakpoint
     >
       <template #item="{ item }">
-        <span class="p-menuitem-link">
-          <BcLink
-            v-if="item.url"
-            :to="item.url"
-            :replace="route.path.startsWith(item.url)"
-          >
-            <span
-              :class="[item.class]"
-              class="p-menuitem-text"
-            >
-              <span>{{ item.label }}</span>
-            </span>
-          </BcLink>
-          <div
-            v-else
-            class="pointer p-menuitem-text"
+        <BcLink
+          v-if="item.root && item.url"
+          class="p-menuitem-link"
+          :to="item.url"
+          :replace="route.path.startsWith(item.url)"
+        >
+          <span
             :class="[item.class]"
-            @click="item.command?.(null as any)"
+            class="p-menuitem-text"
           >
-            {{ item.label }}
-          </div>
-        </span>
+            <span>{{ item.label }}</span>
+          </span>
+        </BcLink>
+
+        <BcButton
+          v-else-if="item.root"
+          :class="[item.class, 'bc-header-mega-menu__item-button']"
+          @click="item.command?.(null as any)"
+        >
+          {{ item.label }}
+          <template #icon>
+            <BaseIcon
+              name="chevron-down"
+            />
+          </template>
+        </BcButton>
+
+        <BcLink
+          v-else-if="item.url"
+          :to="item.url"
+          :replace="route.path.startsWith(item.url)"
+          class="p-menuitem-link"
+        >
+          <BaseIcon
+            :name="item.icon as IconName"
+          />
+          <span
+            :class="[item.class]"
+            class="p-menuitem-text"
+          >
+            <span>{{ item.label }}</span>
+          </span>
+        </BcLink>
       </template>
     </PvMegaMenu>
   </ClientOnly>
 </template>
 
 <style lang="scss" scoped>
-.iconSpacing {
-  width: 25px;
-  position: relative;
-
-  img,
-  svg,
-  i {
-    position: absolute;
-    transform: translateY(-50%);
-    max-width: 16px;
-  }
-}
 </style>

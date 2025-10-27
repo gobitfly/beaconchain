@@ -644,8 +644,9 @@
         "login": "Log in",
         "logout": "Log out",
         "megamenu": {
-            "api_docs": "API Docs",
-            "api_pricing": "API Pricing",
+            "api_docs": "Docs",
+            "api_key_management": "Get API Key",
+            "api_pricing": "Pricing",
             "beaconchain_app": "Beaconchain App",
             "beaconchain_premium": "Beaconchain Premium",
             "block_viz": "Block Viz",
