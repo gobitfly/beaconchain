@@ -86,6 +86,7 @@ func Run(
 
 	apiService, _ := InitDependencies(chainConfigs, userRepo, ethereumNetworkRepo, validatorRepo)
 
+	// Base mux for OpenAPI routes (do NOT register /healthz here)
 	mux := http.NewServeMux()
 
 	hStrict := model.NewStrictHandlerWithOptions(apiService, nil, model.StrictHTTPServerOptions{
@@ -124,14 +125,18 @@ func Run(
 	// since the middleware sets the default values directly on the request var
 	h = validationMiddleware(h)
 
+	// Health handlers (kept fast and outside OpenAPI)
 	healthHandler := apputils.InitHealthHandler(&dataSources)
-	mux.HandleFunc("/healthz", healthHandler.ServeHealth)
-	mux.HandleFunc("/readyz", healthHandler.ServeReady)
-	// serveSwaggerStatics(mux)
 
+	// Root mux that serves health endpoints directly and forwards everything else to the OpenAPI handler
 	go func() {
+		rootMux := http.NewServeMux()
+		rootMux.Handle("/healthz", http.HandlerFunc(healthHandler.ServeHealth))
+		rootMux.Handle("/readyz", http.HandlerFunc(healthHandler.ServeReady))
+		rootMux.Handle("/", h) // all other routes go through OpenAPI validation/router
+
 		s := &http.Server{
-			Handler:           h,
+			Handler:           rootMux,
 			Addr:              fmt.Sprintf(":%s", config.HttpPort),
 			ReadHeaderTimeout: 5 * time.Second,
 			IdleTimeout:       120 * time.Second,
