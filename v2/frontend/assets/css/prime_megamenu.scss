@@ -3,6 +3,7 @@
     background: var(--container-background);
     user-select: none;
     z-index: 1; // without this, the menu keeps a very high z-index when it is open in mobile mode and then the window is enlarged (the change of mode closes the menu but does not reset its z-index, so the menu bar floats above the search bar)
+    margin-right: -.75rem; // keep items' text right-aligned to page while showing consistent outline padding on focus
 
     .p-megamenu-root-list:focus {
       outline: none;
@@ -14,56 +15,59 @@
       }
     }
 
+    .p-megamenu-item>.p-megamenu-item-content {
+      color: var(--megamenu-text-color)
+    }
+
+    .p-megamenu-item {
+      padding: var(--padding-small);
+    }
+
     .p-megamenu-item>.p-megamenu-item-content .p-menuitem-link {
+      --outline-width: var(--padding-tiny);
+      --outline-offset: var(--padding-tiny);
       display: flex;
       align-items: center;
-      padding: 0 16px;
+      border-radius: var(--border-radius);
+      padding: var(--padding-small) .75rem;
+      gap: var(--padding);
 
-      >a,
-      >div {
-        flex-grow: 1;
-        padding: 12px 0;
-        display: flex;
-        align-items: center;
-
-        .p-menuitem-text {
-          flex-grow: 1;
-        }
+      &:focus-visible {
+        outline: var(--outline-width) solid var(--blue-500);
+        outline-offset: var(--outline-offset);
       }
     }
 
-    .p-megamenu-item:not(.orange-box)>.p-megamenu-item-content .p-menuitem-link {
-
-      .p-menuitem-text,
-      .p-menuitem-icon {
-        color: var(--text-color);
-        white-space: nowrap;
-      }
-    }
-
-    .p-megamenu-item:not(.p-highlight):not(.p-disabled)>.p-megamenu-item-content:hover {
+    .p-megamenu-submenu>.p-megamenu-item:not(.p-highlight):not(.p-disabled):hover {
       background: var(--megamenu-hover-color);
     }
 
     .p-megamenu-overlay {
       background: var(--megamenu-panel-color);
-      min-width: fit-content;
-      right: 0;
-      left: auto;
-      top: calc(var(--navbar2-height) - 7px);
+      background-color: transparent;
+      width: fit-content;
+      pointer-events: none;
       border-radius: var(--border-radius);
     }
 
-    .p-megamenu-submenu-label {
-      margin: 0;
-      padding: 12px 20px;
-      color: var(--text-color);
-      font-weight: var(--big_text_label_font_weight);
-      font-size: var(--big_text_label_font_size);
+    .p-megamenu-submenu {
+      margin-top: var(--padding-tiny);
+      padding: var(--padding) var(--padding-small) var(--padding) var(--padding-small);
+      background-color: var(--background-color);
+      border: 1px solid var(--container-border-color);
+      border-radius: var(--border-radius);
+      font-weight: var(--standard_text_font_weight);
+      pointer-events: auto;
+
+      .p-megamenu-item {
+        position: relative;
+        border-radius: var(--border-radius);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
     }
 
     .p-megamenu-submenu {
-      padding: 8px 0;
       min-width: fit-content;
     }
 
@@ -76,37 +80,26 @@
             color: var(--megamenu-text-color);
           }
         }
+      }
+    }
 
-        .p-megamenu-root-list>.p-megamenu-item {
-          &:last-child {
-            >.p-megamenu-item-content .p-menuitem-link {
-              padding-right: 0;
-            }
-          }
-        }
+    &:not(.p-megamenu-mobile) {
+      .p-megamenu-overlay {
 
-        >.p-megamenu-item {
-          &:last-child {
-            >.p-megamenu-item-content .p-menuitem-link {
-              padding-right: 0;
-            }
-          }
+        .p-megamenu-col-2,
+        .p-megamenu-col-3,
+        .p-megamenu-col-12 {
+          width: fit-content;
         }
       }
 
-      .p-megamenu-root-list {
-        >.p-megamenu-item {
-          >.p-megamenu-item-content .p-menuitem-link .p-submenu-icon {
-            margin-left: 8px;
-          }
-
-          &:not(.p-highlight):not(.p-disabled)>.p-megamenu-item-content:hover {
-            background: var(--container-background);
-
-            .p-menuitem-link>.p-menuitem-text {
-              opacity: 0.8;
-            }
-          }
+      .p-megamenu-item {
+        .bc-header-mega-menu__item-button {
+          font-size: 1rem;
+          padding: var(--padding-small);
+          height: unset;
+          margin: 0;
+          margin-right: var(--padding);
         }
       }
     }
@@ -115,7 +108,7 @@
       width: 100%;
       align-items: flex-end;
       flex-direction: column;
-      padding: 0;
+      padding-top: var(--padding);
 
       .p-megamenu-button {
         opacity: 0;
@@ -135,7 +128,6 @@
         position: static;
         border-radius: 8px;
         padding: 0 var(--padding);
-        margin: var(--padding-small);
       }
 
       .p-megamenu-root-list>.p-megamenu-item>.p-megamenu-item-content .p-menuitem-link {
@@ -146,43 +138,15 @@
           color: var(--text-color);
         }
       }
-    }
 
-    &:not(.p-megamenu-mobile) {
-      .p-megamenu-overlay {
-
-        .p-megamenu-col-2,
-        .p-megamenu-col-3,
-        .p-megamenu-col-12 {
-          width: fit-content;
-        }
-      }
-    }
-
-    .p-megamenu-overlay {
-
-      .p-megamenu-col-2,
-      .p-megamenu-col-3,
-      .p-megamenu-col-12 {
-        padding: 0;
-      }
-    }
-
-    .p-megamenu-item {
-      &.orange-box {
-        .p-menuitem-link {
-          background-color: var(--primary-orange);
-          border-radius: var(--border-radius);
-
-          .p-menuitem-text {
-            color: var(--text-color-inverted);
-            white-space: nowrap;
-          }
-
-          &:hover {
-            background-color: var(--primary-orange-hover);
-          }
-        }
+      .bc-header-mega-menu__item-button {
+        display: flex;
+        font-size: 1rem;
+        padding: var(--padding-small) .75rem;
+        height: unset;
+        width: 100%;
+        margin: 0;
+        justify-content: space-between;
       }
     }
   }
