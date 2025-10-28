@@ -18,7 +18,6 @@ type sliceToMapTestCase[T comparable] struct {
 func runSliceToMapTests[T comparable](t *testing.T, testCases []sliceToMapTestCase[T]) {
 	for _, tc := range testCases {
 		// Capture tc to avoid issues with the loop variable in parallel tests.
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			result := SliceToMap(tc.input)
 			assert.True(t, maps.Equal(tc.expected, result))

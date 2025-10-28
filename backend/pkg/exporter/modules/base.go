@@ -173,7 +173,6 @@ func startSubscriptionModules(moduleCtx *ModuleContext, modules []ModuleInterfac
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
 	for _, module := range modules {
-		module := module
 		goPool.Go(func() error {
 			start := time.Now()
 			r := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)

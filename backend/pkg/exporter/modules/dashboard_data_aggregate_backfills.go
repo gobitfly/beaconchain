@@ -38,7 +38,6 @@ func (d *dashboardData) aggregateBackfillTask() {
 		// fork for every backfill we have to do
 		backfillType := backfillType
 		for _, aggregateType := range aggregates {
-			aggregateType := aggregateType
 			fields := log.Fields{
 				"backfillType":  backfillType,
 				"aggregateType": aggregateType,
@@ -109,8 +108,6 @@ func (d *dashboardData) backfillAggregates(t edb.AggregateBackfillType, a edb.Ag
 	eg := &errgroup.Group{}
 	eg.SetLimit(int(utils.Config.DashboardExporter.AggregateBackfillsIncompleteInParallel))
 	for id, batch := range batches {
-		batch := batch
-		id := id
 		eg.Go(func() (err error) {
 			//d.log.InfoWithFields("doing backfill batch %s", id)
 			d.log.InfoWithFields(log.Fields{"backfillType": t, "backfillBatchId": id, "timestampRange": []time.Time{batch[0].Timestamp, batch[len(batch)-1].Timestamp}}, "doing aggregate backfill batch")

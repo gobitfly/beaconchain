@@ -133,8 +133,6 @@ func Init(chainId uint64, eth1Endpoint, mainCurrencyParam, clCurrencyParam, elCu
 func updatePrices() {
 	g := &errgroup.Group{}
 	for pair, feed := range feeds {
-		pair := pair
-		feed := feed
 		g.Go(func() error {
 			price, err := getPriceFromFeed(feed)
 			if err != nil {
