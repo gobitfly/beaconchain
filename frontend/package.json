@@ -62,7 +62,7 @@
         "tests-landing-page-hoodi": "ENV=hoodi.staging npx playwright test --config=tests/playwright.config.ts --grep @landing-page --ui",
         "tests-landing-page-mainnet": "ENV=mainnet.staging npx playwright test --config=tests/playwright.config.ts --grep @landing-page --ui",
         "typecheck": "npx nuxi typecheck",
-        "validate": "npm run lint:fix && npm run typecheck"    
+        "validate": "npm run lint:fix && npm run typecheck"
     },
     "type": "module",
     "workspaces": [
