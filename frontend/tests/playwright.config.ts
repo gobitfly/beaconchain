@@ -1,28 +1,31 @@
 import path from 'path'
-import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import {
   defineConfig, devices,
 } from '@playwright/test'
-import type { ConfigOptions } from '@nuxt/test-utils/playwright'
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') })
+const envName = process.env.ENV || 'local'
+const envFile = `.env.${envName}`
+dotenv.config({ path: path.resolve(process.cwd(), 'tests', envFile) })
 
-export default defineConfig<ConfigOptions>({
+console.log(`✅ Running Playwright with environment: ${envName}`)
+console.log(`📄 Loaded env file: ${envFile}`)
+console.log(`🌍 Base URL: ${process.env.URL}`)
+
+export default defineConfig({
   outputDir: './results',
   projects: [ {
     name: 'chromium',
     use: {
-      ...devices['Desktop Chrome'], channel: 'chromium',
+      ...devices['Desktop Chrome'],
+      channel: 'chromium',
     },
   } ],
-  testMatch: '**/*.spec.ts',
-  timeout: 300000,
+  retries: 3,
+  testMatch: [ '**/*.spec.ts' ],
+  timeout: 20000,
   use: {
-    baseURL: process.env.NUXT_PUBLIC_DOMAIN,
+    baseURL: process.env.URL,
     ignoreHTTPSErrors: true,
-    nuxt: {
-      rootDir: fileURLToPath(new URL('.', import.meta.url)),
-    },
   },
 })
