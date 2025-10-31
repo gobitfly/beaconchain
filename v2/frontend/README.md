@@ -1,16 +1,16 @@
 # Beaconcha.in Good to know
 
-## Usefull VSC Plugins
+## Useful VSC Plugins
 
 - Nuxtr
 - EsLint
-- Prettier -COde Formatter
-- TypeScript Vue Plugin (Volar)
-- Vue language Features (Volar)
+- Tailwind CSS IntelliSense
+- GitLens
+- Conventional Commits
 
-# Nuxt 3 Minimal Starter
+# Nuxt 4 Minimal Starter
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more about this framework.
+Look at the [Nuxt 4 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more about this framework.
 
 ## Setup
 
