@@ -1,0 +1,41 @@
+name: Static Check
+
+on:
+  push:
+    branches:
+      - master
+      - staging
+  pull_request:
+    branches:
+      - staging
+      - master
+
+jobs:
+  ci:
+    name: "Run CI"
+    runs-on: "ubuntu-latest"
+    steps:
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v3
+    - name: Set up Go 1.23
+      uses: actions/setup-go@v4
+      with:
+        go-version-file: './go.mod'
+      id: go
+    - name: Get dependencies
+      run: |
+        go get -v -t -d ./...
+    - name: Setup Node.js 24.x
+      uses: actions/setup-node@v6
+      with:
+        node-version: '24'
+        cache: 'npm'
+    - name: Install JS dependencies
+      run: npm ci
+    - run: make all				
+    - run: "go test ./..."
+    - run: "go vet ./..."
+    - uses: dominikh/staticcheck-action@v1.3.1
+      with:
+        version: "2025.1" # see https://github.com/dominikh/go-tools/releases
+        install-go: false

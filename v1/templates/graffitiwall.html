@@ -1,0 +1,134 @@
+{{ define "js" }}
+  <script type="text/javascript">
+    var pixels = {{.}}
+    function drawGraffiti() {
+      document.getElementById("nsfwWarning").classList.add("d-none")
+      var c = document.getElementById("graffitiwall")
+      var ctx = c.getContext("2d")
+      ctx.fillStyle = "#FFFFFF"
+
+      ctx.fillRect(0, 0, 999, 1099)
+
+      ctx.fillStyle = "#000000"
+      ctx.font = "15px Arial"
+      ctx.fillText("by beaconcha.in", 875, 1030)
+
+      ctx.beginPath()
+      ctx.moveTo(0, 1000)
+      ctx.lineTo(999, 1000)
+      ctx.stroke()
+
+      if (pixels !== null) {
+        pixels.forEach(function (p) {
+          ctx.fillStyle = "#" + p.color
+          ctx.fillRect(p.x, p.y, 1, 1)
+        })
+      }
+    }
+
+    if (document.cookie.indexOf("graffiti=accepted") != -1) {
+      drawGraffiti()
+    } else {
+      document.getElementById("nsfwWarning").classList.remove("d-none")
+    }
+
+    function acceptNSFW() {
+      document.cookie = "graffiti=accepted;expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/"
+      drawGraffiti()
+    }
+  </script>
+{{ end }}
+
+{{ define "css" }}
+  <style>
+    #graffitiwallContainer {
+      position: relative;
+    }
+    #nsfwWarning {
+      display: flex;
+      left: 0;
+      right: 0;
+      top: 0;
+    }
+  </style>
+{{ end }}
+
+{{ define "content" }}
+  <div class="container mt-2">
+    <div class="my-3">
+      <div class="d-md-flex py-2 justify-content-md-between">
+        <h1 class="h4 mb-1 mb-md-0"><i class="fas fa-paint-brush"></i> The Graffitiwall - Draw your stake!</h1>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb font-size-1 mb-0" style="padding:0; background-color:transparent;">
+            <li class="breadcrumb-item"><a href="/" title="Home">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Graffitiwall</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+    <div id="r-banner" info="{{ .Meta.Templates }}"></div>
+    <div class="row">
+      <div class="col-md-12">
+        <div class="accordion">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="h6">
+                <a data-toggle="collapse" href="#collapse1">Want to participate?</a>
+              </h2>
+            </div>
+            <div id="collapse1" class="collapse">
+              <div class="card-body">
+                In order to draw on the graffitiwall you will need to adjust the graffiti value your validator assigns to each proposed block.<br />
+                There are 2 different formats you can use:
+                <ul>
+                  <li>
+                    The simple one: <code>graffitiwall:<b>x</b>:<b>y</b>:<b>#cccccc</b></code>
+                    <ul>
+                      <li>
+                        <code><b>x</b></code> and <code><b>y</b></code> are the coordinates of the pixel you want to draw. These coordinates need to be within 0 and 999.<br />
+                        The <code><b>x</b></code> and <code><b>y</b></code> coordinates start at 0.<br />
+                        <code><b>x</b></code> = 0 and <code><b>y</b></code> = 0 starts in the upper left corner.
+                      </li>
+                      <li>
+                        <code><b>cccccc</b></code> is the hexadecimal representation of the color you want to draw.
+                      </li>
+                      <li>
+                        <b>Example:</b>
+                        <code>graffitiwall:<b>50</b>:<b>60</b>:<b>#efefef</b></code> will draw a pixel at position x=50, y=60 with the color #efefef.
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    The compact one: <code>gw:<b>xxxyyycccccc</b></code>
+                    <ul>
+                      <li>
+                        This version is small enough for you to add your own message next to it.<br />
+                        Some valid examples: <code>RP-N v1.0.0 (<b>gw:050060efefef</b>)</code> or <code><b>gw:050060efefef</b> | Hello World!</code>
+                      </li>
+                      <li>Coordinates have to be padded with leading zeros to make sure they are always 3 digits long.</li>
+                      <li>
+                        <b>Example:</b>
+                        <code>gw:<b>050</b><b>060</b><b>efefef</b></code> will draw a pixel at position x=50, y=60 with the color #efefef.
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+                Pixels can be overwritten and only the most recent value will be shown. The total canvas size is 1000x1000 pixels.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <br />
+    <div class="row">
+      <div class="col-md-12 text-center" id="graffitiwallContainer">
+        <canvas id="graffitiwall" width="1000" height="1050" style="image-rendering:pixelated;"></canvas>
+        <div id="nsfwWarning" class="mt-5 d-none flex-column align-items-center position-absolute hidden">
+          <h4>Warning: This canvas is unmoderated and may contain NSFW content. Do you want to continue?</h4>
+          <div class="btn btn-primary btn-sm d-flex mt-2 text-white" onclick="acceptNSFW()">Accept</div>
+        </div>
+      </div>
+    </div>
+  </div>
+{{ end }}

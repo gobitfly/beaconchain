@@ -1,0 +1,156 @@
+{{ define "js" }}
+  <script src="/js/highcharts/v14/highcharts.min.js"></script>
+  <script src="/js/highcharts/v14/modules/treemap.min.js"></script>
+  <script src="/js/highcharts/v14/modules/heatmap.min.js"></script>
+  <script src="/js/highcharts/v14/modules/accessibility.min.js"></script>
+  <script src="/js/vue.min.js"></script>
+  <script src="/js/highcharts/highcharts-global-options.js"></script>
+  <script src="/js/highcharts/v14/highcharts-extensions.min.js"></script>
+  <script src="/js/treemap.js"></script>
+
+  <!-- <script type="text/javascript" src="js/slick.min.js"></script> -->
+  <!-- <script type="text/javascript" src="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script> -->
+
+  {{ if .GenesisPeriod }}
+    <script src="/js/d3.min.js"></script>
+  {{ end }}
+    <script>
+        var creditsEnabled = {{ if  .SlotVizData }} false {{ else }} true {{ end }}
+        var app = new Vue({
+            el: '#app',
+            delimiters: ['${', '}'], // Standard vuejs template syntax conflicts with golang template syntax
+            data: function () {
+                return {
+                    checklist: [
+                        {epoch: 0, participation: 0.3,},
+                        {epoch: 1, participation: 0.3,},
+                        {epoch: 1, participation: 0.3,}
+                    ],
+                    windowWidth: window.innerWidth,
+                    updateIn: -1,
+                    page: {{.}},
+                }
+            },
+            computed: {
+                participation: function () {
+                    if (this.page && this.page.epochs && this.page.epochs.length && this.page.epochs[0].globalparticipationrate !== 0) {
+                        return Math.round(this.page.epochs[0].globalparticipationrate * 1000) / 1000
+                    } else if (this.page && this.page.epochs && this.page.epochs.length > 1) {
+                        return Math.round(this.page.epochs[1].globalparticipationrate * 1000) / 1000
+                    } else {
+                        return 0
+                    }
+                },
+                scheduledCount: function () {
+                    return this.page.scheduled_count
+                },
+                epochCompletePercent: function () {
+                    return ((32 - this.page.scheduled_count) / 32) * 100
+                }
+            },
+            filters: {
+                fromNow(date) {
+                    return getRelativeTime(luxon.DateTime.fromISO(date));
+                },
+                timestampTooltip(date){
+                    return formatTimestampsTooltip(luxon.DateTime.fromISO(date))
+                }
+            },
+            created: function () {
+                this.tick();
+                setInterval(function () {
+                    this.tick();
+                }.bind(this), 1000);
+            },
+            methods: {
+                tick: function () {
+                    if (this.updateIn <= 0) {
+                        $.getJSON('/index/data', function (response) {
+                            this.page = response;
+                        }.bind(this));
+                        this.updateIn = 5;
+                    } else {
+                        this.updateIn--;
+                    }
+                }
+            },
+            mounted() {
+                this.$nextTick(() => {
+                    window.addEventListener('resize', () => {
+                        this.windowWidth = window.innerWidth
+                    })
+                })
+            }
+        })
+</script>
+{{ end }}
+
+{{ define "css" }}
+
+  <!-- <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+    <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick-theme.css"/> -->
+
+  {{ if .GenesisPeriod }}
+    <link rel="stylesheet" href="/css/checklist.css" />
+    <link rel="stylesheet" href="/css/rocket.css" />
+  {{ end }}
+
+
+  <style>
+    #slotsViz > svg {
+      overflow: visible;
+    }
+    svg rect[slot],
+    svg rect[epoch] {
+      cursor: pointer;
+    }
+  </style>
+
+  <style>
+    @media (max-width: 960px) {
+      .index-stats {
+        font-size: 0.9rem;
+      }
+
+      .index-stats h5,
+      .card-title {
+        font-size: 1rem !important;
+      }
+    }
+
+    [v-cloak] {
+      visibility: hidden;
+    }
+
+    .responsive-border-right {
+      border-right-color: rgb(222, 226, 230);
+      border-right-style: solid;
+      border-right-width: 1px;
+    }
+
+    @media (max-width: 767px) {
+      .responsive-border-right-l {
+        border: hidden;
+      }
+    }
+  </style>
+{{ end }}
+
+{{ define "content" }}
+  <div class="container mt-2">
+    <div id="app" v-cloak>
+      {{ with .Data }}
+        {{ template "apiBanner" . }}
+      {{ end }}
+      <div id="r-banner" info="{{ .Meta.Templates }}"></div>
+      {{ if and (not .Data.Genesis) (not .Data.GenesisPeriod) }}
+        {{ template "preGenesis" $ }}
+      {{ else if .Data.GenesisPeriod }}
+        {{ template "genesis" . }}
+      {{ else }}
+        {{ template "postGenesis" .Data }}
+      {{ end }}
+    </div>
+  </div>
+  {{ if .Data.SlotVizData }}{{ template "SlotViz" . }}{{ end }}
+{{ end }}

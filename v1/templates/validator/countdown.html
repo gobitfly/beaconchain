@@ -1,0 +1,68 @@
+{{ define "validatorCountdown" }}
+<script>
+	function setTime(secondsLeft) {
+  		let [seconds, minutes, hours, days] = [0, 0, 0, 0];
+  		if (secondsLeft > 0) {
+  		  const duration = luxon.Duration.fromMillis(secondsLeft * 1000).shiftTo("days", "hours", "minutes", "seconds")
+
+  		  seconds = duration.seconds
+  		  minutes = duration.minutes
+  		  hours = duration.hours
+  		  days = duration.days
+  		}
+
+  		if (seconds < 10) {
+  		  seconds = "0" + seconds
+  		}
+  		if (minutes < 10) {
+  		  minutes = "0" + minutes
+  		}
+  		if (hours < 10) {
+  		  hours = "0" + hours
+  		}
+  		if (days < 10) {
+  		  days = "0" + days
+  		}
+
+		$('#clock').html(days+' days '+ hours + ' hr ' + minutes + ' min ' + seconds + ' sec')
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		var rocket = {{ ne .Status "deposited" }}
+		{{ if not .EstimatedActivationTs.IsZero}}
+			var genesis = {{ .EstimatedActivationTs.Unix }}
+		{{ else }}
+			var genesis = {{ .ActivationTs.Unix }}
+		{{ end }}
+		{{ if and (not .PendingDepositAboveMinActivation) (not .EstimatedIndexTs.IsZero) }}
+			genesis = {{ .EstimatedIndexTs.Unix }}
+			rocket = false
+		{{ end }}
+
+		var now = Math.round((new Date()).getTime() / 1000)
+		var secondsLeft = genesis - now
+		setTime(secondsLeft)
+		// $('#estimated+span').removeClass('d-none')
+		var countdownInterval = setInterval(function () {
+			if (secondsLeft<= 0 && rocket) {
+				clearInterval(countdownInterval)
+				$('#rocket').removeClass('d-none')
+				return
+			}
+
+			secondsLeft -= 1
+			setTime(secondsLeft)
+		}, 1000)
+	})
+</script>
+  <div class="position-relative d-flex justify-content-center">
+    {{ template "rocket" }}
+    <div style="max-width: 300px;" id="countdown" class="d-flex flex-column justify-content-center">
+      <div class="align-self-center text-center">
+        <div>
+          <strong id="clock"> </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+{{ end }}

@@ -1,0 +1,52 @@
+<!-- DEPRECATED, NOT USED ANYMORE -->
+{{ define "block_transactions" }}
+  {{ range $i, $transaction := .Transactions }}
+    <div class="card my-2">
+      <div class="card-body px-0 py-1">
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-12 text-center"><b>Transaction {{ $i }}</b></div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Transaction hash">Transaction hash:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            <a href="/tx/0x{{ printf "%x" $transaction.TxHash }}">0x{{ printf "%x" $transaction.TxHash }}</a>
+          </div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Transaction Sender">From:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            0x{{ printf "%x" $transaction.Sender }}
+          </div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Transaction Recipient">To:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            0x{{ printf "%x" $transaction.Recipient }}
+          </div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Sender Account Nonce">Nonce:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            {{ $transaction.AccountNonce }}
+          </div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Gas Limit">Gas Limit:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            {{ $transaction.GasLimit }}
+          </div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Transaction value">Amount:</span></div>
+          <div class="col-md-10 text-monospace text-break">{{ $transaction.AmountPretty }} ETH</div>
+        </div>
+        <div class="row border-bottom p-1 mx-0">
+          <div class="col-md-2"><span data-toggle="tooltip" data-placement="top" title="Transaction payload">Payload:</span></div>
+          <div class="col-md-10 text-monospace text-break">
+            0x{{ printf "%x" $transaction.Payload }}
+          </div>
+        </div>
+      </div>
+    </div>
+  {{ end }}
+{{ end }}

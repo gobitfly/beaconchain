@@ -1,0 +1,767 @@
+{{ define "js" }}
+  <script type="text/javascript" src="/js/datatables.min.js"></script>
+  <script type="text/javascript" src="/js/datatable_input.js"></script>
+  <script type="text/javascript" src="/js/datatable_loader.js"></script>
+  <script src="/js/highcharts/v14/highcharts.min.js"></script>
+  <script src="/js/highcharts/v14/modules/accessibility.min.js"></script>
+  <script src="/js/highcharts/highcharts-global-options.js"></script>
+  <script>
+    ;(function () {
+      function renderEfficiencyChart() {
+        const containerId = "efficiency-chart"
+        const el = document.getElementById(containerId)
+        if (!el || typeof Highcharts === "undefined") return
+
+        // build points from hidden DOM to avoid inline template in JS
+        const container = document.getElementById("efficiency-series")
+        const spans = container ? Array.from(container.querySelectorAll("span[data-ts][data-val]")) : []
+        const rawPoints = spans.map(function (s) {
+          return [parseInt(s.getAttribute("data-ts")), parseFloat(s.getAttribute("data-val"))]
+        })
+        if (rawPoints.length === 0) {
+          el.innerHTML = '<div class="text-muted">No data</div>'
+          return
+        }
+        // Clamp values to [0,1] and compute dynamic bounds
+        var yMinVal = 1,
+          yMaxVal = 0
+        const clampedPoints = rawPoints.map(function (p) {
+          var y = Math.max(0, Math.min(1, p[1]))
+          if (y < yMinVal) yMinVal = y
+          if (y > yMaxVal) yMaxVal = y
+          return [p[0], y]
+        })
+        var range = yMaxVal - yMinVal
+        if (!isFinite(range) || range <= 0) {
+          range = 0.01
+        }
+        var padding = range * 0.1
+        var yMin = Math.max(0, yMinVal - padding)
+        var yMax = 1 // always include 100% as reference and never exceed it
+
+        Highcharts.chart(containerId, {
+          chart: { type: "line", zoomType: "x" },
+          title: { text: "BeaconScore ({{ .Period }})", style: { color: "var(--font-color)" } },
+          xAxis: { type: "datetime", labels: { style: { color: "var(--font-color)" } } },
+          yAxis: {
+            title: { text: "BeaconScore", style: { color: "var(--font-color)" } },
+            labels: {
+              formatter: function () {
+                return (this.value * 100).toFixed(2) + "%"
+              },
+              style: { color: "var(--font-color)" },
+            },
+            min: yMin,
+            max: yMax,
+            plotLines: [
+              {
+                value: 1,
+                color: "var(--secondary-font-color)",
+                dashStyle: "ShortDash",
+                width: 1,
+                zIndex: 3,
+                label: { text: "100%", align: "right", x: 0, style: { color: "var(--secondary-font-color)" } },
+              },
+            ],
+          },
+          tooltip: {
+            xDateFormat: "%e %b, %H:%M",
+            valueDecimals: 4,
+            pointFormatter: function () {
+              return '<span style="color:' + this.color + '">●</span> ' + (this.y * 100).toFixed(2) + "%<br/>"
+            },
+          },
+          legend: { enabled: false },
+          series: [{ name: "Efficiency", data: clampedPoints, color: "#2ecc71", lineWidth: 2 }],
+          credits: { enabled: false },
+        })
+      }
+
+      document.addEventListener("DOMContentLoaded", renderEfficiencyChart)
+    })()
+  </script>
+  <script>
+    ;(function () {
+      function formatNumber(value) {
+        try {
+          return Number(value).toLocaleString(undefined)
+        } catch (e) {
+          return String(value)
+        }
+      }
+
+      function setActivityMode(percentMode) {
+        var pairNodes = document.querySelectorAll(".activity-pair")
+        var missedNodes = document.querySelectorAll(".activity-missed")
+        var sepNodes = document.querySelectorAll(".activity-sep")
+        var labelNodes = document.querySelectorAll(".activity-label")
+
+        if (pairNodes) {
+          pairNodes.forEach(function (el) {
+            var observed = parseFloat(el.getAttribute("data-observed") || "0")
+            var scheduled = parseFloat(el.getAttribute("data-scheduled") || "0")
+            if (percentMode) {
+              if (scheduled > 0) {
+                var pct = (observed / scheduled) * 100
+                el.textContent = pct.toFixed(2) + "%"
+              } else {
+                el.textContent = "-"
+              }
+            } else {
+              el.textContent = formatNumber(observed)
+            }
+          })
+        }
+
+        if (missedNodes) {
+          missedNodes.forEach(function (el) {
+            var scheduled = parseFloat(el.getAttribute("data-scheduled") || "0")
+            var proposed = parseFloat(el.getAttribute("data-proposed") || "0")
+            var missed = Math.max(0, scheduled - proposed)
+            if (percentMode) {
+              el.style.display = "none"
+            } else {
+              el.style.display = "inline"
+              el.textContent = formatNumber(missed)
+            }
+          })
+        }
+
+        if (sepNodes) {
+          sepNodes.forEach(function (el) {
+            el.style.display = percentMode ? "none" : "inline"
+          })
+        }
+
+        if (labelNodes) {
+          labelNodes.forEach(function (el) {
+            el.style.visibility = percentMode ? "hidden" : "visible"
+          })
+        }
+      }
+
+      function init() {
+        var toggle = document.getElementById("activity-percent-toggle")
+        if (!toggle) return
+        var storageKey = "entity_activity_display_mode"
+        var initialPercentMode = false
+        try {
+          var saved = localStorage.getItem(storageKey)
+          if (saved === "percent" || saved === "true" || saved === "1") {
+            initialPercentMode = true
+          } else if (saved === "absolute" || saved === "false" || saved === "0") {
+            initialPercentMode = false
+          }
+        } catch (e) {
+          // ignore storage errors
+        }
+        toggle.checked = initialPercentMode
+        setActivityMode(initialPercentMode)
+        toggle.addEventListener("change", function () {
+          var newMode = toggle.checked
+          try {
+            localStorage.setItem(storageKey, newMode ? "percent" : "absolute")
+          } catch (e) {
+            // ignore storage errors
+          }
+          setActivityMode(newMode)
+        })
+      }
+
+      document.addEventListener("DOMContentLoaded", init)
+    })()
+  </script>
+  <script>
+    $(document).ready(function () {
+      const period = "{{ .Period | js }}"
+      const entity = "{{ .Entity | js }}"
+      const subEntity = "{{ .SubEntity | js }}"
+
+      if ($("#sub-entities-table").length) {
+        $("#sub-entities-table").DataTable({
+          searchDelay: 0,
+          lengthChange: false,
+          processing: true,
+          serverSide: true,
+          ordering: false,
+          searching: false,
+          ajax: dataTableLoader(`/entity/${encodeURIComponent(entity)}/${encodeURIComponent(subEntity)}/subentities/data`, `period=${encodeURIComponent(period)}`),
+          pagingType: "input",
+          stateSave: true,
+          stateSaveCallback: function (settings, data) {
+            data.order = []
+            fetch(`/tables/${settings.sTableId}/state`, { method: "PUT", body: JSON.stringify(data) })
+              .then((res) => res.json())
+              .then(({ status, data }) => {
+                if (status !== "OK") {
+                  console.error("error updating table state, err:", data, "status: ", status)
+                }
+                if (data !== "") {
+                  localStorage.setItem("DataTables_" + settings.sInstance, JSON.stringify(data))
+                } else {
+                  localStorage.removeItem("DataTables_" + settings.sInstance)
+                }
+              })
+              .catch((err) => {
+                console.error("error updating table state, err: ", err)
+              })
+          },
+          pageLength: 25,
+          language: {
+            paginate: { previous: '<i class="fas fa-chevron-left"></i>', next: '<i class="fas fa-chevron-right"></i>' },
+          },
+          preDrawCallback: function () {
+            document.getElementById("header-placeholder-subentities").style.display = "none"
+            document.getElementById("footer-placeholder-subentities").style.display = "none"
+          },
+        })
+      }
+
+      if ($("#entity-validators").length) {
+        var validatorsPagingStack = []
+        var currentPagingToken = ""
+        var nextPagingTokenFromResponse = ""
+        var lastStart = 0
+        var entityValidatorsUrl = `/entity/${encodeURIComponent(entity)}/${encodeURIComponent(subEntity)}/validators/data`
+
+        var table = $("#entity-validators").DataTable({
+          searchDelay: 0,
+          lengthChange: false,
+          processing: true,
+          serverSide: true,
+          ordering: false,
+          searching: false,
+          pagingType: "simple", // only previous/next
+          pageLength: 25,
+          language: {
+            paginate: { previous: '<i class="fas fa-chevron-left"></i>', next: '<i class="fas fa-chevron-right"></i>' },
+          },
+          ajax: function (data, callback, settings) {
+            // Determine paging direction from DataTables' requested start offset
+            var requestedStart = typeof data.start === "number" ? data.start : 0
+            if (requestedStart > lastStart) {
+              // moving forward
+              if (nextPagingTokenFromResponse) {
+                validatorsPagingStack.push(currentPagingToken)
+                currentPagingToken = nextPagingTokenFromResponse
+              }
+            } else if (requestedStart < lastStart) {
+              // moving backward
+              currentPagingToken = validatorsPagingStack.pop() || ""
+            }
+            // Inject our period and optional paging token into the request
+            data.period = period
+            if (currentPagingToken) {
+              data.pagingToken = currentPagingToken
+            }
+            fetch(`${entityValidatorsUrl}?${$.param(data)}`)
+              .then((response) => response.json())
+              .then((resp) => {
+                nextPagingTokenFromResponse = resp.pagingToken || ""
+                // Update lastStart after successful response
+                lastStart = requestedStart
+                // Toggle prev/next disabled state
+                var prevBtn = document.getElementById('entity-validators_previous')
+                var nextBtn = document.getElementById('entity-validators_next')
+                if (prevBtn) {
+                  if (validatorsPagingStack.length === 0) prevBtn.classList.add('disabled')
+                  else prevBtn.classList.remove('disabled')
+                }
+                if (nextBtn) {
+                  if (!nextPagingTokenFromResponse) nextBtn.classList.add('disabled')
+                  else nextBtn.classList.remove('disabled')
+                }
+                callback(resp)
+              })
+              .catch((err) => {
+                console.error("Failed to fetch validators table: ", err)
+                callback({ draw: data.draw, recordsTotal: 0, recordsFiltered: 0, data: [], pageLength: 25, displayStart: 0, pagingToken: currentPagingToken })
+              })
+          },
+          preDrawCallback: function () {
+            document.getElementById("header-placeholder-validators").style.display = "none"
+            document.getElementById("footer-placeholder-validators").style.display = "none"
+          },
+        })
+      }
+    })
+  </script>
+{{ end }}
+
+{{ define "css" }}
+  <link rel="stylesheet" type="text/css" href="/css/datatables.min.css" />
+  <style>
+    .kpi-card .label {
+      font-size: 12px;
+      color: var(--secondary-font-color);
+      letter-spacing: 0.04em;
+    }
+
+    .kpi-card .value {
+      font-size: 22px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--secondary-font-color);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .stat-heading {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary-font-color);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--secondary-font-color);
+    }
+
+    .activity-label {
+      min-height: 18px;
+    }
+
+    /* Activity toggle switch */
+    .activity-toggle {
+      display: inline-block;
+    }
+
+    .activity-toggle .toggle-input {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .activity-toggle .toggle-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 72px;
+      height: 32px;
+      box-sizing: border-box;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(128, 128, 128, 0.35);
+      background: rgba(127, 127, 127, 0.08);
+      color: var(--secondary-font-color);
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .activity-toggle .toggle-symbol {
+      font-size: 14px;
+      opacity: 0.5;
+      transition: opacity 0.15s ease;
+    }
+
+    .activity-toggle .toggle-handle {
+      position: absolute;
+      top: 50%;
+      left: 2px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--font-color);
+      opacity: 0.12;
+      transform: translateY(-50%);
+      transition: left 0.2s ease;
+    }
+
+    .activity-toggle .toggle-input:not(:checked) + .toggle-label .hash {
+      opacity: 1;
+    }
+
+    .activity-toggle .toggle-input:checked + .toggle-label .percent {
+      opacity: 1;
+    }
+
+    .activity-toggle .toggle-input:checked + .toggle-label .toggle-handle {
+      left: calc(100% - 30px);
+    }
+
+    /* Validator status chips (medium emphasis) */
+    .validator-chip {
+      font-size: 0.9rem;
+      font-weight: 500;
+      line-height: 1.1;
+    }
+
+    .validator-chip i {
+      margin-right: 0.35rem;
+    }
+
+    @media (max-width: 576px) {
+      .validator-chip {
+        font-size: 0.85rem;
+      }
+    }
+
+    /* High-contrast badges for Entity/Sub-Entity */
+    .badge-entity {
+      background-color: #2c7be5; /* vivid blue */
+      color: #ffffff;
+    }
+
+    .badge-subentity {
+      background-color: #6f42c1; /* purple */
+      color: #ffffff;
+    }
+    /* Keep two columns in Duties, Income, Missed Rewards and Slashings grids even on smallest screens */
+    @media (max-width: 575.98px) {
+      .duties-grid > [class*="col-"],
+      .income-grid > [class*="col-"],
+      .missed-grid > [class*="col-"],
+      .slashings-grid > [class*="col-"] {
+        flex: 0 0 50%;
+        max-width: 50%;
+      }
+    }
+  </style>
+{{ end }}
+
+{{ define "content" }}
+  <section id="entity-detail">
+    <div class="container">
+      <div class="h-100 py-4">
+        <nav aria-label="Breadcrumb">
+          <ol class="breadcrumb bg-transparent p-0 mb-2 justify-content-end">
+            <li class="breadcrumb-item"><a href="/entities">Entities</a></li>
+            {{ if .Data.HasRealSubEntities }}
+              <li class="breadcrumb-item"><a href="/entity/{{ .Data.Entity | urlPathEscape }}/-">{{ .Data.Entity }}</a></li>
+              <li class="breadcrumb-item active" aria-current="page">{{ .Data.SubEntity }}</li>
+            {{ else }}
+              <li class="breadcrumb-item active" aria-current="page">{{ .Data.Entity }}</li>
+            {{ end }}
+          </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+          <h1 class="h4 mb-0 mr-2">Entity Dashboard</h1>
+          <div class="btn-group btn-group-sm mt-2 mt-md-0" role="group" aria-label="Select period">
+            {{ range .Data.PeriodLinks }}
+              <a href="{{ .Href }}" class="btn {{ if eq .Value $.Data.Period }}btn-primary{{ else }}btn-outline-primary{{ end }}">{{ .Label }}</a>
+            {{ end }}
+          </div>
+        </div>
+        <div class="mb-2 d-flex align-items-center justify-content-between">
+          <div class="d-flex align-items-center" style="flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap;">
+            <span class="badge badge-entity"><i class="fas fa-building" aria-hidden="true"></i> <span class="d-none d-sm-inline">Entity</span></span>
+            {{ if and .Data.HasRealSubEntities (ne .Data.SubEntity "-") }}
+              <a class="font-weight-bold ml-2" href="/entity/{{ .Data.Entity | urlPathEscape }}/-" style="display: inline-block; max-width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" title="{{ .Data.Entity }}">{{ .Data.Entity }}</a>
+            {{ else }}
+              <span class="font-weight-bold ml-2" style="display: inline-block; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" title="{{ .Data.Entity }}">{{ .Data.Entity }}</span>
+            {{ end }}
+            {{ if .Data.HasRealSubEntities }}
+              <span class="mx-2">/</span>
+              <span class="badge badge-subentity"><i class="fas fa-sitemap" aria-hidden="true"></i> <span class="d-none d-sm-inline">Sub-Entity</span></span>
+              <span class="font-weight-bold ml-2" style="display: inline-block; max-width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom;" title="{{ .Data.SubEntity }}">{{ .Data.SubEntity }}</span>
+            {{ end }}
+          </div>
+          <div class="d-flex align-items-center" style="flex: 0 0 auto;">
+            <span class="badge badge-pill bg-success text-white mr-2 px-2 py-1 validator-chip" {{ .Data.OnlineBreakdownHTML }} aria-label="Online validators: {{ formatThousandsInt .Data.OnlineCount }}">
+              <i class="fas fa-power-off mr-1" aria-hidden="true"></i> {{ formatThousandsInt .Data.OnlineCount }}
+            </span>
+            <span class="badge badge-pill bg-danger text-white px-2 py-1 validator-chip" {{ .Data.OfflineBreakdownHTML }} aria-label="Offline validators: {{ formatThousandsInt .Data.OfflineCount }}">
+              <i class="fas fa-power-off mr-1" aria-hidden="true"></i> {{ formatThousandsInt .Data.OfflineCount }}
+            </span>
+          </div>
+        </div>
+
+        <!-- KPI row -->
+        <div class="row mt-3">
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-tachometer-alt mr-1" aria-hidden="true"></i> BeaconScore</div>
+                <div class="value">{{ formatBeaconscore .Data.Efficiency true }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-chart-pie mr-1" aria-hidden="true"></i> Net Share</div>
+                <div class="value">{{ formatPercentageWithPrecision .Data.NetShare 2 }}%</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-coins mr-1" aria-hidden="true"></i> Total Balance</div>
+                <div class="value">{{ formatClCurrency .Data.BalanceEndSumGwei "ETH" 2 true false false true }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-check-circle mr-1" aria-hidden="true"></i> Attestation Efficiency</div>
+                <div class="value">{{ formatEfficiency .Data.AttestationEfficiency }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-bolt mr-1" aria-hidden="true"></i> Proposal Efficiency</div>
+                <div class="value">{{ formatEfficiency .Data.ProposalEfficiency }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="card kpi-card h-100">
+              <div class="card-body">
+                <div class="label"><i class="fas fa-users mr-1" aria-hidden="true"></i> Sync Comm. Efficiency</div>
+                <div class="value">{{ formatEfficiency .Data.SyncCommitteeEfficiency }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card mb-3">
+          <div class="card-body">
+            <div id="efficiency-chart" style="height: 320px; width: 100%"></div>
+            <div id="efficiency-series" style="display:none;">
+              {{- range .Data.EfficiencySeries -}}
+                <span data-ts="{{ .TsMs }}" data-val="{{ .Value }}"></span>
+              {{- end -}}
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Activity -->
+          <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                  <div class="section-title mb-0"><i class="fas fa-chart-line mr-1" aria-hidden="true"></i> Duties</div>
+                  <div class="small d-flex align-items-center">
+                    <div class="activity-toggle" title="Toggle between raw counts (#) and percentages (%)">
+                      <input type="checkbox" id="activity-percent-toggle" class="toggle-input" aria-label="Toggle display between counts and percentage" />
+                      <label class="toggle-label" for="activity-percent-toggle">
+                        <span class="toggle-symbol hash">#</span>
+                        <span class="toggle-symbol percent">%</span>
+                        <span class="toggle-handle" aria-hidden="true"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="row duties-grid">
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-check-circle mr-1" aria-hidden="true"></i> Attestations</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.AttestationsObservedSum }}" data-scheduled="{{ .Data.AttestationsScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.AttestationsScheduledSum }}" data-proposed="{{ .Data.AttestationsObservedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Executed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-sitemap mr-1" aria-hidden="true"></i> Head Votes</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.AttestationsHeadExecutedSum }}" data-scheduled="{{ .Data.AttestationsScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.AttestationsScheduledSum }}" data-proposed="{{ .Data.AttestationsHeadExecutedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Executed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-compass mr-1" aria-hidden="true"></i> Source Votes</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.AttestationsSourceExecutedSum }}" data-scheduled="{{ .Data.AttestationsScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.AttestationsScheduledSum }}" data-proposed="{{ .Data.AttestationsSourceExecutedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Executed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-bullseye mr-1" aria-hidden="true"></i> Target Votes</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.AttestationsTargetExecutedSum }}" data-scheduled="{{ .Data.AttestationsScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.AttestationsScheduledSum }}" data-proposed="{{ .Data.AttestationsTargetExecutedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Executed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-cube mr-1" aria-hidden="true"></i> Blocks</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.BlocksProposedSum }}" data-scheduled="{{ .Data.BlocksScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.BlocksScheduledSum }}" data-proposed="{{ .Data.BlocksProposedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Proposed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-sync-alt mr-1" aria-hidden="true"></i> Sync Duties</div>
+                    <div class="stat">
+                      <span class="activity-pair" data-observed="{{ .Data.SyncExecutedSum }}" data-scheduled="{{ .Data.SyncScheduledSum }}"></span>
+                      <span class="activity-sep">/</span>
+                      <span class="activity-missed text-danger" data-scheduled="{{ .Data.SyncScheduledSum }}" data-proposed="{{ .Data.SyncExecutedSum }}"></span>
+                    </div>
+                    <div class="stat-label activity-label">Executed / Missed</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"><i class="fas fa-hourglass-half mr-1" aria-hidden="true"></i> Avg. Inclusion Delay</div>
+                    <div class="stat">{{ formatFloat .Data.AttestationAvgInclDist 3 }}</div>
+                    <div class="stat-label">Slots</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Penalties & Delays -->
+          <div class="col-lg-6 mb-3">
+            <div class="card h-100">
+              <div class="card-body">
+                <div class="section-title mb-3"><i class="fas fa-coins mr-1" aria-hidden="true"></i> Income</div>
+                <div class="row income-grid">
+                  <div class="col-sm-4 mb-2">
+                    <div class="stat text-warning">
+                      {{ formatElCurrency .Data.TotalRewardsWei "ETH" 2 true false false true }}
+                    </div>
+                    <div class="stat-label">Total</div>
+                  </div>
+                  <div class="col-sm-4 mb-2">
+                    <div class="stat-heading"></div>
+                    <div class="stat text-warning">
+                      {{ formatClCurrency .Data.ClRewardsGWei "ETH" 2 true false false true }}
+                    </div>
+                    <div class="stat-label">Consensus Layer</div>
+                  </div>
+                  <div class="col-sm-4 mb-2">
+                    <div class="stat-heading"></div>
+                    <div class="stat text-warning">
+                      {{ formatElCurrency .Data.ElRewardsWei "ETH" 2 true false false true }}
+                    </div>
+                    <div class="stat-label">Execution Layer</div>
+                  </div>
+                </div>
+                <hr />
+                <div class="section-title mb-3"><i class="fas fa-times-circle mr-1" aria-hidden="true"></i> Missed Rewards</div>
+                <div class="row missed-grid">
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat text-warning">
+                      {{ formatClCurrency .Data.TotalMissedClRewards "ETH" 2 true false false
+                        true
+                      }}
+                    </div>
+                    <div class="stat-label">Total</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"></div>
+                    <div class="stat text-warning">
+                      {{ formatClCurrency .Data.BlocksClMissedMedianRewardSum "ETH" 2 true
+                        false false true
+                      }}
+                    </div>
+                    <div class="stat-label">Blocks</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"></div>
+                    <div class="stat text-warning">
+                      {{ formatClCurrency .Data.AttestationsMissedRewardsSum "ETH" 2 true
+                        false false true
+                      }}
+                    </div>
+                    <div class="stat-label">Attestations</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat-heading"></div>
+                    <div class="stat text-warning">
+                      {{ formatClCurrency .Data.MissedSyncRewardsSum "ETH" 2 true false false
+                        true
+                      }}
+                    </div>
+                    <div class="stat-label">Sync Comm.</div>
+                  </div>
+                </div>
+                <hr />
+                <div class="section-title mb-3"><i class="fas fa-gavel mr-1" aria-hidden="true"></i> Slashings</div>
+                <div class="row slashings-grid">
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat text-danger">{{ formatThousandsInt .Data.SlashedInPeriodMax }}</div>
+                    <div class="stat-label">Slashed Validators</div>
+                  </div>
+                  <div class="col-sm-6 mb-2">
+                    <div class="stat text-success">{{ formatThousandsInt .Data.SlashedAmountSum }}</div>
+                    <div class="stat-label">Executed Slashings</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <!-- Sub-Entities (left) -->
+          <div class="{{ if and .Data.HasRealSubEntities (eq .Data.SubEntity "-") }}col-lg-6 mb-3{{ else }}d-none{{ end }}">
+            {{ if and .Data.HasRealSubEntities (eq .Data.SubEntity "-") }}
+              <div id="sub-entities" class="card h-100">
+                <div class="card-body">
+                  <div class="section-title mb-2"><i class="fas fa-sitemap mr-1" aria-hidden="true"></i> Sub-Entities</div>
+                  <div id="header-placeholder-subentities" style="height:20px;"></div>
+                  <div class="table-responsive px-0 py-1">
+                    <table class="table table-sm table-hover" id="sub-entities-table">
+                      <thead>
+                        <tr>
+                          <th>Sub-Entity</th>
+                          <th>BeaconScore</th>
+                          <th>Net Share</th>
+                        </tr>
+                      </thead>
+                      <tbody></tbody>
+                    </table>
+                  </div>
+                  <div id="footer-placeholder-subentities" style="height:10px;"></div>
+                </div>
+              </div>
+            {{ end }}
+          </div>
+
+          <!-- Validators (right) -->
+          <div class="{{ if and .Data.HasRealSubEntities (eq .Data.SubEntity "-") }}col-lg-6{{ else }}col-lg-12{{ end }} mb-3">
+            <div id="validators" class="card h-100">
+              <div class="card-body d-flex flex-column">
+                <div class="section-title mb-2"><i class="fas fa-user-shield mr-1" aria-hidden="true"></i> Validators</div>
+                <div id="header-placeholder-validators" style="height:20px;"></div>
+                <div class="table-responsive px-0 py-1">
+                  <table class="table table-sm table-hover" id="entity-validators">
+                    <thead>
+                      <tr>
+                        <th>Index</th>
+                        <th>Status</th>
+                        <th>BeaconScore</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div id="footer-placeholder-validators" style="height:10px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-muted text-right font-weight-light">Last updated: {{ .Data.LastUpdatedAt.Unix | formatTimestamp }}</p>
+      </div>
+    </div>
+  </section>
+{{ end }}

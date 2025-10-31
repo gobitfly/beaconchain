@@ -1,0 +1,153 @@
+{{ define "js" }}
+  <script type="text/javascript" src="/js/datatables.min.js"></script>
+  <script type="text/javascript" src="/js/datatable_input.js"></script>
+  <script type="text/javascript" src="/js/datatable_loader.js"></script>
+  <script src="/js/highcharts/v14/highcharts.min.js"></script>
+  <script src="/js/highcharts/v14/modules/treemap.min.js"></script>
+  <script src="/js/highcharts/v14/modules/heatmap.min.js"></script>
+  <script src="/js/highcharts/v14/modules/accessibility.min.js"></script>
+  <script src="/js/highcharts/highcharts-global-options.js"></script>
+  <script src="/js/highcharts/v14/highcharts-extensions.min.js"></script>
+  <script src="/js/treemap.js"></script>
+  <script>
+    $(document).ready(function () {
+      $("#staking-entities").DataTable({
+        searchDelay: 0,
+        lengthChange: false,
+        processing: true,
+        serverSide: true,
+        ordering: false,
+        searching: true,
+        ajax: dataTableLoader("/entities/data", "period={{ .Period }}"),
+        pagingType: "input",
+        stateSave: true,
+        stateSaveCallback: function (settings, data) {
+          data.order = []
+          fetch(`/tables/${settings.sTableId}/state`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+          })
+            .then((res) => res.json())
+            .then(({ status, data }) => {
+              if (status !== "OK") {
+                console.error("error updating table state, err:", data, "status: ", status)
+              }
+              if (data !== "") {
+                localStorage.setItem("DataTables_" + settings.sInstance, JSON.stringify(data))
+              } else {
+                localStorage.removeItem("DataTables_" + settings.sInstance)
+              }
+            })
+            .catch((err) => {
+              console.error("error updating table state, err: ", err)
+            })
+        },
+        stateLoadCallback: function (settings, callback) {
+          fetch(`/tables/${settings.sTableId}/state`, {
+            method: "GET",
+          })
+            .then((res) => res.json())
+            .then(({ status, data }) => {
+              if (status !== "OK") {
+                console.error("error loading table state, err:", data, "status: ", status)
+              }
+              var response = data !== "" ? data : JSON.parse(localStorage.getItem("DataTables_" + settings.sInstance))
+              callback(response)
+            })
+            .catch((err) => {
+              console.error("error loading table state, err: ", err)
+            })
+        },
+        pageLength: 25,
+        language: {
+          searchPlaceholder: "Search Entities",
+          search: "",
+          paginate: {
+            previous: '<i class="fas fa-chevron-left"></i>',
+            next: '<i class="fas fa-chevron-right"></i>',
+          },
+        },
+      })
+    })
+    document.addEventListener("DOMContentLoaded", function () {
+      if (window.BeaconTreemap) {
+        window.BeaconTreemap.renderFromScript("entities-treemap", "treemap-data")
+      }
+    })
+  </script>
+{{ end }}
+
+{{ define "css" }}
+  <link rel="stylesheet" type="text/css" href="/css/datatables.min.css" />
+  <link rel="stylesheet" type="text/css" href="/css/entities.css" />
+{{ end }}
+
+{{ define "content" }}
+  <section>
+    <div class="container">
+      <div class="my-3">
+        <div class="d-md-flex py-2 justify-content-md-between">
+          <h1 class="h4 mb-1 mb-md-0"><i class="fas fa-building mr-1" aria-hidden="true"></i> Ethereum Staking Ecosystem Overview</h1>
+          <nav aria-label="breadcrumb">
+            <ol class="breadcrumb font-size-1 mb-0" style="padding:0; background-color:transparent;">
+              <li class="breadcrumb-item"><a href="/" title="Home">Home</a></li>
+              <li class="breadcrumb-item"><a href="/entities" title="Entities Overview">Entities</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Overview</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+      <div class="h-100 py-4">
+        <div class="d-flex justify-content-end mb-2">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Select period">
+            {{ range .Data.PeriodLinks }}
+              <a href="{{ .Href }}" class="btn {{ if eq .Value $.Data.Period }}btn-primary{{ else }}btn-outline-primary{{ end }}">{{ .Label }}</a>
+            {{ end }}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mb-3">
+              <div class="card-body">
+                <div class="text-center">Staking Entities Overview ({{ .Data.Period }})<i class="ml-1 fas fa-info-circle" data-tippy-content="To improve performance, only the 25 largest entities are shown in this chart. Values of hidden entities are still included in aggregate calculations.<br /><br />Read more about how we calculate the BeaconScore in our <a href='https://kb.beaconcha.in/v2beta/metric-validator-efficiency' target='_blank'>docs</a>."></i></div>
+                <div id="entities-treemap" style="min-height: 600px;"></div>
+              <script id="treemap-data" type="application/json">[
+                {{- $len := len .Data.Treemap -}}
+                {{- range $i, $t := .Data.Treemap -}}
+                  {{- if $i }},{{ end -}}
+                  {"entity":"{{ $t.Entity | js }}","efficiency":{{ printf "%.6f" $t.Efficiency }},"netShare":{{ printf "%.8f" $t.NetShare }}}
+                {{- end -}}
+              ]</script>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row mt-4">
+          <div class="col-md-12">
+            <div class="card mb-2">
+              <div id="header-placeholder" style="height:20px;"></div>
+              <div class="table-responsive px-0 py-1">
+                <table class="table" id="staking-entities">
+                  <thead>
+                    <tr>
+                      <th>Entity</th>
+                      <th>Sub Entities</th>
+                      <th>BeaconScore<span class="ml-1 fas fa-info-circle" data-tippy-content="Read more about how we calculate the BeaconScore in our <a href='https://kb.beaconcha.in/v2beta/metric-validator-efficiency' target='_blank'>docs</a>."></span></th>
+                      <th>Net Share</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              <div id="footer-placeholder" style="height:10px;"></div>
+            </div>
+
+            <div class="d-flex justify-content-end align-items-center">
+              <p class="small text-muted mb-0">Entity tagging data provided by <a href="https://x.com/hildobby" target="_blank" rel="noopener">@hildobby</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{{ end }}

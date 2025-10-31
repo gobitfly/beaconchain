@@ -1,0 +1,132 @@
+{{ define "genesis" }}
+  <div class="row pt-3">
+    <div class="col-lg-5 my-2">{{ template "depositProgress" .Data }}</div>
+    <div class="col-lg-2 my-2"></div>
+    <div class="col-lg-5 my-2">{{ template "genesisCountdown" .Data }}</div>
+  </div>
+  <div style="position:relative" class="card mt-3 index-stats">
+    <div class="card-header pt-3">
+      <div class="row">
+        {{ template "networkStats" }}
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-lg-12">
+          <div class="m-2" id="slotsViz"></div>
+          <h5 class="my-3">Genesis Checklist</h5>
+          <div class="checklists d-flex justify-content-center flex-wrap">
+            <div class="d-flex justify-content-around flex-wrap">
+              <div class="checklist">
+                <h6 class="{{ if eq .CurrentEpoch 0 }}text-primary{{ end }}">Epoch 0</h6>
+                <div class="genesis-checklist">
+                  <input id="01" type="checkbox" name="r" value="1" disabled />
+                  <label for="01">First Block Proposed</label>
+                  <input id="02" type="checkbox" name="r" value="2" disabled />
+                  <label for="02">Participation > 2/3</label>
+                </div>
+              </div>
+              <div class="checklist">
+                <h6 class="{{ if eq .CurrentEpoch 1 }}text-primary{{ end }}">Epoch 1</h6>
+                <div class="genesis-checklist">
+                  <input id="03" type="checkbox" name="r" value="3" disabled />
+                  <label for="03">First Block Proposed</label>
+                  <input id="04" type="checkbox" name="r" value="4" disabled />
+                  <label for="04">Participation > 2/3</label>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex justify-content-around flex-wrap">
+              <div class="checklist">
+                <h6 class="{{ if eq .CurrentEpoch 2 }}text-primary{{ end }}">Epoch 2</h6>
+                <div class="genesis-checklist">
+                  <!-- <input id="05" type="checkbox" name="r" value="5">
+                  <label for="05">First Block Proposed</label> -->
+                  <input id="06" type="checkbox" name="r" value="6" disabled />
+                  <label for="06">Participation > 2/3</label>
+                  <!-- <input id="07" type="checkbox" name="r" value="7" disabled>
+                <label for="07">Epoch 1 finalized</label> -->
+                  <input id="08" type="checkbox" name="r" value="8" disabled />
+                  <label for="08">Epoch 2 justified</label>
+                </div>
+              </div>
+              <div class="checklist">
+                <h6 class="{{ if eq .CurrentEpoch 3 }}text-primary{{ end }}">Epoch 3</h6>
+                <div class="genesis-checklist">
+                  <!-- <input id="09" type="checkbox" name="r" value="9">
+                  <label for="09">First Block Proposed</label> -->
+                  <input id="10" type="checkbox" name="r" value="10" disabled />
+                  <label for="10">Participation > 2/3</label>
+                  <input id="11" type="checkbox" name="r" value="11" disabled />
+                  <label for="11">Epoch 1 finalized</label>
+                  <input id="12" type="checkbox" name="r" value="12" disabled />
+                  <label for="12">Epoch 3 justified</label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-lg-6 mt-3 pr-lg-2">
+      {{ template "recentEpochs" }}
+    </div>
+    <div class="col-lg-6 mt-3 pl-lg-2">
+      {{ template "recentBlocks" }}
+    </div>
+  </div>
+  <script>
+    function updateChecklist() {
+      if (!lastSlotVizData) {
+        return
+      }
+      var data = lastSlotVizData
+      var participationInputs = ["02", "04", "06", "10"]
+      var firstProposed = ["01", "03", null, null]
+      var finalized = [null, "11", null, null]
+      var justified = [null, null, "08", "12"]
+
+      for (var i = 0; i < data.length; i++) {
+        epoch = data[i].epoch
+        if (epoch > 4) {
+          continue
+        }
+        if (finalized[epoch] && epoch > 0 && data[i].finalized) {
+          document.getElementById(finalized[epoch]).checked = true
+        }
+
+        if (justified[epoch] && data[i].justified) {
+          document.getElementById(justified[epoch]).checked = true
+        }
+
+        if (data[i].participation <= 1) {
+          data[i].participation = Math.round(data[i].participation * 10000) / 100
+        }
+
+        if (data[i].participation >= 66.666) {
+          document.getElementById(participationInputs[epoch]).checked = true
+        }
+
+        var slots = data[i].slots
+        for (var j = 0; j < slots.length; j++) {
+          if (epoch === 0 && j === 0) {
+            continue
+          }
+          if (slots[j].status === "proposed") {
+            if (firstProposed[epoch]) {
+              document.getElementById(firstProposed[epoch]).checked = true
+              var el = document.querySelector("[for='" + firstProposed[epoch] + "']")
+              el.innerHTML = "First block proposed in Slot " + j
+              break
+            }
+          }
+        }
+      }
+    }
+    window.addEventListener("DOMContentLoaded", function () {
+      setInterval(updateChecklist, 3000)
+    })
+  </script>
+{{ end }}

@@ -1,0 +1,88 @@
+{{ define "genesisCountdown" }}
+<script>
+	function setTime(secondsLeft) {
+  		let [seconds, minutes, hours, days] = [0, 0, 0, 0];
+  		if (secondsLeft > 0) {
+  		  const duration = luxon.Duration.fromMillis(secondsLeft * 1000).shiftTo("days", "hours", "minutes", "seconds")
+
+  		  seconds = duration.seconds
+  		  minutes = duration.minutes
+  		  hours = duration.hours
+  		  days = duration.days
+  		}
+
+  		if (seconds < 10) {
+  		  seconds = "0" + seconds
+  		}
+  		if (minutes < 10) {
+  		  minutes = "0" + minutes
+  		}
+  		if (hours < 10) {
+  		  hours = "0" + hours
+  		}
+  		if (days < 10) {
+  		  days = "0" + days
+  		}
+
+		$('#clock').html(days+' days '+ hours + ' hr ' + minutes + ' min ' + seconds + ' sec')
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		var genesis = {{.NetworkStartTs}}
+		var now = Math.round((new Date()).getTime() / 1000)
+		var secondsLeft = genesis - now
+  		const duration = luxon.Duration.fromMillis(secondsLeft * 1000).shiftTo("days")
+		if (-1 < duration.days && duration.days <= 7) {
+			setTime(secondsLeft)
+			$('#estimated').html('Countdown')
+			$('#minGenesis').addClass('d-none')
+			$('#minGenesisAnd').addClass('d-none')
+			$('#networkStart').removeClass('d-none')
+			// $('#estimated+span').removeClass('d-none')
+			var countdownInterval = setInterval(function () {
+				if (secondsLeft <= 0) {
+					clearInterval(countdownInterval)
+					$('#rocket').removeClass('d-none')
+					return
+				}
+
+				secondsLeft -= 1
+				setTime(secondsLeft)
+			}, 1000)
+		}
+	})
+</script>
+  <div class="position-relative">
+    {{ template "rocket" }}
+    <div id="countdown" class="d-flex flex-column justify-content-center">
+      <h6 class="d-flex justify-content-between">
+        <span id="estimated">
+          Estimated
+          {{ if gt .ValidatorsRemaining 0.0 }}between:{{ end }}
+        </span>
+        {{ if gt .NetworkStartTs 0 }}
+          <small id="networkStart" data-toggle="tooltip" title="Genesis Time" class="text-muted d-none" aria-ethereum-date-format="ff" aria-ethereum-date="{{ .NetworkStartTs }}"></small>
+        {{ end }}
+      </h6>
+      <div class="align-self-center text-center">
+        {{ if eq .NetworkStartTs 0 }}
+          <div>
+            <strong>Waiting on min genesis time announcement</strong>
+          </div>
+        {{ else }}
+          {{ if gt .ValidatorsRemaining 0.0 }}
+            <div id="minGenesis">
+              <strong data-toggle="tooltip" title="Earliest possible Genesis Time." class="" aria-ethereum-date-format="ff" aria-ethereum-date="{{ .MinGenesisTime }}"></strong>
+            </div>
+            <div id="minGenesisAnd"><span>and</span></div>
+          {{ end }}
+          <div>
+            <strong id="clock">
+              <span data-toggle="tooltip" title="Estimated Genesis Time. This time may vary until the deposit threshold is reached."><span aria-ethereum-date-format="ff" aria-ethereum-date="{{ .NetworkStartTs }}"></span> ({{ .NetworkStartTs | formatTsWithoutTooltip }})</span>
+            </strong>
+          </div>
+        {{ end }}
+      </div>
+    </div>
+  </div>
+{{ end }}

@@ -1,0 +1,215 @@
+package db
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"github.com/gobitfly/eth2-beaconchain-explorer/types"
+	"github.com/gobitfly/eth2-beaconchain-explorer/utils"
+)
+
+// StripeRemoveCustomer removes the stripe customer and sets all subscriptions to inactive
+func StripeRemoveCustomer(customerID string) error {
+	tx, err := FrontendWriterDB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	userID, err := StripeGetCustomerUserId(customerID)
+	if err == nil {
+		now := time.Now()
+		nowTs := now.Unix()
+		_, _ = tx.Exec("UPDATE users_app_subscriptions SET active = $1, updated_at = TO_TIMESTAMP($2), expires_at = TO_TIMESTAMP($3), reject_reason = $4 WHERE user_id = $5 AND store = 'stripe';",
+			false, nowTs, nowTs, "stripe_user_deleted", userID,
+		)
+	} else {
+		// logg & continue anyway
+		logger.WithError(err).Error("error could not disable stripe mobile subs: " + customerID + "err: ")
+	}
+
+	// remove customer id entry from database
+	_, err = tx.Exec("UPDATE users SET stripe_customer_id = NULL WHERE stripe_customer_id = $1", customerID)
+	if err != nil {
+		return err
+	}
+
+	// set all subscriptions to inactive for the deleted stripe customer
+	_, err = tx.Exec("UPDATE users_stripe_subscriptions SET active = 'f' WHERE stripe_customer_id = $1", customerID)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	return err
+}
+
+// StripeCreateSubscription inserts a new subscription
+func StripeCreateSubscription(tx *sql.Tx, customerID, priceID, subscriptionID string, payload json.RawMessage) error {
+	purchaseGroup := utils.GetPurchaseGroup(priceID)
+
+	_, err := tx.Exec("INSERT INTO users_stripe_subscriptions (subscription_id, customer_id, price_id, active, payload, purchase_group) VALUES ($1, $2, $3, 'f', $4, $5)", subscriptionID, customerID, priceID, payload, purchaseGroup)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// StripeUpdateSubscription inserts a new subscription
+func StripeUpdateSubscription(tx *sql.Tx, priceID, subscriptionID string, payload json.RawMessage) error {
+	purchaseGroup := utils.GetPurchaseGroup(priceID)
+
+	_, err := tx.Exec("UPDATE users_stripe_subscriptions SET price_id = $2, purchase_group = $4, payload = $3 where subscription_id = $1", subscriptionID, priceID, payload, purchaseGroup)
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+// StripeUpdateSubscriptionStatus sets the status of a subscription
+func StripeUpdateSubscriptionStatus(tx *sql.Tx, id string, status bool, payload *json.RawMessage) error {
+	var err error
+	var useInternTx bool = tx == nil
+	var result sql.Result
+	if useInternTx {
+		tx, err := FrontendWriterDB.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+	}
+
+	if payload == nil {
+		result, err = tx.Exec("UPDATE users_stripe_subscriptions SET active = $2 WHERE subscription_id = $1", id, status)
+		if err != nil {
+			return err
+		}
+	} else {
+		result, err = tx.Exec("UPDATE users_stripe_subscriptions SET active = $2, payload = $3 WHERE subscription_id = $1", id, status, payload)
+		if err != nil {
+			return err
+		}
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected <= 0 {
+		return fmt.Errorf("no rows affected")
+	}
+
+	if useInternTx {
+		err = tx.Commit()
+	}
+
+	return err
+}
+
+// StripeGetUserAPISubscriptions returns a users current subscriptions
+func StripeGetUserSubscriptions(id uint64, purchaseGroup string) ([]types.UserSubscription, error) {
+	tmpUserSubs := []struct {
+		UserID         uint64  `db:"id"`
+		Email          string  `db:"email"`
+		Active         *bool   `db:"active"`
+		CustomerID     *string `db:"stripe_customer_id"`
+		SubscriptionID *string `db:"subscription_id"`
+		PriceID        *string `db:"price_id"`
+		ApiKey         *string `db:"api_key"`
+		Quantity       int     `db:"quantity"`
+	}{}
+
+	err := FrontendWriterDB.Select(&tmpUserSubs, `
+		SELECT users.id, users.email, users.stripe_customer_id, us.subscription_id, us.price_id, us.active, users.api_key, us.quantity 
+		FROM users 
+		INNER JOIN (
+			SELECT subscription_id, customer_id, price_id, active, COALESCE((payload->>'quantity')::int,1) AS quantity 
+			FROM users_stripe_subscriptions 
+			WHERE purchase_group = $2 and (payload->'ended_at')::text = 'null'
+		) as us ON users.stripe_customer_id = us.customer_id 
+		WHERE users.id = $1 ORDER BY active desc`, id, purchaseGroup)
+
+	if err != nil {
+		return nil, err
+	}
+	userSubs := []types.UserSubscription{}
+	for _, tmpUserSub := range tmpUserSubs {
+		for i := 0; i < tmpUserSub.Quantity; i++ {
+			userSub := types.UserSubscription{
+				UserID:         tmpUserSub.UserID,
+				Email:          tmpUserSub.Email,
+				Active:         tmpUserSub.Active,
+				CustomerID:     tmpUserSub.CustomerID,
+				SubscriptionID: tmpUserSub.SubscriptionID,
+				PriceID:        tmpUserSub.PriceID,
+				ApiKey:         tmpUserSub.ApiKey,
+			}
+			userSubs = append(userSubs, userSub)
+		}
+	}
+	return userSubs, nil
+}
+
+// StripeGetUserAPISubscription returns a users current subscription
+func StripeGetUserSubscription(id uint64, purchaseGroup string) (types.UserSubscription, error) {
+	userSub := types.UserSubscription{}
+	err := FrontendWriterDB.Get(&userSub, "SELECT users.id, users.email, users.stripe_customer_id, us.subscription_id, us.price_id, us.active, users.api_key FROM users LEFT JOIN (SELECT subscription_id, customer_id, price_id, active FROM users_stripe_subscriptions WHERE purchase_group = $2 and (payload->'ended_at')::text = 'null') as us ON users.stripe_customer_id = us.customer_id WHERE users.id = $1 ORDER BY active desc LIMIT 1", id, purchaseGroup)
+	return userSub, err
+}
+
+// StripeGetSubscription returns a subscription given a subscription_id
+func StripeGetSubscription(id string) (*types.StripeSubscription, error) {
+	sub := types.StripeSubscription{}
+	err := FrontendWriterDB.Get(&sub, "SELECT customer_id, subscription_id, price_id, active FROM users_stripe_subscriptions WHERE subscription_id = $1", id)
+	return &sub, err
+}
+
+// StripeUpdateCustomerID adds a stripe customer id to a user. It checks if the user already has a stripe customer id.
+func StripeUpdateCustomerID(email, customerID string) error {
+	tx, err := FrontendWriterDB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var currID string
+
+	row := tx.QueryRow("SELECT stripe_customer_id FROM users WHERE email = $1", email)
+	row.Scan(&currID)
+
+	// customer already exists
+	if currID == customerID {
+		return nil
+	}
+
+	// user already has a customer id
+	if currID != "" && customerID != currID {
+		return fmt.Errorf("error updating stripe customer id, the user already has an id: %v failed to overwrite with: %v", currID, customerID)
+	}
+
+	_, err = tx.Exec("UPDATE users SET stripe_customer_id = $1 WHERE email = $2", customerID, email)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	return err
+}
+
+// StripeGetCustomerEmail returns a customers email given their customerID
+func StripeGetCustomerEmail(customerID string) (string, error) {
+	email := ""
+	err := FrontendWriterDB.Get(&email, "SELECT email FROM users WHERE stripe_customer_id = $1", customerID)
+	return email, err
+}
+
+func StripeGetCustomerUserId(customerID string) (uint64, error) {
+	var id uint64 = 0
+	err := FrontendWriterDB.Get(&id, "SELECT id FROM users WHERE stripe_customer_id = $1", customerID)
+	return id, err
+}

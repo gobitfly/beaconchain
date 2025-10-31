@@ -1,0 +1,582 @@
+{{ define "js" }}
+  <script type="text/javascript" src="/js/datatables.min.js"></script>
+  <script type="text/javascript" src="/js/datatable_loader.js"></script>
+
+  <script>
+    function togglePriceContent(currentPrice, historicPrice) {
+      var content = document.getElementById("valuePriceButton")
+
+      if (content.hasAttribute("historic-price")) {
+        content.setAttribute("data-original-title", "Current Value")
+        content.innerHTML = currentPrice
+      } else {
+        content.setAttribute("data-original-title", "Estimated Value on Day of Txn")
+        content.innerHTML = historicPrice
+      }
+
+      $(content).tooltip("show")
+      content.toggleAttribute("historic-price")
+    }
+
+    activateTabbarSwitcher("eth1tx-tab-content", "eth1TxTabs", "overview")
+
+    const handleTabChange = (url) => {
+      if ($(`#${"eth1tx-tab-content"}`).find(".tab-pane.active")[0] == $("#internal-txnsTabPanel")[0]) {
+        $("#advanced-itx").show()
+      }
+      else {
+        $("#advanced-itx").hide()
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", function (ev) {
+      if (window.navigation) {
+        window.navigation.addEventListener("navigate", (event) => {
+          if (!event.destination?.url || event.destination.url.split("#")[0] != event.srcElement?.currentEntry?.url?.split("#")[0]) {
+            return
+          }
+          handleTabChange(event.destination?.url)
+        })
+      } else {
+        //handle Firefox specific way as it does not support the navigation way
+        const tabBarContainer = $(`#eth1TxTabs`)
+        if (!tabBarContainer) {
+          return
+        }
+
+        tabBarContainer.find(`.nav-link`).on("click", event => {
+          var href = event.currentTarget.href
+          if (href) {
+            handleTabChange(href)
+          }
+        })
+      }
+      handleTabChange(window.location.href)
+    })
+
+    function filterItransactions(show) {
+      if (show) {
+        $('#itransactions').DataTable()
+        .column(0)
+        .search("")
+        .column(3)
+        .search("")
+        .draw()
+      } else {
+        // all but exact match would be:
+        //regExSearch = '^(?!' + `0 ETH` + '$).*$'
+        noZeroValue = '^(?!' + '0 ' + ')'
+        noDelegateCall = '^(?!' + 'delegatecall' + ')'
+        $('#itransactions').DataTable()
+        .column(0)
+        .search(noDelegateCall, true, false)
+        .column(3)
+        .search(noZeroValue, true, false)
+        .draw()
+      }
+      $('#itxCountLabel').text($('#itransactions').DataTable().rows( {search:'applied'} ).count());
+    }
+
+    $("#advanced-itx-toggle").on("click", async () => {
+      filterItransactions($("#advanced-itx-toggle").is(':checked'))
+    })
+
+    let hash = {{ .Hash }} || 0
+    $(document).ready(function () {
+      var tblOpts = {
+        processing: true,
+        paging: false,
+        ordering: false,
+        searching: true,
+        ajax: dataTableLoader('/tx/' + hash + '/data'),
+        dom: 'lrtip',
+        initComplete: function(settings, json) {
+          filterItransactions(false)
+        }
+      }
+    $('#itransactions').DataTable(tblOpts)
+    })
+  </script>
+{{ end }}
+
+{{ define "css" }}
+  <style>
+    #valuePriceButton {
+      font-size: inherit;
+      font-weight: normal;
+    }
+  </style>
+{{ end }}
+
+{{ define "content" }}
+  <div class="container mt-2">
+    <div class="my-3">
+      <div class="d-md-flex py-2 justify-content-md-between">
+        <h1 class="h4 mb-1 mb-md-0">
+          <span class="ml-1 mr-1"><i class="fas fa-credit-card mr-2"></i>Transaction Details</span>
+        </h1>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb font-size-1 mb-0" style="padding: 0; background-color: transparent;">
+            <li class="breadcrumb-item"><a href="/" title="Home">Home</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Tx Details</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+    <div id="r-banner" info="{{ .Meta.Templates }}"></div>
+    {{ with .Data }}
+      <div class="card">
+        <div class="card-header">
+          <div id="advanced-itx" class="mr-20 float-right" style="display: none;">
+            <div class="float-right">
+              <span class="text-monospace mr-2">Advanced</span>
+              <label class="advanced-itx-switch float-right" for="advanced-itx-toggle">
+                <input type="checkbox" id="advanced-itx-toggle" autocomplete="off" />
+                <div class="slider round"></div>
+              </label>
+            </div>
+          </div>
+          <ul class="nav nav-tabs card-header-tabs border-bottom-0" id="eth1TxTabs" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link show active" id="overview-tab" data-toggle="tab" href="#overview" role="tab" aria-controls="overview" aria-selected="true"><i class="fas fa-info-circle"></i><span class="tab-text" style="margin-left: 6px;">Overview</span></a>
+            </li>
+            {{ if gt (len .InternalTxns) 0 }}
+              <li class="nav-item">
+                <a class="nav-link" id="internal-txns-tab" data-toggle="tab" href="#internal-txns" role="tab" aria-controls="internal-txns" aria-selected="false">
+                  <i class="fas fa-sitemap"></i><span class="tab-text" style="margin-left: 6px;">Internal Transactions <span class="badge badge-dark align-middle text-white" id="itxCountLabel"></span></span>
+                </a>
+              </li>
+            {{ end }}
+            {{ if gt (len .Events) 0 }}
+              <li class="nav-item">
+                <a class="nav-link" id="events-tab" data-toggle="tab" href="#events" role="tab" aria-controls="events" aria-selected="false">
+                  <i class="tab-icon mr-md-1 fa fa-clipboard-list"></i><span class="tab-text" style="margin-left: 6px;">Events <span class="badge badge-dark align-middle text-white">{{ len .Events }}</span></span>
+                </a>
+              </li>
+            {{ end }}
+          </ul>
+        </div>
+        <div class="card-body px-0 py-1">
+          <div class="tab-content h-100" id="eth1tx-tab-content">
+            <div id="overviewTabPanel" class="tab-pane fade" role="tabpanel" aria-labelledby="overview-tab">
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3"><span class="align-middle">Transaction Hash:</span></div>
+                <div class="col-md-9">
+                  <div class="d-flex align-items-center">
+                    <div style="min-width: 0;">{{ .Hash | formatHashLong }}</div>
+                    <div class="ml-2 flex-shrink-1">
+                      <button class="btn btn-dark text-white btn-sm align-bottom" type="button" id="copy-button" data-toggle="tooltip" title="Copy transaction hash to clipboard" data-clipboard-text="0x{{ printf "%x" .Hash }}">
+                        <i class="fa fa-copy"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3">Status:</div>
+                <div class="col-md-9">
+                  <div class="d-flex flex-wrap">
+                    <div class="mr-2 flex-shrink-1">
+                      {{ formatEth1TxStatus .Receipt.Status }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {{ if .ErrorMsg }}
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Revert Reason:</div>
+                  <div class="col-md-9">
+                    <span class="text-monospace">{{ .ErrorMsg }}</span>
+                  </div>
+                </div>
+              {{ end }}
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3">Block:</div>
+                <div class="col-md-9">
+                  <a href="/block/{{ .BlockNumber }}">
+                    <span>{{ .BlockNumber }}</span>
+                  </a>
+                  {{ if gtf .Epoch.Participation 0 }}
+                    {{ if .Epoch.Finalized }}
+                      <span data-html="true" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="This transaction can't be reverted without manual intervention by all participants." data-container="body">
+                        <span class="badge badge-success align-text-top text-white px-1"><i class="fas fa-check-double"></i> Finalized</span>
+                      </span>
+                    {{ else if and (gtf .Epoch.Participation 0.66) (ltf .Epoch.Participation 1) }}
+                      <span data-html="true" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="This transaction can be safely considered as final, and is highly unlikely to be reverted." data-container="body">
+                        <span class="badge badge-secondary align-text-top text-white px-1"><i class="fas fa-check"></i> Not Finalized (Safe)</span>
+                      </span>
+                    {{ else }}
+                      <span data-html="true" data-toggle="tooltip" data-placement="bottom" title="" data-original-title="This transaction can still be reverted and shouldn't be considered final." data-container="body">
+                        <span class="badge badge-light align-text-top text-black px-1"><i class="fas fa-exclamation-circle"></i> Not Finalized</span>
+                      </span>
+                    {{ end }}
+                  {{ end }}
+                </div>
+              </div>
+              <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                <div class="col-md-3">Timestamp:</div>
+                <div class="col-md-9"><span aria-ethereum-date="{{ .Timestamp.Unix }}" aria-ethereum-date-format="FROMNOW">{{ .Timestamp }}</span></div>
+              </div>
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3">From:</div>
+                <div class="col-md-9 d-flex flex-wrap">
+                  {{ formatEth1AddressFull .From }}
+                  {{ if ne .FromName "" }}
+                    <div class="ml-2 flex-shrink-1"><span class="badge badge-pill badge-ens align-middle">{{ .FromName }}</span></div>
+                  {{ end }}
+                  <i class="fa fa-copy text-muted p-1 ml-1" role="button" data-toggle="tooltip" title="Copy to clipboard" data-clipboard-text="{{ .From }}"></i>
+                </div>
+              </div>
+              <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                <div class="col-md-3">{{ if .IsContractCreation }}Created{{ else if .TargetIsContract }}Interacted With{{ else }}To{{ end }}:</div>
+                <div class="col-md-9">
+                  <div class="d-flex">
+                    <div class="row no-gutters w-100">
+                      <div class="col-md-auto" style="min-width: 0;">
+                        <span class="align-middle mr-2">{{ formatEth1AddressFull .To }}</span>
+                      </div>
+                      <div class="col-md-auto">
+                        <div class="d-flex flex-wrap">
+                          {{ if .TargetIsContract }}
+                            {{ if .DepositContractInteractions }}
+                              <div class="mr-2 flex-shrink-1"><span class="badge badge-primary align-middle text-white">Deposit Contract</span></div>
+                            {{ else if .Withdrawals }}
+                              <div class="mr-2 flex-shrink-1"><span class="badge badge-secondary align-middle text-white">Withdrawal Contract</span></div>
+                            {{ else  if .Consolidations }}
+                              <div class="mr-2 flex-shrink-1"><span class="badge badge-secondary align-middle text-white">Consolidations Contract</span></div>
+                            {{ else }}
+                              <div class="mr-2 flex-shrink-1"><span class="badge badge-secondary align-middle text-white">Contract</span></div>
+                            {{ end }}
+                          {{ end }}
+                          {{ if ne .ToName "" }}
+                            <div class="flex-shrink-1"><span class="badge badge-pill badge-ens align-middle">{{ .ToName }}</span></div>
+                          {{ end }}
+                          <i class="fa fa-copy text-muted p-1" role="button" data-toggle="tooltip" title="Copy to clipboard" data-clipboard-text="{{ .To }}"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {{ if gt (len .InternalTxns) 0 }}
+                    <ul class="fa-ul mb-0 mt-2">
+                      {{ range $i, $row := .InternalTxns }}
+                        {{ if and (not .Reverted) (not .Advanced) }}
+                          <li class="mb-1">
+                            <i class="fa-li fas fa-long-arrow-alt-right"></i>
+                            {{ if .Advanced }}
+                              <span>Call From</span>
+                              <span>{{ .From }}</span>
+                              <span>To</span>
+                              <span>{{ .To }}</span>
+                            {{ else }}
+                              <span>Transfer</span>
+                              <span>{{ .Amount }}</span>
+                              <span>From</span>
+                              <span>{{ .From }}</span>
+                              <span>To</span>
+                              <span>{{ .To }}</span>
+                            {{ end }}
+                          </li>
+                        {{ end }}
+                      {{ end }}
+                    </ul>
+                    <a class="btn btn-link" data-toggle="collapse" href="#collapseAdvancedIdx" role="button" aria-expanded="false" aria-controls="collapseAdvancedIdx">Advanced Info</a>
+                    <ul class="collapse fa-ul mb-0 mt-2" id="collapseAdvancedIdx">
+                      {{ range $i, $row := .InternalTxns }}
+                        {{ if .Advanced }}
+                          <li class="mb-1">
+                            <i class="fa-li fas fa-long-arrow-alt-right"></i>
+                            <span>Call From</span>
+                            <span>{{ .From }}</span>
+                            <span>To</span>
+                            <span>{{ .To }}</span>
+                          </li>
+                        {{ end }}
+                      {{ end }}
+                    </ul>
+                  {{ end }}
+                </div>
+              </div>
+              {{ if gt (len .Transfers) 0 }}
+                <div class="row border-bottom p-3 mx-0" style="border-bottom-width:4px !important;">
+                  <div class="col-md-3">Tokens Transferred: <span class="badge badge-dark align-text-middle text-white">{{ len .Transfers }}</span></div>
+                  <div class="col-md-9">
+                    <ul class="fa-ul mb-0">
+                      {{ range $i, $row := .Transfers }}
+                        <li class="mb-1">
+                          <i class="fa-li fas fa-caret-right"></i>
+                          <span>From</span>
+                          <span>{{ .From }}</span>
+                          <span>To</span>
+                          <span>{{ .To }}</span>
+                          <span>For</span>
+                          <span>{{ .Amount }}</span>
+                          <span>{{ .Token }}</span>
+                        </li>
+                      {{ end }}
+                    </ul>
+                  </div>
+                </div>
+              {{ end }}
+              {{ if .DepositContractInteractions }}
+                <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                  <div class="col-md-3">Beaconchain Deposits:</div>
+                  <div class="col-md-9">
+                    <ul class="fa-ul mb-0 mt-2">
+                      {{ range $i, $deposit := .DepositContractInteractions }}
+                        <li class="mb-1">
+                          <i class="fa-li fas fa-long-arrow-alt-right"></i>
+                          <span>Deposit of</span>
+                          <span>{{ formatBytesAmount $deposit.Amount config.Frontend.ElCurrency 8 }}</span>
+                          <span>to Validator</span>
+                          <span>{{ formatPublicKey $deposit.ValidatorPubkey }}</span>
+                          <span>with Withdrawal Credentials</span>
+                          <span>{{ formatWithdawalCredentials $deposit.WithdrawalCreds true }}</span>
+                        </li>
+                      {{ end }}
+                    </ul>
+                  </div>
+                </div>
+              {{ end }}
+              {{ if .Consolidations }}
+                <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                  <div class="col-md-3">Beaconchain Consolidations:</div>
+                  <div class="col-md-9">
+                    <ul class="fa-ul mb-0 mt-2">
+                      {{ range $i, $con := .Consolidations }}
+                        <li class="mb-1">
+                          <i class="fa-li fas fa-long-arrow-alt-right"></i>
+                          {{ if $con.IsMoveToCompounding }}
+                            <span>Convert to compounding request from validator </span>
+                            <span>{{ formatPublicKey $con.SourceValidatorPubkey }}</span>
+                          {{ else }}
+                            <span>Consolidate request from validator </span>
+                            <span>{{ formatPublicKey $con.SourceValidatorPubkey }}</span>
+                            <span>to validator </span>
+                            <span>{{ formatPublicKey $con.TargetValidatorPubkey }}</span>
+                          {{ end }}
+                        </li>
+                      {{ end }}
+                    </ul>
+                  </div>
+                </div>
+              {{ end }}
+              {{ if .Withdrawals }}
+                <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                  <div class="col-md-3">Beaconchain Withdrawals:</div>
+                  <div class="col-md-9">
+                    <ul class="fa-ul mb-0 mt-2">
+                      {{ range $i, $with := .Withdrawals }}
+                        <li class="mb-1">
+                          <i class="fa-li fas fa-long-arrow-alt-right"></i>
+                          {{ if $with.IsExitRequest }}
+                            <span>Exit request from validator </span>
+                            <span>{{ formatPublicKey $with.ValidatorPubkey }}</span>
+                          {{ else }}
+                            <span>Withdrawal request of </span>
+                            {{ formatClCurrency $with.Amount config.Frontend.MainCurrency 8 true false false false }}
+                            <span>from validator </span>
+                            <span>{{ formatPublicKey $with.ValidatorPubkey }}</span>
+                          {{ end }}
+                        </li>
+                      {{ end }}
+                    </ul>
+                  </div>
+                </div>
+              {{ end }}
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3">Value:</div>
+                <div class="col-md-9">
+                  {{ formatBytesAmount .Value config.Frontend.ElCurrency 8 }}
+                  <span id="valuePriceButton" class="badge badge-pill align-middle bg-dark text-white" data-html="true" data-toggle="tooltip" data-placement="bottom" data-original-title="Current Value" {{ if .HistoricalEtherPrice }}onclick="togglePriceContent('{{ .CurrentEtherPrice }}','{{ .HistoricalEtherPrice }}')" style="cursor: pointer;"{{ end }}>
+                    {{ formatElCurrency .Value $.Rates.SelectedCurrency 2 true false false false }}
+                  </span>
+                </div>
+              </div>
+              <div class="row border-bottom p-3 mx-0" style="border-width:4px !important;">
+                <div class="col-md-3">Transaction Fee:</div>
+                <div class="col-md-9">
+                  {{ formatBytesAmount .Gas.TxFee config.Frontend.ElCurrency 8 }}
+                  <span id="valuePriceButton" class="badge badge-pill align-middle bg-dark text-white" data-html="true" data-toggle="tooltip" data-placement="bottom" data-original-title="Current Value">
+                    {{ formatElCurrency .Gas.TxFee $.Rates.SelectedCurrency 2 true false false false }}
+                  </span>
+                </div>
+              </div>
+              <div class="row border-bottom p-3 mx-0">
+                <div class="col-md-3">Effective Gas Price:</div>
+                <div class="col-md-9">{{ formatBytesAmount .Gas.EffectiveFee "GWei" 8 }}</div>
+              </div>
+              {{ if eq .Type 3 }}
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Blob Tx Fees:</div>
+                  <div class="col-md-9">{{ formatBytesAmount .Gas.BlobTxFee config.Frontend.ElCurrency 8 }} <span class="text-secondary">(Used</span> <span class="text-black">{{ .Gas.BlobGasUsed }}</span> <span class="text-secondary">@</span> <span class="text-black">{{ formatBytesAmount .Gas.BlobGasPrice "GWei" 8 }}</span><span class="text-secondary">)</span></div>
+                </div>
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Blob Versioned Hashes:</div>
+                  <div class="col-md-9">
+                    <ul>
+                      {{ range $i, $h := .BlobHashes }}<li>{{ $i }}: {{ formatBlobVersionedHash $h }}</li>{{ end }}
+                    </ul>
+                  </div>
+                </div>
+              {{ end }}
+              <div class="collapse" id="collapseExample">
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Execution Stats:</div>
+                  <div class="col-md-9">
+                    <span class="text-secondary">Used</span>
+                    <span class="text-black">{{ .Gas.Used }}</span>
+                    <span class="text-secondary">out of</span>
+                    <span class="text-black">{{ .Gas.Limit }}</span>
+                    <span class="text-secondary">Gas</span>
+                    <span class="text-black">({{ formatPercentage .Gas.UsedPerc }}%)</span>
+                  </div>
+                </div>
+                {{ if (gt .Type 1) }}
+                  <div class="row border-bottom p-3 mx-0" style="border-bottom-width:4px !important;">
+                    <div class="col-md-3">Gas Fees:</div>
+                    <div class="col-md-9">
+                      <span class="text-secondary">Base Block Fee:</span>
+                      <span class="text-black">{{ formatBytesAmount .Gas.BlockBaseFee "GWei" 8 }}</span>
+                      <span class="px-2">|</span>
+                      <span class="text-secondary">Max Overall Fee:</span>
+                      <span class="text-black">{{ formatBytesAmount .Gas.MaxFee "GWei" 8 }}</span>
+                      <span class="px-2">|</span>
+                      <span class="text-secondary">Max Priority Fee:</span>
+                      <span class="text-black">{{ formatBytesAmount .Gas.MaxPriorityFee "GWei" 8 }}</span>
+                    </div>
+                  </div>
+                {{ end }}
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Attributes:</div>
+                  <div class="col-md-9">
+                    <div class="d-flex flex-wrap">
+                      <div class="mr-2 flex-shrink-1">
+                        <span class="badge badge-dark align-middle text-light p-1 px-2">Txn Type: <span class="text-white">{{ .TypeFormatted }}</span></span>
+                      </div>
+                      <div class="mr-2 flex-shrink-1">
+                        <span class="badge badge-dark align-middle text-light p-1 px-2">Nonce: <span class="text-white">{{ .Nonce }}</span></span>
+                      </div>
+                      <div class="mr-2 flex-shrink-1">
+                        <span class="badge badge-dark align-middle text-light p-1 px-2">Block Position: <span class="text-white">{{ .TxnPosition }}</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="row border-bottom p-3 mx-0">
+                  <div class="col-md-3">Call Data:</div>
+                  <div class="col-md-9">
+                    <textarea readonly class="form-control bg-light text-monospace ">{{ .CallData }}</textarea>
+                    <div class="mt-2">
+                      <button class="btn btn-dark text-white btn-sm" type="button" id="copy-button" data-toggle="tooltip" title="Copy raw data to clipboard" data-clipboard-text="{{ .CallData }}">Copy Raw Data <i class="fa fa-copy"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="row p-3 mx-0" style="border-width:4px !important;">
+                <a class="btn btn-link" data-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">Advanced Info</a>
+              </div>
+            </div>
+            {{ if .Events }}
+              <div id="eventsTabPanel" class="tab-pane fade" role="tabpanel" aria-labelledby="events-tab">
+                {{ range $index, $event := .Events }}
+                  <div class="row p-3 mx-0 {{ if $index }}border-top{{ end }}" {{ if $index }}style="border-width:4px !important;"{{ end }}>
+                    <div class="col-md-3">Address:</div>
+                    <div class="col-md-9">{{ formatEth1AddressFull .Address }}</div>
+                  </div>
+                  {{ if .Name }}
+                    <div class="row border-top p-3 mx-0">
+                      <div class="col-md-3">Name:</div>
+                      <div class="col-md-9"><samp>{{ .Name }}</samp></div>
+                    </div>
+                  {{ end }}
+                  <div class="row border-top p-3 mx-0">
+                    <div class="col-md-3">Topics:</div>
+                    <div class="col-md-9">
+                      <div class="table-responsive">
+                        <table class="table table-borderless text-monospace">
+                          <tbody>
+                            {{ range $index, $topic := .Topics }}
+                              <tr>
+                                <th class="border-0 p-0 pb-1 pr-2" style="width: 0;">
+                                  <span class="badge badge-dark align-bottom text-white">{{ $index }}</span>
+                                </th>
+                                <td class="border-0 p-0 pb-1 align-bottom">
+                                  <samp>{{ . }}</samp>
+                                </td>
+                              </tr>
+                            {{ end }}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  {{ if .DecodedData }}
+                    <div class="row border-top p-3 mx-0">
+                      <div class="col-md-3">Data (Decoded):</div>
+                      <div class="col-md-9">
+                        <div class="table-responsive">
+                          <table class="table table-borderless text-monospace">
+                            <tbody>
+                              {{ range $key, $value :=.DecodedData }}
+                                <tr>
+                                  <th class="border-0 p-0 pb-1 pr-2 col-md-auto" style="width: 0;">
+                                    <span class="badge badge-dark align-bottom text-white">{{ $key }}</span>
+                                  </th>
+                                  <td class="border-0 p-0 pr-2 col-md-auto" style="width: 0;">
+                                    <span class="badge badge-secondary align-bottom text-white">{{ $value.Type }}</span>
+                                  </td>
+                                  <td class="border-0 p-0 col-md-auto">
+                                    <div class="d-inline-flex">
+                                      <div class="flex-shrink-1">
+                                        {{ if eq $value.Type "address" }}
+                                          {{ formatEth1AddressFull $value.Address }}
+                                        {{ else }}
+                                          <samp>{{ $value.Value }}</samp>
+                                        {{ end }}
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              {{ end }}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  {{ end }}
+                  <div class="row border-top p-3 mx-0">
+                    <div class="col-md-3">Data (Hex):</div>
+                    <div class="col-md-9">
+                      <textarea readonly class="form-control bg-light text-monospace ">{{ printf "0x%x" .Data }}</textarea>
+                      <div class="mt-2">
+                        <button class="btn btn-dark text-white btn-sm" type="button" id="copy-button" data-toggle="tooltip" title="Copy raw data to clipboard" data-clipboard-text="0x{{ printf "%x" .Data }}">Copy Raw Data <i class="fa fa-copy"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                {{ end }}
+              </div>
+            {{ end }}
+            {{ if .InternalTxns }}
+              <div id="internal-txnsTabPanel" class="tab-pane fade" role="tabpanel" aria-labelledby="internal-txns-tab">
+                <div class="table-responsive">
+                  <table class="table dataTable no-footer" id="itransactions" role="grid">
+                    <thead>
+                      <tr>
+                        <th>Type Trace Address</th>
+                        <th>From</th>
+                        <th>To</th>
+                        <th>Value</th>
+                        <th>Gas Limit</th>
+                      </tr>
+                    </thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+            {{ end }}
+          </div>
+        </div>
+      </div>
+    {{ end }}
+  </div>
+{{ end }}
