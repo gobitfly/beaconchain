@@ -1,0 +1,61 @@
+name: Landing Page | ENV
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Choose environment"
+        required: true
+        type: choice
+        options:
+          - hoodi.staging
+          - mainnet.staging
+      tests_ref:
+        description: "Git ref (branch/tag/SHA) to run tests from"
+        required: true
+        default: "main"
+        type: string
+
+jobs:
+  run-landing-page-tests:
+    name: Landing Page • ${{ inputs.environment }} • ${{ inputs.tests_ref }}
+    runs-on: ubuntu-latest
+
+    env:
+      ENV: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code (tests ref)
+        uses: actions/checkout@v4
+        with:
+          # This controls which branch/tag/SHA your tests run against.
+          ref: ${{ inputs.tests_ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      # Keep your IF/ELSE block; run with HTML reporter for CI
+      - name: Run Playwright (@landing-page)
+        run: |
+          if [ "${ENV}" = "hoodi.staging" ]; then
+            ENV=hoodi.staging npx playwright test --config=tests/playwright.config.ts --grep @landing-page --reporter=html
+          else
+            ENV=mainnet.staging npx playwright test --config=tests/playwright.config.ts --grep @landing-page --reporter=html
+          fi
+
+      - name: Upload Playwright report (HTML)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.environment }}-${{ inputs.tests_ref }}
+          path: playwright-report
+          retention-days: 7
