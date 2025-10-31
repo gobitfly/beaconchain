@@ -60,16 +60,15 @@ definePageMeta({
         v-if="promoCode"
         class="promo-overlay"
       >
-        <I18nT
+        <BcTranslation
           keypath="pricing.promo_code"
-          scope="global"
           tag="span"
           class="promo-text"
         >
-          <template #_code>
+          <template #code>
             <span class="promo-code">{{ promoCode }}</span>
           </template>
-        </I18nT>
+        </BcTranslation>
       </div>
     </div>
   </BcPageWrapper>
