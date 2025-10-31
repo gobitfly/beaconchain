@@ -1,0 +1,182 @@
+linters:
+  enable-all: true
+  enable:
+    # default needs explicit enabling?
+    - unused
+    - staticcheck
+    - govet
+    - errcheck
+    - gosimple
+    - ineffassign
+    - forbidigo
+    - unconvert
+    - bodyclose
+    - durationcheck
+    - errchkjson
+    - errname
+    - nosprintfhostport
+    - nolintlint
+    - gosec
+    - importas
+    - unparam
+  disable:
+    - dupword
+    - gocognit
+    - dupl
+    - mnd
+    - copyloopvar
+    - intrange
+
+    # Disabled for now:
+    - asasalint
+    - containedctx
+    - contextcheck
+    - cyclop
+    - dogsled
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - err113
+    - gofumpt
+    - gomnd
+    - gomoddirectives
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - lll
+    - maintidx
+    - makezero
+    - musttag
+    - nakedret
+    - nestif
+    - nilnil
+    - nlreturn
+    - noctx
+    - nonamedreturns
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - revive
+    # - stylecheck
+    - tagalign
+    - tagliatelle
+    - thelper
+    - varnamelen
+    - wrapcheck
+    - wsl
+  fast: true
+
+linters-settings:
+  importas:
+    alias:
+      - pkg: "github.com/gobitfly/beaconchain/pkg/consapi/types"
+        alias: constypes
+      - pkg: "github.com/ethereum/go-ethereum/core/types"
+        alias: gethtypes
+      - pkg: "github.com/ethereum/go-ethereum/rpc"
+        alias: gethrpc
+      - pkg: "github.com/ethereum/go-ethereum"
+        alias: ethereum
+      - pkg: "github.com/gobitfly/beaconchain/pkg/exporter/db"
+        alias: edb
+  unused:
+    exported-is-used: true
+  forbidigo:
+    forbid:
+      - p: ^logrus\.Fatalf.*$
+        msg: Use log.Fatal instead
+      - p: ^log\.Fatalf.*$
+        msg: Use log.Fatal instead
+      - p: ^logger\.Fatalf.*$
+        msg: Use log.Fatal instead
+      - p: ^logrus\.Errorf.*$
+        msg: Use log.Error instead
+      - p: ^logger\.Errorf.*$
+        msg: Use log.Error instead
+      - p: ^log\.Errorf.*$
+        msg: Use log.Error instead
+      - p: ^fmt\.Print.*$
+        msg: Use log.Infof instead
+      - p: ^fmt\.Printf.*$
+        msg: Use log.Infof instead
+  gocognit:
+    min-complexity: 65
+  depguard:
+    rules:
+      main:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - $all
+          - "!$test"
+          - "!**/pkg/exporter/modules/eth1.go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/prysmaticlabs/prysm/v3
+            desc: "Depending on your needs you might find something here https://github.com/wealdtech"
+      main-logging:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - $all
+          - "!$test"
+          - "!**/pkg/commons/log/log.go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/sirupsen/logrus
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
+          - pkg: log
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
+          - pkg: log/slog
+            desc: "Do not use an external logging library, use pkg/commons/log/log instead"
+      consapi:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/consapi/**/*.go"
+          - "**/consapi/*go"
+        allow:
+          - $gostd
+          - github.com/gobitfly/beaconchain/pkg/consapi
+        deny:
+          - pkg: github.com/gobitfly/beaconchain
+            desc: "ConsAPI must not import anything from the main package"
+      db:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/commons/db/**/*.go"
+          - "**/commons/db/*go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/gobitfly/beaconchain/pkg/consapi
+            desc: "DB must not import"
+          - pkg: github.com/gobitfly/beaconchain/pkg/exporter
+            desc: "DB must not import"
+          - pkg: "net/http"
+            desc: "DB must not import"
+      commons:
+        list-mode: lax # allow unless explicitely denied
+        files:
+          - "**/commons/**/*.go"
+          - "**/commons/*go"
+        allow:
+          - $gostd
+        deny:
+          - pkg: github.com/gobitfly/beaconchain/pkg/exporter
+            desc: "DB must not import"
+issues:
+  max-same-issues: 0
+  exclude-dirs:
+    - cmd/playground

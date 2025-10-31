@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "backend"
+		},
+		{
+			"path": "frontend"
+		},
+		{
+			"path": "perfTesting"
+		},
+		{
+			"path": ".github"
+		}
+	]
+}

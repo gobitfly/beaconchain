@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "vivaxy.vscode-conventional-commits",
+    "dbaeumer.vscode-eslint",
+    "eamodio.gitlens",
+    "usernamehw.errorlens",
+    "nuxtr.nuxt-vscode-extentions",
+    "vue.volar"
+  ]
+}

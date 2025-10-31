@@ -1,0 +1,34 @@
+{
+  "paging": {
+    "total_count": 999
+  },
+  "data": [
+    {
+      "group_id": -1,
+      "status": {
+        "next_sync_count": 23434,
+        "current_sync_count": 345,
+        "slashed_count": 12
+      },
+      "validators": {
+        "online": 123124,
+        "offline": 234,
+        "exited": 22
+      },
+      "efficiency": 81.02,
+      "average_network_efficiency": 84.213,
+      "attestations": {
+        "success": 1234,
+        "failed": 134
+      },
+      "proposals": {
+        "success": 34,
+        "failed": 23
+      },
+      "reward": {
+        "el": "51200000000000000",
+        "cl": "11200000000000000"
+      }
+    }
+  ]
+}

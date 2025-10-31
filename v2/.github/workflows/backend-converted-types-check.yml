@@ -1,0 +1,46 @@
+name: Backend-Converted-Types-Check
+on:
+  push:
+    paths:
+      - 'backend/pkg/api/types/**'
+      - 'frontend/types/api/**'
+    branches:
+      - main
+      - staging
+  pull_request:
+    paths:
+      - 'backend/pkg/api/types/**'
+      - 'frontend/types/api/**'
+    branches:
+      - '*'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  build:
+    name: converted-types-check
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'backend/go.mod'
+          cache-dependency-path: 'backend/go.sum'
+      - name: Check if all backend-types have been converted to frontend-types
+        working-directory: backend
+        run: |
+          currHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
+          make frontend-types
+          newHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
+          if [ "$currHash" != "$newHash" ]; then
+            echo "frontend-types have changed, please commit the changes"
+            exit 1
+          fi
+

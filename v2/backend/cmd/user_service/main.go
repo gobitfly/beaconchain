@@ -1,0 +1,140 @@
+package user_service
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"time"
+
+	"net/http"
+	"sync"
+
+	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
+	"github.com/gobitfly/beaconchain/pkg/commons/version"
+	"github.com/gobitfly/beaconchain/pkg/userservice"
+
+	//nolint:gosec
+	_ "net/http/pprof"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+)
+
+func Run() {
+	fs := flag.NewFlagSet("fs", flag.ExitOnError)
+	configPath := fs.String("config", "config.yml", "path to config")
+	_ = fs.Parse(os.Args[2:])
+
+	cfg := &types.Config{}
+	err := utils.ReadConfig(cfg, *configPath)
+	if err != nil {
+		log.Fatal(err, "error reading config file", 0)
+	}
+	utils.Config = cfg
+	log.InfoWithFields(log.Fields{
+		"config":    *configPath,
+		"version":   version.Version,
+		"chainName": utils.Config.Chain.ClConfig.ConfigName}, "starting")
+
+	if utils.Config.Chain.ClConfig.SlotsPerEpoch == 0 || utils.Config.Chain.ClConfig.SecondsPerSlot == 0 {
+		log.Fatal(err, "invalid chain configuration specified, you must specify the slots per epoch, seconds per slot and genesis timestamp in the config file", 0)
+	}
+
+	if utils.Config.Metrics.Enabled {
+		go func() {
+			log.Infof("serving metrics on %v", utils.Config.Metrics.Address)
+			if err := metrics.Serve(utils.Config.Metrics.Address, utils.Config.Metrics.Pprof, utils.Config.Metrics.PprofExtra); err != nil {
+				log.Fatal(err, "error serving metrics", 0)
+			}
+		}()
+	}
+
+	if utils.Config.Pprof.Enabled {
+		go func() {
+			log.Infof("starting pprof http server on port %s", utils.Config.Pprof.Port)
+			server := &http.Server{
+				Addr:         fmt.Sprintf("localhost:%s", utils.Config.Pprof.Port),
+				Handler:      nil,
+				ReadTimeout:  60 * time.Second,
+				WriteTimeout: 60 * time.Second,
+			}
+			err := server.ListenAndServe()
+
+			if err != nil {
+				log.Error(err, "error during ListenAndServe for pprof http server", 0)
+			}
+		}()
+	}
+
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		db.FrontendWriterDB, db.FrontendReaderDB = db.MustInitDB(&types.DatabaseConfig{
+			Username:     cfg.Frontend.WriterDatabase.Username,
+			Password:     cfg.Frontend.WriterDatabase.Password,
+			Name:         cfg.Frontend.WriterDatabase.Name,
+			Host:         cfg.Frontend.WriterDatabase.Host,
+			Port:         cfg.Frontend.WriterDatabase.Port,
+			MaxOpenConns: cfg.Frontend.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.WriterDatabase.MaxIdleConns,
+		}, &types.DatabaseConfig{
+			Username:     cfg.Frontend.ReaderDatabase.Username,
+			Password:     cfg.Frontend.ReaderDatabase.Password,
+			Name:         cfg.Frontend.ReaderDatabase.Name,
+			Host:         cfg.Frontend.ReaderDatabase.Host,
+			Port:         cfg.Frontend.ReaderDatabase.Port,
+			MaxOpenConns: cfg.Frontend.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: cfg.Frontend.ReaderDatabase.MaxIdleConns,
+		}, "pgx", "postgres")
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		db.WriterDb, db.ReaderDb = db.MustInitDB(&types.DatabaseConfig{
+			Username:     utils.Config.WriterDatabase.Username,
+			Password:     utils.Config.WriterDatabase.Password,
+			Name:         utils.Config.WriterDatabase.Name,
+			Host:         utils.Config.WriterDatabase.Host,
+			Port:         utils.Config.WriterDatabase.Port,
+			MaxOpenConns: utils.Config.WriterDatabase.MaxOpenConns,
+			MaxIdleConns: utils.Config.WriterDatabase.MaxIdleConns,
+			SSL:          utils.Config.WriterDatabase.SSL,
+		}, &types.DatabaseConfig{
+			Username:     utils.Config.ReaderDatabase.Username,
+			Password:     utils.Config.ReaderDatabase.Password,
+			Name:         utils.Config.ReaderDatabase.Name,
+			Host:         utils.Config.ReaderDatabase.Host,
+			Port:         utils.Config.ReaderDatabase.Port,
+			MaxOpenConns: utils.Config.ReaderDatabase.MaxOpenConns,
+			MaxIdleConns: utils.Config.ReaderDatabase.MaxIdleConns,
+			SSL:          utils.Config.ReaderDatabase.SSL,
+		}, "pgx", "postgres")
+	}()
+
+	// if needed, init the database, cache or bigtable
+
+	wg.Wait()
+
+	defer db.FrontendReaderDB.Close()
+	defer db.FrontendWriterDB.Close()
+
+	log.Infof("database connection established")
+
+	Init()
+
+	utils.WaitForCtrlC()
+
+	log.Infof("exiting...")
+}
+
+func Init() {
+	log.Infof("starting user service")
+	go userservice.StripeEmailUpdater()
+	go userservice.CheckMobileSubscriptions()
+}
