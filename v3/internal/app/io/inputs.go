@@ -146,13 +146,13 @@ func asWithdrawalInput(input model.ValidatorsSelector) (domain.ValidatorsSelecto
 		return selector, errEmptySelector
 	}
 
-	credsBytes, err := decodeHexString(byWithdrawal.Withdrawal)
+	credsBytes, err := DecodeHexString(byWithdrawal.Withdrawal)
 	if err != nil {
 		return selector, fmt.Errorf("decoding withdrawal hex: %w", err)
 	}
 
 	if len(credsBytes) == 20 {
-		address := domain.EthereumAddress(credsBytes)
+		address := credsBytes
 		selector.WithdrawalAddress = &address
 		return selector, nil
 	}
@@ -160,7 +160,7 @@ func asWithdrawalInput(input model.ValidatorsSelector) (domain.ValidatorsSelecto
 	if len(credsBytes) != 32 {
 		return selector, fmt.Errorf("invalid withdrawal credential: %d", len(credsBytes))
 	}
-	credential := domain.WithdrawalCredential(credsBytes)
+	credential := credsBytes
 	selector.WithdrawalCredential = &credential
 	return selector, nil
 }
@@ -190,7 +190,7 @@ func asIdentifiers(input model.ValidatorsSelector) (domain.ValidatorsSelector, e
 			return selector, errEmptySelector
 		}
 
-		pubkeyBytes, err := decodeHexString(publicKey)
+		pubkeyBytes, err := DecodeHexString(publicKey)
 		if err != nil {
 			return selector, fmt.Errorf("invalid validator pubkey: %w", err)
 		}
@@ -210,14 +210,14 @@ func asIdentifiers(input model.ValidatorsSelector) (domain.ValidatorsSelector, e
 
 // ParseEthereumAddress parses a hex-encoded Ethereum address (with or without "0x" prefix).
 func ParseEthereumAddress(address string) (domain.EthereumAddress, error) {
-	addressBytes, err := decodeHexString(address)
+	addressBytes, err := DecodeHexString(address)
 	if err != nil {
 		return domain.EthereumAddress{}, err
 	}
-	return domain.EthereumAddress(addressBytes), nil
+	return addressBytes, nil
 }
 
-// decodeHexString decodes a hex string, allowing an optional "0x" prefix.
-func decodeHexString(s string) ([]byte, error) {
+// DecodeHexString decodes a hex string, allowing an optional "0x" prefix.
+func DecodeHexString(s string) ([]byte, error) {
 	return hex.DecodeString(strings.TrimPrefix(s, "0x"))
 }

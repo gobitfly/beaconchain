@@ -117,6 +117,7 @@ func Run(
 
 	validationMiddleware := nethttpmiddleware.OapiRequestValidatorWithOptions(spec, &nethttpmiddleware.Options{
 		ErrorHandlerWithOpts: apputils.ValidationErrorHandler,
+		DoNotValidateServers: true, // disabled so that non-prod servers don't have to be listed in the OpenAPI spec
 		Options: openapi3filter.Options{
 			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc, // we do our own auth in a separate middleware
 		},

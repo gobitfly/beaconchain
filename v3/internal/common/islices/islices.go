@@ -9,3 +9,12 @@ func Transform[In any, Out any](in []In, transform func(In) Out) []Out {
 	}
 	return out
 }
+
+// ToMap converts a slice into a map using a key extraction function.
+func ToMap[In any, Key comparable](in []In, keyFunc func(In) Key) map[Key]In {
+	out := make(map[Key]In)
+	for _, item := range in {
+		out[keyFunc(item)] = item
+	}
+	return out
+}

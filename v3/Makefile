@@ -16,6 +16,7 @@ generate-api-stubs:
 	go generate ./...
 generate-mocks:
 	go install github.com/vektra/mockery/v3@latest
+	rm -rf internal/dataaccess/repo/*/mock.go
 	mockery
 build-service:
 	mkdir -p bin

@@ -2,9 +2,11 @@ package io
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gobitfly/beaconchain-backend/api/external/model"
 	"github.com/gobitfly/beaconchain-backend/internal/common/config"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEpochToSlot(t *testing.T) {
@@ -59,9 +61,7 @@ func TestEpochToSlot(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := EpochToStartSlot(tt.epoch, tt.config)
-			if result != tt.expectedSlot {
-				t.Errorf("EpochToSlot(%d) = %d, want %d", tt.epoch, result, tt.expectedSlot)
-			}
+			assert.Equal(t, tt.expectedSlot, result)
 		})
 	}
 }
@@ -71,7 +71,7 @@ func TestEpochToTimestamp(t *testing.T) {
 		name              string
 		epoch             int
 		config            config.ChainConfig
-		expectedTimestamp int
+		expectedTimestamp time.Time
 	}{
 		{
 			name:  "epoch 0 should return genesis timestamp",
@@ -81,7 +81,7 @@ func TestEpochToTimestamp(t *testing.T) {
 				SecondsPerSlot:   12,
 				GenesisTimestamp: 1606824000,
 			},
-			expectedTimestamp: 1606824000,
+			expectedTimestamp: time.Unix(1606824000, 0).UTC(),
 		},
 		{
 			name:  "epoch 1 calculation",
@@ -91,7 +91,7 @@ func TestEpochToTimestamp(t *testing.T) {
 				SecondsPerSlot:   12,
 				GenesisTimestamp: 1606824000,
 			},
-			expectedTimestamp: 1606824000 + (32 * 12), // 1606824384
+			expectedTimestamp: time.Unix(1606824000+(32*12), 0).UTC(),
 		},
 		{
 			name:  "epoch 10 with standard config",
@@ -101,7 +101,7 @@ func TestEpochToTimestamp(t *testing.T) {
 				SecondsPerSlot:   12,
 				GenesisTimestamp: 1606824000,
 			},
-			expectedTimestamp: 1606824000 + (320 * 12), // 1606827840
+			expectedTimestamp: time.Unix(1606824000+(320*12), 0).UTC(),
 		},
 		{
 			name:  "epoch 5 with different seconds per slot",
@@ -111,7 +111,7 @@ func TestEpochToTimestamp(t *testing.T) {
 				SecondsPerSlot:   6,
 				GenesisTimestamp: 1606824000,
 			},
-			expectedTimestamp: 1606824000 + (160 * 6), // 1606824960
+			expectedTimestamp: time.Unix(1606824000+(160*6), 0).UTC(),
 		},
 		{
 			name:  "zero genesis timestamp",
@@ -121,16 +121,14 @@ func TestEpochToTimestamp(t *testing.T) {
 				SecondsPerSlot:   12,
 				GenesisTimestamp: 0,
 			},
-			expectedTimestamp: 96 * 12, // 1152
+			expectedTimestamp: time.Unix(0+(96*12), 0).UTC(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := EpochToStartTimestamp(tt.epoch, tt.config)
-			if result != tt.expectedTimestamp {
-				t.Errorf("EpochToTimestamp(%d) = %d, want %d", tt.epoch, result, tt.expectedTimestamp)
-			}
+			result := EpochToStartTime(tt.epoch, tt.config)
+			assert.Equal(t, tt.expectedTimestamp, result)
 		})
 	}
 }
@@ -239,24 +237,7 @@ func TestEpochToResultRange(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := EpochToResultRange(tt.epoch, tt.config)
-
-			// Check Epoch range
-			if result.Epoch.Start != tt.expectedRange.Epoch.Start || result.Epoch.End != tt.expectedRange.Epoch.End {
-				t.Errorf("Epoch range mismatch: got {Start: %d, End: %d}, want {Start: %d, End: %d}",
-					result.Epoch.Start, result.Epoch.End, tt.expectedRange.Epoch.Start, tt.expectedRange.Epoch.End)
-			}
-
-			// Check Slot range
-			if result.Slot.Start != tt.expectedRange.Slot.Start || result.Slot.End != tt.expectedRange.Slot.End {
-				t.Errorf("Slot range mismatch: got {Start: %d, End: %d}, want {Start: %d, End: %d}",
-					result.Slot.Start, result.Slot.End, tt.expectedRange.Slot.Start, tt.expectedRange.Slot.End)
-			}
-
-			// Check Timestamp range
-			if result.Timestamp.Start != tt.expectedRange.Timestamp.Start || result.Timestamp.End != tt.expectedRange.Timestamp.End {
-				t.Errorf("Timestamp range mismatch: got {Start: %d, End: %d}, want {Start: %d, End: %d}",
-					result.Timestamp.Start, result.Timestamp.End, tt.expectedRange.Timestamp.Start, tt.expectedRange.Timestamp.End)
-			}
+			assert.Equal(t, tt.expectedRange, result)
 		})
 	}
 }

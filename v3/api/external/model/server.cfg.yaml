@@ -6,4 +6,4 @@ generate:
   strict-server: true
 output: external-server.gen.go
 output-options:
-  nullable-type: true
+  prefer-skip-optional-pointer: true

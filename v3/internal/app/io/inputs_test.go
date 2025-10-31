@@ -184,7 +184,7 @@ func TestParseEthereumAddress(t *testing.T) {
 	// A standard, valid 20-byte Ethereum address (40 hex characters)
 	validHex := testAddressStr
 	addrBytes, _ := hex.DecodeString(validHex)
-	ethereumAddress := domain.EthereumAddress(addrBytes)
+	ethereumAddress := addrBytes
 
 	tests := []struct {
 		name    string
@@ -310,7 +310,7 @@ func TestAsWithdrawalInput(t *testing.T) {
 	emptyInput, depositAddressInput, withdrawalAddressInput, withdrawalCredentialInput, identifiersInput := setupSelectorInputs()
 
 	ethereumAddress, _ := ParseEthereumAddress(testAddressStr)
-	credential := domain.WithdrawalCredential(slices.Concat([]byte{0x01}, slices.Repeat([]byte{0x00}, 11), []byte(ethereumAddress)))
+	credential := slices.Concat([]byte{0x01}, slices.Repeat([]byte{0x00}, 11), ethereumAddress)
 	// success cases
 	test := []struct {
 		name  string
@@ -377,7 +377,7 @@ func TestAsIdentifiers(t *testing.T) {
 	t.Run("identifiers input parses", func(t *testing.T) {
 		selector, err := asIdentifiers(identifiersInput)
 		assert.NoError(t, err)
-		key, err := decodeHexString(testAddressStr)
+		key, err := DecodeHexString(testAddressStr)
 		require.NoError(t, err)
 		want := domain.ValidatorsSelector{
 			Identifiers: &domain.ValidatorsByIdentifier{
@@ -413,7 +413,7 @@ func TestAsValidatorsSelector(t *testing.T) {
 	emptyInput, depositAddressInput, withdrawalAddressInput, withdrawalCredentialInput, identifiersInput := setupSelectorInputs()
 
 	ethereumAddress, _ := ParseEthereumAddress(testAddressStr)
-	credential := domain.WithdrawalCredential(slices.Concat([]byte{0x01}, slices.Repeat([]byte{0x00}, 11), []byte(ethereumAddress)))
+	credential := slices.Concat([]byte{0x01}, slices.Repeat([]byte{0x00}, 11), ethereumAddress)
 
 	tests := []struct {
 		name    string

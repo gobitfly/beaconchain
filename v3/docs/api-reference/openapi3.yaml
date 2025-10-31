@@ -2079,7 +2079,7 @@ components:
         - exited_slashed
         - withdrawal_possible
         - withdrawal_done
-      nullable: true
+        - unknown
 
     Deposits:
       type: object
@@ -2882,6 +2882,26 @@ components:
         - manual
         - network
 
+    LifeCycleEpochs:
+      type: object
+      description: Epochs marking significant lifecycle events for the validator. Unlike the official spec, null is returned for events that have not yet occurred, instead of using "FAR_FUTURE_EPOCH" (max uint64), to simplify client handling.
+      properties:
+        activation_eligibility:
+          description: The epoch at which the validator became eligible for activation by meeting the activation criteria.
+          type: integer
+          nullable: true
+        activation:
+          description: The epoch at which the validator was activated and started participating in the consensus process & earning rewards.
+          type: integer
+          nullable: true
+        exit:
+          type: integer
+          description: The epoch at which the validator exited and stopped participating in the consensus process.
+          nullable: true
+        withdrawable:
+          type: integer
+          description: The epoch at which the validator became eligible for withdrawal after they have exited.
+          nullable: true
     ValidatorOverview.Data:
       type: object
       properties:
@@ -2892,11 +2912,8 @@ components:
         status:
           $ref: '#/components/schemas/Data.Status'
         online:
-          description: |
-            Indicates whether the validator has been recently observed as online. This field is null if the validator is not in an active status (e.g., pending or exited).
-            A validator is considered online if it is active and has attested within the last 2 epochs.
-          nullable: true
           type: boolean
+          nullable: true
         # capabilities: # on hold for extended discussion, ideally we go beyond prefix capabilities and provide at the current state whether f.e consolidation is possible or not
         #   type: object
         #   description: Capabilities are determined based on the prefix of the validator's withdrawal credentials. 
@@ -2912,26 +2929,8 @@ components:
         #       description: The maximum balance the validator can have based on its withdrawal credential type. Validators with withdrawal credentials prefix of "0x00" or "0x01" have a max stake of 32 ETH, while those with "0x02" prefix can have up to 2048 ETH.
         withdrawal_credentials:
           $ref: '#/components/schemas/withdrawalCredential'
-        lifecycle_epochs:
-          type: object
-          description: Epochs marking significant lifecycle events for the validator. Unlike the official spec, null is returned for events that have not yet occurred, instead of using "FAR_FUTURE_EPOCH" (max uint64), to simplify client handling.
-          properties:
-            activation_eligibility:
-              description: The epoch at which the validator became eligible for activation by meeting the activation criteria.
-              type: integer
-              nullable: true
-            activation:
-              description: The epoch at which the validator was activated and started participating in the consensus process & earning rewards.
-              type: integer
-              nullable: true
-            exit:
-              type: integer
-              description: The epoch at which the validator exited and stopped participating in the consensus process.
-              nullable: true
-            withdrawable:
-              type: integer
-              description: The epoch at which the validator became eligible for withdrawal after they have exited.
-              nullable: true
+        life_cycle_epochs:
+          $ref: '#/components/schemas/LifeCycleEpochs'
         balances:
           $ref: '#/components/schemas/validatorBalancesHead'
         finality:

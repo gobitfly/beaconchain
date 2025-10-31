@@ -5,3 +5,4 @@ generate:
 output: external-types.gen.go
 output-options:
   prefer-skip-optional-pointer: true
+  nullable-type: true

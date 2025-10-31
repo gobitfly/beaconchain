@@ -28,21 +28,21 @@ func (service *ApiService) GetSlot(ctx context.Context, in model.GetSlotRequestO
 
 	transformedSlot := transformSlotToModel(slot)
 	response := model.GetSlot200JSONResponse{}
-	response.Data = &transformedSlot
+	response.Data = transformedSlot
 	return response, nil
 }
 func transformSlotToModel(slot domain.Slot) model.SlotOverviewData {
 	return model.SlotOverviewData{
-		AttestationCount: slot.AttestationCount,
+		AttestationCount: io.AsNullableValue(slot.AttestationCount),
 		// TODO: Missing ProposerSlashingCount in spec
 		BlockRoot: model.ConsensusLayerBlockRoot(slot.BlockRoot),
 		// expected spec-change:
 		// DataRecency: model.DataRecency{
 		// 	IsEpochFinalized: slot.Finalized,
 		// },
-		Graffiti: model.Graffiti(slot.Graffiti),
+		Graffiti: io.AsNullableValue(model.Graffiti(slot.Graffiti)),
 		Proposer: model.Validator{
-			Index:     slot.Proposer.Index,
+			Index:     io.AsNullableValue(slot.Proposer.Index),
 			PublicKey: model.ValidatorPublicKey(slot.Proposer.Pubkey),
 		},
 		Status: model.DutyStatus(slot.Status),

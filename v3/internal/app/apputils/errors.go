@@ -59,7 +59,10 @@ func ValidationErrorHandler(_ context.Context, err error, w http.ResponseWriter,
 	switch v := err.(type) {
 	case *routers.RouteError:
 		// middleware defaults to 404, but we want to distinguish between 404 and 405
-		if v == routers.ErrMethodNotAllowed {
+		switch v {
+		case routers.ErrPathNotFound:
+			err = common.NewAPIUserFacingError(http.StatusNotFound, fmt.Sprintf("path not found: %s", r.URL.Path))
+		case routers.ErrMethodNotAllowed:
 			err = common.NewAPIUserFacingError(http.StatusMethodNotAllowed, fmt.Sprintf("method not allowed: %s", r.Method))
 		}
 	case *openapi3filter.RequestError, *openapi3filter.ValidationError:
