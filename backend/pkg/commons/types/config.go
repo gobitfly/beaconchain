@@ -71,6 +71,7 @@ type Config struct {
 			PrivacyPolicyUrl  string `yaml:"privacyPolicyUrl" env:"PRIVACY_POLICY_URL"`
 			ImprintTemplate   string `yaml:"imprintTemplate" env:"IMPRINT_TEMPLATE"`
 		} `yaml:"legal" env:", prefix=LEGAL_"`
+		SiteDomainV2 string `yaml:"siteDomainV2" env:"SITE_DOMAIN_V2"` // used to format links and text that relates to v2-site
 		SiteDomain   string `yaml:"siteDomain" env:"SITE_DOMAIN"`
 		SiteName     string `yaml:"siteName" env:"SITE_NAME"`
 		SiteTitle    string `yaml:"siteTitle" env:"SITE_TITLE"`

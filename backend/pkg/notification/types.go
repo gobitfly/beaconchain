@@ -53,11 +53,11 @@ func formatValidatorPrefixedDashboardAndGroupLink(format types.NotificationForma
 	if n.GetDashboardId() != nil {
 		switch format {
 		case types.NotifciationFormatHtml:
-			dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
+			dashboardAndGroupInfo = fmt.Sprintf(` of Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomainV2, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
 		case types.NotifciationFormatText:
 			dashboardAndGroupInfo = fmt.Sprintf(` of Group %[1]v in Dashboard %[2]v`, n.GetDashboardGroupName(), n.GetDashboardName())
 		case types.NotifciationFormatMarkdown:
-			dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomain, *n.GetDashboardId())
+			dashboardAndGroupInfo = fmt.Sprintf(` of Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomainV2, *n.GetDashboardId())
 		}
 	}
 	return dashboardAndGroupInfo
@@ -68,11 +68,11 @@ func formatPureDashboardAndGroupLink(format types.NotificationFormat, n types.No
 	if n.GetDashboardId() != nil {
 		switch format {
 		case types.NotifciationFormatHtml:
-			dashboardAndGroupInfo = fmt.Sprintf(`Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomain, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
+			dashboardAndGroupInfo = fmt.Sprintf(`Group <b>%[2]v</b> in Dashboard <a href="https://%[1]v/dashboard/%[4]v">%[3]v</a>`, utils.Config.Frontend.SiteDomainV2, n.GetDashboardGroupName(), n.GetDashboardName(), *n.GetDashboardId())
 		case types.NotifciationFormatText:
 			dashboardAndGroupInfo = fmt.Sprintf(`Group %[1]v in Dashboard %[2]v`, n.GetDashboardGroupName(), n.GetDashboardName())
 		case types.NotifciationFormatMarkdown:
-			dashboardAndGroupInfo = fmt.Sprintf(`Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomain, *n.GetDashboardId())
+			dashboardAndGroupInfo = fmt.Sprintf(`Group **%[1]v** in Dashboard [%[2]v](https://%[3]v/dashboard/%[4]v)`, n.GetDashboardGroupName(), n.GetDashboardName(), utils.Config.Frontend.SiteDomainV2, *n.GetDashboardId())
 		}
 	}
 	return dashboardAndGroupInfo
