@@ -260,7 +260,10 @@ watch(
             >
               <template #header>
                 <div class="validators-header">
-                  <div>{{ $t("dashboard.validator.col.beaconscore") }}</div>
+                  <BcTranslation
+                    keypath="base.common.beaconscore"
+                    suppath="base.common.registered_trademark_symbol"
+                  />
                   <BcTooltip
                     class="info"
                     tooltip-class="summary-info-tooltip"
@@ -270,6 +273,7 @@ watch(
                       <BcTranslation
                         keypath="dashboard.beaconscore.template"
                         linkpath="dashboard.beaconscore.link"
+                        suppath="base.common.registered_trademark_symbol"
                         :to="externalLink.knowledgeBase.beaconScore"
                       />
                     </template>

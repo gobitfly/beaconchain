@@ -9,11 +9,13 @@
                 "try_again": "Try again"
             },
             "all": "All",
+            "beaconscore": "BeaconScore{sup}",
             "close": "Close",
             "ethereum": "Ethereum",
             "log_in": "Log in",
             "no_results": "No results found.",
             "open_navigation": "Open Navigation",
+            "registered_trademark_symbol": "®",
             "side_navigation": "Side Navigation",
             "something_went_wrong": "Something went wrong."
         },
@@ -172,7 +174,7 @@
         "account_dashboard": "Account Dashboard",
         "beaconscore": {
             "link": "knowledge base article",
-            "template": "Read more about how we calculate the BeaconScore in our {link}"
+            "template": "Read more about how we calculate the BeaconScore{sup} in our {link}"
         },
         "creation": {
             "network": {
@@ -351,7 +353,6 @@
             "col": {
                 "amount": "Amount",
                 "balance": "Balance",
-                "beaconscore": "BeaconScore",
                 "block_processed": "Block Processed",
                 "block_queued": "Block Queued",
                 "cl_rewards": "Cl Rewards",
@@ -443,7 +444,7 @@
                 "validators_limit_exceeded": "Cannot add validators. The maximum effective balance of the validators exceeds your plan's limit."
             },
             "overview": {
-                "24h_beaconscore": "BeaconScore (24h)",
+                "24h_beaconscore": "BeaconScore{sup} (24h)",
                 "30d_apr": "APR (30d)",
                 "30d_rewards": "Rewards (30d)",
                 "online_validators": "Online Validators",
@@ -528,7 +529,6 @@
                     "all_groups": "All Groups",
                     "average": "Network Average",
                     "efficiency": {
-                        "all": "BeaconScore",
                         "attestation": "Attestation Eff.",
                         "proposal": "Proposal Eff.",
                         "sync": "Sync Eff."
@@ -571,11 +571,11 @@
                 "tooltip": {
                     "amount_of_rounds": "(amount of rounds)",
                     "amount_of_validators": "(amount of validators)",
-                    "equal": "{name}'s BeaconScore is at the network average of {average}",
+                    "equal": "{name}'s BeaconScore{sup} is at the network average of {average}",
                     "estimated_loss": "Estimated loss based on avg. network performance.",
-                    "higher": "{name}'s BeaconScore is above the network average of {average}",
+                    "higher": "{name}'s BeaconScore{sup} is above the network average of {average}",
                     "live": "Validators missing two consecutive attestations are considered offline.",
-                    "lower": "{name}'s BeaconScore is below the network average of {average}"
+                    "lower": "{name}'s BeaconScore{sup} is below the network average of {average}"
                 },
                 "total_group_name": "Total Efficiency",
                 "validator_status_popout": "Open validator status details"

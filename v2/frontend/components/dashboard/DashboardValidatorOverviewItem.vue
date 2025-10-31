@@ -6,7 +6,7 @@ const props = defineProps<{
     label: string,
     value: NumberOrString,
   }[],
-  title: string,
+  title?: string,
 }>()
 </script>
 
@@ -14,7 +14,13 @@ const props = defineProps<{
   <div class="box">
     <div class="main">
       <div class="big_text_label">
-        {{ props.title }}
+        <slot
+          v-if="$slots.title"
+          name="title"
+        />
+        <template v-else>
+          {{ props.title }}
+        </template>
       </div>
       <div class="big_text dashbaord-validator-overview-item__value">
         <slot />
