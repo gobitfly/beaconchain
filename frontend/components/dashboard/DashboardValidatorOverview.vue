@@ -137,8 +137,13 @@ const aprInfos = [
     </DashboardValidatorOverviewItem>
     <DashboardValidatorOverviewItem
       :infos="efficiencyInfos"
-      :title="$t('dashboard.validator.overview.24h_beaconscore')"
     >
+      <template #title>
+        <BcTranslation
+          keypath="dashboard.validator.overview.24h_beaconscore"
+          suppath="base.common.registered_trademark_symbol"
+        />
+      </template>
       <BcTooltip
         tooltip-class="tooltip"
       >
@@ -151,6 +156,7 @@ const aprInfos = [
           <BcTranslation
             keypath="dashboard.beaconscore.template"
             linkpath="dashboard.beaconscore.link"
+            suppath="base.common.registered_trademark_symbol"
             :to="externalLink.knowledgeBase.beaconScore"
           />
         </template>

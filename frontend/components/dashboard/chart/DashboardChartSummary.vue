@@ -287,6 +287,20 @@ const formatTimestamp = (value: string) => {
   }
 }
 const isTriggeringOnMouseMove = ref(true)
+const efficiencyLabel = computed(() => {
+  switch (props.filter?.efficiency) {
+    case 'all':
+      return `${$t('base.common.beaconscore')}®`
+    case 'attestation':
+      return $t('dashboard.validator.summary.chart.efficiency.attestation')
+    case 'proposal':
+      return $t('dashboard.validator.summary.chart.efficiency.proposal')
+    case 'sync':
+      return $t('dashboard.validator.summary.chart.efficiency.sync')
+    default:
+      return ''
+  }
+})
 const option = computed<EChartsOption>(() => {
   return {
     color: colors.value.groups,
@@ -409,9 +423,7 @@ const option = computed<EChartsOption>(() => {
           ? Math.max(0, 10 * Math.ceil(range.min / 10 - 1))
           : 10 * Math.ceil(range.min / 10 - 1),
       minInterval: 10,
-      name: $t(
-        `dashboard.validator.summary.chart.efficiency.${props.filter?.efficiency}`,
-      ),
+      name: efficiencyLabel.value,
       nameLocation: 'middle',
       nameTextStyle: {
         padding: [

@@ -97,7 +97,7 @@ export const EfficiencyTypes = [
   'attestation',
   'sync',
   'proposal',
-]
+] as const
 export type EfficiencyType = (typeof EfficiencyTypes)[number]
 
 export type SummaryChartFilter = {

@@ -426,14 +426,21 @@ const openValidatorModal = () => {
         />
         <template #tooltip>
           <span class="efficiency-total-tooltip">
-            {{
-              $t('dashboard.validator.summary.tooltip.higher', {
-                name: groupName,
-                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+            <BcTranslation
+              keypath="dashboard.validator.summary.tooltip.higher"
+            >
+              <template #sup>
+                <sup>{{ $t("base.common.registered_trademark_symbol") }}</sup>
+              </template>
+              <template #name>
+                {{ groupName }}
+              </template>
+              <template #average>
+                {{ formatPercent(data.efficiencyTotal.networkEfficiency, {
                   maximumFractionDigits: 2,
-                }),
-              })
-            }}
+                }) }}
+              </template>
+            </BcTranslation>
           </span>
         </template>
       </BcTooltip>
@@ -453,14 +460,21 @@ const openValidatorModal = () => {
         />
         <template #tooltip>
           <span class="efficiency-total-tooltip">
-            {{
-              $t('dashboard.validator.summary.tooltip.equal', {
-                name: groupName,
-                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+            <BcTranslation
+              keypath="dashboard.validator.summary.tooltip.equal"
+            >
+              <template #sup>
+                <sup>{{ $t("base.common.registered_trademark_symbol") }}</sup>
+              </template>
+              <template #name>
+                {{ groupName }}
+              </template>
+              <template #average>
+                {{ formatPercent(data.efficiencyTotal.networkEfficiency, {
                   maximumFractionDigits: 2,
-                }),
-              })
-            }}
+                }) }}
+              </template>
+            </BcTranslation>
           </span>
         </template>
       </BcTooltip>
@@ -480,14 +494,21 @@ const openValidatorModal = () => {
         />
         <template #tooltip>
           <span class="efficiency-total-tooltip">
-            {{
-              $t('dashboard.validator.summary.tooltip.lower', {
-                name: groupName,
-                average: formatPercent(data.efficiencyTotal.networkEfficiency, {
+            <BcTranslation
+              keypath="dashboard.validator.summary.tooltip.lower"
+            >
+              <template #sup>
+                <sup>{{ $t("base.common.registered_trademark_symbol") }}</sup>
+              </template>
+              <template #name>
+                {{ groupName }}
+              </template>
+              <template #average>
+                {{ formatPercent(data.efficiencyTotal.networkEfficiency, {
                   maximumFractionDigits: 2,
-                }),
-              })
-            }}
+                }) }}
+              </template>
+            </BcTranslation>
           </span>
         </template>
       </BcTooltip>

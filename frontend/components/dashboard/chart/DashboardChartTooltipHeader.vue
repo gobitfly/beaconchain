@@ -73,12 +73,18 @@ const epochText = computed(() => {
 })
 
 const title = computed(() => {
-  if (props.efficiencyType) {
-    return props.t(
-      `dashboard.validator.summary.chart.efficiency.${props.efficiencyType}`,
-    )
+  switch (props.efficiencyType) {
+    case 'all':
+      return `${props.t('base.common.beaconscore')}®`
+    case 'attestation':
+      return props.t('dashboard.validator.summary.chart.efficiency.attestation')
+    case 'proposal':
+      return props.t('dashboard.validator.summary.chart.efficiency.proposal')
+    case 'sync':
+      return props.t('dashboard.validator.summary.chart.efficiency.sync')
+    default:
+      return ''
   }
-  return undefined
 })
 </script>
 
