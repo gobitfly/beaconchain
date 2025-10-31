@@ -1,0 +1,69 @@
+# Anything placed here will override `service/default.yaml`
+# Below settings are for a "default" empty psql database. You shouldn't put any real credentials here. 
+# Instead, override these with Environment variables to keep things secure.
+# Assumes you are connecting through a cloud-sql-proxy, i.e.:
+# ./cloud-sql-proxy --auto-iam-authn michael-test-454110:us-central1:hoodi-ddf25050
+
+exposeSchema: true
+isCloudDeployment: false
+
+readerAdminDatabase:
+  isCloudConnection: false
+  username: "postgres"
+  dbName: "postgres"
+  host: "postgres"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+writerAdminDatabase:
+  isCloudConnection: false
+  username: "postgres"
+  dbName: "postgres"
+  host: "postgres"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+
+readerChainDatabaseMainnet:
+  isCloudConnection: false
+  username: "postgres"
+  dbName: "postgres"
+  host: "postgres"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+writerChainDatabaseMainnet:
+  isCloudConnection: false
+  username: "postgres"
+  dbName: "postgres"
+  host: "postgres"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+
+readerClickhouseMainnet:
+  isCloudConnection: false
+  username: "default"
+  dbName: "default"
+  host: "clickhouse"
+  port: "9000"
+  password: ""
+  useSSL: false
+writerClickhouseMainnet:
+  isCloudConnection: false
+  username: "default"
+  dbName: "default"
+  host: "clickhouse"
+  port: "9000"
+  password: ""
+  useSSL: false
+
+redis:
+  endpoint: "redis:6379"
+
+bigtable:
+  project: "my-project"
+  instance: "my-instance"
+  emulator: true
+  emulatorHost: "littlebigtable"
+  emulatorPort: "9000"

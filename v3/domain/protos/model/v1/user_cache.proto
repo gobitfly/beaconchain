@@ -1,0 +1,19 @@
+syntax = "proto3";
+package model.v1;
+
+option go_package = "github.com/gobitfly/beaconchain-backend/model";
+
+
+message SerializableUser {
+  uint64 id = 1;
+  string tier = 2;
+}
+
+message SerializableAPIKey {
+  uint64 user_id = 1;
+  UUID api_key_id = 2;
+}
+
+message UUID {
+  bytes value = 1;
+}

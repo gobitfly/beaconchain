@@ -1,0 +1,30 @@
+# Connects to a "Hybrid" environment, one where the service is running locally but where you've opened up a cloud-sql-proxy to run against a real database. See README for info on how to run a hybrid environment
+readerAdminDatabase:
+  username: "beaconchain"
+  dbName: "users"
+  host: "localhost"
+  port: "5413"
+  password: "testpassword"
+  useSSL: false
+writerAdminDatabase:
+  username: "beaconchain"
+  dbName: "users"
+  host: "localhost"
+  port: "5413"
+  password: "testpassword"
+  useSSL: false
+
+readerChainDatabase:
+  username: "beaconchain"
+  dbName: "hoodi"
+  host: "localhost"
+  port: "5432"
+  password: "testpassword"
+  useSSL: false
+writerChainDatabase:
+  username: "beaconchain"
+  dbName: "hoodi"
+  host: "localhost"
+  port: "5432"
+  password: "testpassword"
+  useSSL: false

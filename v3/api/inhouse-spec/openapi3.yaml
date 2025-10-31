@@ -1,0 +1,216 @@
+openapi: 3.0.4
+info:
+  title: Internal API Service
+  version: 1.0.0
+  description: >
+    HTTP/REST interface for the session based API service.
+    All endpoints require authentication via session cookie or Bearer token.
+
+# servers:
+#   - url: https://api-external-616724563735.us-central1.run.app
+#     description: Staging
+#   - url: http://localhost:9090
+#     description: Local development
+
+security:
+  - SessionAuth: []
+  - GCPAuth: []
+
+paths:
+  /api-keys:
+    post:
+      summary: Create a new API key
+      operationId: CreateAPIKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAPIKeyBody'
+      responses:
+        '200':
+          description: Successfully created API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateAPIKeyData'
+
+    get:
+      summary: List all API keys
+      operationId: GetAPIKeys
+      responses:
+        '200':
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAPIKeysData'
+
+  /api-keys/{name}:
+    get:
+      summary: Get a specific API key
+      operationId: GetAPIKey
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_.-]{3,35}$'
+      responses:
+        '200':
+          description: Retrieved API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAPIKeyData'
+
+    delete:
+      summary: Delete an API key
+      operationId: DeleteAPIKey
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_.-]{3,35}$'
+      responses:
+        '204':
+          description: API key deleted successfully
+
+  /api-keys/{name}/disable:
+    post:
+      summary: Disable an API key
+      operationId: DisableAPIKey
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_.-]{3,35}$'
+      responses:
+        '200':
+          description: API key disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DisableAPIKeyData'
+
+  /api-keys/{name}/enable:
+    post:
+      summary: Enable an API key
+      operationId: EnableAPIKey
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_.-]{3,35}$'
+      responses:
+        '200':
+          description: API key enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnableAPIKeyData'
+
+components:
+  securitySchemes:
+    SessionAuth:
+      type: apiKey
+      description: 'Session cookie'
+      name: session_id
+      in: cookie
+    GCPAuth:
+      type: apiKey
+      description: 'Authorization header: Bearer <token>'
+      name: X-Serverless-Authorization
+      in: header
+
+  schemas:
+    # === Requests ===
+    CreateAPIKeyBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          pattern: '^[A-Za-z0-9_.-]{3,35}$'
+          description: 'API key name (3-35 chars, alphanumeric, _, ., -)'
+
+    # === Responses ===
+    CreateAPIKeyData:
+      type: object
+      properties:
+        raw_api_key:
+          type: string
+          description: 'Full API key (only returned once)'
+          example: 'abc123xyz456abc123xyz456'
+        api_key:
+          $ref: '#/components/schemas/APIKey'
+
+
+    DisableAPIKeyData:
+      type: object
+      properties:
+        api_key:
+          $ref: '#/components/schemas/APIKey'
+
+    EnableAPIKeyData:
+      type: object
+      properties:
+        api_key:
+          $ref: '#/components/schemas/APIKey'
+
+    GetAPIKeysData:
+      type: object
+      properties:
+        api_keys:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIKey'
+      required:
+        - api_keys
+
+    GetAPIKeyData:
+      type: object
+      properties:
+        api_key:
+          $ref: '#/components/schemas/APIKey'
+
+    # === Core Model ===
+    APIKey:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'The name of the API key.'
+          example: 'my-api-key'
+        short_key:
+          type: string
+          description: 'First 3 and last 3 characters of the raw API-key, separated by ...'
+          example: 'abc...xyz'
+        created_at:
+          type: string
+          format: date-time
+          description: 'Creation time in RFC 3339 format (ISO 8601).'
+          example: '2025-10-14T12:26:50.123Z'
+        last_used_at:
+          type: string
+          nullable: true
+          format: date-time
+          description: 'Last used time in RFC 3339 format (ISO 8601).'
+          example: '2025-10-14T12:26:50.123Z'
+        disabled_at:
+          type: string
+          nullable: true
+          format: date-time
+          description: 'Disabled time in RFC 3339 format (ISO 8601).'
+          example: '2025-10-14T12:26:50.123Z'
+      required:
+        - name
+        - short_key
+        - created_at 

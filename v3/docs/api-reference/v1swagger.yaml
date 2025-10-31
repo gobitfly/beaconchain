@@ -1,0 +1,2591 @@
+openapi: 3.1.1
+info:
+  title: beaconcha.in API Documentation
+  description: |-
+    ## Introduction
+    **Advanced and reliable API for accessing comprehensive Ethereum blockchain data.**
+
+    - **Free Usage Policy:** The API is free to use under a fair use policy, with rate limits of 10 requests per minute per IP.
+    - **Caching:** All responses are cached for 1 minute.
+    - **Higher Usage Plans:** For higher usage plans, visit: [https://beaconcha.in/pricing](https://beaconcha.in/pricing). An API key is required to use these plans.
+
+    ### API Key Usage
+    API keys can be obtained at [/user/settings](https://beaconcha.in/user/settings) and must be included in requests either as a query string parameter or in the request header.
+
+    #### Example: Query String Parameter
+    ```bash
+    curl https://beaconcha.in/api/v1/slot/1?apikey=<your_key>
+    ```
+
+    #### Example: Request Header
+    ```bash
+    curl -H 'apikey: <your_key>' https://beaconcha.in/api/v1/slot/1
+    ```
+  contact: {}
+  version: "1.1"
+servers:
+  - url: https://beaconcha.in
+    description: "Ethereum mainnet"
+  - url: https://hoodi.beaconcha.in
+    description: "Hoodi Ethereum testnet"
+  - url: https://gnosis.beaconcha.in
+    description: "Gnosis mainnet"
+security:
+  - ApiKeyAuth: []
+tags:
+  - name: Epoch
+    description: Data related to consensus layer epochs
+  - name: Slots
+    description: Data related to consensus layer slots
+  - name: Validators
+    description: Data related to consensus layer validators
+  - name: Rewards
+    description: Data related to validator rewards
+  - name: Sync Committees
+    description: Data related to sync committees
+  - name: Rocketpool
+    description: Data related to the rocketpool protocol
+  - name: ETH.Store®
+    description: Data related to the ETH.Store® metric
+  - name: Validator deposits
+    description: Data related to execution layer validator deposits
+  - name: Blocks
+    description: Data related to execution layer blocks
+  - name: Gas
+    description: Data related to gas prices
+  - name: Address
+    description: Data related to ethereum addresses
+  - name: Network
+    description: Network data
+  - name: Misc
+  - name: User
+paths:
+  /api/healthz:
+    get:
+      tags:
+        - Misc
+      summary: Get explorer Health
+      description: |-
+        Provides the health status of all modules of the explorer. This endpoint is useful for monitoring the availability and functionality of the explorer's components.
+        - **Modules Monitored:** Includes monitoring of services such as `monitoring_app`, `monitoring_el_data`, `monitoring_services`, `monitoring_cl_data`, `monitoring_api`, `monitoring_redis`.
+        - **Response Details:** Returns the status of each module. If all modules are operational, the response will indicate success. Otherwise, it will return an error with details about the failing modules.
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/healthz-loadbalancer:
+    get:
+      tags:
+        - Misc
+      summary: Get explorer Availability
+      description: Health endpoint to monitor the operational status of the explorer
+        (used for load balancer health checks)
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/chart/{chart}:
+    get:
+      tags:
+        - Misc
+      summary: Get chart
+      description: Returns charts from the page https://beaconcha.in/charts as PNG
+      parameters:
+        - name: chart
+          in: path
+          description: Chart name (see https://github.com/gobitfly/eth2-beaconchain-explorer/blob/master/services/charts_updater.go#L20
+            for all available names)
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/client/metrics:
+    post:
+      tags:
+        - User
+      summary: Submit client stats
+      description: Used in consensus layer clients to submit stats to your beaconcha.in
+        account. This data can be accessed by the app or the user stats api call.
+      parameters:
+        - name: apikey
+          in: query
+          description: "User API key, can be found on https://beaconcha.in/user/settings"
+          required: true
+          style: form
+          explode: true
+          schema: {}
+        - name: machine
+          in: query
+          description: Name your device if you have multiple devices you want to monitor
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/ens/lookup/{domain}:
+    get:
+      tags:
+        - ENS
+      summary: Resolve an ens name or address
+      description: Get the address for an ens name and vice versa. Returns and object
+        with the ens name and address - if found.
+      parameters:
+        - name: domain
+          in: path
+          description: domain can either be an ens name or an etherum address
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/epoch/{epoch}:
+    get:
+      tags:
+        - Epochs
+      summary: Get epoch
+      description: Returns information for a specified epoch by the epoch number or
+        an epoch tag (can be latest or finalized)
+      parameters:
+        - name: epoch
+          in: path
+          description: "Epoch number, the string latest or the string finalized"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.APIEpochResponse'
+        "400":
+          description: Failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/epoch/{epoch}/slots:
+    get:
+      tags:
+        - Epochs
+      summary: Get epoch slots
+      description: Returns all slots for a specified epoch
+      parameters:
+        - name: epoch
+          in: path
+          description: "Epoch number, the string latest or string finalized"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APISlotResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/eth1deposit/{txhash}:
+    get:
+      tags:
+        - Validator deposits
+      description: Get the deposit information for a given eth1 transaction hash.
+      parameters:
+        - name: txhash
+          in: path
+          description: Eth1 transaction hash
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/ethstore/{day}:
+    get:
+      tags:
+        - ETH.Store®
+      summary: Get ETH.Store® day
+      description: |-
+        ETH.STORE® represents the average financial return validators on the Ethereum network have achieved in a 24-hour period.
+        For each 24-hour period the datapoint is denoted by the number of days that have passed since genesis for that period (= beaconchain-day)
+        See https://github.com/gobitfly/eth.store for further information.
+      parameters:
+        - name: day
+          in: path
+          description: The beaconchain-day (periods of <(24 * 60 * 60) // SlotsPerEpoch
+            // SecondsPerSlot> epochs) to get the the ETH.STORE® for. Must be a number
+            or the string 'latest'.
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/execution/address/{address}:
+    get:
+      tags:
+        - Addresses
+      summary: Get address balances
+      description: "Returns the ether balance and any token balances for a given Ethereum\
+        \ address. Amount of different ECR20 tokens is limited to 200. If you need\
+        \ more, use the /execution/address/{address}/erc20tokens endpoint."
+      parameters:
+        - name: address
+          in: path
+          description: provide an Ethereum address consists of an optional 0x prefix
+            followed by 40 hexadecimal characters
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: token
+          in: query
+          description: filter for a specific token by providing a ethereum token contract
+            address
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiEth1AddressResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/execution/address/{address}/erc20tokens:
+    get:
+      tags:
+        - Addresses
+      summary: Get ERC20 token balances for address
+      description: Returns the ERC20 token balances for a given Ethereum address.
+        Supports pagination.
+      parameters:
+        - name: address
+          in: path
+          description: provide an Ethereum address consists of an optional 0x prefix
+            followed by 40 hexadecimal characters
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: offset
+          in: query
+          description: data offset
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: limit
+          in: query
+          description: data limit (ranging from 1 to 200)
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/types.ApiEth1AddressERC20TokenResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/execution/block/{blockNumber}:
+    get:
+      tags:
+        - Blocks
+      summary: Get blocks by number
+      description: Get execution blocks by execution block number
+      parameters:
+        - name: blockNumber
+          in: path
+          description: 'Provide one or more execution block numbers. Coma separated
+          up to max 100. '
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/types.ExecutionBlockApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/execution/gasnow:
+    get:
+      tags:
+        - Gas
+      summary: Get current gas prices
+      description: "Gets the current estimation for gas prices in GWei.. The response\
+        \ is split into four estimated inclusion speeds rapid (15 seconds), fast (1\
+        \ minute), standard (3 minutes) and slow (> 10 minutes)."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.GasNowPageData'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/execution/{addressIndexOrPubkey}/produced:
+    get:
+      tags:
+        - Blocks
+      summary: "Get proposed blocks by address, proposer index or proposer pubkey"
+      description: |-
+        Get a list of proposed or mined blocks from a given fee recipient address, proposer index or proposer pubkey.
+        Mixed use of recipient addresses and proposer indexes or proposer pubkeys with an offset is discouraged as it can lead to skipped entries.
+      parameters:
+        - name: addressIndexOrPubkey
+          in: path
+          description: "Either the fee recipient address, the proposer index or proposer\
+          \ pubkey. You can provide multiple by separating them with ','. Max allowed\
+          \ index or pubkeys are 100, max allowed user addresses are 20."
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: offset
+          in: query
+          description: Offset
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: limit
+          in: query
+          description: "Limit the amount of entries you wish to receive (Maximum: 100)"
+          required: false
+          style: form
+          explode: true
+          schema:
+            maximum: 100
+        - name: sort
+          in: query
+          description: Sort via the block number either by 'asc' or 'desc'
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/types.ExecutionBlockApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/graffitiwall:
+    get:
+      tags:
+        - Misc
+      summary: Get graffiti wall
+      description: |-
+        Returns the most recent pixels that have been painted during the last 10000 slots.
+        Optionally set the slot query parameter to look back further.
+        Boundary coordinates are included.
+        X = 0 and Y = 0 start at the upper left corner.
+        Returns an error if an invalid area is provided by the coordinates.
+      parameters:
+        - name: startx
+          in: query
+          description: Start X offset
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: starty
+          in: query
+          description: Start Y offset
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: endx
+          in: query
+          description: End X limit
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: endy
+          in: query
+          description: End Y limit
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: startSlot
+          in: query
+          description: Start slot to query (end slot - 10000 if empty)
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: slot
+          in: query
+          description: End slot to query
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: summarize
+          in: query
+          description: Only return end state of each pixel
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/latestState:
+    get:
+      tags:
+        - Network
+      summary: Get network state
+      description: Returns information on the current state of the network
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.LatestState'
+        "400":
+          description: Failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/mobile/notify/register:
+    post:
+      tags:
+        - User
+      summary: Change mobile notification token
+      description: Register or update your mobile notification token
+      requestBody:
+        description: Your device`s firebase notification token
+        content:
+          application/json:
+            schema: {}
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/rocketpool/stats:
+    get:
+      tags:
+        - Rocketpool
+      summary: Get rocketpool statistics
+      description: Returns statistics about the Rocketpool protocol
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.APIRocketpoolStatsResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/rocketpool/validator/{indexOrPubkey}:
+    get:
+      tags:
+        - Validators
+      summary: Get rocketpool validators
+      description: Returns information about Rocketpool validators
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.ApiRocketpoolValidatorResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slotOrHash}:
+    get:
+      tags:
+        - Slots
+      summary: Get slot
+      description: "Returns a slot by its slot number or root hash, the latest slot\
+        \ with string latest or the slot containing the head block with string head"
+      parameters:
+        - name: slotOrHash
+          in: path
+          description: Slot or root hash or the string latest or head
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.APISlotResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/attestations:
+    get:
+      tags:
+        - Slots
+      summary: Get slot attestations
+      description: Returns the attestations included in a specific slot
+      parameters:
+        - name: slot
+          in: path
+          description: Slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIAttestationResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/attesterslashings:
+    get:
+      tags:
+        - Slots
+      summary: Get slot attestation slashings
+      description: Returns the attester slashings included in a specific slot
+      parameters:
+        - name: slot
+          in: path
+          description: Slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIAttesterSlashingResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/deposits:
+    get:
+      tags:
+        - Slots
+      summary: Get slot deposits
+      description: Returns the deposits included in a specific block
+      parameters:
+        - name: slot
+          in: path
+          description: Block slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: limit
+          in: query
+          description: Limit the number of results
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: offset
+          in: query
+          description: Offset the number of results
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/proposerslashings:
+    get:
+      tags:
+        - Slots
+      summary: Get slot proposer slashings
+      description: Returns the proposer slashings included in a specific slot
+      parameters:
+        - name: slot
+          in: path
+          description: Slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIProposerSlashingResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/voluntaryexits:
+    get:
+      tags:
+        - Slots
+      summary: Get slot voluntary exits
+      description: Returns the voluntary exits included in a specific slot
+      parameters:
+        - name: slot
+          in: path
+          description: Slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIVoluntaryExitResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/slot/{slot}/withdrawals:
+    get:
+      tags:
+        - Slots
+      summary: Get slot withdrawals
+      description: Returns the withdrawals included in a specific slot
+      parameters:
+        - name: slot
+          in: path
+          description: Block slot
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/sync_committee/{period}:
+    get:
+      tags:
+        - Sync Committees
+      summary: Get sync committee
+      description: |-
+        Returns the sync-committee for a sync-period. Validators are sorted by sync-committee-index.
+        Sync committees where introduced in the Altair hardfork. Peroids before the hardfork do not contain sync-committees.
+        For mainnet sync-committes first started after epoch 74240 (period 290) and each sync-committee is active for 256 epochs.
+      parameters:
+        - name: period
+          in: path
+          description: Period ('latest' for latest period or 'next' for next period
+            in the future)
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.APISyncCommitteeResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/user/dashboard/remove:
+    post:
+      tags:
+        - User
+      summary: Remove validator subscription
+      description: Unsubscribes a user from a specific validator via index from both
+        watchlist and notification events
+      requestBody:
+        description: Index of validator you want to unsubscribe from
+        content:
+          application/json:
+            schema:
+              items: {}
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/dashboard/save:
+    post:
+      tags:
+        - User
+      summary: Save validator subscription
+      description: Subscribes a user to get notifications from a specific validator
+        via index
+      requestBody:
+        description: Index of validator you want to subscribe to
+        content:
+          application/json:
+            schema:
+              items: {}
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/mobile/settings:
+    get:
+      tags:
+        - User
+      summary: Get device settings
+      description: "Get your device settings, currently only whether to enable mobile\
+        \ notifcations or not"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.MobileSettingsData'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+    post:
+      tags:
+        - User
+      summary: Update device settings
+      description: "Update your device settings, currently only whether to enable\
+        \ mobile notifcations or not."
+      requestBody:
+        description: Whether to enable mobile notifications for this device or not
+        content:
+          application/json:
+            schema: {}
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.MobileSettingsData'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/notifications:
+    post:
+      tags:
+        - User
+      summary: Get user subscriptions
+      description: Get a set of events a user is subscribed to
+      requestBody:
+        description: An object that filters through the active subscriptions
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/types.UsersNotificationsRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.Subscription'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/stats/{offset}/{limit}:
+    get:
+      tags:
+        - User
+      summary: Get client stats
+      description: Get your client submitted stats
+      parameters:
+        - name: offset
+          in: path
+          description: "Data offset, default 0"
+          required: false
+          style: simple
+          explode: false
+          schema: {}
+        - name: limit
+          in: path
+          description: "Data limit, default 180 (~3h)."
+          required: false
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.StatsDataStruct'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/token:
+    post:
+      tags:
+        - User
+      summary: Get OAUTH API token
+      description: Exchange your oauth code for an access token or refresh your access
+        token
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              required:
+                - grant_type
+              properties:
+                grant_type:
+                  description: grant_type use authorization_code for oauth code or
+                    refresh_token if you wish to refresh an token
+                code:
+                  description: Only required when using authorization_code grant type.
+                    Code received via oauth redirect_uri
+                redirect_uri:
+                  description: Only required when using authorization_code grant type.
+                    Must match the redirect_uri from your oauth flow.
+                refresh_token:
+                  description: Only required when using refresh_token grant type.
+                    The refresh_token you received during authorization_code flow.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.OAuthResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.OAuthErrorResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/utils.OAuthErrorResponse'
+      security:
+        - OAuthAccessCode: []
+  /api/v1/user/validator/saved:
+    get:
+      tags:
+        - User
+      summary: Get tagged validators
+      description: Get all your tagged validators
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.MinimalTaggedValidators'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/validator/{pubkey}/add:
+    post:
+      tags:
+        - User
+      summary: Add validator subscription
+      description: Subscribes a user to get notifications from a specific validator
+      parameters:
+        - name: pubKey
+          in: query
+          description: Public Key of validator you want to subscribe to
+          required: true
+          style: form
+          explode: true
+          schema: {}
+      requestBody:
+        description: Submit \
+        content:
+          application/json:
+            schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/user/validator/{pubkey}/remove:
+    post:
+      tags:
+        - User
+      summary: Remove validator subscription
+      description: Unsubscribes a user from a specific validator
+      parameters:
+        - name: pubKey
+          in: query
+          description: Public Key of validator you want to subscribe to
+          required: true
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+      security:
+        - ApiKeyAuth: []
+  /api/v1/validator:
+    post:
+      tags:
+        - Validators
+      summary: Get validator
+      description: Retrieve validator information by index or pubkey (up to 100).
+      requestBody:
+        description: "Up to 100 validator indicesOrPubkeys, comma separated"
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/types.DashboardRequest'
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIValidatorResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/eth1/{eth1address}:
+    get:
+      tags:
+        - Validators
+      summary: Get validator information by eth1 address
+      description: Retrieve validator information by eth1 address
+      parameters:
+        - name: eth1address
+          in: path
+          description: Eth1 address from which the validator deposits were sent
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: limit
+          in: query
+          description: "Limit the number of results (default: 2000)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: offset
+          in: query
+          description: "Offset the results (default: 0)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorEth1Response'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/leaderboard:
+    get:
+      tags:
+        - Rewards
+      summary: Get validator leaderboard
+      description: Get the current top 100 performing validators (using the income
+        over the last 7 days)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorPerformanceResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/stats/{index}:
+    get:
+      tags:
+        - Validators
+      summary: Get validator statistics
+      parameters:
+        - name: index
+          in: path
+          description: Validator index
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: end_day
+          in: query
+          description: "End day (default: latest day)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: start_day
+          in: query
+          description: "Start day (default: 0)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorDailyStatsResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/withdrawalCredentials/{withdrawalCredentialsOrEth1address}:
+    get:
+      tags:
+        - Validators
+      summary: Get validators by credentials or address
+      description: Returns the validator indexes and pubkeys of a withdrawal credential
+        or eth1 address
+      parameters:
+        - name: withdrawalCredentialsOrEth1address
+          in: path
+          description: Provide a withdrawal credential or an eth1 address with an optional
+            0x prefix
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: limit
+          in: query
+          description: "Limit the number of results, maximum: 200"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: offset
+          in: query
+          description: Offset the number of results
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiWithdrawalCredentialsResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}:
+    get:
+      tags:
+        - Validators
+      summary: Get validator
+      description: Retrieve validator information by index or pubkey (up to 100).
+        Use the POST endpoint if you get URL too long errors.
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.APIValidatorResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/attestationefficiency:
+    get:
+      tags:
+        - Validators
+      summary: Get validator attestation efficiency
+      description: Retrieve validator attestation efficiency by index or pubkey (up
+        to 100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/attestations:
+    get:
+      tags:
+        - Validators
+      summary: Get validator attestations
+      description: Get all attestations during the last 100 epochs for up to 100 validators
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: startEpoch
+          in: query
+          description: "Start epoch for the query (default: latest epoch - 99)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: endEpoch
+          in: query
+          description: "End epoch for the query (default: latest epoch)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: slim
+          in: query
+          description: "If true, drops rarely used week and committee index fields from\
+          \ the response"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/balancehistory:
+    get:
+      tags:
+        - Validators
+      summary: Get validator balance history
+      description: Retrieve the validator balance history by index or pubkey (up to
+        100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: latest_epoch
+          in: query
+          description: The latest epoch to consider in the query
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: offset
+          in: query
+          description: Number of items to skip
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: limit
+          in: query
+          description: "Maximum number of items to return, up to 100"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorBalanceHistoryResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/blsChange:
+    get:
+      tags:
+        - Validators
+      summary: Get validator bls change history
+      description: Retrieve validator BLS change history by index or pubkey (up to
+        100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorBlsChangeResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/deposits:
+    get:
+      tags:
+        - Validators
+      summary: Get validator execution layer deposits
+      description: Get all eth1 deposits for up to 100 validators
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorDepositsResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/execution/performance:
+    get:
+      tags:
+        - Rewards
+      summary: Get validator execution layer rewards
+      description: Retrieve validator execution rewards by index or pubkey (up to
+        100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorExecutionPerformanceResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/incomedetailhistory:
+    get:
+      tags:
+        - Validators
+      summary: Get validator income detail history
+      description: Retrieve validator income detail history by index or pubkey (up
+        to 100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: latest_epoch
+          in: query
+          description: The latest epoch to consider in the query
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: offset
+          in: query
+          description: Number of items to skip
+          required: false
+          style: form
+          explode: true
+          schema: {}
+        - name: limit
+          in: query
+          description: "Maximum number of items to return, up to 100"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorIncomeHistoryResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/performance:
+    get:
+      tags:
+        - Rewards
+      summary: Get validator consensus layer rewards
+      description: Retrieve validator consensus layer rewards by index or pubkey (up
+        to 100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorPerformanceResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/proposals:
+    get:
+      tags:
+        - Validators
+      summary: Get validator proposals
+      description: Get all proposed blocks during the last 100 epochs for up to 100
+        validators. Optionally set the epoch query parameter to look back further.
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: epoch
+          in: query
+          description: Page the result by epoch
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorProposalsResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validator/{indexOrPubkey}/withdrawals:
+    get:
+      tags:
+        - Validators
+      summary: Get validator withdrawal history
+      description: Retrieve validator withdrawal history by index or pubkey (up to
+        100).
+      parameters:
+        - name: indexOrPubkey
+          in: path
+          description: "Up to 100 validator indicesOrPubkeys, comma separated"
+          required: true
+          style: simple
+          explode: false
+          schema: {}
+        - name: epoch
+          in: query
+          description: "the start epoch for the withdrawal history (default: latest\
+          \ epoch)"
+          required: false
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiValidatorWithdrawalResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validators/proposalLuck:
+    get:
+      tags:
+        - Validators
+      summary: Get validator proposal luck
+      description: Returns the proposal luck of a validator or a list of validators
+      parameters:
+        - name: validators
+          in: query
+          description: Provide a comma separated list of validator indices or pubkeys
+          required: true
+          style: form
+          explode: true
+          schema: {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        items:
+                          $ref: '#/components/schemas/types.ApiProposalLuckResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+        "500":
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+  /api/v1/validators/queue:
+    get:
+      tags:
+        - Validators
+      summary: Get validator queue
+      description: Returns the current number of validators entering and exiting the
+        beacon chain
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/types.ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/types.ApiValidatorQueueResponse'
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/types.ApiResponse'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: 'Authorization header with value: Bearer <token>'
+  schemas:
+    big.Int: {}
+    types.APIAttestationResponse:
+      properties:
+        aggregationbits: {}
+        beaconblockroot: {}
+        block_index: {}
+        block_root: {}
+        block_slot: {}
+        committeeindex: {}
+        signature: {}
+        slot: {}
+        source_epoch: {}
+        source_root: {}
+        target_epoch: {}
+        target_root: {}
+        validators:
+          items: {}
+    types.APIAttesterSlashingResponse:
+      properties:
+        attestation1_beaconblockroot: {}
+        attestation1_index: {}
+        attestation1_indices:
+          items: {}
+        attestation1_signature: {}
+        attestation1_slot: {}
+        attestation1_source_epoch: {}
+        attestation1_source_root: {}
+        attestation1_target_epoch: {}
+        attestation1_target_root: {}
+        attestation2_beaconblockroot: {}
+        attestation2_index: {}
+        attestation2_indices:
+          items: {}
+        attestation2_signature: {}
+        attestation2_slot: {}
+        attestation2_source_epoch: {}
+        attestation2_source_root: {}
+        attestation2_target_epoch: {}
+        attestation2_target_root: {}
+        block_index: {}
+        block_root: {}
+        block_slot: {}
+    types.APIEpochResponse:
+      properties:
+        attestationscount: {}
+        attesterslashingscount: {}
+        averagevalidatorbalance: {}
+        blockscount: {}
+        depositscount: {}
+        eligibleether: {}
+        epoch: {}
+        finalized: {}
+        globalparticipationrate: {}
+        missedblocks: {}
+        orphanedblocks: {}
+        proposedblocks: {}
+        proposerslashingscount: {}
+        rewards_exported: {}
+        scheduledblocks: {}
+        totalvalidatorbalance: {}
+        ts: {}
+        validatorscount: {}
+        voluntaryexitscount: {}
+        votedether: {}
+        withdrawalcount: {}
+    types.APIProposerSlashingResponse:
+      properties:
+        block_index: {}
+        block_root: {}
+        block_slot: {}
+        header1_bodyroot: {}
+        header1_parentroot: {}
+        header1_signature: {}
+        header1_slot: {}
+        header1_stateroot: {}
+        header2_bodyroot: {}
+        header2_parentroot: {}
+        header2_signature: {}
+        header2_slot: {}
+        header2_stateroot: {}
+        proposerindex: {}
+    types.APIRocketpoolStatsResponse:
+      properties:
+        claim_interval_time: {}
+        claim_interval_time_start: {}
+        current_node_demand: {}
+        current_node_fee: {}
+        effective_rpl_staked: {}
+        minipool_count: {}
+        node_count: {}
+        node_operator_rewards: {}
+        odao_member_count: {}
+        reth_apr: {}
+        reth_exchange_rate: {}
+        reth_supply: {}
+        rpl_price: {}
+        total_eth_balance: {}
+        total_eth_staking: {}
+    types.APISlotResponse:
+      properties:
+        attestationscount: {}
+        attesterslashingscount: {}
+        blockroot: {}
+        depositscount: {}
+        epoch: {}
+        eth1data_blockhash: {}
+        eth1data_depositcount: {}
+        eth1data_depositroot: {}
+        exec_base_fee_per_gas:
+          x-nullable: true
+        exec_block_hash:
+          x-nullable: true
+        exec_block_number:
+          x-nullable: true
+        exec_extra_data:
+          x-nullable: true
+        exec_fee_recipient:
+          x-nullable: true
+        exec_gas_limit:
+          x-nullable: true
+        exec_gas_used:
+          x-nullable: true
+        exec_logs_bloom:
+          x-nullable: true
+        exec_parent_hash:
+          x-nullable: true
+        exec_random:
+          x-nullable: true
+        exec_receipts_root:
+          x-nullable: true
+        exec_state_root:
+          x-nullable: true
+        exec_timestamp:
+          x-nullable: true
+        exec_transactions_count:
+          x-nullable: true
+        graffiti: {}
+        graffiti_text: {}
+        parentroot: {}
+        proposer: {}
+        proposerslashingscount: {}
+        randaoreveal: {}
+        signature: {}
+        slot: {}
+        stateroot: {}
+        status: {}
+        syncaggregate_bits: {}
+        syncaggregate_participation: {}
+        syncaggregate_signature: {}
+        voluntaryexitscount: {}
+        withdrawalcount: {}
+    types.APISyncCommitteeResponse:
+      properties:
+        end_epoch: {}
+        period: {}
+        start_epoch: {}
+        validators:
+          items: {}
+    types.APIValidatorResponse:
+      properties:
+        activation_eligibility_epoch: {}
+        activation_epoch: {}
+        balance: {}
+        effective_balance: {}
+        exit_epoch: {}
+        last_attestation_slot: {}
+        name: {}
+        pubkey: {}
+        slashed: {}
+        status: {}
+        validator_index: {}
+        withdrawable_epoch: {}
+        withdrawal_credentials: {}
+    types.APIVoluntaryExitResponse:
+      properties:
+        block_index: {}
+        block_root: {}
+        block_slot: {}
+        epoch: {}
+        signature: {}
+        validatorindex: {}
+    types.ApiEth1AddressERC20TokenResponse:
+      properties:
+        address: {}
+        balance: {}
+        symbol: {}
+    types.ApiEth1AddressResponse:
+      properties:
+        address: {}
+        ether: {}
+        tokens:
+          items:
+            $ref: '#/components/schemas/types.ApiEth1AddressERC20TokenResponse'
+    types.ApiProposalLuckResponse:
+      properties:
+        average_proposal_interval:
+          description: The average slot interval between proposals for the given set
+            of validators
+        next_proposal_estimate_ts:
+          description: The estimated timestamp of the next proposal
+        proposal_luck:
+          description: The proposal luck for the given set of validators as a percentage
+        time_frame_name:
+          description: The timeframe for which the luck is calculated
+    types.ApiResponse:
+      properties:
+        data: {}
+        status: {}
+    types.ApiRocketpoolValidatorResponse:
+      properties:
+        claimed_smoothing_pool: {}
+        index: {}
+        minipool_address: {}
+        minipool_deposit_type: {}
+        minipool_node_fee: {}
+        minipool_status: {}
+        minipool_status_time: {}
+        node_address: {}
+        node_max_rpl_stake: {}
+        node_min_rpl_stake: {}
+        node_rpl_stake: {}
+        node_timezone_location: {}
+        penalty_count: {}
+        rpl_cumulative_rewards: {}
+        smoothing_pool_opted_in: {}
+        unclaimed_rpl_rewards: {}
+        unclaimed_smoothing_pool: {}
+    types.ApiValidatorBalanceHistoryResponse:
+      properties:
+        balance: {}
+        effectivebalance: {}
+        epoch: {}
+        validatorindex: {}
+        week: {}
+        week_end: {}
+        week_start: {}
+    types.ApiValidatorBlsChangeResponse:
+      properties:
+        address: {}
+        blockroot: {}
+        bls_pubkey: {}
+        bls_signature: {}
+        epoch: {}
+        slot: {}
+        validatorindex: {}
+        withdrawalcredentials_0x00: {}
+        withdrawalcredentials_0x01: {}
+    types.ApiValidatorDailyStatsResponse:
+      properties:
+        attester_slashings: {}
+        day: {}
+        day_end: {}
+        day_start: {}
+        deposits: {}
+        deposits_amount: {}
+        end_balance: {}
+        end_effective_balance: {}
+        max_balance: {}
+        max_effective_balance: {}
+        min_balance: {}
+        min_effective_balance: {}
+        missed_attestations: {}
+        missed_blocks: {}
+        missed_sync: {}
+        orphaned_attestations: {}
+        orphaned_blocks: {}
+        orphaned_sync: {}
+        participated_sync: {}
+        proposed_blocks: {}
+        proposer_slashings: {}
+        start_balance: {}
+        start_effective_balance: {}
+        validatorindex: {}
+        withdrawals: {}
+        withdrawals_amount: {}
+    types.ApiValidatorDepositsResponse:
+      properties:
+        amount: {}
+        block_number: {}
+        block_ts: {}
+        from_address: {}
+        merkletree_index: {}
+        publickey: {}
+        removed: {}
+        signature: {}
+        tx_hash: {}
+        tx_index: {}
+        tx_input: {}
+        valid_signature: {}
+        withdrawal_credentials: {}
+    types.ApiValidatorEth1Response:
+      properties:
+        public_key: {}
+        valid_signature: {}
+        validator_index: {}
+    types.ApiValidatorExecutionPerformanceResponse:
+      properties:
+        performance1d: {}
+        performance31d: {}
+        performance7d: {}
+        validatorindex: {}
+    types.ApiValidatorIncomeHistory:
+      properties:
+        attestation_head_reward: {}
+        attestation_source_penalty: {}
+        attestation_source_reward: {}
+        attestation_target_penalty: {}
+        attestation_target_reward: {}
+        finality_delay_penalty: {}
+        proposals_missed: {}
+        proposer_attestation_inclusion_reward: {}
+        proposer_slashing_inclusion_reward: {}
+        proposer_sync_inclusion_reward: {}
+        slashing_penalty: {}
+        slashing_reward: {}
+        sync_committee_penalty: {}
+        sync_committee_reward: {}
+        tx_fee_reward_wei: {}
+    types.ApiValidatorIncomeHistoryResponse:
+      properties:
+        epoch: {}
+        income:
+          $ref: '#/components/schemas/types.ApiValidatorIncomeHistory'
+        validatorindex: {}
+        week: {}
+        week_end: {}
+        week_start: {}
+    types.ApiValidatorPerformanceResponse:
+      properties:
+        balance: {}
+        performance1d: {}
+        performance31d: {}
+        performance365d: {}
+        performance7d: {}
+        rank7d: {}
+        validatorindex: {}
+    types.ApiValidatorProposalsResponse:
+      properties:
+        attestationscount: {}
+        attesterslashingscount: {}
+        blockroot: {}
+        depositscount: {}
+        epoch: {}
+        eth1data_blockhash: {}
+        eth1data_depositcount: {}
+        eth1data_depositroot: {}
+        exec_base_fee_per_gas: {}
+        exec_block_hash: {}
+        exec_block_number: {}
+        exec_extra_data: {}
+        exec_fee_recipient: {}
+        exec_gas_limit: {}
+        exec_gas_used: {}
+        exec_logs_bloom: {}
+        exec_parent_hash: {}
+        exec_random: {}
+        exec_receipts_root: {}
+        exec_state_root: {}
+        exec_timestamp: {}
+        exec_transactions_count: {}
+        graffiti: {}
+        graffiti_text: {}
+        parentroot: {}
+        proposer: {}
+        proposerslashingscount: {}
+        randaoreveal: {}
+        signature: {}
+        slot: {}
+        stateroot: {}
+        status: {}
+        syncaggregate_bits: {}
+        syncaggregate_participation: {}
+        syncaggregate_signature: {}
+        voluntaryexitscount: {}
+    types.ApiValidatorQueueResponse:
+      properties:
+        beaconchain_entering: {}
+        beaconchain_exiting: {}
+        validators_count: {}
+    types.ApiValidatorWithdrawalResponse:
+      properties:
+        address: {}
+        amount: {}
+        blockroot: {}
+        epoch: {}
+        slot: {}
+        validatorindex: {}
+        withdrawalindex: {}
+    types.ApiWithdrawalCredentialsResponse:
+      properties:
+        publickey: {}
+        validatorindex: {}
+    types.DashboardRequest:
+      properties:
+        indicesOrPubkey: {}
+    types.ExecBlockProposer:
+      properties:
+        epoch: {}
+        executionBlockNumber: {}
+        finalized: {}
+        proposerIndex: {}
+        slot: {}
+    types.ExecutionBlockApiResponse:
+      properties:
+        baseFee:
+          $ref: '#/components/schemas/big.Int'
+        blockHash: {}
+        blockMevReward:
+          $ref: '#/components/schemas/big.Int'
+        blockNumber: {}
+        blockReward:
+          $ref: '#/components/schemas/big.Int'
+        consensusAlgorithm: {}
+        difficulty:
+          $ref: '#/components/schemas/big.Int'
+        feeRecipient: {}
+        gasLimit: {}
+        gasUsed: {}
+        internalTxCount: {}
+        parentHash: {}
+        posConsensus:
+          $ref: '#/components/schemas/types.ExecBlockProposer'
+        producerReward:
+          $ref: '#/components/schemas/big.Int'
+        relay:
+          $ref: '#/components/schemas/types.RelayDataApiResponse'
+        timestamp: {}
+        txCount: {}
+        uncleCount: {}
+        uncleHash: {}
+    types.GasNowPageData:
+      properties:
+        code: {}
+        data:
+          properties:
+            currency: {}
+            fast:
+              $ref: '#/components/schemas/big.Int'
+            price: {}
+            priceUSD: {}
+            rapid:
+              $ref: '#/components/schemas/big.Int'
+            slow:
+              $ref: '#/components/schemas/big.Int'
+            standard:
+              $ref: '#/components/schemas/big.Int'
+            timestamp: {}
+    types.LatestState:
+      properties:
+        currentEpoch: {}
+        currentFinalizedEpoch: {}
+        currentSlot: {}
+        finalityDelay: {}
+        lastProposedSlot: {}
+        rates:
+          $ref: '#/components/schemas/types.Rates'
+        syncing: {}
+    types.MinimalTaggedValidators:
+      properties:
+        index: {}
+        pubKey: {}
+    types.MobileSettingsData:
+      properties:
+        notify_token: {}
+    types.Rates:
+      properties:
+        clCurrency: {}
+        clCurrencyKFormatted: {}
+        clCurrencyPrice: {}
+        clCurrencyPriceFormatted: {}
+        clCurrencySymbol: {}
+        elCurrency: {}
+        elCurrencyKFormatted: {}
+        elCurrencyPrice: {}
+        elCurrencyPriceFormatted: {}
+        elCurrencySymbol: {}
+        mainCurrency: {}
+        mainCurrencyKFormatted: {}
+        mainCurrencyPrice: {}
+        mainCurrencyPriceFormatted: {}
+        mainCurrencySymbol: {}
+        mainCurrencyTickerPrice: {}
+        mainCurrencyTickerPriceFormatted: {}
+        mainCurrencyTickerPriceKFormatted: {}
+        mainCurrencyTickerPrices:
+          additionalProperties:
+            $ref: '#/components/schemas/types.RatesPrice'
+        selectedCurrency: {}
+        selectedCurrencySymbol: {}
+        tickerCurrency: {}
+        tickerCurrencySymbol: {}
+    types.RatesPrice:
+      properties:
+        roundPrice: {}
+        symbol: {}
+        truncPrice: {}
+    types.RelayDataApiResponse:
+      properties:
+        builderPubkey: {}
+        producerFeeRecipient: {}
+        tag: {}
+    types.StatsDataStruct:
+      properties:
+        node: {}
+        system: {}
+        validator: {}
+    types.Subscription:
+      properties:
+        createdEpoch: {}
+        createdTime:
+          description: Channels        pq.StringArray `db:"channels"`
+        eventFilter: {}
+        eventName: {}
+        eventThreshold: {}
+        id: {}
+        lastEpoch: {}
+        lastSent: {}
+        state: {}
+        unsubscribeHash: {}
+        userID: {}
+    types.UsersNotificationsRequest:
+      properties:
+        event_filters:
+          items: {}
+        event_names:
+          items: {}
+        join_validator: {}
+        limit: {}
+        offset: {}
+        search: {}
+    utils.OAuthErrorResponse:
+      properties:
+        error: {}
+        error_description: {}
+    utils.OAuthResponse:
+      properties:
+        access_token: {}
+        expires_in: {}
+        refresh_token: {}
+        token_type: {}
+x-tagGroups:
+  - name: Consensus Layer
+    tags:
+      - Epochs
+      - Slots
+      - Validators
+      - Rewards
+      - Sync Committees
+      - Rocketpool
+      - ETH.Store®
+  - name: Execution Layer
+    tags:
+      - Validator Deposits
+      - Blocks
+      - Addresses
+      - Gas
+  - name: Other
+    tags:
+      - Network
+      - User
+      - Misc

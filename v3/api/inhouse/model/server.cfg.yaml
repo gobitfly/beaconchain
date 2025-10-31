@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../../../../configuration-schema.json
+package: model
+generate:
+  std-http-server: true
+  embedded-spec: true
+  strict-server: true
+output: internal-server.gen.go

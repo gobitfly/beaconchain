@@ -1,0 +1,42 @@
+# Anything placed here will override `service/default.yaml`
+# Below settings are for a "default" empty psql database. You shouldn't put any real credentials here. 
+# Instead, override these with Environment variables to keep things secure.
+#
+#
+
+isCloudDeployment: true
+exposeSchema: true
+
+readerAdminDatabase:
+  isCloudConnection: true
+  username: "postgres"
+  dbName: "postgres"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+writerAdminDatabase:
+  isCloudConnection: true
+  username: "postgres"
+  dbName: "postgres"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+
+readerChainDatabaseMainnet:
+  isCloudConnection: true
+  username: "postgres"
+  dbName: "postgres"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
+  port: "5432"
+  password: "postgres"
+  useSSL: false
+writerChainDatabaseMainnet:
+  isCloudConnection: true
+  username: "postgres"
+  dbName: "postgres"
+  host: "/cloudsql/your-project-id:us-central1:beaconchain-db"
+  port: "5432"
+  password: "postgres"
+  useSSL: false

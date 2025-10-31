@@ -1,0 +1,42 @@
+name: Unit-Tests
+
+env:
+  # raise that threshold over time
+  COVERAGE_THRESHOLD: 25
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './go.mod'
+          cache-dependency-path: go.sum
+      - uses: bufbuild/buf-setup-action@v1.50.0
+      - run: make generate-static-files
+      - name: unit tests
+        run: |
+          export TERM=xterm
+          go test $(go list ./... | grep -Ev "test|cmd|domain/gen|internal/log|api/external|api/inhouse")  -coverprofile=coverage.out -covermode=atomic -race
+
+      - name: coverage
+        run: |
+          echo "Quality Gate: checking test coverage is above threshold ..."
+          echo "Threshold             : $COVERAGE_THRESHOLD %"
+          totalCoverage=`cat coverage.out | grep -v 'mock' > coverage_no_mock.out && go tool cover -func=coverage_no_mock.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
+          echo "Current test coverage : $totalCoverage %"
+          if (( $(echo "$totalCoverage $COVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
+              echo "OK"
+          else
+              echo "Current test coverage is below threshold. Please add more unit tests."
+              echo "Failed"
+              exit 1
+          fi

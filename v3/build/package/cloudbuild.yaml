@@ -1,0 +1,10 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'build/package/Dockerfile',
+      '-t', 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/beaconchain/beaconchain-api:latest',
+      '.'
+    ]
+images:
+  - 'us-central1-docker.pkg.dev/${_PROJECT_NAME}/beaconchain/beaconchain-api:latest'
