@@ -88,11 +88,21 @@ func Run() {
 
 	var srv *http.Server
 	go func() {
+		if utils.Config.Frontend.HttpWriteTimeout == 0 {
+			utils.Config.Frontend.HttpWriteTimeout = time.Second * 15
+		}
+		if utils.Config.Frontend.HttpReadTimeout == 0 {
+			utils.Config.Frontend.HttpReadTimeout = time.Second * 15
+		}
+		if utils.Config.Frontend.HttpIdleTimeout == 0 {
+			utils.Config.Frontend.HttpIdleTimeout = time.Second * 620 // use google-suggested per default, see: https://cloud.google.com/load-balancing/docs/https#timeout-keepalive-backends
+		}
 		srv = &http.Server{
 			Handler:      router,
 			Addr:         net.JoinHostPort(cfg.Frontend.Server.Host, cfg.Frontend.Server.Port),
-			WriteTimeout: 15 * time.Second,
-			ReadTimeout:  15 * time.Second,
+			WriteTimeout: utils.Config.Frontend.HttpWriteTimeout,
+			ReadTimeout:  utils.Config.Frontend.HttpReadTimeout,
+			IdleTimeout:  utils.Config.Frontend.HttpIdleTimeout,
 		}
 		log.Infof("serving on %s:%s", cfg.Frontend.Server.Host, cfg.Frontend.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
