@@ -1,0 +1,104 @@
+# Why validator withdrawals don’t show up as wallet transactions
+
+When your validator withdraws ETH, you usually won’t see an incoming transaction in your wallet. Instead, your balance on the execution layer increases silently. This behavior is expected and by design.
+
+This page explains why, what kinds of withdrawals exist, and how you can verify them on beaconcha.in.
+
+## Key takeaways
+
+- Withdrawals are system-level balance credits on the execution layer (EL), not user-initiated transfers.
+- They don’t originate from an externally owned account (EOA), so most wallets don’t display a “received transaction.”
+- Partial withdrawals (excess above 32 ETH) credit automatically to your withdrawal address once eligible.
+- Full withdrawals (validator exited) credit the entire effective balance to your withdrawal address.
+- You can verify credits on beaconcha.in via the Withdrawals tab on the address page and on the slot/block page.
+
+## How withdrawals flow: consensus vs. execution layers
+
+Ethereum staking operates across two layers:
+
+- Consensus layer (CL): Manages validators, attestations, and withdrawal eligibility. The CL determines when a validator can withdraw and includes withdrawal instructions in the payload.
+- Execution layer (EL): Manages ETH balances, transactions, and smart contracts. The EL applies the withdrawal list by directly increasing the specified withdrawal address balance.
+
+During block processing, the CL passes a list of withdrawals to the EL. The EL applies these as balance changes, not as regular EOA-to-EOA transactions.
+
+Result: Your wallet balance at the withdrawal address increases, but there is no sender account or “transaction” to show in the wallet’s history.
+
+## Types of withdrawals
+
+- Partial withdrawals
+  - What it is: Automatic skimming of any ETH above 32 ETH effective balance from an active validator.
+  - When it happens: Periodically, once the validator has a valid withdrawal credential set to an Ethereum address (0x01 prefix) and becomes eligible in the withdrawal queue.
+  - What you will see: Balance at the withdrawal address increases by the skimmed amount. No incoming transaction appears in most wallets.
+
+- Full withdrawals
+  - What it is: Payout of the validator’s entire effective balance after a successful voluntary exit (or forced exit) and eligibility in the withdrawal queue.
+  - When it happens: After exit finalization and once the validator is processed by the withdrawal queue.
+  - What you will see: A one-time balance increase at the withdrawal address, again typically without an inbound transaction entry.
+
+## Why your wallet doesn’t show an inbound transaction
+
+Most wallet UIs list transfers initiated by accounts (EOAs) or contracts—events they can attribute to a sender and a transaction hash. Withdrawals are neither:
+
+- They are protocol-applied balance updates recorded in the block’s withdrawals list.
+- There is no sender address, no ERC-20 Transfer event, and often no typical EOA transaction hash tied to the credit.
+- On beaconcha.in, withdrawals are visible in the Withdrawals tab on the execution address page and on the slot/block page, separate from normal transactions.
+
+Because the wallet can’t attribute a familiar transfer, it simply reflects the new balance without an itemized incoming tx.
+
+## Prerequisites
+
+Before expecting withdrawals to appear:
+
+- Your validator must use 0x01 withdrawal credentials that point to your intended execution address.
+- Your validator must be eligible in the withdrawal queue (partial: above 32 ETH; full: exited and finalized).
+- You must wait for the network to process withdrawals, which occurs continuously but is rate-limited per block.
+
+## How to verify your withdrawal
+
+Use beaconcha.in to confirm credits and timing.
+
+1. Open your withdrawal execution address on beaconcha.in and select the Withdrawals tab.
+   - You will see all credits to this address and the slot they were included in.
+   - Example address page: https://beaconcha.in/address/0xb720fbd903ffcd40e63def20f3321a483bf00bb2#withdrawals
+2. From any withdrawal row, open the linked slot and select the Withdrawals tab to view all withdrawals included in that slot/block.
+   - Example slot page: https://beaconcha.in/slot/12800471#withdrawals
+3. Optionally, open your validator page on beaconcha.in and review its Withdrawals section to see which slots credited your withdrawal address.
+4. Compare your wallet balance around that slot; expect a net increase without a normal inbound transaction entry.
+
+Expected outcome: You can identify the block that included your withdrawal and confirm the credited amount to your withdrawal address, even though no inbound transaction appears in your wallet history.
+
+## Common questions
+
+- Can I make withdrawals show as transactions in my wallet?
+  - No. These are protocol-level balance credits. On beaconcha.in, they appear under the Withdrawals tab, but your wallet will typically not show a normal incoming transaction.
+
+- Why haven’t I received my partial withdrawal yet?
+  - Ensure you have 0x01 withdrawal credentials set to an execution address. If you still have 0x00 (BLS) credentials, you must perform a credential update first. Then wait for the queue to process.
+
+- Where can I see the exact credit?
+  - On beaconcha.in: Address page → Withdrawals tab, and Slot/Block page → Withdrawals tab. Your address balance will reflect the credit once the slot is processed.
+
+- Do withdrawals cost gas?
+  - No. They are system-applied and do not require you to submit a transaction or pay gas.
+
+## Troubleshooting
+
+- Balance didn’t change but beaconcha.in shows a withdrawal
+  - Re-check the specific block and confirm you are looking at the correct withdrawal address.
+  - Wait for a few confirmations and refresh your wallet; some UIs cache balances.
+  - Verify that your wallet shows the updated native balance for the address; if not, confirm the credit on the beaconcha.in address page (Withdrawals tab) and allow time for your wallet to refresh cached data.
+
+- Still have 0x00 credentials
+  - You must update to 0x01 credentials to enable partial withdrawals. Follow official steps to generate and broadcast the credential update message. After confirmation on CL, partial withdrawals can start when eligible.
+
+- Expecting full withdrawal but not credited yet
+  - Confirm the validator is fully exited and finalized. Then wait for the withdrawal queue to process your index. Timing depends on network throughput and queue length.
+
+## Related resources
+
+- [Deposit Process](./deposit-process.md)
+- [Rewards and Penalties](../beaconcha.in-explorer/rewards-and-penalties.md)
+- [Attestation](../beaconcha.in-explorer/attestation.md)
+- [beaconcha.in explorer](https://beaconcha.in/) (validator view and block view)
+
+Tip: Keep your withdrawal address secure. Anyone with control of that address controls the withdrawn ETH.
