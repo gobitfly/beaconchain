@@ -37,14 +37,33 @@ const aggregationDisabled = ({ disabled }: { disabled: boolean }) => disabled
 
 /** efficiency */
 const efficiency = ref<EfficiencyType>(chartFilter.value.efficiency)
-
-const efficiencyList = EfficiencyTypes.map(e => ({
-  id: e,
-  label: $t(`dashboard.validator.summary.chart.efficiency.${e}`),
-}))
+const efficiencyList = EfficiencyTypes.map((efficiencyType) => {
+  let efficiencyTranslationKey: TranslationKey
+  switch (efficiencyType) {
+    case 'all':
+      efficiencyTranslationKey = 'base.common.beaconscore'
+      break
+    case 'attestation':
+      efficiencyTranslationKey = 'dashboard.validator.summary.chart.efficiency.attestation'
+      break
+    case 'proposal':
+      efficiencyTranslationKey = 'dashboard.validator.summary.chart.efficiency.proposal'
+      break
+    case 'sync':
+      efficiencyTranslationKey = 'dashboard.validator.summary.chart.efficiency.sync'
+      break
+  }
+  return {
+    efficiencyTranslationKey,
+    id: efficiencyType,
+  }
+})
 watch(efficiency, (e) => {
   chartFilter.value.efficiency = e
 })
+const getEfficiencyTranslationKey = (id: EfficiencyType) => {
+  return efficiencyList.find(efficiencyType => efficiencyType.id === id)!.efficiencyTranslationKey
+}
 
 /** groups */
 const total = ref(
@@ -156,9 +175,23 @@ const selectedLabel = computed(() => {
       v-model="efficiency"
       :options="efficiencyList"
       option-value="id"
-      option-label="label"
+      option-label="labelTranslationKey"
       class="small"
-    />
+    >
+      <template #option="{ efficiencyTranslationKey }">
+        <BcTranslation
+          :keypath="efficiencyTranslationKey"
+          suppath="base.common.registered_trademark_symbol"
+        />
+      </template>
+
+      <template #value="{ value }">
+        <BcTranslation
+          :keypath="getEfficiencyTranslationKey(value)"
+          suppath="base.common.registered_trademark_symbol"
+        />
+      </template>
+    </BcDropdown>
 
     <BcMultiSelect
       v-model="selectedGroups"
