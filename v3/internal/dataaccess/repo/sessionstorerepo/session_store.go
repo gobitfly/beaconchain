@@ -18,6 +18,12 @@ const (
 	SubscriptionSessionKey  = "subscription"
 )
 
+type UserV1Notification int
+
+func init() {
+	gob.RegisterName("github.com/gobitfly/eth2-beaconchain-explorer/types.UserV1Notification", UserV1Notification(0))
+}
+
 type DBRepository struct {
 	redis *redis.Client
 }

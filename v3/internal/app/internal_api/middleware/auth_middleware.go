@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gobitfly/beaconchain-backend/internal/auth"
 	"github.com/gobitfly/beaconchain-backend/internal/common"
 	"github.com/gobitfly/beaconchain-backend/internal/dataaccess/repo/sessionstorerepo"
-
-	"github.com/gobitfly/beaconchain-backend/internal/auth"
 )
 
 const SessionIDCookieName = "session_id"
