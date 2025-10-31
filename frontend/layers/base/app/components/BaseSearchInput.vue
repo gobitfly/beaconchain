@@ -136,8 +136,12 @@ const idSearchInput = useId()
               <RkComboboxGroup
                 v-for="[groupKey, groupItems] in groupedResults"
                 :key="groupKey as string"
+                :aria-labelledby="`search-group-label-${groupKey}`"
               >
-                <RkComboboxLabel class="px-2xl py-md  dark:text-gray-400">
+                <RkComboboxLabel
+                  :id="`search-group-label-${groupKey}`"
+                  class="px-2xl py-md  dark:text-gray-400"
+                >
                   <slot
                     name="result-group-label"
                     :label="groupKey"
