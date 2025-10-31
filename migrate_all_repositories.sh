@@ -11,15 +11,15 @@ MONOREPO_REMOTE="${MONOREPO_REMOTE:-git@github.com:gobitfly/beaconchain-monorepo
 # Workspace dir for mirrors (kept so re-runs are incremental)
 WORKDIR="${WORKDIR:-./_monorepo_migration}"
 
-# Map: namespace => "remote_url subdir_name"
-# - namespace is used to prefix refs in the monorepo: heads/<ns>/*, tags/<ns>/*
+# List of sources: "<ns> <remote_url> <subdir_name>"
+# - ns is used to prefix refs in the monorepo: heads/<ns>/*, tags/<ns>/*
 # - subdir_name is the folder under which history will be placed.
-declare -A SOURCES=(
-  [v1]="git@github.com:gobitfly/eth2-beaconchain-explorer.git v1"
-  [v2]="git@github.com:gobitfly/beaconchain.git v2"
-  [v3]="git@github.com:gobitfly/beaconchain-backend.git v3"
-  [docs]="git@github.com:gobitfly/eth2-knowledge-base.git docs"
-  [app]="git@github.com:gobitfly/eth2-beaconchain-explorer-app.git app"
+SOURCES=(
+  "v1 git@github.com:gobitfly/eth2-beaconchain-explorer.git v1"
+  "v2 git@github.com:gobitfly/beaconchain.git v2"
+  "v3 git@github.com:gobitfly/beaconchain-backend.git v3"
+  "docs git@github.com:gobitfly/eth2-knowledge-base.git docs"
+  "app git@github.com:gobitfly/eth2-beaconchain-explorer-app.git app"
 )
 
 # Push only branches updated within the last N days (set 0 to push ALL)
@@ -30,6 +30,20 @@ MERGE_MAINS="${MERGE_MAINS:-true}"   # true|false
 
 # Dry run (show what would be pushed)
 DRY_RUN="${DRY_RUN:-false}"          # true|false
+# Predeclare array to avoid set -u 'unbound variable' on macOS Bash 3.2
+declare -a active_branches=()
+
+# Map: per-namespace default branch (main vs master) — Bash 3 compatible
+# v1 and docs use 'master', others use 'main'
+main_branch_for() {
+  case "$1" in
+    v1|docs) echo master ;;
+    *) echo main ;;
+  esac
+}
+
+# Merge order for building monorepo main
+MERGE_ORDER=(v1 v2 v3 docs app)
 
 # ============================
 # Helpers
@@ -58,6 +72,17 @@ compute_cutoff_epoch() {
   fi
 }
 
+# Cleanup filter-repo state in a mirror repo (refs/original and metadata dir)
+clean_filter_repo_state() {
+  local mirror_dir="$1"
+  # Remove any refs/original/* created by prior filter-repo runs
+  while read -r origref; do
+    [[ -n "$origref" ]] && git -C "$mirror_dir" update-ref -d "$origref" || true
+  done < <(git -C "$mirror_dir" for-each-ref --format='%(refname)' refs/original || true)
+  # Remove filter-repo metadata directory to avoid assertion errors when chaining runs
+  rm -rf "$mirror_dir/filter-repo" || true
+}
+
 # List active branches (by HEAD commit date) in a mirror repo
 list_active_branches() {
   local mirror_dir="$1" cutoff_epoch="$2"
@@ -80,8 +105,12 @@ push_refspec() {
 }
 
 push_selected_branches() {
-  local mirror_dir="$1" ns="$2" branches=("$@"); shift 2
-  for br in "${branches[@]:2}"; do
+  local mirror_dir="$1"
+  local ns="$2"
+  shift 2
+  local branches=("$@")
+  local br
+  for br in "${branches[@]}"; do
     local src="refs/heads/${br}"
     local dst="refs/heads/${ns}/${br}"
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -117,78 +146,106 @@ fi
 
 cutoff_epoch="$(compute_cutoff_epoch "$ACTIVE_DAYS")"
 
-for ns in "${!SOURCES[@]}"; do
-  read -r remote_url subdir <<<"${SOURCES[$ns]}"
+for entry in "${SOURCES[@]}"; do
+  read -r ns remote_url subdir <<<"$entry"
 
   say "=== Processing $ns: $remote_url → subdir '$subdir/' ==="
 
   mirror="${WORKDIR}/${ns}-mirror.git"
   if [[ ! -d "$mirror" ]]; then
-    say "Cloning mirror..."
-    git clone --mirror "$remote_url" "$mirror"
+    say "Cloning pristine mirror (no tags)..."
+    git clone --mirror --no-tags "$remote_url" "$mirror" || git clone --mirror "$remote_url" "$mirror"
+    # Ensure mirror will not fetch tags on subsequent fetches
+    git -C "$mirror" config remote.origin.tagopt --no-tags
   else
-    say "Mirror exists, fetching updates..."
-    git -C "$mirror" fetch --all --prune --tags
+    say "Refreshing pristine mirror with a fresh clone (no tags)..."
+    rm -rf "$mirror"
+    git clone --mirror --no-tags "$remote_url" "$mirror" || git clone --mirror "$remote_url" "$mirror"
+    git -C "$mirror" config remote.origin.tagopt --no-tags
   fi
 
-  # Clean previous filter-repo refs (if any) and rewrite
+  # Prepare a fresh working repo from the pristine mirror (avoid double-subdir like v1/v1)
+  work="${WORKDIR}/${ns}-work.git"
+  rm -rf "$work"
+  git clone --mirror "$mirror" "$work"
+
+  # Clean previous filter-repo state (if any) and rewrite
   say "Rewriting history under '${subdir}/'..."
-  # Remove any refs/original/* created by prior filter-repo runs
-  while read -r origref; do
-    [[ -n "$origref" ]] && git -C "$mirror" update-ref -d "$origref" || true
-  done < <(git -C "$mirror" for-each-ref --format='%(refname)' refs/original || true)
-  git -C "$mirror" filter-repo --to-subdirectory-filter "$subdir" --force
+  clean_filter_repo_state "$work"
+  git -C "$work" filter-repo --to-subdirectory-filter "$subdir" --force
 
   # For Go code repos, rewrite import paths to the new monorepo modules
   case "$ns" in
-    v1)
-      say "Rewriting imports for v1 to module github.com/gobitfly/beaconchain-monorepo ..."
-      mapfile_v1="$(mktemp)"; trap 'rm -f "$mapfile_v1"' RETURN
+    v1|v2|v3)
+      say "Rewriting Go import paths to monorepo modules (v1/v2/v3 mappings) ..."
+      repl_common="$(mktemp)"
       {
-        echo "github.com/gobitfly/eth2-beaconchain-explorer/ ==> github.com/gobitfly/beaconchain-monorepo/"
-        echo "\bmodule[[:space:]]+github.com/gobitfly/eth2-beaconchain-explorer\b ==> module github.com/gobitfly/beaconchain-monorepo"
-      } > "$mapfile_v1"
-      git -C "$mirror" filter-repo --replace-text "$mapfile_v1" --force
-      ;;
-    v2)
-      say "Rewriting imports for v2 to module github.com/gobitfly/beaconchain-monorepo/v2 ..."
-      mapfile_v2="$(mktemp)"; trap 'rm -f "$mapfile_v2"' RETURN
-      {
-        echo "github.com/gobitfly/beaconchain/ ==> github.com/gobitfly/beaconchain-monorepo/v2/"
-        echo "\bmodule[[:space:]]+github.com/gobitfly/beaconchain\b ==> module github.com/gobitfly/beaconchain-monorepo/v2"
-      } > "$mapfile_v2"
-      git -C "$mirror" filter-repo --replace-text "$mapfile_v2" --force
-      ;;
-    v3)
-      say "Rewriting imports for v3 to module github.com/gobitfly/beaconchain-monorepo/v3 ..."
-      mapfile_v3="$(mktemp)"; trap 'rm -f "$mapfile_v3"' RETURN
-      {
+        # v3 backend → monorepo/v3
         echo "github.com/gobitfly/beaconchain-backend/ ==> github.com/gobitfly/beaconchain-monorepo/v3/"
-        echo "\bmodule[[:space:]]+github.com/gobitfly/beaconchain-backend\b ==> module github.com/gobitfly/beaconchain-monorepo/v3"
-      } > "$mapfile_v3"
-      git -C "$mirror" filter-repo --replace-text "$mapfile_v3" --force
+        echo "github.com/gobitfly/beaconchain-backend ==> github.com/gobitfly/beaconchain-monorepo/v3"
+        # v2 beaconchain → monorepo/v2
+        echo "github.com/gobitfly/beaconchain/ ==> github.com/gobitfly/beaconchain-monorepo/v2/"
+        echo "github.com/gobitfly/beaconchain ==> github.com/gobitfly/beaconchain-monorepo/v2"
+        # v1 explorer → monorepo root
+        echo "github.com/gobitfly/eth2-beaconchain-explorer/ ==> github.com/gobitfly/beaconchain-monorepo/"
+        echo "github.com/gobitfly/eth2-beaconchain-explorer ==> github.com/gobitfly/beaconchain-monorepo"
+      } > "$repl_common"
+      clean_filter_repo_state "$work"
+      git -C "$work" filter-repo --replace-text "$repl_common" --force
+      rm -f "$repl_common"
+
+      # Additionally, update the module path in go.mod for this namespace
+      repl_mod="$(mktemp)"
+      case "$ns" in
+        v1)
+          echo "regex:\bmodule\s+github\.com/gobitfly/eth2-beaconchain-explorer\b ==> module github.com/gobitfly/beaconchain-monorepo" > "$repl_mod"
+          ;;
+        v2)
+          echo "regex:\bmodule\s+github\.com/gobitfly/beaconchain\b ==> module github.com/gobitfly/beaconchain-monorepo/v2" > "$repl_mod"
+          ;;
+        v3)
+          echo "regex:\bmodule\s+github\.com/gobitfly/beaconchain-backend\b ==> module github.com/gobitfly/beaconchain-monorepo/v3" > "$repl_mod"
+          ;;
+      esac
+      clean_filter_repo_state "$work"
+      git -C "$work" filter-repo --replace-text "$repl_mod" --force
+      rm -f "$repl_mod"
       ;;
   esac
 
-  # Add monorepo remote if missing
-  if ! git -C "$mirror" remote | grep -q "^monorepo$"; then
-    git -C "$mirror" remote add monorepo "$MONOREPO_REMOTE"
+  # Add monorepo remote to work repo if missing
+  if ! git -C "$work" remote | grep -q "^monorepo$"; then
+    git -C "$work" remote add monorepo "$MONOREPO_REMOTE"
   fi
 
   if [[ "$ACTIVE_DAYS" -le 0 ]]; then
-    say "Pushing ALL branches and tags for $ns (namespaced)..."
-    push_refspec "$mirror" "$ns" heads
-    push_refspec "$mirror" "$ns" tags
+    say "Pushing ALL branches for $ns (namespaced); skipping tags by design..."
+    push_refspec "$work" "$ns" heads
   else
-    say "Pushing ONLY branches updated in last ${ACTIVE_DAYS} days for $ns..."
-    mapfile -t active_branches < <(list_active_branches "$mirror" "$cutoff_epoch")
-    if [[ "${#active_branches[@]}" -eq 0 ]]; then
+    say "Pushing ONLY branches updated in last ${ACTIVE_DAYS} days for $ns (tags are skipped)..."
+    # Ensure array exists under set -u in Bash 3.2 and initialize for this namespace
+    active_branches=()
+    while IFS= read -r _br; do
+      [[ -n "$_br" ]] && active_branches+=("$_br")
+    done < <(list_active_branches "$work" "$cutoff_epoch")
+    # Ensure the default branch is included even if inactive
+    main_br="$(main_branch_for "$ns")"
+    if git -C "$work" rev-parse --verify "refs/heads/${main_br}" >/dev/null 2>&1; then
+      found=false
+      # Iterate over active_branches safely (array is initialized above)
+      for b in "${active_branches[@]}"; do
+        if [[ "$b" == "$main_br" ]]; then found=true; break; fi
+      done
+      if [[ "$found" == "false" ]]; then
+        active_branches+=("$main_br")
+      fi
+    fi
+    # Length check (safe because array is initialized above)
+    if [[ ${#active_branches[@]} -eq 0 ]]; then
       say "No active branches for $ns. Skipping branch push."
     else
-      push_selected_branches "$mirror" "$ns" "${active_branches[@]}"
+      push_selected_branches "$work" "$ns" "${active_branches[@]}"
     fi
-    say "Pushing ALL tags for $ns (namespaced) to preserve release history..."
-    push_refspec "$mirror" "$ns" tags
   fi
 done
 
@@ -197,7 +254,7 @@ done
 # ============================
 
 if [[ "$MERGE_MAINS" == "true" ]]; then
-  say "Merging v1/main + v2/main + v3/main into monorepo 'main'..."
+  say "Merging selected mains into monorepo 'main' (per default-branch mapping)..."
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
 
@@ -213,26 +270,41 @@ if [[ "$MERGE_MAINS" == "true" ]]; then
     git -C "$tmpdir" commit --allow-empty -m "Initialize monorepo main"
   fi
 
-  # Merge the three mains (namespaced)
-  for ns in v1 v2 v3; do
-    if git -C "$tmpdir" rev-parse --verify "origin/${ns}/main" >/dev/null 2>&1; then
-      say "Merging ${ns}/main..."
-      git -C "$tmpdir" merge --no-edit --allow-unrelated-histories "origin/${ns}/main" || {
+  # Merge all defined namespaces in MERGE_ORDER using their default branch
+  for ns in "${MERGE_ORDER[@]}"; do
+    main_br="$(main_branch_for "$ns")"
+    if git -C "$tmpdir" rev-parse --verify "origin/${ns}/${main_br}" >/dev/null 2>&1; then
+      say "Merging ${ns}/${main_br}..."
+      git -C "$tmpdir" merge --no-edit --allow-unrelated-histories "origin/${ns}/${main_br}" || {
         echo
-        echo "Conflict while merging ${ns}/main. Resolve in $tmpdir then run:"
+        echo "Conflict while merging ${ns}/${main_br}. Resolve in $tmpdir then run:"
         echo "  git add -A && git commit && git push origin main"
         exit 1
       }
     else
-      say "No ${ns}/main found; skipping."
+      say "No ${ns}/${main_br} found; skipping."
     fi
   done
 
+  # Ensure go.work exists with required content
+  gowork_path="$tmpdir/go.work"
+  gowork_content='go 1.22
+use (
+  ./v1
+  ./v2/backend
+  ./v3
+)'
   if [[ "$DRY_RUN" == "true" ]]; then
-    say "Dry run: would push 'main' to origin."
+    say "Dry run: would write go.work and push 'main' to origin."
   else
+    printf "%s\n" "$gowork_content" > "$gowork_path"
+    git -C "$tmpdir" add go.work
+    # Commit only if there are changes (go.work new or updated)
+    if ! git -C "$tmpdir" diff --cached --quiet; then
+      git -C "$tmpdir" commit -m "Add go.work for monorepo workspace"
+    fi
     git -C "$tmpdir" push origin main
-    say "Pushed merged 'main' to monorepo."
+    say "Pushed merged 'main' with go.work to monorepo."
   fi
 fi
 
