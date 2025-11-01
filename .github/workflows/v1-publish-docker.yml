@@ -1,7 +1,7 @@
 #
 name: v1-backend publish docker image
 
-# Configures this workflow to run every time a change is pushed to the branch called `release`.
+# Configures this workflow to run every time a change is pushed to main and staging branches.
 on:
   push:
     branches: [main, staging]
