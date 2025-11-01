@@ -1,2 +1,4 @@
 .idea/
 _monorepo_migration/
+bin/
+node_modules/

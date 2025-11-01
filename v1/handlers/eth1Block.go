@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/gobitfly/eth2-beaconchain-explorer/db"
 	"github.com/gobitfly/eth2-beaconchain-explorer/rpc"
 	"github.com/gobitfly/eth2-beaconchain-explorer/services"
@@ -16,6 +17,7 @@ import (
 	"github.com/gobitfly/eth2-beaconchain-explorer/utils"
 
 	"github.com/ethereum/go-ethereum/consensus/misc/eip4844"
+	geth_types "github.com/ethereum/go-ethereum/core/types"
 	"github.com/gorilla/mux"
 )
 
@@ -238,7 +240,11 @@ func GetExecutionBlockPageData(number uint64, limit int) (*types.Eth1BlockPageDa
 		txs = txs[:limit]
 	}
 
-	blobGasPrice := eip4844.CalcBlobFee(block.ExcessBlobGas)
+	chainConfig := params.MainnetChainConfig
+	if utils.Config.Name == "holesky" {
+		chainConfig = params.HoleskyChainConfig
+	}
+	blobGasPrice := eip4844.CalcBlobFee(chainConfig, &geth_types.Header{ExcessBlobGas: &block.ExcessBlobGas})
 	burnedTxFees := new(big.Int).Mul(new(big.Int).SetBytes(block.BaseFee), big.NewInt(int64(block.GasUsed)))
 	burnedBlobFees := new(big.Int).Mul(blobGasPrice, big.NewInt(int64(block.BlobGasUsed)))
 	burnedFees := new(big.Int).Add(burnedTxFees, burnedBlobFees)

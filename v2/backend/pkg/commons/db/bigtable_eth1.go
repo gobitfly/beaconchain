@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/go-redis/redis/v8"
 
@@ -898,7 +897,7 @@ func (bigtable *Bigtable) TransformBlock(block *types.Eth1Block, cache *freecach
 		txFee := new(big.Int).Mul(new(big.Int).SetBytes(t.GasPrice), big.NewInt(int64(t.GasUsed)))
 
 		if len(block.BaseFee) > 0 {
-			effectiveGasPrice := math.BigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(block.BaseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
+			effectiveGasPrice := bigMin(new(big.Int).Add(new(big.Int).SetBytes(t.MaxPriorityFeePerGas), new(big.Int).SetBytes(block.BaseFee)), new(big.Int).SetBytes(t.MaxFeePerGas))
 			proposerGasPricePart := new(big.Int).Sub(effectiveGasPrice, new(big.Int).SetBytes(block.BaseFee))
 
 			if proposerGasPricePart.Cmp(big.NewInt(0)) >= 0 {
@@ -980,6 +979,14 @@ func CalculateMevFromBlock(block *types.Eth1Block) *big.Int {
 		}
 	}
 	return mevReward
+}
+
+// bigMin returns the smaller of x or y.
+func bigMin(x, y *big.Int) *big.Int {
+	if x.Cmp(y) > 0 {
+		return y
+	}
+	return x
 }
 
 func CalculateTxFeesFromBlock(block *types.Eth1Block) *big.Int {

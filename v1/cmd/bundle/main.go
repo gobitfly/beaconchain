@@ -135,7 +135,7 @@ func replaceFilesNames(files map[string]string) error {
 }
 
 func main() {
-	files, err := bundle("./static")
+	files, err := bundle("./v1/static")
 	if err != nil {
 		log.Fatalf("error bundling: %v", err)
 	}
