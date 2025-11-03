@@ -734,31 +734,55 @@ func (d *DataAccessService) AddValidatorDashboardValidators(ctx context.Context,
 	}
 	defer utils.Rollback(tx)
 
-	// Add all the validators to the dashboard and group
-	addValidatorsArgsIntf := []interface{}{dashboardId, groupId}
-	for _, validatorIndex := range validators {
-		addValidatorsArgsIntf = append(addValidatorsArgsIntf, validatorIndex)
-	}
-	err = d.alloyWriter.SelectContext(ctx, &addedValidators, addValidatorsQuery, addValidatorsArgsIntf...)
-	if err != nil {
-		return nil, err
-	}
+	numArgs := 3
+	batchSize := 65535 / numArgs // max 65535 params per batch, since postgres uses int16 for binding input params
+	batchIdx, allIdx := 0, 0
+	var validatorsToInsert []goqu.Record
+	for _, validatorIdx := range validators {
+		validatorsToInsert = append(validatorsToInsert,
+			goqu.Record{"dashboard_id": dashboardId, "group_id": groupId, "validator_index": validatorIdx})
+
+		batchIdx++
+		allIdx++
+
+		if batchIdx >= batchSize || allIdx >= len(validators) {
+			insertDs := goqu.Dialect("postgres").
+				Insert("users_val_dashboards_validators").
+				Cols("dashboard_id", "group_id", "validator_index").
+				Rows(validatorsToInsert).
+				OnConflict(goqu.DoUpdate(
+					"dashboard_id, validator_index",
+					goqu.Record{
+						"dashboard_id":    goqu.L("EXCLUDED.dashboard_id"),
+						"group_id":        goqu.L("EXCLUDED.group_id"),
+						"validator_index": goqu.L("EXCLUDED.validator_index"),
+					},
+				))
+
+			query, args, err := insertDs.Prepared(true).ToSQL()
+			if err != nil {
+				return nil, fmt.Errorf("error preparing query: %w", err)
+			}
+
+			_, err = tx.ExecContext(ctx, query, args...)
+			if err != nil {
+				return nil, err
+			}
 
 			batchIdx = 0
 			validatorsToInsert = validatorsToInsert[:0]
 		}
 	}
 
-	addedValidatorsMap := make(map[t.VDBValidator]uint64, len(addedValidators))
-	for _, addedValidatorInfo := range addedValidators {
-		addedValidatorsMap[addedValidatorInfo.ValidatorIndex] = addedValidatorInfo.GroupId
+	err = tx.Commit()
+	if err != nil {
+		return nil, fmt.Errorf("error committing tx to insert validators for a dashboard: %w", err)
 	}
 
-	result := []t.VDBPostValidatorsData{}
 	for _, validator := range validators {
 		result = append(result, t.VDBPostValidatorsData{
-			PublicKey: pubkeysMap[validator],
-			GroupId:   addedValidatorsMap[validator],
+			Index:   validator,
+			GroupId: groupId,
 		})
 	}
 
