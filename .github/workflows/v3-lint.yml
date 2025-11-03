@@ -1,0 +1,25 @@
+name: v3-golangci-lint
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'v3/**'
+      - '.github/workflows/v3-lint.yml'
+  workflow_dispatch:
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './v3/go.mod'
+      - uses: bufbuild/buf-setup-action@v1.50.0
+      - run: make v3-generate-static-files
+      - uses: bufbuild/buf-lint-action@v1
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: v3
+          version: v2.2.1
