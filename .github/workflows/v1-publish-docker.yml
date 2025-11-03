@@ -4,7 +4,7 @@ name: v1-backend publish docker image
 # Configures this workflow to run every time a change is pushed to main and staging branches.
 on:
   push:
-    branches: [main, staging]
+    branches: [main, staging, deploy-*]
     paths:
       - 'v1/**'
       - '.github/workflows/v1-publish-docker.yml'
