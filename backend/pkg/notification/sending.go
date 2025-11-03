@@ -275,7 +275,6 @@ func sendWebhookNotifications() error {
 	g := &errgroup.Group{}
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
-		n := n
 		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
 		if err != nil {
 			log.Error(err, "error increasing sent webhook count", 0)
@@ -392,7 +391,6 @@ func sendDiscordNotifications() error {
 	g := &errgroup.Group{}
 	g.SetLimit(50) // issue at most 50 requests at a time
 	for _, n := range notificationQueueItem {
-		n := n
 		_, _, err := db.IncrSentMessagesCount(NOTIFICAION_WEBHOOK_RATE_LIMIT_BUCKET, n.Content.UserId, 1, -1)
 		if err != nil {
 			log.Error(err, "error increasing sent discord count", 0)

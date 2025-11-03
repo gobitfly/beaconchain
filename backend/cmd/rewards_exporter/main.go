@@ -148,7 +148,6 @@ func Run() {
 		}()
 
 		for _, e := range notExportedEpochs {
-			e := e
 			g.Go(func() error {
 				var err error
 				for i := 0; i < 10; i++ {

@@ -52,7 +52,6 @@ func (s *ServiceClickhouseRollings) runChecks() {
 	}
 	wg := sync.WaitGroup{}
 	for rolling := range maps.Keys(rollings) {
-		rolling := rolling
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

@@ -110,8 +110,6 @@ func (d *dashboardData) transferEpochs(epochs []edb.EpochMetadata) error {
 	eg := &errgroup.Group{}
 	eg.SetLimit(int(utils.Config.DashboardExporter.TransferInParallel))
 	for id, epochs := range transferBatchEpochs {
-		epochs := epochs
-		id := id
 		eg.Go(func() error {
 			d.log.Infof("doing transfer batch %s", id)
 			err := edb.TransferEpochs(epochs)

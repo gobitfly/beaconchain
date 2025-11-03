@@ -192,7 +192,6 @@ func (h *HandlerService) InternalPostSearch(w http.ResponseWriter, r *http.Reque
 			continue
 		}
 		for _, chainId := range chainIdSet {
-			chainId := chainId
 			searchType := searchType
 			g.Go(func() error {
 				searchResult, err := searchTypeMap[searchType].handlerFunc(ctx, h, req.Input, chainId)

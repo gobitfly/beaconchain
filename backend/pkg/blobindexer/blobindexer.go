@@ -476,7 +476,6 @@ func (bi *BlobIndexer) storeBlobsInS3(blobs []constypes.BlobSidecarsData) error 
 	g.SetLimit(4)
 
 	for _, d := range blobs {
-		d := d
 		g.Go(func() error {
 			select {
 			case <-gCtx.Done():

@@ -706,7 +706,6 @@ func fixEns(erigonClient *rpc.ErigonClient) error {
 
 		log.Infof("processing batch %v-%v / %v", i, to, total)
 		for _, addr := range batch {
-			addr := addr
 			g.Go(func() error {
 				ensAddr, err := go_ens.Resolve(erigonClient.GetNativeClient(), addr.EnsName)
 				if err != nil {

@@ -26,7 +26,6 @@ func (d *dashboardData) backfillTask() {
 	}
 	for _, backfillType := range jobs {
 		// fork for every backfill we have to do
-		backfillType := backfillType
 		go func() {
 			log.Tracef("starting backfill for %s", backfillType)
 			for {
@@ -89,8 +88,6 @@ func (d *dashboardData) backfillEpochs(t edb.BackfillType, epochs []edb.Backfill
 	eg := &errgroup.Group{}
 	eg.SetLimit(int(utils.Config.DashboardExporter.BackfillInParallel))
 	for id, epochs := range backfillBatchEpochs {
-		epochs := epochs
-		id := id
 		eg.Go(func() (err error) {
 			//d.log.InfoWithFields("doing backfill batch %s", id)
 			d.log.InfoWithFields(log.Fields{"backfillType": t, "backfillBatchId": id, "epochRange": []uint64{epochs[0].Epoch, epochs[len(epochs)-1].Epoch}}, "doing backfill batch")

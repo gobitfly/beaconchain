@@ -951,7 +951,6 @@ func (bigtable *Bigtable) GetAddressesNamesArMetadata(addresses *map[string]stri
 
 	if inputMetadata != nil {
 		for address := range *inputMetadata {
-			address := address
 			g.Go(func() error {
 				metadata, err := bigtable.GetERC20MetadataForAddress([]byte(address))
 				if err != nil {
