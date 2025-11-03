@@ -174,44 +174,6 @@ for entry in "${SOURCES[@]}"; do
   clean_filter_repo_state "$work"
   git -C "$work" filter-repo --to-subdirectory-filter "$subdir" --force
 
-  # For Go code repos, rewrite import paths to the new monorepo modules
-  case "$ns" in
-    v1|v2|v3)
-      say "Rewriting Go import paths to monorepo modules (v1/v2/v3 mappings) ..."
-      repl_common="$(mktemp)"
-      {
-        # v3 backend → monorepo/v3
-        echo "github.com/gobitfly/beaconchain-backend/ ==> github.com/gobitfly/beaconchain-monorepo/v3/"
-        echo "github.com/gobitfly/beaconchain-backend ==> github.com/gobitfly/beaconchain-monorepo/v3"
-        # v2 beaconchain → monorepo/v2
-        echo "github.com/gobitfly/beaconchain/ ==> github.com/gobitfly/beaconchain-monorepo/v2/"
-        echo "github.com/gobitfly/beaconchain ==> github.com/gobitfly/beaconchain-monorepo/v2"
-        # v1 explorer → monorepo root
-        echo "github.com/gobitfly/eth2-beaconchain-explorer/ ==> github.com/gobitfly/beaconchain-monorepo/"
-        echo "github.com/gobitfly/eth2-beaconchain-explorer ==> github.com/gobitfly/beaconchain-monorepo"
-      } > "$repl_common"
-      clean_filter_repo_state "$work"
-      git -C "$work" filter-repo --replace-text "$repl_common" --force
-      rm -f "$repl_common"
-
-      # Additionally, update the module path in go.mod for this namespace
-      repl_mod="$(mktemp)"
-      case "$ns" in
-        v1)
-          echo "regex:\bmodule\s+github\.com/gobitfly/eth2-beaconchain-explorer\b ==> module github.com/gobitfly/beaconchain-monorepo" > "$repl_mod"
-          ;;
-        v2)
-          echo "regex:\bmodule\s+github\.com/gobitfly/beaconchain\b ==> module github.com/gobitfly/beaconchain-monorepo/v2" > "$repl_mod"
-          ;;
-        v3)
-          echo "regex:\bmodule\s+github\.com/gobitfly/beaconchain-backend\b ==> module github.com/gobitfly/beaconchain-monorepo/v3" > "$repl_mod"
-          ;;
-      esac
-      clean_filter_repo_state "$work"
-      git -C "$work" filter-repo --replace-text "$repl_mod" --force
-      rm -f "$repl_mod"
-      ;;
-  esac
 
   # Add monorepo remote to work repo if missing
   if ! git -C "$work" remote | grep -q "^monorepo$"; then
