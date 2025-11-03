@@ -1,0 +1,21 @@
+version: "2"
+linters:
+  enable:
+    - unused
+    - nolintlint
+    - importas
+  disable:
+    - staticcheck
+    - gosec
+    - gocritic
+    - errname
+    - unparam
+    - unconvert
+    - ineffassign
+    - govet
+    - bodyclose
+    - errcheck
+    - errchkjson
+    - forbidigo
+    - nosprintfhostport
+    - durationcheck

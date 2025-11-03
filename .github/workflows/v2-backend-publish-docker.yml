@@ -26,7 +26,7 @@ jobs:
       #
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set version
         run: |
           echo "BEACONCHAIN_VERSION=$(TZ=UTC0 git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd" $GITHUB_SHA)-$(git describe $GITHUB_SHA --always --tags)" >> "$GITHUB_ENV"

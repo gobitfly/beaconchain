@@ -29,7 +29,10 @@ func NewRedis(t testing.TB) *redis.Client {
 	if err != nil {
 		t.Fatalf("failed to start container: %s", err)
 	}
-	testcontainers.CleanupContainer(t, container)
+
+	t.Cleanup(func() {
+
+	})
 
 	endpoint, err := container.Endpoint(ctx, "")
 	if err != nil {

@@ -1,0 +1,44 @@
+name: v2-backend-converted-types-check
+on:
+  push:
+    paths:
+      - 'v2/backend/pkg/api/types/**'
+      - 'v2/frontend/types/api/**'
+      - '.github/workflows/v2-backend-converted-types-check.yml'
+  pull_request:
+    paths:
+      - 'v2/backend/pkg/api/types/**'
+      - 'v2/frontend/types/api/**'
+      - '.github/workflows/v2-backend-converted-types-check.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  v2-backend-converted-types-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: 'v2/backend/go.mod'
+          cache-dependency-path: 'v2/backend/go.sum'
+          cache: true
+      - name: Check if all backend-types have been converted to frontend-types
+        working-directory: v2/backend
+        run: |
+          currHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
+          make frontend-types
+          newHash=$(find ../frontend/types/api -type f -print0 | sort -z | xargs -0 sha1sum | sha256sum | head -c 64)
+          if [ "$currHash" != "$newHash" ]; then
+            echo "frontend-types have changed, please commit the changes"
+            exit 1
+          fi
+

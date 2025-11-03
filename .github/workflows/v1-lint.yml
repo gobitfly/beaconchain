@@ -1,0 +1,37 @@
+name: v1-lint
+on:
+  pull_request:
+    paths:
+      - 'v1/**'
+      - '.github/workflows/v1-lint.yml'
+  workflow_dispatch:
+jobs:
+  v1-golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './v1/go.mod'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: v1
+          version: v2.6.0
+  v1-html-js-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Setup Node Environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install Dependencies
+        working-directory: v1
+        run: npm ci
+      - name: Check File Format
+        working-directory: v1
+        run: npm run check-format
+      - name: Lint Files
+        working-directory: v1
+        run: npm run check-style

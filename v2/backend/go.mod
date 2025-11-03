@@ -1,6 +1,8 @@
 module github.com/gobitfly/beaconchain
 
-go 1.24.0
+go 1.25
+
+toolchain go1.25.3
 
 require (
 	cloud.google.com/go/bigtable v1.35.0

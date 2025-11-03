@@ -1,0 +1,21 @@
+name: v2-backend-lint
+on:
+  pull_request:
+    paths:
+      - 'v2/backend/**'
+      - '.github/workflows/v2-backend-lint.yml'
+  workflow_dispatch:
+jobs:
+  v2-golangci-lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: './v2/backend/go.mod'
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          working-directory: v2/backend
+          version: v2.6.0

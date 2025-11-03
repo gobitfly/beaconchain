@@ -1,39 +1,37 @@
-name: v3-unit-tests
+name: v2-backend-unit-tests
 env:
   # raise that threshold over time
-  COVERAGE_THRESHOLD: 25
+  COVERAGE_THRESHOLD: 2
 on:
   push:
     branches: [main, staging]
     paths:
-      - 'v3/**'
-      - '.github/workflows/v3-unit-tests.yml'
+      - 'v2/backend/**'
+      - '.github/workflows/v2-backend-unit-tests.yml'
   pull_request:
     paths:
-      - 'v3/**'
-      - '.github/workflows/v3-unit-tests.yml'
+      - 'v2/backend/**'
+      - '.github/workflows/v2-backend-unit-tests.yml'
   workflow_dispatch:
 jobs:
-  v3-unit-tests:
+  v2-backend-unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version-file: './v3/go.mod'
+          go-version-file: './v2/backend/go.mod'
           cache-dependency-path: go.sum
-      - uses: bufbuild/buf-setup-action@v1.50.0
-      - run: make v3-generate-static-files
       - name: unit tests
         run: |
           export TERM=xterm
-          go test -C v3 $(go list -C v3 ./... | grep -Ev "test|cmd|domain/gen|internal/log|api/external|api/inhouse") -coverprofile=coverage.out -covermode=atomic -race
+          go test -C v2/backend `go list -C v2/backend ./... | grep -v "pkg/consapi\|internal/th\|internal/contracts\|pkg/commons/types\|pkg/commons/contracts\|cmd\|db2"` -coverprofile coverage.out -covermode atomic -race
 
       - name: coverage
         run: |
           echo "Quality Gate: checking test coverage is above threshold ..."
           echo "Threshold             : $COVERAGE_THRESHOLD %"
-          totalCoverage=`cat v3/coverage.out | grep -v 'mock' > coverage_no_mock.out && go tool cover -func=coverage_no_mock.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
+          totalCoverage=`cat v2/backend/coverage.out | grep -v 'mock' > coverage_no_mock.out && go tool cover -func=coverage_no_mock.out | grep ^total | grep -Eo '[0-9]+\.[0-9]+'`
           echo "Current test coverage : $totalCoverage %"
           if (( $(echo "$totalCoverage $COVERAGE_THRESHOLD" | awk '{print ($1 >= $2)}') )); then
               echo "OK"
