@@ -688,9 +688,15 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 				// that have been deposited but arent active yet for some reason
 				// we can safely ignore these
 				if ar.ValidatorIndex >= uint64(len(validatorSlotMap)) {
-					d.log.Tracef("skipping reward for validator %d in epoch %d", ar.ValidatorIndex, epoch)
+					d.log.Tracef("skipping reward for validator %d in epoch %d, outside of assignment range", ar.ValidatorIndex, epoch)
 					continue
 				}
+				attData := validatorSlotMap[ar.ValidatorIndex]
+				if attData == nil {
+					d.log.Tracef("skipping reward for validator %d in epoch %d, no attestation assignment", ar.ValidatorIndex, epoch)
+					continue
+				}
+
 				valiIndextO := uint64(tO) + ar.ValidatorIndex
 				// ideal rewards
 				// we need to use the effective balance of epoch n+1 because the attestation processing for epoch n happens in the transition from n+1 => n+2
@@ -720,12 +726,6 @@ func (d *dashboardData) processAttestationRewards(data *MultiEpochData, tar *[]t
 					total += r
 				}
 				// generate hyper localized max
-				attData := validatorSlotMap[ar.ValidatorIndex]
-				if attData == nil {
-					// happens when the validator has been added to state but doesnt have a duty yet or has been slashed
-					// fine to ignore
-					continue
-				}
 				if hyperlocalizedMax[attData.Slot][attData.Committee] < total {
 					hyperlocalizedMax[attData.Slot][attData.Committee] = total
 				}
