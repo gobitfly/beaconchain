@@ -1,4 +1,6 @@
 go 1.25
+toolchain go1.25.3
+
 use (
   ./v1
   ./v2/backend
