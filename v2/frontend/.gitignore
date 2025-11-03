@@ -39,3 +39,4 @@ server.key
 
 /test-results
 /tests/results
+/tests/.env.*

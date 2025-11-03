@@ -1,11 +1,16 @@
-import type { Page as playwrightPage } from 'playwright-core'
+import type { Page as PlaywrightPage } from '@playwright/test'
 import {
-  expect as playwrightExpext, test as playwrightTest,
-} from '@nuxt/test-utils/playwright'
+  expect as playwrightExpect, test as playwrightTest,
+} from '@playwright/test'
 
-export const goto = async (page: Page, url: string, waitUntil?: | 'load' | 'networkidle') => {
+export const goto = async (
+  page: Page,
+  url: string,
+  waitUntil?: 'load' | 'networkidle',
+) => {
   await page.goto(url, { waitUntil })
 }
-export type Page = playwrightPage
+
+export type Page = PlaywrightPage
 export const test = playwrightTest
-export const expect = playwrightExpext
+export const expect = playwrightExpect
