@@ -77,6 +77,12 @@
             ]
           },
           {
+            "group": "Validator Tagging",
+            "pages": [
+              "validator-tagging/overview"
+            ]
+          },
+          {
             "group": "Notifications & Monitoring",
             "pages": [
               "notifications-monitoring/mobile-app-beacon-node",
