@@ -2,3 +2,5 @@
 _monorepo_migration/
 bin/
 node_modules/
+compare.sh
+migrate_selected_branches.sh
