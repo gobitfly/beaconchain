@@ -37,4 +37,7 @@ RUN --mount=type=cache,target=/gomod-cache --mount=type=cache,target=/go-cache m
 
 # final stage
 FROM gcr.io/distroless/base-debian12
+WORKDIR /usr/local/bin
 COPY --from=builder /src/bin/v1/ /usr/local/bin/
+COPY --from=builder /src/v1/config /usr/local/bin/config
+CMD ["./explorer", "--config", "./config/default.config.yml"]

@@ -1,8 +1,11 @@
 GITCOMMIT=`git describe --always`
+GITDATE=`TZ=UTC0 git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd"`
 VERSION=`git describe --always --tags`
-GITDATE=`TZ=UTC git show -s --date=iso-strict-local --format=%cd HEAD`
 BUILDDATE=`date -u +"%Y-%m-%dT%H:%M:%S%:z"`
-LDFLAGS="-X version.Version=${VERSION} -X version.BuildDate=${BUILDDATE} -X version.GitCommit=${GITCOMMIT} -X version.GitDate=${GITDATE} -s -w"
+V1_PACKAGE=github.com/gobitfly/eth2-beaconchain-explorer
+V1_LDFLAGS="-X ${V1_PACKAGE}/version.Version=${VERSION} -X ${V1_PACKAGE}/version.BuildDate=${BUILDDATE} -X ${V1_PACKAGE}/version.GitCommit=${GITCOMMIT} -X ${V1_PACKAGE}/version.GitDate=${GITDATE} -s -w"
+V2_PACKAGE=github.com/gobitfly/beaconchain/pkg/commons
+V2_LDFLAGS="-X ${V2_PACKAGE}/version.Version=${VERSION} -X ${V2_PACKAGE}/version.BuildDate=${BUILDDATE} -X ${V2_PACKAGE}/version.GitCommit=${GITCOMMIT} -X ${V2_PACKAGE}/version.GitDate=${GITDATE} -s -w"
 CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
@@ -58,7 +61,7 @@ v2: v2-backend
 v2-backend:
 	mkdir -p bin/v2
 	go install github.com/swaggo/swag/cmd/swag@latest && swag init --ot json -o ./v2/backend/pkg/api/docs -d ./v2/backend/pkg/api/ -g ./handlers/public.go
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o ./bin/v2/bc ./v2/backend/cmd/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V2_LDFLAGS} -o ./bin/v2/bc ./v2/backend/cmd/main.go
 
 v2-test:
 	go test -C v2/backend ./...
@@ -73,40 +76,40 @@ v1-explorer:
 	echo "Bundling API docs..."
 	npm run bundle-api-docs
 	echo "Building explorer..."
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/explorer v1/cmd/explorer/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/explorer v1/cmd/explorer/main.go
 
 v1-stats:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/statistics v1/cmd/statistics/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/statistics v1/cmd/statistics/main.go
 
 v1-frontend-data-updater:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/frontend-data-updater v1/cmd/frontend-data-updater/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/frontend-data-updater v1/cmd/frontend-data-updater/main.go
 
 v1-rewards-exporter:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/rewards-exporter v1/cmd/rewards-exporter/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/rewards-exporter v1/cmd/rewards-exporter/main.go
 
 v1-eth1indexer:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/eth1indexer v1/cmd/eth1indexer/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/eth1indexer v1/cmd/eth1indexer/main.go
 
 v1-blobindexer:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/blobindexer v1/cmd/blobindexer/blobindexer.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/blobindexer v1/cmd/blobindexer/blobindexer.go
 
 v1-node-jobs-processor:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/node-jobs-processor v1/cmd/node-jobs-processor/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/node-jobs-processor v1/cmd/node-jobs-processor/main.go
 
 v1-signatures:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/signatures v1/cmd/signatures/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/signatures v1/cmd/signatures/main.go
 
 v1-misc:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/misc v1/cmd/misc/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/misc v1/cmd/misc/main.go
 
 v1-notification-sender:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/notification-sender v1/cmd/notification-sender/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/notification-sender v1/cmd/notification-sender/main.go
 
 v1-notification-collector:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/notification-collector v1/cmd/notification-collector/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/notification-collector v1/cmd/notification-collector/main.go
 
 v1-user-service:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/user-service v1/cmd/user-service/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/user-service v1/cmd/user-service/main.go
 
 v1-validator-tagger:
-	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${LDFLAGS} -o bin/v1/validator-tagger v1/cmd/validator-tagger/main.go
+	CGO_CFLAGS=${CGO_CFLAGS} CGO_CFLAGS_ALLOW=${CGO_CFLAGS_ALLOW} go build --ldflags=${V1_LDFLAGS} -o bin/v1/validator-tagger v1/cmd/validator-tagger/main.go
