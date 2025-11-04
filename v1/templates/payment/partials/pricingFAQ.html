@@ -1,0 +1,109 @@
+{{ define "css" }}
+{{ end }}
+{{ define "pricingFAQ" }}
+<style>
+ #faq-section .card{
+      background: var(--bg-color-light);
+    }
+    .faq-icon {
+      transition: transform 0.2s;
+    }
+    .card-header button:not(.collapsed) .faq-icon {
+      transform: rotate(180deg);
+    }
+    .card-header button:not(.collapsed) .faq-icon:before {
+      content: "\f068"; /* FontAwesome minus icon when expanded */
+    }
+</style>
+<section class="my-5" id="faq-section">
+  <div class="row justify-content-center">
+    <div class="col-md-10">
+      <div class="text-center mb-4">
+        <h2 class="h3 font-weight-bold m-0">Frequently Asked Questions</h2>
+      </div>
+      
+      <div class="accordion" id="faqAccordion">
+        <div class="card border-0 shadow-none mb-3">
+          <div class="card-header border-0 p-2" id="faq-header-1">
+            <h5 class="mb-0 w-100">
+              <button class="btn btn-link btn-block text-left text-dark font-weight-bold text-decoration-none p-2 d-flex justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#faq-collapse-1" aria-expanded="false" aria-controls="faq-collapse-1">
+                <span>Lorem ipsum, dolor sit amet consectetur adipisicing elit.</span>
+                <span class="ml-4"><i class="faq-icon fa fa-fw fa-plus"></i></span>
+              </button>
+            </h5>
+          </div>
+          <div id="faq-collapse-1" class="collapse" aria-labelledby="faq-header-1">
+            <div class="card-body pt-0">
+              Id consequatur, aspernatur sapiente perspiciatis quo ducimus unde libero distinctio! Autem possimus ipsum doloribus, rerum perferendis labore voluptate dolor assumenda beatae obcaecati.
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-none mb-3">
+          <div class="card-header border-0 p-2" id="faq-header-2">
+            <h5 class="mb-0">
+              <button class="btn btn-link btn-block text-left text-dark font-weight-bold text-decoration-none p-2 d-flex justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#faq-collapse-2" aria-expanded="false" aria-controls="faq-collapse-2">
+                <span>Phasellus molestie est et justo efficitur, quis congue quam aliquam?</span>
+                <span class="ml-4"><i class="faq-icon fa fa-fw fa-plus"></i></span>
+              </button>
+            </h5>
+          </div>
+          <div id="faq-collapse-2" class="collapse" aria-labelledby="faq-header-2">
+            <div class="card-body pt-0">
+              Ut rhoncus interdum arcu sed gravida. Donec nunc urna, venenatis eget ornare ut, gravida sed risus. Donec nec eleifend elit, et lacinia ligula. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas.
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-none mb-3">
+          <div class="card-header border-0 p-2" id="faq-header-3">
+            <h5 class="mb-0">
+              <button class="btn btn-link btn-block text-left text-dark font-weight-bold text-decoration-none p-2 d-flex justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#faq-collapse-3" aria-expanded="false" aria-controls="faq-collapse-3">
+                <span>Etiam eleifend ipsum ac purus ornare ornare?</span>
+                <span class="ml-4"><i class="faq-icon fa fa-fw fa-plus"></i></span>
+              </button>
+            </h5>
+          </div>
+          <div id="faq-collapse-3" class="collapse" aria-labelledby="faq-header-3">
+            <div class="card-body pt-0">
+              Donec mollis scelerisque risus, sit amet blandit metus. Donec at massa quis elit auctor suscipit vel sed lectus. Mauris rutrum, arcu at molestie feugiat, velit diam accumsan libero, nec finibus purus leo et eros.
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-none mb-3">
+          <div class="card-header border-0 p-2" id="faq-header-4">
+            <h5 class="mb-0">
+              <button class="btn btn-link btn-block text-left text-dark font-weight-bold text-decoration-none p-2 d-flex justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#faq-collapse-4" aria-expanded="false" aria-controls="faq-collapse-4">
+                <span>Phasellus eget diam pretium, pellentesque metus sed, porta justo?</span>
+                <span class="ml-4"><i class="faq-icon fa fa-fw fa-plus"></i></span>
+              </button>
+            </h5>
+          </div>
+          <div id="faq-collapse-4" class="collapse" aria-labelledby="faq-header-4">
+            <div class="card-body pt-0">
+              Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Phasellus id ipsum nisl. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin tempus posuere purus a condimentum.
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-none mb-3">
+          <div class="card-header border-0 p-2" id="faq-header-5">
+            <h5 class="mb-0">
+              <button class="btn btn-link btn-block text-left text-dark font-weight-bold text-decoration-none p-2 d-flex justify-content-between collapsed" type="button" data-toggle="collapse" data-target="#faq-collapse-5" aria-expanded="false" aria-controls="faq-collapse-5">
+                <span>Praesent ac metus eget arcu interdum semper at ac diam?</span>
+                <span class="ml-4"><i class="faq-icon fa fa-fw fa-plus"></i></span>
+              </button>
+            </h5>
+          </div>
+          <div id="faq-collapse-5" class="collapse" aria-labelledby="faq-header-5">
+            <div class="card-body pt-0">
+              Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Phasellus id ipsum nisl. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Proin tempus posuere purus a condimentum.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{{ end }}

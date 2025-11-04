@@ -20,6 +20,7 @@ func Pricing(w http.ResponseWriter, r *http.Request) {
 		layoutTemplateFiles,
 		"payment/pricing.html",
 		"payment/partials/pricingCompareTable.html",
+		"payment/partials/pricingFAQ.html",
 		"svg/pricing.html",
 	)
 	var pricingTemplate = templates.GetTemplate(templateFiles...)

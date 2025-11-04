@@ -291,6 +291,19 @@
       font-weight: normal;
       opacity: 0.6;
     }
+    /****** FAQ Section ******/
+    #faq-section .card{
+      background: var(--bg-color-light);
+    }
+    .faq-icon {
+      transition: transform 0.2s;
+    }
+    .card-header button:not(.collapsed) .faq-icon {
+      transform: rotate(180deg);
+    }
+    .card-header button:not(.collapsed) .faq-icon:before {
+      content: "\f068"; /* FontAwesome minus icon when expanded */
+    }
   </style>
 {{ end }}
 
@@ -610,6 +623,9 @@
           </div>
         </div>
       </section>
+
+      <!-- FAQ Section -->
+      {{ template "pricingFAQ" . }}
 
       <!-- Error Modal -->
       <div class="modal fade" id="error-modal" tabindex="-1" role="dialog" aria-labelledby="error-modal-label" aria-hidden="true">
