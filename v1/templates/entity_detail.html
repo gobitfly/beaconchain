@@ -41,10 +41,10 @@
 
         Highcharts.chart(containerId, {
           chart: { type: "line", zoomType: "x" },
-          title: { text: "BeaconScore ({{ .Period }})", style: { color: "var(--font-color)" } },
+          title: { text: "BeaconScore<sup>®</sup> ({{ .Period }})", useHTML: true, style: { color: "var(--font-color)" } },
           xAxis: { type: "datetime", labels: { style: { color: "var(--font-color)" } } },
           yAxis: {
-            title: { text: "BeaconScore", style: { color: "var(--font-color)" } },
+            title: { text: "BeaconScore<sup>®</sup>", useHTML: true, style: { color: "var(--font-color)" } },
             labels: {
               formatter: function () {
                 return (this.value * 100).toFixed(2) + "%"
@@ -487,7 +487,7 @@
           <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
             <div class="card kpi-card h-100">
               <div class="card-body">
-                <div class="label"><i class="fas fa-tachometer-alt mr-1" aria-hidden="true"></i> BeaconScore</div>
+                <div class="label"><i class="fas fa-tachometer-alt mr-1" aria-hidden="true"></i> BeaconScore<sup>®</sup></div>
                 <div class="value">{{ formatBeaconscore .Data.Efficiency true }}</div>
               </div>
             </div>
@@ -724,7 +724,7 @@
                       <thead>
                         <tr>
                           <th>Sub-Entity</th>
-                          <th>BeaconScore</th>
+                          <th>BeaconScore<sup>®</sup></th>
                           <th>Net Share</th>
                         </tr>
                       </thead>
@@ -749,7 +749,7 @@
                       <tr>
                         <th>Index</th>
                         <th>Status</th>
-                        <th>BeaconScore</th>
+                        <th>BeaconScore<sup>®</sup></th>
                       </tr>
                     </thead>
                     <tbody></tbody>
