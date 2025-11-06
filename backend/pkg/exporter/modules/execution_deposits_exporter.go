@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/doug-martin/goqu/v9"
+	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,11 +28,13 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/contracts/deposit_contract"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/services"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
+	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -50,6 +54,7 @@ type executionDepositsExporter struct {
 	LastExportedBlock                  uint64
 	LastExportedFinalizedBlock         uint64
 	LastExportedFinalizedBlockRedisKey string
+	LastLookupTableRefresh             time.Time
 	CurrentHeadBlock                   atomic.Uint64
 	Signer                             gethtypes.Signer
 	DepositMethod                      abi.Method
@@ -278,13 +283,31 @@ func (d *executionDepositsExporter) export() (err error) {
 	}
 
 	start := time.Now()
-	// update cached view
-	err = d.updateCachedView()
+	var g2 errgroup.Group
+	g2.Go(func() error {
+		// update cached view
+		err := d.updateCachedView()
+		if err != nil {
+			return err
+		}
+		log.Debugf("updating cached deposits view took %v", time.Since(start))
+		return nil
+	})
+	g2.Go(func() error {
+		if d.LastLookupTableRefresh.Before(time.Now().Add(-time.Minute * 5)) {
+			err := d.upkeepLookupTable()
+			if err != nil {
+				return err
+			}
+			d.LastLookupTableRefresh = time.Now()
+			log.Debugf("updating lookup table took %v", time.Since(start))
+		}
+		return nil
+	})
+	err = g2.Wait()
 	if err != nil {
 		return err
 	}
-
-	log.Debugf("updating cached deposits view took %v", time.Since(start))
 
 	return nil
 }
@@ -693,4 +716,78 @@ func (d *executionDepositsExporter) updateCachedView() error {
 		[]string{"dashboard_id", "block_number", "log_index"},
 		[]string{"dashboard_id", "amount"})
 	return err
+}
+
+func (d *executionDepositsExporter) upkeepLookupTable() error {
+	// metrics: overall invocation
+	metrics.Tasks.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+	startTotal := time.Now()
+	defer func() { metrics.TaskDuration.WithLabelValues("execution_deposits_exporter_upkeep_lookup.total").Observe(time.Since(startTotal).Seconds()) }()
+
+	// Build external ClickHouse table with required schema
+	tbl, err := edb.NewLookupExternalTable()
+	if err != nil {
+		metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+		return fmt.Errorf("error creating external table: %w", err)
+	}
+
+	// Fetch distinct deposit address -> validator index mappings from Postgres (built with goqu)
+	startPg := time.Now()
+	ds := goqu.Dialect("postgres").
+		From(goqu.T("eth1_deposits").As("ed")).
+		Select(
+			goqu.Func("ENCODE", goqu.T("ed").Col("from_address"), "hex").As("from_hex"),
+			goqu.T("v").Col("validatorindex").As("validator_index"),
+		).
+		Distinct().
+		InnerJoin(
+			goqu.T("validators").As("v"),
+			goqu.On(goqu.T("v").Col("pubkey").Eq(goqu.T("ed").Col("publickey"))),
+		)
+	sqlStr, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+		return fmt.Errorf("error building deposit address mappings query: %w", err)
+	}
+	rows, err := db.ReaderDb.Query(sqlStr, args...)
+	metrics.TaskDuration.WithLabelValues("execution_deposits_exporter_upkeep_lookup.pg_query").Observe(time.Since(startPg).Seconds())
+	if err != nil {
+		metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+		return fmt.Errorf("error querying deposit address mappings: %w", err)
+	}
+	defer rows.Close()
+
+	startAppend := time.Now()
+	var rowsAppended int64
+	for rows.Next() {
+		var fromHex string
+		var validatorIndex int64
+		if err := rows.Scan(&fromHex, &validatorIndex); err != nil {
+			metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+			return fmt.Errorf("error scanning deposit address mapping row: %w", err)
+		}
+		// Prefix 0x for selector value consistency
+		selector := "0x" + fromHex
+		if err := tbl.Append(string(edb.DepositAddressSelector), selector, uint64(validatorIndex)); err != nil {
+			metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+			return fmt.Errorf("error appending row to external table: %w", err)
+		}
+		rowsAppended++
+	}
+	if err := rows.Err(); err != nil {
+		metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+		return fmt.Errorf("row iteration error: %w", err)
+	}
+	metrics.TaskDuration.WithLabelValues("execution_deposits_exporter_upkeep_lookup.append_rows").Observe(time.Since(startAppend).Seconds())
+	metrics.Counter.WithLabelValues("execution_deposits_exporter_upkeep_lookup.rows_appended").Add(float64(rowsAppended))
+
+	// Update the ClickHouse lookup table
+	startCH := time.Now()
+	ctx := context.Background()
+	if err := edb.UpdateLookupTable(ctx, edb.DepositAddressSelector, tbl); err != nil {
+		metrics.Errors.WithLabelValues("execution_deposits_exporter_upkeep_lookup").Inc()
+		return fmt.Errorf("error updating deposit address lookup table: %w", err)
+	}
+	metrics.TaskDuration.WithLabelValues("execution_deposits_exporter_upkeep_lookup.ch_update").Observe(time.Since(startCH).Seconds())
+	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
@@ -29,6 +30,7 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/gobitfly/beaconchain/pkg/commons/metrics"
 	edb "github.com/gobitfly/beaconchain/pkg/exporter/db"
 )
 
@@ -684,6 +686,109 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 					return nil
 				})
 			}
+
+			// update pubkey => validator lookup index in clickhouse
+			g.Go(func() error {
+				metrics.Tasks.WithLabelValues("slot_exporter_upkeep_lookup_public_key").Inc()
+				startTotal := time.Now()
+				defer func() { metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_public_key.total").Observe(time.Since(startTotal).Seconds()) }()
+				tbl, err := edb.NewLookupExternalTable()
+				if err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_public_key").Inc()
+					return fmt.Errorf("error creating external table: %w", err)
+				}
+				startAppend := time.Now()
+				var rowsAppended int64
+				for _, v := range block.Validators {
+					if err := tbl.Append(string(edb.PublicKeySelector), hexutil.Encode(v.PublicKey), uint64(v.Index)); err != nil {
+						metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_public_key").Inc()
+						return fmt.Errorf("error appending row to external table: %w", err)
+					}
+					rowsAppended++
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_public_key.append_rows").Observe(time.Since(startAppend).Seconds())
+				metrics.Counter.WithLabelValues("slot_exporter_upkeep_lookup_public_key.rows_appended").Add(float64(rowsAppended))
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+				defer cancel()
+				startCH := time.Now()
+				if err := edb.UpdateLookupTable(ctx, edb.PublicKeySelector, tbl); err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_public_key").Inc()
+					return fmt.Errorf("error updating external table: %w", err)
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_public_key.ch_update").Observe(time.Since(startCH).Seconds())
+				return nil
+			})
+
+			// update withdrawal credentials => validator index lookup in clickhouse (in parallel)
+			g.Go(func() error {
+				metrics.Tasks.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials").Inc()
+				startTotal := time.Now()
+				defer func() { metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials.total").Observe(time.Since(startTotal).Seconds()) }()
+				tbl, err := edb.NewLookupExternalTable()
+				if err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials").Inc()
+					return fmt.Errorf("error creating external table: %w", err)
+				}
+				startAppend := time.Now()
+				var rowsAppended int64
+				for _, v := range block.Validators {
+					if len(v.WithdrawalCredentials) == 0 {
+						continue
+					}
+					selector := hexutil.Encode(v.WithdrawalCredentials)
+					if err := tbl.Append(string(edb.WithdrawalCredentialsSelector), selector, uint64(v.Index)); err != nil {
+						metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials").Inc()
+						return fmt.Errorf("error appending row to external table: %w", err)
+					}
+					rowsAppended++
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials.append_rows").Observe(time.Since(startAppend).Seconds())
+				metrics.Counter.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials.rows_appended").Add(float64(rowsAppended))
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+				defer cancel()
+				startCH := time.Now()
+				if err := edb.UpdateLookupTable(ctx, edb.WithdrawalCredentialsSelector, tbl); err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials").Inc()
+					return fmt.Errorf("error updating external table: %w", err)
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_credentials.ch_update").Observe(time.Since(startCH).Seconds())
+				return nil
+			})
+
+			// update withdrawal address => validator index lookup in clickhouse (in parallel)
+			g.Go(func() error {
+				metrics.Tasks.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address").Inc()
+				startTotal := time.Now()
+				defer func() { metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address.total").Observe(time.Since(startTotal).Seconds()) }()
+				tbl, err := edb.NewLookupExternalTable()
+				if err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address").Inc()
+					return fmt.Errorf("error creating external table: %w", err)
+				}
+				startAppend := time.Now()
+				var rowsAppended int64
+				for _, v := range block.Validators {
+					if addr, ok := eth1AddrFromWithdrawalCreds(v.WithdrawalCredentials); ok {
+						selector := hexutil.Encode(addr)
+						if err := tbl.Append(string(edb.WithdrawalAddressSelector), selector, uint64(v.Index)); err != nil {
+							metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address").Inc()
+							return fmt.Errorf("error appending row to external table: %w", err)
+						}
+						rowsAppended++
+					}
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address.append_rows").Observe(time.Since(startAppend).Seconds())
+				metrics.Counter.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address.rows_appended").Add(float64(rowsAppended))
+				ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+				defer cancel()
+				startCH := time.Now()
+				if err := edb.UpdateLookupTable(ctx, edb.WithdrawalAddressSelector, tbl); err != nil {
+					metrics.Errors.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address").Inc()
+					return fmt.Errorf("error updating external table: %w", err)
+				}
+				metrics.TaskDuration.WithLabelValues("slot_exporter_upkeep_lookup_withdrawal_address.ch_update").Observe(time.Since(startCH).Seconds())
+				return nil
+			})
 		}
 		var epochParticipationStats *types.ValidatorParticipation
 		if epoch > 0 {
@@ -757,4 +862,19 @@ func (d *slotExporterData) OnChainReorg(event *constypes.StandardEventChainReorg
 
 func (d *slotExporterData) OnFinalizedCheckpoint(event *constypes.StandardFinalizedCheckpointResponse) (err error) {
 	return nil // nop
+}
+
+// eth1AddrFromWithdrawalCreds extracts the 20-byte ETH1 address from 32-byte
+// withdrawal credentials that encode an address. Supports both 0x01 and 0x02
+// prefixes (wc[0] == 0x01 or 0x02). Returns (addr, true) on success.
+func eth1AddrFromWithdrawalCreds(wc []byte) ([]byte, bool) {
+	if len(wc) != 32 {
+		return nil, false
+	}
+	if wc[0] == 0x01 || wc[0] == 0x02 {
+		addr := make([]byte, 20)
+		copy(addr, wc[12:])
+		return addr, true
+	}
+	return nil, false
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	ch "github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/ext"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/doug-martin/goqu/v9"
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
@@ -2427,3 +2428,98 @@ const (
 	AggregateWeekly  AggregateType = "_final_validator_dashboard_data_weekly"
 	AggregateMonthly AggregateType = "_final_validator_dashboard_data_monthly"
 )
+
+type SelectorType string
+
+const (
+	WithdrawalAddressSelector     SelectorType = "withdrawal_address"
+	WithdrawalCredentialsSelector SelectorType = "withdrawal_credentials"
+	DepositAddressSelector        SelectorType = "deposit_address"
+	PublicKeySelector             SelectorType = "public_key"
+)
+
+const LookupTableName = "_lookup_validator"
+
+// NewLookupExternalTable creates a ClickHouse external table with the standard
+// schema expected by UpdateLookupTable: (selector_type, selector, validator_index).
+func NewLookupExternalTable() (*ext.Table, error) {
+	return ext.NewTable("external_data",
+		ext.Column("selector_type", "String"),
+		ext.Column("selector", "String"),
+		ext.Column("validator_index", "UInt64"),
+	)
+}
+
+// UpdateLookupTable replaces all entries of the given selector type in the lookup table
+// with rows from the provided external ClickHouse table. Any existing rows of that
+// selector type not present in the external table are marked as deleted.
+//
+// The external table must have exactly these columns:
+//   - selector_type
+//   - selector
+//   - validator_index
+func UpdateLookupTable(parentCtx context.Context, selector SelectorType, dat *ext.Table) error {
+	if dat == nil {
+		return fmt.Errorf("external table is nil")
+	}
+	cols := dat.Block().Columns
+	// columns must be selector_type, selector, validator_index
+	if len(cols) != 3 {
+		return fmt.Errorf("invalid number of columns in external data table: expected 3, got %d", len(cols))
+	}
+	for i, col := range []string{"selector_type", "selector", "validator_index"} {
+		if cols[i].Name() != col {
+			return fmt.Errorf("invalid column %s at position %d, expected %s", cols[i].Name(), i, col)
+		}
+	}
+
+	externalTableName := dat.Name()
+	now := time.Now().UTC()
+
+	ds := goqu.
+		Dialect("postgres").
+		From(goqu.L(LookupTableName+" FINAL")).
+		Select(
+			goqu.C("selector_type"),
+			goqu.C("selector"),
+			goqu.C("validator_index"),
+			goqu.V(1).As("is_deleted"),
+			goqu.V(now.Add(-1*time.Second)).As("updated_at"), // ensures its older than the new entries
+		).
+		Where(
+			goqu.C("selector_type").Eq(string(selector)),
+			goqu.L("(selector_type, selector, validator_index) NOT IN ?", goqu.Dialect("postgres").
+				From(goqu.T(externalTableName)).Select(
+				goqu.C("selector_type"),
+				goqu.C("selector"),
+				goqu.C("validator_index"),
+			),
+			),
+			goqu.C("is_deleted").Eq(0),
+		).
+		UnionAll(
+			goqu.Dialect("postgres").
+				From(goqu.T(externalTableName)).
+				Select(
+					goqu.C("selector_type"),
+					goqu.C("selector"),
+					goqu.C("validator_index"),
+					goqu.V(0).As("is_deleted"),
+					goqu.V(now).As("updated_at"),
+				).
+				Where(
+					goqu.C("selector_type").Eq(string(selector)),
+				),
+		)
+	insert := goqu.Dialect("postgres").Insert(LookupTableName).FromQuery(ds)
+	query, args, err := insert.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error building lookup table update query: %w", err)
+	}
+	ctx := ch.Context(parentCtx, ch.WithExternalTable(dat))
+	_, err = db.ClickHouseWriter.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error updating lookup table: %w", err)
+	}
+	return nil
+}
