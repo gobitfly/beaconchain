@@ -41,7 +41,7 @@ import (
 
 type executionDepositsExporter struct {
 	ModuleContext
-	Client                             rpc.Client
+	Client                             ConsClient
 	ErigonClient                       *gethrpc.Client
 	GethClient                         *gethrpc.Client
 	LogClient                          *ethclient.Client

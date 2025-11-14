@@ -8,7 +8,6 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
@@ -29,7 +28,7 @@ type syncCommitteesExporter struct {
 	cache *cache.TieredCacheBase
 }
 
-func NewSyncCommitteesExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) syncCommitteesExporter {
+func NewSyncCommitteesExporter(ctx context.Context, client ConsClient, db db2.ConsensusRepository) syncCommitteesExporter {
 	if cache.TieredCache == nil {
 		log.Fatal(nil, "TieredCache is not initialised", 0)
 	}

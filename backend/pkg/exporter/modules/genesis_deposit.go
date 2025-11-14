@@ -7,7 +7,6 @@ import (
 
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
@@ -23,7 +22,7 @@ type genesisDepositsExporter struct {
 	ctx   context.Context
 }
 
-func newGenesisDepositsExporter(ctx context.Context, client rpc.Client, db db2.ConsensusRepository) genesisDepositsExporter {
+func newGenesisDepositsExporter(ctx context.Context, client ConsClient, db db2.ConsensusRepository) genesisDepositsExporter {
 	return genesisDepositsExporter{
 		client: client,
 		db:     db,

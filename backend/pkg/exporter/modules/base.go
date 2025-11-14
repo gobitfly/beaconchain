@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/config"
+	"github.com/gobitfly/beaconchain/pkg/commons/types"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	db2 "github.com/gobitfly/beaconchain/pkg/commons/db2"
@@ -14,11 +15,10 @@ import (
 	"github.com/gobitfly/beaconchain/pkg/commons/rpc"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/consapi"
-	"github.com/gobitfly/beaconchain/pkg/consapi/types"
+	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/services"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -27,21 +27,38 @@ type ModuleInterface interface {
 	GetName() string // Used for logging
 	GetMonitoringEventId() constants.Event
 
-	OnHead(*types.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
+	OnHead(*constypes.StandardEventHeadResponse) error // !Do not block in this functions for an extended period of time!
 
 	// Note that "StandardFinalizedCheckpointResponse" event contains the current justified epoch, not the finalized one
 	// An epoch becomes finalized once the next epoch gets justified
 	// Do not assume event.Epoch -1 is finalized by default as it could be that it is not justified
-	OnFinalizedCheckpoint(*types.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
+	OnFinalizedCheckpoint(*constypes.StandardFinalizedCheckpointResponse) error // !Do not block in this functions for an extended period of time!
 
-	OnChainReorg(*types.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
+	OnChainReorg(*constypes.StandardEventChainReorg) error // !Do not block in this functions for an extended period of time!
 }
 
-var Client *rpc.Client
+type ConsClient interface {
+	GetChainHead() (*types.ChainHead, error)
+	GetEpochAssignments(epoch uint64) (*types.EpochAssignments, error)
+	GetEpochData(epoch uint64, skipHistoricBalances bool) (*types.EpochData, error)
+	GetBalancesForEpoch(epoch int64) (map[uint64]uint64, error)
+	GetValidatorState(epoch uint64) (*constypes.StandardValidatorsResponse, error)
+	GetSyncCommittee(stateID string, epoch uint64) (*constypes.StandardSyncCommittee, error)
+	GetBlockHeader(slot uint64) (*constypes.StandardBeaconHeaderResponse, error)
+	GetBlockBySlot(slot uint64) (*types.Block, error)
+	GetValidatorParticipation(epoch uint64) (*types.ValidatorParticipation, error)
+	GetValidatorQueue() (*types.ValidatorQueue, error)
+}
+
+type ModuleContext struct {
+	CL         consapi.ClientInt
+	ConsClient ConsClient
+}
+
+var EventPoolLimit = 16
 
 // Start will start the export of data from rpc into the database
-func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
-	services.InitStatusReport()
+func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) error {
 	if !justV2 {
 		ctx := context.Background()
 		consDB := db2.NewConsensusRepository(db.ReaderDb, db.WriterDb)
@@ -94,81 +111,136 @@ func StartAll(moduleCtx ModuleContext, modules []ModuleInterface, justV2 bool) {
 		time.Sleep(time.Second * 10)
 	}
 	// start subscription modules
-	startSubscriptionModules(&moduleCtx, modules)
-}
-
-func startSubscriptionModules(moduleCtx *ModuleContext, modules []ModuleInterface) {
-	goPool := &errgroup.Group{}
-	log.Infof("initialising exporter modules")
-
-	// Initialize modules
-	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
-		return module.Init()
-	})
-
-	err := goPool.Wait()
+	err := startSubscriptionModules(&moduleCtx, modules)
 	if err != nil {
-		log.Fatal(err, "error initializing modules", 0)
-		return
+		log.Error(err, "error initializing modules: %v", 0)
+		return err
 	}
 
-	eventPool := &errgroup.Group{}
-	eventPool.SetLimit(16)
+	return nil
+}
+
+func startSubscriptionModules(context *ModuleContext, modules []ModuleInterface) error {
+	// Initialize modules
+	if err := initializeModules(modules); err != nil {
+		return err
+	}
 
 	log.Infof("subscribing to node events")
 
 	// subscribe to node events and notify modules
-	events := moduleCtx.CL.GetEvents([]types.EventTopic{
-		types.EventHead,
-		types.EventFinalizedCheckpoint,
-		types.EventChainReorg,
-	})
+	events := getEvents(context)
+
 	log.Infof("subscribed to node events")
 
+	handleEvents(events, modules)
+
+	return nil
+}
+
+func initializeModules(modules []ModuleInterface) error {
+	if len(modules) == 0 {
+		return errors.New("no modules to initialize")
+	}
+
+	goPool := &errgroup.Group{}
+
+	log.Infof("initialising exporter modules")
+
+	notifyAllModules(goPool, modules, func(module ModuleInterface) error {
+		return module.Init()
+	})
+
+	return goPool.Wait()
+}
+
+func getEvents(context *ModuleContext) chan *constypes.EventResponse {
+	events := context.CL.GetEvents([]constypes.EventTopic{
+		constypes.EventHead,
+		constypes.EventFinalizedCheckpoint,
+		constypes.EventChainReorg,
+	})
+	return events
+}
+
+func handleEvents(events chan *constypes.EventResponse, modules []ModuleInterface) {
+	eventPool := &errgroup.Group{}
+	eventPool.SetLimit(EventPoolLimit)
+
 	for event := range events {
-		if event.Error != nil {
-			log.Error(event.Error, "error getting event", 0)
-			continue
-		}
-
-		switch event.Event {
-		case types.EventHead:
-			res, err := event.Head()
-			if err != nil {
-				log.Error(err, "error getting head event", 0)
-				continue
-			}
-			log.InfoWithFields(
-				log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
-				"notifying exporter modules about new head",
-			)
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnHead(res)
-			})
-
-		case types.EventFinalizedCheckpoint:
-			res, err := event.FinalizedCheckpoint()
-			if err != nil {
-				log.Error(err, "error getting finalized checkpoint event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnFinalizedCheckpoint(res)
-			})
-
-		case types.EventChainReorg:
-			res, err := event.ChainReorg()
-			if err != nil {
-				log.Error(err, "error getting chain reorg event", 0)
-				continue
-			}
-			log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
-			notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
-				return module.OnChainReorg(res)
-			})
+		err := handleEvent(event, eventPool, modules)
+		if err != nil {
+			log.Error(err, "error getting event", 0)
 		}
 	}
+}
+
+func handleEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	if event.Error != nil {
+		return fmt.Errorf("error getting event: %v", event.Error)
+	}
+
+	switch event.Event {
+	case constypes.EventHead:
+		err := handleHeadEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting head event: %v", err)
+		}
+	case constypes.EventFinalizedCheckpoint:
+		err := handleFinalizedCheckpointEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting finalized checkpoint event: %v", err)
+		}
+	case constypes.EventChainReorg:
+		err := handleChainReorgEvent(event, eventPool, modules)
+		if err != nil {
+			return fmt.Errorf("error getting chain reorg event: %v", err)
+		}
+	}
+
+	return nil
+}
+
+func handleHeadEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.Head()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(
+		log.Fields{"slot": res.Slot, "epoch-transition": res.EpochTransition},
+		"notifying exporter modules about new head",
+	)
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnHead(res)
+	})
+
+	return nil
+}
+
+func handleFinalizedCheckpointEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.FinalizedCheckpoint()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(log.Fields{"epoch": res.Epoch}, "notifying exporter modules about new finalized checkpoint")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnFinalizedCheckpoint(res)
+	})
+
+	return nil
+}
+
+func handleChainReorgEvent(event *constypes.EventResponse, eventPool *errgroup.Group, modules []ModuleInterface) error {
+	res, err := event.ChainReorg()
+	if err != nil {
+		return err
+	}
+	log.InfoWithFields(log.Fields{"slot": res.Slot, "depth": res.Depth}, "notifying exporter modules about chain reorg")
+	notifyAllModules(eventPool, modules, func(module ModuleInterface) error {
+		return module.OnChainReorg(res)
+	})
+
+	return nil
 }
 
 func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(ModuleInterface) error) {
@@ -176,39 +248,30 @@ func notifyAllModules(goPool *errgroup.Group, modules []ModuleInterface, f func(
 		module := module
 		goPool.Go(func() error {
 			start := time.Now()
-			r := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
-			r(constants.Running, nil)
+			statusReport := services.StatusReporter.NewStatusReport(module.GetMonitoringEventId(), 5*time.Minute, constants.Default)
+			statusReport(constants.Running, nil)
 			err := f(module)
 			if err != nil {
 				log.Error(err, fmt.Sprintf("error in module %s", module.GetName()), 0)
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReport(constants.Failure, map[string]string{"error": err.Error()})
 				return nil // return never gets caught anywhere? lets not risk a memory leak and instead return nil
 			}
-			r(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
+			statusReport(constants.Success, map[string]string{"took_raw": fmt.Sprintf("%v", time.Since(start).Milliseconds())})
 			return nil
 		})
 	}
 }
+
 func GetModuleContext() (ModuleContext, error) {
 	var moduleContext ModuleContext
 
 	cl := consapi.NewClient("http://" + utils.Config.Indexer.Node.Host + ":" + utils.Config.Indexer.Node.Port)
-
-	spec, err := cl.GetSpec()
+	err := getClientSpec(cl)
 	if err != nil {
 		log.Fatal(err, "error getting spec", 0)
 	}
 
-	config.ClConfig = &spec.Data
-
-	nodeImpl, ok := cl.ClientInt.(*consapi.NodeClient)
-	if !ok {
-		return ModuleContext{}, errors.New("lighthouse client can only be used with real node impl")
-	}
-
-	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
-
-	clClient, err := rpc.NewLighthouseClient(nodeImpl, chainID)
+	clClient, err := createLighthouseClient(cl)
 	if err != nil {
 		log.Fatal(err, "error creating lighthouse client", 0)
 	}
@@ -218,67 +281,22 @@ func GetModuleContext() (ModuleContext, error) {
 	return moduleContext, nil
 }
 
-type ModuleContext struct {
-	CL         consapi.Client
-	ConsClient *rpc.LighthouseClient
-}
-
-type ModuleLog struct {
-	module ModuleInterface
-}
-
-func (m ModuleLog) Info(message string) {
-	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, message)
-}
-
-func (m ModuleLog) Infof(format string, args ...interface{}) {
-	log.InfoWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
-}
-
-func (m ModuleLog) Debug(message string) {
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, message)
+func getClientSpec(client consapi.ClientInt) error {
+	spec, err := client.GetSpec()
+	if err != nil {
+		return err
 	}
+	config.ClConfig = &spec.Data
+
+	return nil
 }
 
-func (m ModuleLog) Debugf(format string, args ...interface{}) {
-	if logrus.IsLevelEnabled(logrus.DebugLevel) {
-		log.DebugWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
+func createLighthouseClient(cl consapi.ClientInt) (*rpc.LighthouseClient, error) {
+	nodeImpl, ok := cl.(*consapi.NodeClient)
+	if !ok {
+		return nil, errors.New("lighthouse client can only be used with real node impl")
 	}
-}
+	chainID := new(big.Int).SetUint64(utils.Config.Chain.ClConfig.DepositChainID)
 
-func (m ModuleLog) Trace(message string) {
-	if logrus.IsLevelEnabled(logrus.TraceLevel) {
-		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, message)
-	}
-}
-
-func (m ModuleLog) Tracef(format string, args ...interface{}) {
-	if logrus.IsLevelEnabled(logrus.TraceLevel) {
-		log.TraceWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
-	}
-}
-
-func (m ModuleLog) InfoWithFields(additionalInfos log.Fields, msg string) {
-	additionalInfos["module"] = m.module.GetName()
-	log.InfoWithFields(additionalInfos, msg)
-}
-
-func (m ModuleLog) Error(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
-	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
-	log.Error(err, errorMsg, callerSkip, additionalInfos...)
-}
-
-func (m ModuleLog) Warn(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
-	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
-	log.WarnWithStackTrace(err, errorMsg, callerSkip, additionalInfos...)
-}
-
-func (m ModuleLog) Warnf(format string, args ...interface{}) {
-	log.WarnWithFields(log.Fields{"module": m.module.GetName()}, fmt.Sprintf(format, args...))
-}
-
-func (m ModuleLog) Fatal(err error, errorMsg interface{}, callerSkip int, additionalInfos ...log.Fields) {
-	additionalInfos = append(additionalInfos, log.Fields{"module": m.module.GetName()})
-	log.Fatal(err, errorMsg, callerSkip, additionalInfos...)
+	return rpc.NewLighthouseClient(nodeImpl, chainID)
 }

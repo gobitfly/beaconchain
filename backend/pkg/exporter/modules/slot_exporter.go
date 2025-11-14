@@ -34,7 +34,7 @@ import (
 
 type slotExporterData struct {
 	ModuleContext
-	Client   rpc.Client
+	Client   ConsClient
 	FirstRun bool
 }
 
@@ -301,7 +301,7 @@ func (d *slotExporterData) OnHead(_ *constypes.StandardEventHeadResponse) (err e
 	return nil
 }
 
-func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) error {
+func ExportSlot(client ConsClient, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) error {
 	isFirstSlotOfEpoch := slot%utils.Config.Chain.ClConfig.SlotsPerEpoch == 0
 	epoch := slot / utils.Config.Chain.ClConfig.SlotsPerEpoch
 
@@ -515,7 +515,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		if isHeadEpoch {
 			// this function sets exports the validator status into the db
 			// and also updates the status field in the validators array
-			err := edb.SaveValidators(epoch, block.Validators, client, 10000, tx)
+			err = edb.SaveValidators(epoch, block.Validators, client.(rpc.Client), 10000, tx)
 			if err != nil {
 				return fmt.Errorf("error saving validators for epoch %v: %w", epoch, err)
 			}
@@ -703,7 +703,7 @@ func ExportSlot(client rpc.Client, slot uint64, isHeadEpoch bool, tx *sqlx.Tx) e
 		}
 
 		// save the epoch metadata to the database
-		err = edb.SaveEpoch(epoch, block.Validators, client, tx)
+		err = edb.SaveEpoch(epoch, block.Validators, tx)
 		if err != nil {
 			return fmt.Errorf("error saving epoch data: %w", err)
 		}
