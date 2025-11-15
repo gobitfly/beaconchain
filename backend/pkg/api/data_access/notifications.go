@@ -216,23 +216,26 @@ func (d *DataAccessService) GetNotificationOverview(ctx context.Context, userId 
 			return err
 		}
 
-		whereNetwork := ""
+		var networkName string
 		for _, network := range networks {
-			if len(whereNetwork) > 0 {
-				whereNetwork += " OR "
+			if network.ChainId == utils.Config.Chain.ClConfig.DepositChainID {
+				networkName = network.NotificationsName
+				break
 			}
-			whereNetwork += "event_name like '" + network.NotificationsName + ":rocketpool_%' OR event_name like '" + network.NotificationsName + ":network_%'"
+		}
+		if networkName == "" {
+			return fmt.Errorf("network with chain id %d to update general notification settings not found", utils.Config.Chain.ClConfig.DepositChainID)
 		}
 
 		query := goqu.Dialect("postgres").
 			From("users_subscriptions").
 			Select(
-				goqu.L("count(*) FILTER (WHERE event_filter like 'vdb:%')").As("vdb_subscriptions_count"),
-				goqu.L("count(*) FILTER (WHERE event_filter like 'adb:%')").As("adb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_filter like 'vdb:%' AND event_name like '"+networkName+":%')").As("vdb_subscriptions_count"),
+				goqu.L("count(*) FILTER (WHERE event_filter like 'adb:%' AND event_name like '"+networkName+":%')").As("adb_subscriptions_count"),
 				goqu.L("count(*) FILTER (WHERE event_name like 'monitoring_%')").As("machines_subscription_count"),
 				goqu.L("count(*) FILTER (WHERE event_name = 'eth_client_update')").As("clients_subscription_count"),
 				// not sure if there's a better way in goqu
-				goqu.L("count(*) FILTER (WHERE "+whereNetwork+")").As("networks_subscription_count"),
+				goqu.L("count(*) FILTER (WHERE event_name like '"+networkName+":rocketpool_%' OR event_name like '"+networkName+":network_%')").As("networks_subscription_count"),
 			).
 			Where(goqu.Ex{
 				"user_id": userId,
