@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync/atomic"
@@ -101,27 +102,39 @@ func (d *executionDepositsExporter) Init() error {
 	}
 	d.DepositMethod = depositMethod
 
-	// check if any log_index is missing, if yes we have to do a soft re-export
-	// ideally i would check for gaps in the merkletree-index column, but this is extremely annoying as its stored as little endian bytes in the db
-	var isV2Check bool
-	err = db.WriterDb.Get(&isV2Check, "select count(*) = count(log_index) as is_v2 from eth1_deposits")
+	// check for gaps in the merkletree-index column
+	log.Info("checking for gaps in eth1_deposits table")
+	gapsInTable, err := db.GetGapsInEth1DepositsTable()
 	if err != nil {
 		return err
 	}
+	log.Infof("found %v gaps in eth1_deposits table", len(gapsInTable))
 
-	if isV2Check {
-		// get latest block from db
-		err = db.WriterDb.Get(&d.LastExportedBlock, "select block_number from eth1_deposits order by block_number desc limit 1")
+	for _, gap := range gapsInTable {
+		log.Infof("gap in eth1_deposits table: %v", gap)
+		deposits, err := d.fetchDeposits(uint64(gap.FromBlock), uint64(gap.ToBlock))
 		if err != nil {
-			if err == sql.ErrNoRows {
-				d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
-			} else {
-				return err
-			}
+			return err
 		}
-	} else {
-		log.Warnf("log_index is missing in eth1_deposits table, starting from the beginning")
-		d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
+		// can return more than the expected missing deposits as the start and end blocks are inclusive
+		if int64(len(deposits)) < gap.MissingCount {
+			return fmt.Errorf("only %d of %d expected deposits found for gap in eth1_deposits table: %v", len(deposits), gap.MissingCount, gap)
+		}
+		log.Infof("saving %v deposits", len(deposits))
+		err = d.saveDeposits(deposits)
+		if err != nil {
+			return err
+		}
+	}
+
+	// get latest block from db
+	err = db.WriterDb.Get(&d.LastExportedBlock, "select block_number from eth1_deposits order by block_number desc limit 1")
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			d.LastExportedBlock = utils.Config.Indexer.ELDepositContractFirstBlock
+		} else {
+			return err
+		}
 	}
 
 	val, err := db.PersistentRedisDbClient.Get(context.Background(), d.LastExportedFinalizedBlockRedisKey).Uint64()
@@ -561,7 +574,6 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 	elems := make([]gethrpc.BatchElem, 0, len(blocksToFetch)+len(txsToFetch))
 	headers := make(map[uint64]*gethtypes.Header, len(blocksToFetch))
 	txs := make(map[string]*gethtypes.Transaction, len(txsToFetch))
-	errors := make([]error, 0, len(blocksToFetch)+len(txsToFetch))
 
 	for _, b := range blocksToFetch {
 		header := &gethtypes.Header{}
@@ -573,7 +585,6 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 			Error:  err,
 		})
 		headers[b] = header
-		errors = append(errors, err)
 	}
 
 	for _, txHashHex := range txsToFetch {
@@ -586,7 +597,6 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 			Error:  err,
 		})
 		txs[txHashHex] = tx
-		errors = append(errors, err)
 	}
 
 	lenElems := len(elems)
@@ -596,7 +606,7 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 	}
 
 	for i := 0; (i * 100) < lenElems; i++ {
-		start := (i * 100)
+		start := i * 100
 		end := start + 100
 
 		if end > lenElems {
@@ -609,9 +619,9 @@ func (d *executionDepositsExporter) batchRequestHeadersAndTxs(blocksToFetch []ui
 		}
 	}
 
-	for _, e := range errors {
-		if e != nil {
-			return nil, nil, e
+	for _, e := range elems {
+		if e.Error != nil {
+			return nil, nil, e.Error
 		}
 	}
 
