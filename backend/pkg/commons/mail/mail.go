@@ -34,7 +34,7 @@ func SendHTMLMail(to, subject string, msg types.Email, attachment []types.EmailA
 	if utils.Config.Frontend.Mail.SMTP.User != "" {
 		headers := "MIME-version: 1.0;\nContent-Type: text/html;"
 		body.Write([]byte(fmt.Sprintf("To: %s\r\nSubject: %s\r\n%s\r\n", to, subject, headers)))
-		err = renderer.Execute(&body, MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
+		err = renderer.ExecuteTemplate(&body, "layout", MailTemplate{Mail: msg, Domain: utils.Config.Frontend.SiteDomain})
 		if err != nil {
 			return fmt.Errorf("error rendering mail template: %w", err)
 		}
