@@ -54,6 +54,10 @@ func (d *dashboardData) handleIncompleteTransfers() error {
 	}
 	d.log.Infof("handleIncompleteTransfers, found %d incomplete transfer epochs", len(incomplete))
 
+	d.log.Tracef("acquiring shared rolling gen mutex for incomplete transfers")
+	d.sharedRollingGenMutex.Lock()
+	d.log.Tracef("acquired shared rolling gen mutex for incomplete transfers")
+	defer d.sharedRollingGenMutex.Unlock()
 	err = d.transferEpochs(incomplete)
 	if err != nil {
 		return errors.Wrap(err, "failed to transfer incomplete epochs")
@@ -71,6 +75,11 @@ func (d *dashboardData) handlePendingTransfers() error {
 		return nil
 	}
 	d.log.Infof("handlePendingTransfers, found %d pending transfer epochs", len(pending))
+
+	d.log.Tracef("acquiring shared rolling gen mutex for pending transfers")
+	d.sharedRollingGenMutex.Lock()
+	d.log.Tracef("acquired shared rolling gen mutex for pending transfers")
+	defer d.sharedRollingGenMutex.Unlock()
 
 	// allocate transfer batch ids
 	batchIds := make([]uuid.UUID, 0)

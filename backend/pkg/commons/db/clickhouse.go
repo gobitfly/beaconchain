@@ -67,6 +67,7 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 			// trade of higher background overhead for lower query specific memory pressure
 			// reduces memory usage by 20-30% in our prod insert queries
 			"optimize_on_insert": "0",
+			"compatibility":      "25.6", // enables spill to disk when memory usage is too high, among other things
 		},
 		ClientInfo: ch.ClientInfo{
 			Products: []struct {

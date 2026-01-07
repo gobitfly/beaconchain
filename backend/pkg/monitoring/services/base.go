@@ -74,6 +74,7 @@ func newStatusReport(id constants.Event, timeout time.Duration, check_interval t
 			ctx := clickhouse.Context(timeoutContext, clickhouse.WithSettings(
 				clickhouse.Settings{
 					"throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert": 0,
+					"deduplicate_blocks_in_dependent_materialized_views":                               0,
 				},
 			))
 
