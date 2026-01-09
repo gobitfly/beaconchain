@@ -36,7 +36,7 @@ func NewServices(readerDb, writerDb, clickhouseReader *sqlx.DB, bigtable *db.Big
 func (s *Services) InitServices() {
 	wg := &sync.WaitGroup{}
 	log.Infof("initializing services...")
-	services.InitStatusReport()
+	services.InitStatusReporter(utils.Config.DeploymentType)
 	wg.Add(4)
 	go s.startSlotVizDataService(wg)
 	go s.startIndexMappingService(wg)

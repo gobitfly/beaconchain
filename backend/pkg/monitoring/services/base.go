@@ -9,8 +9,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
+	"github.com/gobitfly/beaconchain/pkg/commons/db2"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
 	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/commons/version"
@@ -31,10 +31,12 @@ type ServiceBase struct {
 	cancel  context.CancelFunc
 	running atomic.Bool
 	wg      sync.WaitGroup
+	db      db2.Monitoring
 }
 
 func (s *ServiceBase) InitServices() {
 	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.db = db2.NewMonitoringClickhouse(db.ClickHouseReader, db.ClickHouseNativeWriter)
 }
 
 func (s *ServiceBase) Stop() {
@@ -45,124 +47,140 @@ func (s *ServiceBase) Stop() {
 	s.wg.Wait()
 }
 
-func newStatusReport(id constants.Event, timeout time.Duration, check_interval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	runId := uuid.New().String()
-	return func(status constants.StatusType, metadata map[string]string) {
-		// acquire snowflake synchronously
-		flake := utils.GetSnowflake()
-		callerProgramCounter, callerFullFilePath, callerLine, callerOK := runtime.Caller(1)
-		now := time.Now()
-		go func() {
-			if metadata == nil {
-				metadata = make(map[string]string)
-			}
+type statusConfig struct {
+	initialized    bool
+	deploymentType string
+}
 
-			metadata["run_id"] = runId
-			metadata["status"] = string(status)
-			metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
-			if callerOK {
-				callerFunction := runtime.FuncForPC(callerProgramCounter).Name()
-				callerFile := filepath.Base(callerFullFilePath)
-				metadata["caller"] = fmt.Sprintf("%s %s:%d", callerFunction, callerFile, callerLine)
-			}
+var (
+	config     statusConfig
+	configOnce sync.Once
+)
 
-			// report status to monitoring
-			timeoutContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			// wrap in clickhouse context so we can set the setting throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert to 0
-			// we have no materialized views on the status_reports table, but it triggers as we need the deduplication setting for the other tables
-			ctx := clickhouse.Context(timeoutContext, clickhouse.WithSettings(
-				clickhouse.Settings{
-					"throw_if_deduplication_in_dependent_materialized_views_enabled_with_async_insert": 0,
-				},
-			))
+func InitStatusReporter(deploymentType string) {
+	if deploymentType == "" {
+		log.Warn("deployment type is empty, defaulting to 'development'")
+		deploymentType = "development"
+	}
 
-			timeouts_at := now.Add(1 * time.Minute)
-			if timeout != constants.Default {
-				timeouts_at = now.Add(timeout)
-			}
-			expires_at := timeouts_at.Add(1 * time.Minute)
-			if check_interval >= 1*time.Minute {
-				expires_at = timeouts_at.Add(check_interval)
-			}
-			log.TraceWithFields(log.Fields{
-				"emitter":         id,
-				"event_id":        utils.GetUUID(),
-				"deployment_type": utils.Config.DeploymentType,
-				"insert_id":       flake,
-				"expires_at":      expires_at,
-				"timeouts_at":     timeouts_at,
-				"metadata":        metadata,
-			}, "sending status report")
-			var err error
-			if db.ClickHouseNativeWriter != nil {
-				err = db.ClickHouseNativeWriter.AsyncInsert(
-					ctx,
-					"INSERT INTO status_reports (emitter, event_id, deployment_type, insert_id, expires_at, timeouts_at, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					false, // true means wait for settlement, but we want to shoot and forget. false does mean we cant log any errors that occur during settlement
-					utils.GetUUID(),
-					id,
-					utils.Config.DeploymentType,
-					flake,
-					expires_at,
-					timeouts_at,
-					metadata,
-				)
-			} else if utils.Config.DeploymentType != "development" {
-				log.Error(nil, "clickhouse native writer is nil", 0)
-			}
-			if err != nil && utils.Config.DeploymentType != "development" {
-				log.Error(err, "error inserting status report", 0)
-			}
-		}()
+	configOnce.Do(func() {
+		config = statusConfig{
+			initialized:    true,
+			deploymentType: deploymentType,
+		}
+	})
+}
+
+func NewStatusReporter(event constants.Event, defaultTimeout, defaultInterval time.Duration) StatusReporter {
+	if !config.initialized {
+		return &stubStatusReporter{}
+	}
+
+	return &statusReporter{
+		id:            event,
+		timeout:       defaultTimeout,
+		checkInterval: defaultInterval,
+		runID:         uuid.New().String(),
 	}
 }
 
-func GetRequiredEvents() []constants.Event {
-	// i would hope this simple of a function doesnt need caching
-	requiredEvents := constants.RequiredEvents
-	if utils.Config.DeploymentType != "production" {
-		return requiredEvents
-	}
-	requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
-	if utils.Config.RocketpoolExporter.Enabled {
-		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyRocketPool)
-	}
-	if utils.Config.Indexer.PubKeyTagsExporter.Enabled {
-		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyPubkeyTags)
-	}
-	return requiredEvents
+type StatusReporter interface {
+	Report(status constants.StatusType, metadata map[string]string)
 }
 
-type statusReport interface {
-	NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string)
+type statusReporter struct {
+	id            constants.Event
+	timeout       time.Duration
+	checkInterval time.Duration
+	runID         string
+}
+
+func (r *statusReporter) Report(status constants.StatusType, metadata map[string]string) {
+	go r.report(status, metadata)
+}
+
+func (r *statusReporter) report(status constants.StatusType, metadata map[string]string) {
+	flake := utils.GetSnowflake()
+	callerProgramCounter, callerFilePath, callerLine, callerOK := runtime.Caller(2)
+	now := time.Now()
+
+	if metadata == nil {
+		metadata = make(map[string]string)
+	}
+
+	metadata["run_id"] = r.runID
+	metadata["status"] = string(status)
+	metadata["executable_version"] = fmt.Sprintf("%s (%s)", version.Version, version.GoVersion)
+
+	if callerOK {
+		callerFunction := runtime.FuncForPC(callerProgramCounter).Name()
+		callerFile := filepath.Base(callerFilePath)
+		metadata["caller"] = fmt.Sprintf("%s %s:%d", callerFunction, callerFile, callerLine)
+	}
+
+	timeoutsAt := now.Add(1 * time.Minute)
+	if r.timeout != constants.Default {
+		timeoutsAt = now.Add(r.timeout)
+	}
+	expiresAt := timeoutsAt.Add(1 * time.Minute)
+	if r.checkInterval >= 1*time.Minute {
+		expiresAt = timeoutsAt.Add(r.checkInterval)
+	}
+	log.TraceWithFields(log.Fields{
+		"emitter":         r.id,
+		"event_id":        utils.GetUUID(),
+		"deployment_type": config.deploymentType,
+		"insert_id":       flake,
+		"expires_at":      expiresAt,
+		"timeouts_at":     timeoutsAt,
+		"metadata":        metadata,
+	}, "sending status report")
+
+	if db.ClickHouseNativeWriter != nil {
+		monitoringCH := db2.NewMonitoringClickhouse(nil, db.ClickHouseNativeWriter)
+		err := monitoringCH.SaveNewStatusReport(db2.StatusReport{
+			ID:         r.id,
+			Flake:      flake,
+			ExpiresAt:  expiresAt,
+			TimeoutsAt: timeoutsAt,
+			Metadata:   metadata,
+		})
+		if err != nil && config.deploymentType != "development" {
+			log.Error(err, "error inserting status report", 0)
+		}
+	} else if config.deploymentType != "development" {
+		log.Error(nil, "clickhouse native writer is nil", 0)
+	}
 }
 
 type stubStatusReporter struct{}
 
-func (sr stubStatusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return func(status constants.StatusType, metadata map[string]string) {
-		// no-op implementation
-		// only warn if utils.Config is initialized and we're not in development environment
-		if utils.Config != nil && utils.Config.DeploymentType != "development" {
-			log.Warnf("STUB STATUS REPORTER IN USE IN %s ENVIRONMENT! Event: %s, Status: %s, Metadata: %v",
-				utils.Config.DeploymentType,
-				id,
-				status,
-				metadata,
-			)
-		}
+func (r *stubStatusReporter) Report(status constants.StatusType, metadata map[string]string) {
+	if config.deploymentType != "development" && config.deploymentType != "" {
+		log.Warnf("WARN: STUB STATUS REPORTER IN USE IN %s ENVIRONMENT! Status: %s, Metadata: %v",
+			config.deploymentType,
+			status,
+			metadata,
+		)
 	}
 }
 
-type statusReporter struct{}
+func GetRequiredEvents(deploymentType string, rocketpoolEnabled, pubkeyTagsEnabled bool) []constants.Event {
+	// create copy of slice to avoid modifying the original event slice
+	requiredEvents := make([]constants.Event, len(constants.RequiredEvents))
+	copy(requiredEvents, constants.RequiredEvents)
 
-func (sr statusReporter) NewStatusReport(id constants.Event, timeout time.Duration, checkInterval time.Duration) func(status constants.StatusType, metadata map[string]string) {
-	return newStatusReport(id, timeout, checkInterval)
-}
+	if deploymentType != "production" {
+		return requiredEvents
+	}
+	requiredEvents = append(requiredEvents, constants.ProductionRequiredEvents...)
 
-var StatusReporter statusReport = stubStatusReporter{}
+	if rocketpoolEnabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyRocketPool)
+	}
+	if pubkeyTagsEnabled {
+		requiredEvents = append(requiredEvents, constants.Event_ExporterLegacyPubkeyTags)
+	}
 
-func InitStatusReport() {
-	StatusReporter = statusReporter{}
+	return requiredEvents
 }

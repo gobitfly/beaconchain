@@ -41,19 +41,19 @@ func (s *Services) startIndexMappingService(wg *sync.WaitGroup) {
 		startTime := time.Now()
 		delay := time.Duration(utils.Config.Chain.ClConfig.SecondsPerSlot) * time.Second
 		err = nil // clear error
-		r := services.StatusReporter.NewStatusReport(constants.Event_ApiServiceValidatorMapping, constants.Default, delay)
-		r(constants.Running, nil)
+		statusReporter := services.NewStatusReporter(constants.Event_ApiServiceValidatorMapping, constants.Default, delay)
+		statusReporter.Report(constants.Running, nil)
 		latestEpoch := cache.LatestEpoch.Get()
 		if currentValidatorMapping.Load() == nil || latestEpoch != lastEpochUpdate {
 			err = s.updateValidatorMapping()
 		}
 		if err != nil {
 			log.Error(err, "error updating validator mapping", 0)
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			delay = 10 * time.Second
 		} else {
 			log.Infof("=== validator mapping updated in %s", time.Since(startTime))
-			r(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
+			statusReporter.Report(constants.Success, map[string]string{"took": time.Since(startTime).String(), "took_raw": fmt.Sprintf("%v", time.Since(startTime).Milliseconds()), "latest_epoch": fmt.Sprintf("%d", lastEpochUpdate)})
 			lastEpochUpdate = latestEpoch
 			o.Do(func() {
 				wg.Done()

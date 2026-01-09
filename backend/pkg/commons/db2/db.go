@@ -1,6 +1,8 @@
 package db2
 
 import (
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
@@ -37,4 +39,12 @@ type LastBlocksStore interface {
 type LastBlocksStoreWriter interface {
 	SetInBlocksTable(chainID string, number uint64) error
 	SetInDataTable(chainID string, number uint64) error
+}
+
+type Monitoring interface {
+	SaveNewStatusReport(status StatusReport) error
+	GetLatestStatusReport() ([]Victims, error)
+	GetEmitters() ([]string, error)
+	GetLatestEpoch() (time.Time, error)
+	GetEpochEnd(rolling string) (uint64, error)
 }

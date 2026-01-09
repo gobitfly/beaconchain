@@ -1,13 +1,11 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -38,90 +36,30 @@ func (s *ServiceTimeoutDetector) internalProcess() {
 }
 
 func (s *ServiceTimeoutDetector) runChecks() {
-	r := StatusReporter.NewStatusReport(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
-	r(constants.Running, nil)
+	statusReporter := NewStatusReporter(constants.Event_MonitoringTimeouts, constants.Default, 30*time.Second)
+	statusReporter.Report(constants.Running, nil)
 	if db.ClickHouseReader == nil {
-		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+		statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 		// ignore
 		return
 	}
 	log.Tracef("checking services timeouts")
 
-	query := `
-		with active_reports as (
-			SELECT
-				event_id,
-				emitter,
-				run_id,
-				inserted_at,
-				insert_id,
-				expires_at,
-				timeouts_at,
-				status,
-				metadata
-			FROM status_reports
-			WHERE expires_at > now() and deployment_type = ? and emitter not in (select distinct emitter from status_reports where event_id = ? and inserted_at > now() - interval 1 days)
-			ORDER BY
-				event_id ASC,
-				emitter ASC,
-				run_id ASC,
-				insert_id DESC
-		), latest_report_per_run as (
-			SELECT
-				event_id,
-				emitter,
-				any(inserted_at) as inserted_at, 
-				any(insert_id) as insert_id, 
-				any(expires_at) as expires_at,
-				any(timeouts_at) as timeouts_at,
-				any(status) AS status,
-				any(metadata) AS metadata
-			FROM
-				active_reports
-			GROUP BY
-				event_id,
-				emitter,
-				run_id
-			order by insert_id desc
-		)
-		SELECT
-			event_id,
-			emitter,
-			status,
-			inserted_at,
-			expires_at,
-			timeouts_at,
-			metadata
-		FROM
-			latest_report_per_run
-		where status = 'running' and timeouts_at < now()
-		ORDER BY event_id ASC, inserted_at DESC`
-	// context with deadline
-	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
-	defer cancel()
-	var victims []struct {
-		EventID    string            `db:"event_id"`
-		Emitter    string            `db:"emitter"`
-		Status     string            `db:"status"`
-		InsertedAt time.Time         `db:"inserted_at"`
-		ExpiresAt  time.Time         `db:"expires_at"`
-		TimeoutsAt time.Time         `db:"timeouts_at"`
-		Metadata   map[string]string `db:"metadata"`
-	}
-	err := db.ClickHouseReader.SelectContext(ctx, &victims, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
+	victims, err := s.db.GetLatestStatusReport()
 	if err != nil {
-		r(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
 	if len(victims) == 0 {
-		r(constants.Success, nil)
+		statusReporter.Report(constants.Success, nil)
 		return
 	}
 	payload, err := json.Marshal(victims)
 	if err != nil {
-		r(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
+
 	md := map[string]string{"failing_reports": string(payload), "error": "reports are running for too long"}
-	r(constants.Failure, md)
+	statusReporter.Report(constants.Failure, md)
 }

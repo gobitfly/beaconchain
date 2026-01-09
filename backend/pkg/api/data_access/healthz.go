@@ -104,7 +104,11 @@ func (d *DataAccessService) GetHealthz(ctx context.Context, showAll bool) types.
 	for _, result := range results {
 		response.Reports[result.EventId] = append(response.Reports[result.EventId], result)
 	}
-	requiredEvents := monitoringServices.GetRequiredEvents()
+	requiredEvents := monitoringServices.GetRequiredEvents(
+		utils.Config.DeploymentType,
+		utils.Config.RocketpoolExporter.Enabled,
+		utils.Config.Indexer.PubKeyTagsExporter.Enabled,
+	)
 	for _, id := range requiredEvents {
 		if _, ok := response.Reports[string(id)]; !ok {
 			response.Reports[string(id)] = []types.HealthzResult{

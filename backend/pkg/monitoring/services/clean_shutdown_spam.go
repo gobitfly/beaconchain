@@ -1,14 +1,12 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"strconv"
 	"time"
 
 	"github.com/gobitfly/beaconchain/pkg/commons/db"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
-	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	"github.com/gobitfly/beaconchain/pkg/monitoring/constants"
 )
 
@@ -39,33 +37,21 @@ func (s *CleanShutdownSpamDetector) internalProcess() {
 }
 
 func (s *CleanShutdownSpamDetector) runChecks() {
-	r := StatusReporter.NewStatusReport(constants.Event_MonitoringCleanShutdownSpam, constants.Default, 30*time.Second)
-	r(constants.Running, nil)
+	statusReporter := NewStatusReporter(constants.Event_MonitoringCleanShutdownSpam, constants.Default, 30*time.Second)
+	statusReporter.Report(constants.Running, nil)
 	if db.ClickHouseReader == nil {
-		r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+		statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 		// ignore
 		return
 	}
 	log.Tracef("checking clean shutdown spam")
 
-	query := `
-		SELECT
-			emitter
-		FROM
-			status_reports
-		WHERE
-			deployment_type = ?
-			AND inserted_at >= now() - interval 5 minutes
-			AND event_id = ?
-			`
-	ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
-	defer cancel()
-	var emitters []string
-	err := db.ClickHouseReader.SelectContext(ctx, &emitters, query, utils.Config.DeploymentType, constants.Event_MonitoringCleanShutdown)
+	emitters, err := s.db.GetEmitters()
 	if err != nil {
-		r(constants.Failure, map[string]string{"error": err.Error()})
+		statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 		return
 	}
+
 	threshold := 10
 	md := map[string]string{
 		"count":     strconv.Itoa(len(emitters)),
@@ -74,12 +60,12 @@ func (s *CleanShutdownSpamDetector) runChecks() {
 	if len(emitters) > threshold {
 		payload, err := json.Marshal(emitters)
 		if err != nil {
-			r(constants.Failure, map[string]string{"error": err.Error()})
+			statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 			return
 		}
 		md["emitters"] = string(payload)
-		r(constants.Failure, md)
+		statusReporter.Report(constants.Failure, md)
 		return
 	}
-	r(constants.Success, md)
+	statusReporter.Report(constants.Success, md)
 }

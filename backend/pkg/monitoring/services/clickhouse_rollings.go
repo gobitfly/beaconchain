@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"fmt"
 	"maps"
 	"sync"
@@ -56,37 +55,23 @@ func (s *ServiceClickhouseRollings) runChecks() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r := StatusReporter.NewStatusReport(rollings[rolling], constants.Default, 30*time.Second)
-			r(constants.Running, nil)
+			statusReporter := NewStatusReporter(rollings[rolling], constants.Default, 30*time.Second)
+			statusReporter.Report(constants.Running, nil)
 			if db.ClickHouseReader == nil {
-				r(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
+				statusReporter.Report(constants.Failure, map[string]string{"error": "clickhouse reader is nil"})
 				// ignore
 				return
 			}
 			log.Tracef("checking clickhouse rolling %s", rolling)
 			// context with deadline
-			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
-			defer cancel()
-			var tsEpochTable time.Time
-			err := db.ClickHouseReader.GetContext(ctx, &tsEpochTable, `
-					SELECT
-						max(t)
-					FROM view_validator_dashboard_data_epoch_max_ts`,
-			)
+			tsEpochTable, err := s.db.GetLatestEpoch()
 			if err != nil {
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
-			var epochRollingTable uint64
-			err = db.ClickHouseReader.GetContext(ctx, &epochRollingTable, fmt.Sprintf(`
-					SELECT
-						max(epoch_end)
-					FROM validator_dashboard_data_rolling_%s`,
-				rolling,
-			),
-			)
+			epochRollingTable, err := s.db.GetEpochEnd(rolling)
 			if err != nil {
-				r(constants.Failure, map[string]string{"error": err.Error()})
+				statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				return
 			}
 			// convert to timestamp
@@ -97,10 +82,10 @@ func (s *ServiceClickhouseRollings) runChecks() {
 			md := map[string]string{"delta": delta.String(), "threshold": threshold.String()}
 			if delta > threshold {
 				md["error"] = fmt.Sprintf("delta is over threshold %d", threshold)
-				r(constants.Failure, md)
+				statusReporter.Report(constants.Failure, md)
 				return
 			}
-			r(constants.Success, md)
+			statusReporter.Report(constants.Success, md)
 		}()
 	}
 	wg.Wait()

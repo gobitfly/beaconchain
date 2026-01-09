@@ -87,28 +87,28 @@ func (s *ServerDbConnections) checkDBConnections() {
 			// context with deadline
 			ctx, cancel := context.WithTimeout(s.ctx, 15*time.Second)
 			defer cancel()
-			r := StatusReporter.NewStatusReport(entry.ID, constants.Default, 10*time.Second)
+			statusReporter := NewStatusReporter(entry.ID, constants.Default, 10*time.Second)
 			switch edb := entry.DB.(type) {
 			case *sqlx.DB:
 				err := edb.PingContext(ctx)
 				if err != nil {
-					r(constants.Failure, map[string]string{"error": err.Error()})
+					statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				} else {
-					r(constants.Success, nil)
+					statusReporter.Report(constants.Success, nil)
 				}
 			case *redis.Client:
 				err := edb.Ping(ctx).Err()
 				if err != nil {
-					r(constants.Failure, map[string]string{"error": err.Error()})
+					statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				} else {
-					r(constants.Success, nil)
+					statusReporter.Report(constants.Success, nil)
 				}
 			case *cache.TieredCacheBase:
 				// have to use reflection cause nothing is public. this is a hack. but it works
 				val := reflect.ValueOf(edb).Elem().FieldByName("remoteCache")
 				if !val.IsValid() {
 					log.Error(fmt.Errorf("failed to get remoteCache"), "failed to get remoteCache", 0)
-					r(constants.Failure, map[string]string{"error": "failed to get remoteCache"})
+					statusReporter.Report(constants.Failure, map[string]string{"error": "failed to get remoteCache"})
 					return
 				}
 				// its a pointer to a pointer that is cache.RemoteCache compliant. convert it so we can call Get() on it
@@ -120,20 +120,20 @@ func (s *ServerDbConnections) checkDBConnections() {
 					err = nil
 				}
 				if err != nil {
-					r(constants.Failure, map[string]string{"error": err.Error()})
+					statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				} else {
-					r(constants.Success, nil)
+					statusReporter.Report(constants.Success, nil)
 				}
 			case ch.Conn: // its an interface
 				err := edb.Ping(ctx)
 				if err != nil {
-					r(constants.Failure, map[string]string{"error": err.Error()})
+					statusReporter.Report(constants.Failure, map[string]string{"error": err.Error()})
 				} else {
-					r(constants.Success, nil)
+					statusReporter.Report(constants.Success, nil)
 				}
 			default:
 				log.Error(fmt.Errorf("unknown db type"), "unknown db type", 0, map[string]interface{}{"entry": entry})
-				r(constants.Failure, map[string]string{"error": "unknown db type"})
+				statusReporter.Report(constants.Failure, map[string]string{"error": "unknown db type"})
 			}
 		}(entry)
 	}
