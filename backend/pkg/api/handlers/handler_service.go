@@ -159,7 +159,10 @@ func (h *HandlerService) getDashboardId(ctx context.Context, dashboardIdParam in
 			return nil, err
 		}
 		if utils.GWeiToWei(big.NewInt(int64(validatorEb))).GreaterThan(perks.EffectiveBalancePerDashboard) {
-			return nil, newBadRequestErr("effective balance of validators in list is too high, maximum is %d", perks.EffectiveBalancePerDashboard.Div(decimal.NewFromInt(1e9)).IntPart())
+			return nil, apiError{
+				err:  newBadRequestErr("effective balance of validators in list is too high, maximum is %d", perks.EffectiveBalancePerDashboard.Div(decimal.NewFromInt(1e9)).IntPart()),
+				code: types.ErrorEffectiveBalanceTooHigh,
+			}
 		}
 		return &types.VDBId{Validators: validators}, nil
 	}
@@ -259,11 +262,21 @@ func writeResponse(w http.ResponseWriter, r *http.Request, statusCode int, respo
 	}
 }
 
-func returnError(w http.ResponseWriter, r *http.Request, code int, err error) {
+type apiError struct {
+	err  error
+	code types.ErrorCode
+}
+
+func (e apiError) Error() string {
+	return e.err.Error()
+}
+
+func returnError(w http.ResponseWriter, r *http.Request, statusCode int, errorCode types.ErrorCode, err error) {
 	response := types.ApiErrorResponse{
 		Error: err.Error(),
+		Code:  errorCode,
 	}
-	writeResponse(w, r, code, response)
+	writeResponse(w, r, statusCode, response)
 }
 
 func returnOk(w http.ResponseWriter, r *http.Request, data interface{}) {
@@ -281,31 +294,23 @@ func returnNoContent(w http.ResponseWriter, r *http.Request) {
 // Errors
 
 func returnBadRequest(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusBadRequest, err)
-}
-
-func returnUnauthorized(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusUnauthorized, err)
+	returnError(w, r, http.StatusBadRequest, types.ErrorBadRequest, err)
 }
 
 func returnNotFound(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusNotFound, err)
+	returnError(w, r, http.StatusNotFound, types.ErrorNotFound, err)
 }
 
 func returnConflict(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusConflict, err)
+	returnError(w, r, http.StatusConflict, types.ErrorConflict, err)
 }
 
 func returnForbidden(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusForbidden, err)
+	returnError(w, r, http.StatusForbidden, types.ErrorForbidden, err)
 }
 
 func returnTooManyRequests(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusTooManyRequests, err)
-}
-
-func returnGone(w http.ResponseWriter, r *http.Request, err error) {
-	returnError(w, r, http.StatusGone, err)
+	returnError(w, r, http.StatusTooManyRequests, types.ErrorTooManyRequests, err)
 }
 
 const maxBodySize = 10 * 1024
@@ -327,33 +332,46 @@ func logApiError(r *http.Request, err error, callerSkip int, additionalInfos ...
 }
 
 func handleErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, context.Canceled) && r.Context().Err() == context.Canceled {
+		// if the request context was canceled, we don't log the error, as it is expected behavior
+		return
+	}
+	if err == nil {
+		logApiError(r, errors.New("nil error passed to handleErr"), 1)
+		return
+	}
+	// check if err is an apiError
+	apiErr, ok := err.(*apiError)
+	if ok {
+		// if it is, we use the error code from the apiError
+		returnError(w, r, http.StatusInternalServerError, apiErr.code, apiErr.err)
+		return
+	}
+	// otherwise we check for common errors and return the appropriate status code and error code
+	statusCode, errorCode := getErrorStatusCode(err)
+	returnError(w, r, statusCode, errorCode, err)
+}
+
+func getErrorStatusCode(err error) (int, types.ErrorCode) {
 	switch {
 	case errors.Is(err, errBadRequest):
-		returnBadRequest(w, r, err)
+		return http.StatusBadRequest, types.ErrorBadRequest
+	case errors.Is(err, errInternalServer):
+		return http.StatusNotFound, types.ErrorInternalServerError
 	case errors.Is(err, dataaccess.ErrNotFound):
-		returnNotFound(w, r, err)
+		return http.StatusUnauthorized, types.ErrorNotFound
 	case errors.Is(err, errUnauthorized):
-		returnUnauthorized(w, r, err)
+		return http.StatusForbidden, types.ErrorUnauthorized
 	case errors.Is(err, errForbidden):
-		returnForbidden(w, r, err)
+		return http.StatusConflict, types.ErrorForbidden
 	case errors.Is(err, errConflict):
-		returnConflict(w, r, err)
+		return http.StatusServiceUnavailable, types.ErrorConflict
 	case errors.Is(err, services.ErrWaiting):
-		returnError(w, r, http.StatusServiceUnavailable, err)
+		return http.StatusTooManyRequests, types.ErrorTooManyRequests
 	case errors.Is(err, errTooManyRequests):
-		returnTooManyRequests(w, r, err)
-	case errors.Is(err, errGone):
-		returnGone(w, r, err)
-	case errors.Is(err, context.Canceled):
-		if r.Context().Err() != context.Canceled { // only return error if the request context was canceled
-			logApiError(r, err, 1)
-			returnError(w, r, http.StatusInternalServerError, err)
-		}
-	default:
-		logApiError(r, err, 1)
-		// TODO: don't return the error message to the user in production
-		returnError(w, r, http.StatusInternalServerError, err)
+		return http.StatusGone, types.ErrorGone
 	}
+	return http.StatusInternalServerError, types.ErrorInternalServerError
 }
 
 // --------------------------------------

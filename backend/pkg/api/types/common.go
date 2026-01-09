@@ -17,7 +17,8 @@ type ApiResponse struct {
 }
 
 type ApiErrorResponse struct {
-	Error string `json:"error"`
+	Error string    `json:"error"`
+	Code  ErrorCode `json:"code"`
 }
 
 type ApiDataResponse[T any] struct {
