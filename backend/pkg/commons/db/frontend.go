@@ -2,8 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
+	"github.com/doug-martin/goqu/v9"
 	"github.com/gobitfly/beaconchain/pkg/commons/types"
 	"github.com/jmoiron/sqlx"
 )
@@ -56,14 +58,30 @@ func UpdateUserSubscription(tx *sql.Tx, id uint64, valid bool, expiration int64,
 	now := time.Now()
 	nowTs := now.Unix()
 	var err error
+
+	fields := goqu.Record{
+		"active":        valid,
+		"updated_at":    nowTs,
+		"reject_reason": rejectReason,
+	}
+	if expiration != 0 {
+		fields["expires_at"] = expiration
+	}
+
+	ds := goqu.Dialect("postgres").
+		Update("users_app_subscriptions").
+		Set(fields).
+		Where(goqu.I("id").Eq(id))
+
+	qry, args, err := ds.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %w", err)
+	}
+
 	if tx == nil {
-		_, err = FrontendWriterDB.Exec("UPDATE users_app_subscriptions SET active = $1, updated_at = TO_TIMESTAMP($2), expires_at = TO_TIMESTAMP($3), reject_reason = $4 WHERE id = $5;",
-			valid, nowTs, expiration, rejectReason, id,
-		)
+		_, err = FrontendWriterDB.Exec(qry, args)
 	} else {
-		_, err = tx.Exec("UPDATE users_app_subscriptions SET active = $1, updated_at = TO_TIMESTAMP($2), expires_at = TO_TIMESTAMP($3), reject_reason = $4 WHERE id = $5;",
-			valid, nowTs, expiration, rejectReason, id,
-		)
+		_, err = tx.Exec(qry, args)
 	}
 
 	return err
