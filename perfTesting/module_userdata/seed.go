@@ -76,7 +76,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 	_, err := db.DB.Exec(`
 		-- Validator Dashboard
 
-		DROP TABLE IF EXISTS users_val_dashboards;
+		DROP TABLE IF EXISTS users_val_dashboards cascade;
 		CREATE TABLE IF NOT EXISTS users_val_dashboards (
 			id 			BIGSERIAL 		NOT NULL,
 			user_id 	BIGINT 			NOT NULL,
@@ -87,7 +87,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			primary key (id)
 		);
 
-		DROP TABLE IF EXISTS users_val_dashboards_groups;
+		DROP TABLE IF EXISTS users_val_dashboards_groups cascade;
 		CREATE TABLE IF NOT EXISTS users_val_dashboards_groups (
 			id 				SMALLINT 		DEFAULT(0),
 			dashboard_id 	BIGINT 			NOT NULL,
@@ -124,7 +124,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 
 		-- Account Dashboard
 
-		DROP TABLE IF EXISTS users_acc_dashboards;
+		DROP TABLE IF EXISTS users_acc_dashboards cascade;
 		CREATE TABLE IF NOT EXISTS users_acc_dashboards (
 			id 				BIGSERIAL 	NOT NULL,
 			user_id 		BIGINT 		NOT NULL,
@@ -134,7 +134,7 @@ func (*Schemav1) CreateSchema(s *seeding.Seeder) error {
 			primary key (id)
 		);
 
-		DROP TABLE IF EXISTS users_acc_dashboards_groups;
+		DROP TABLE IF EXISTS users_acc_dashboards_groups cascade;
 		CREATE TABLE IF NOT EXISTS users_acc_dashboards_groups (
 			id 				INT 		NOT NULL,
 			dashboard_id 	BIGINT 		NOT NULL,

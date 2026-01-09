@@ -156,7 +156,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 
 	if driverName == "clickhouse" {
 		extraParams = "secure=false"
-		if writer.SSL {
+		if reader.SSL {
 			extraParams = "secure=true"
 		}
 		// after 3 seconds, starting predicting how long the query will take
@@ -170,7 +170,7 @@ func MustInitDB(writer *types.DatabaseConfig, reader *types.DatabaseConfig, driv
 		// sslParam += "&debug=true"
 	} else {
 		extraParams = "sslmode=disable"
-		if writer.SSL {
+		if reader.SSL {
 			extraParams = "sslmode=require"
 		}
 	}

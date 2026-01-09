@@ -29,7 +29,7 @@ fn_main() {
 }
 
 fn_sql() {
-    PGPASSWORD=pass psql -h localhost -p$POSTGRES_PORT -U postgres -d db
+    PGPASSWORD=pass psql -h localhost -p $POSTGRES_PORT -U postgres -d alloy
 }
 
 fn_start() {
@@ -39,7 +39,7 @@ fn_start() {
     docker pull sigp/lighthouse:latest
     # build once before starting all services to prevent multiple parallel builds
     docker compose --profile=build-once run build-once &
-    kurtosis run --enclave my-testnet . "$(cat network-params.json)" &
+    kurtosis run --enclave my-testnet . "$(cat network-params.yml)" &
     wait
     bash provision-explorer-config.sh
     docker compose up -d

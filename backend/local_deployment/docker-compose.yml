@@ -1,5 +1,5 @@
 x-service: &default-service
-  image: golang:1.21
+  image: golang:1.23
   working_dir: /app/backend
   network_mode: "host"
   volumes:
@@ -7,6 +7,20 @@ x-service: &default-service
     - /tmp/go-cache:/go
     - /tmp/go-build-cache:/root/.cache/go-build
 services:
+  grafana:
+    image: grafana/grafana:latest
+    network_mode: "host"
+    environment:
+      - GF_SERVER_HTTP_PORT=3005
+      - GF_PLUGINS_PREINSTALL=grafana-clickhouse-datasource
+    volumes:
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+  prometheus:
+    image: prom/prometheus:latest
+    network_mode: "host"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
   build-once:
     <<: *default-service
     profiles:
@@ -14,33 +28,65 @@ services:
     command: /bin/bash -c "git config --global --add safe.directory '*' && make -B all"
   indexer:
     <<: *default-service
-    command: go run ./cmd/exporter -config /app/backend/local_deployment/config.yml
+    command: go run ./cmd exporter -config /app/backend/local_deployment/config.yml
     environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9005
       - INDEXER_ENABLED=true
+      - LOG_LEVEL=debug
   eth1indexer:
     <<: *default-service
-    command: go run ./cmd/eth1indexer -config /app/backend/local_deployment/config.yml -blocks.concurrency 1 -blocks.tracemode 'geth' -data.concurrency 1 --balances.enabled
+    command: go run ./cmd eth1indexer -config /app/backend/local_deployment/config.yml -concurrency 1 -blocks.tracemode 'geth'
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9006
   rewards-exporter:
     <<: *default-service
-    command: go run ./cmd/rewards_exporter -config /app/backend/local_deployment/config.yml
+    command: go run ./cmd rewards-exporter -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9007
   statistics:
     <<: *default-service
-    command: go run ./cmd/statistics -config /app/backend/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
+    command: go run ./cmd statistics -config /app/backend/local_deployment/config.yml --charts.enabled --graffiti.enabled -validators.enabled
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9008
   # frontend-data-updater:
   #   <<: *default-service
   #   command: go run ./cmd/frontend-data-updater -config /app/local_deployment/config.yml
   api:
     <<: *default-service
-    command: go run ./cmd/api -config /app/backend/local_deployment/config.yml
+    command: go run ./cmd api -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9009
+  notification-collector:
+    <<: *default-service
+    command: go run ./cmd notification-collector -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9010
+  notification-sender:
+    <<: *default-service
+    command: go run ./cmd notification-sender -config /app/backend/local_deployment/config.yml
+    environment:
+      - METRICS_ENABLED=true
+      - METRICS_ADDRESS=127.0.0.1:9011
   frontend:
-    image: ghcr.io/gobitfly/beaconchain_frontend:main
     network_mode: "host"
+    # latest staging
+    #  image: ghcr.io/gobitfly/beaconchain_frontend:staging
+    # local frontend
+    volumes:
+    - ../../.:/app
+    build: ../../frontend/
     environment:
       - NUXT_PUBLIC_API_CLIENT="http://local.beaconcha.in:8080/api/i/"
       - NUXT_PUBLIC_LEGACY_API_CLIENT="http://local.beaconcha.in:8080/"
       - NUXT_PRIVATE_API_SERVER="http://local.beaconcha.in:8080/api/i/"
       - NUXT_PRIVATE_LEGACY_API_SERVER="http://local.beaconcha.in:8080/"
-      - NUXT_PUBLIC_API_KEY="xxx"
-      - NUXT_PUBLIC_X_USER_ID=1
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       - NUXT_HOST=local.beaconcha.in
+      - NUXT_PUBLIC_CHAIN_ID_BY_DEFAULT=3151908
+      - NUXT_PUBLIC_DEPLOYMENT_TYPE="development"

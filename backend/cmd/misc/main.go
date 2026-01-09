@@ -93,6 +93,8 @@ var REQUIRES_LIST = map[string]misctypes.Requires{
 		Bigtable: true,
 		ClNode:   true,
 	},
+	"initBigtableSchema": {Bigtable: true},
+	"applyDbSchema":      {NetworkDBs: true, ClickhouseDBs: true},
 }
 
 func Run() {

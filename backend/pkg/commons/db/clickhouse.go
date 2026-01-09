@@ -36,6 +36,11 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 		}
 	}
 
+	var tlsConfig *tls.Config
+	if writer.SSL {
+		tlsConfig = &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12}
+	}
+
 	log.Infof("initializing clickhouse native writer db connection to %v/%v with %v/%v conn limit", hosts, writer.Name, writer.MaxIdleConns, writer.MaxOpenConns)
 	dbWriter, err := ch.Open(&ch.Options{
 		MaxOpenConns: writer.MaxOpenConns,
@@ -53,7 +58,7 @@ func MustInitClickhouseNative(writer *types.DatabaseConfig) ch.Conn {
 			Database: writer.Name,
 		},
 		Debug: false,
-		TLS:   &tls.Config{InsecureSkipVerify: false, MinVersion: tls.VersionTLS12},
+		TLS:   tlsConfig,
 		// this gets only called when debug is true
 		Debugf: func(s string, p ...interface{}) {
 			log.Debugf("CH NATIVE WRITER: "+s, p...)

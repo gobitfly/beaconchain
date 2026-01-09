@@ -1,0 +1,35 @@
+participants:
+  - el_type: geth
+    el_image: ethereum/client-go:latest
+    cl_type: lighthouse
+    cl_image: sigp/lighthouse:v7.0.0-beta.7
+    cl_extra_params: ["--reconstruct-historic-states"]
+    el_extra_params: ["--http.api='admin,eth,net,debug,tx,txpool'", "--gcmode archive"]
+    count: 2
+  - el_type: geth
+    el_image: ethereum/client-go:latest
+    cl_extra_env_vars: {
+      BITFLY_EXPORTER_LOCAL_DB_PATH: "bolt.db",
+      BITFLY_EXPORTER_REMOTE_DB_CONNECTION_STRING: "postgres://postgres:pass@alloy/alloy"
+    }
+    cl_type: prysm
+    validator_count: 0 # only used for pectra consensus layer events
+    cl_image: beaconcha.in/prysm/beacon-chain:latest # see https://www.offchainlabs.com/prysm/docs/install/install-with-bazel/#for-amd--x86-architecture; source on gitlab
+    cl_extra_params: []
+    el_extra_params: []
+
+network_params:
+  preregistered_validator_keys_mnemonic: "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete"
+  num_validator_keys_per_node: 64
+  network_id: "3151908"
+  deposit_contract_address: "0x4242424242424242424242424242424242424242"
+  seconds_per_slot: 12
+  eth1_follow_distance: 16
+  genesis_delay: 10
+  deneb_fork_epoch: 0
+  electra_fork_epoch: 0
+  prefunded_accounts: '{
+    "0x8943545177806ED17B9F23F0a21ee5948eCaa776": {"balance": "10000ETH"},
+    "0xE25583099BA105D9ec0A67f5Ae86D90e50036425": {"balance": "10000ETH"}
+  }'
+global_log_level: "info"
