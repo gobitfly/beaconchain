@@ -10,7 +10,9 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/ext"
 	"github.com/doug-martin/goqu/v9"
 	t "github.com/gobitfly/beaconchain/pkg/api/types"
+	"github.com/gobitfly/beaconchain/pkg/commons/cache"
 	"github.com/gobitfly/beaconchain/pkg/commons/log"
+	"github.com/gobitfly/beaconchain/pkg/commons/utils"
 	constypes "github.com/gobitfly/beaconchain/pkg/consapi/types"
 )
 
@@ -136,4 +138,121 @@ func (d *DataAccessService) GetValidatorsByGraffiti(ctx context.Context, graffit
 		)
 
 	return runQueryRows[[]t.VDBValidator](ctx, d.readerDb, validatorsDs)
+}
+
+// fills the activation epochs for a set of validators. Tries to estimate pending validators based on current queue simulation
+func (d *DataAccessService) getValidatorActivationEpochs(ctx context.Context, validators map[uint64]*uint64) error {
+	if len(validators) == 0 {
+		return nil
+	}
+	validatorMapping, err := d.services.GetCurrentValidatorMapping()
+	if err != nil {
+		return err
+	}
+	latestEpoch := cache.LatestFinalizedEpoch.Get()
+	latestStats := cache.LatestStats.Get()
+	activationChurnRate := d.config.ClConfig.MinPerEpochChurnLimit
+	if latestStats.ValidatorActivationChurnLimit == nil {
+		log.Warnf("Current activation churn rate could not be retrieved, using chain's minimum of %d as default", activationChurnRate)
+	} else {
+		activationChurnRate = *latestStats.ValidatorActivationChurnLimit
+	}
+	pendingValidatorsPostPectra := make([]uint64, 0)
+
+	for validator := range validators {
+		if validator >= uint64(len(validatorMapping.ValidatorMetadata)) {
+			return fmt.Errorf("validator index %d not found in validator mapping", validator)
+		}
+		metadata := validatorMapping.ValidatorMetadata[validator]
+		if metadata.ActivationEpoch.Valid {
+			// validator already activated, easy case
+			activationEpoch := uint64(metadata.ActivationEpoch.Int64)
+			validators[validator] = &activationEpoch
+			continue
+		}
+
+		// estimate
+		if d.config.ClConfig.ElectraForkEpoch > latestEpoch {
+			// pre pectra
+			if constypes.ValidatorDbStatus(metadata.Status) != constypes.DbPending {
+				// probably not enough deposits yet
+				continue
+			}
+			if !metadata.Queues.ActivationIndex.Valid {
+				// could support estimates for validators without index
+				continue
+			}
+			queuePosition := uint64(metadata.Queues.ActivationIndex.Int64)
+
+			epochsToWait := (queuePosition - 1) / activationChurnRate
+			// calculate dequeue epoch
+			estimatedActivationEpoch := latestEpoch + epochsToWait + 1
+			// add activation offset
+			estimatedActivationEpoch += utils.Config.Chain.ClConfig.MaxSeedLookahead + 1
+
+			validators[validator] = &estimatedActivationEpoch
+			continue
+		}
+
+		// post pectra
+		if constypes.ValidatorDbStatus(metadata.Status) != constypes.DbDeposited {
+			// should not happen since there's no more activation queue after deposits have been processed (see process_registry_updates)
+			return fmt.Errorf("validator %d has no activation epoch", validator)
+		}
+		pendingValidatorsPostPectra = append(pendingValidatorsPostPectra, validator)
+	}
+
+	// determine sum of previous deposit
+	// check if there's a pending deposit which pushes above min activation
+	// return estimate of that from db
+
+	// could also simulate in db, but wouldn't be pretty
+	ds := goqu.Dialect("postgres").From("pending_deposits_queue").
+		Select(
+			goqu.I("validator_index"),
+			goqu.I("est_clear_epoch"),
+			goqu.I("amount"),
+		).
+		Where(
+			goqu.I("validator_index").In(pendingValidatorsPostPectra),
+		).
+		Order(goqu.I("id").Asc())
+
+	type dbResult struct {
+		ValidatorIndex uint64 `db:"validator_index"`
+		ClearEpoch     uint64 `db:"est_clear_epoch"`
+		Amount         uint64 `db:"amount"`
+	}
+	results, err := runQueryRows[[]dbResult](ctx, d.readerDb, ds)
+	if err != nil {
+		return err
+	}
+
+	type ValidatorEstimate struct {
+		Balance          uint64
+		EffectiveBalance uint64
+	}
+	validatorEstimates := make(map[uint64]ValidatorEstimate)
+	upwardThreshold := utils.Config.Chain.ClConfig.EffectiveBalanceIncrement / utils.Config.Chain.ClConfig.HysteresisQuotient * utils.Config.Chain.ClConfig.HysteresisUpwardMultiplier
+
+	for _, deposit := range results {
+		if _, ok := validatorEstimates[deposit.ValidatorIndex]; !ok {
+			metadata := validatorMapping.ValidatorMetadata[deposit.ValidatorIndex]
+			validatorEstimates[deposit.ValidatorIndex] = ValidatorEstimate{
+				Balance:          metadata.Balance,
+				EffectiveBalance: metadata.EffectiveBalance,
+			}
+		}
+		currentEstimate := validatorEstimates[deposit.ValidatorIndex]
+		currentEstimate.Balance += deposit.Amount
+		if currentEstimate.EffectiveBalance+upwardThreshold < currentEstimate.Balance {
+			currentEstimate.EffectiveBalance = currentEstimate.Balance - currentEstimate.Balance%utils.Config.Chain.ClConfig.EffectiveBalanceIncrement
+		}
+		if currentEstimate.EffectiveBalance >= utils.Config.Chain.ClConfig.MinActivationBalance &&
+			validators[deposit.ValidatorIndex] == nil { // consider first deposit above min only
+			validators[deposit.ValidatorIndex] = &deposit.ClearEpoch
+		}
+	}
+
+	return nil
 }
