@@ -60,9 +60,11 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
   }
   const setNotificationForPairedDevice = async ({
     id,
+    name,
     value,
   }: {
     id: number,
+    name?: string,
     value: boolean,
   }) => {
     await fetch<PutUserNotificationSettingsPairedDevicesResponse>(
@@ -70,7 +72,7 @@ export const useNotificationsManagementStore = defineStore('notifications-manage
       {
         body: {
           is_notifications_enabled: value,
-          name: id,
+          name,
         },
       },
       {

@@ -1418,13 +1418,20 @@ func (d *DataAccessService) GetPairedDeviceUserId(ctx context.Context, pairedDev
 }
 
 func (d *DataAccessService) UpdateNotificationSettingsPairedDevice(ctx context.Context, pairedDeviceId uint64, name string, IsNotificationsEnabled bool) error {
-	result, err := d.userWriter.ExecContext(ctx, `
-		UPDATE users_devices 
-		SET 
-			device_name = $1,
-			notify_enabled = $2
-		WHERE id = $3`,
-		name, IsNotificationsEnabled, pairedDeviceId)
+	updateDs := goqu.Dialect("postgres").
+		Update("users_devices").
+		Set(goqu.Record{
+			"notify_enabled": IsNotificationsEnabled,
+			"device_name":    name,
+		}).
+		Where(goqu.Ex{"id": pairedDeviceId})
+
+	query, args, err := updateDs.Prepared(true).ToSQL()
+	if err != nil {
+		return fmt.Errorf("error preparing query: %w", err)
+	}
+
+	result, err := d.userWriter.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
