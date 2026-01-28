@@ -706,13 +706,13 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 
 	// -------------------------------------
 	// Get the machine notification history
-	notificationHistory := []struct {
+	type NotificationHistory struct {
 		Ts             time.Time       `db:"ts"`
 		MachineId      uint64          `db:"machine_id"`
 		MachineName    string          `db:"machine_name"`
 		EventType      types.EventName `db:"event_type"`
 		EventThreshold float64         `db:"event_threshold"`
-	}{}
+	}
 
 	ds := goqu.Dialect("postgres").
 		Select(
@@ -754,14 +754,9 @@ func (d *DataAccessService) GetMachineNotifications(ctx context.Context, userId 
 		ds = ds.Where(directions)
 	}
 
-	query, args, err := ds.Prepared(true).ToSQL()
+	notificationHistory, err := runQueryRows[[]NotificationHistory](ctx, d.userReader, ds)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error preparing machine notifications query: %w", err)
-	}
-
-	err = d.userReader.SelectContext(ctx, &notificationHistory, query, args...)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`error retrieving data for machine notifications: %w`, err)
+		return nil, nil, fmt.Errorf("error retrieving data for machine notifications: %w", err)
 	}
 
 	// -------------------------------------
